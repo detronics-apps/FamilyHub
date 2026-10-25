@@ -39,7 +39,8 @@ test('third-party code cannot ask for first-party powers or escape its package',
 
 test('cross-app permissions are understood and named', () => {
   assert.ok(ok(third({ permissions: ['data:own', 'data:tasks:read'] })));
-  assert.match(permissionInfo('data:tasks:write').label, /Read and change records of the tasks/);
+  assert.match(permissionInfo('data:tasks:read').label, /Read records of the tasks/);
+  assert.equal(permissionInfo('data:tasks:write'), null, 'only the owner writes its records');
   assert.equal(permissionInfo('data:TASKS:read'), null);
 });
 

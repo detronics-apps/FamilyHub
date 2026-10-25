@@ -23,8 +23,12 @@ export const PERMISSIONS = {
   'household:people:write': { label: 'Add and change people', risk: 'high', firstParty: true },
 };
 
-/** Cross-app access, e.g. 'data:tasks:read'. Always shown to the person by name. */
-const CROSS = /^data:([a-z][a-z0-9.-]*):(read|write)$/;
+/**
+ * Cross-app reading, e.g. 'data:tasks:read'. Always shown to the person by name.
+ * Only the owning app writes its own records (it alone knows how to index them);
+ * another app that wants to create one opens the owner's screen with a prefill.
+ */
+const CROSS = /^data:([a-z][a-z0-9.-]*):read$/;
 
 export const RESERVED_IDS = new Set(['home', 'settings', 'help', 'library', 'app', 'apps', 'core', 'data', 'media', 'household', 'system']);
 const ID = /^[a-z][a-z0-9]*(\.[a-z0-9][a-z0-9-]*)*$/;
@@ -67,7 +71,7 @@ export function satisfies(version, range) {
 export function permissionInfo(p) {
   if (PERMISSIONS[p]) return PERMISSIONS[p];
   const m = CROSS.exec(p);
-  if (m) return { label: `${m[2] === 'write' ? 'Read and change' : 'Read'} records of the ${m[1]} mini-app`, risk: m[2] === 'write' ? 'high' : 'medium' };
+  if (m) return { label: `Read records of the ${m[1]} mini-app`, risk: 'medium' };
   return null;
 }
 

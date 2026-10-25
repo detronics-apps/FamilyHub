@@ -356,3 +356,9 @@ body:has(.player:not([hidden])) .app-footer { padding-bottom: 72px; }
   .chip-status { width: var(--tap); padding: 0; }
   .session__clock { font-size: 22px; }
 }
+
+/* Decisions: where an agreement is in the Observe -> Adapt cycle */
+.cycle { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; counter-reset: c; }
+.cycle__step { counter-increment: c; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--panel-2); color: var(--text-faint); border: 1px solid var(--border); }
+.cycle__step::before { content: counter(c) ". "; }
+.cycle__step--now { background: var(--accent-soft); color: var(--text); border-color: var(--accent); font-weight: 700; }

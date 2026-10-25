@@ -97,7 +97,7 @@ function setDevice(patch) {
 }
 
 function flash(notice) {
-  app.flash = [notice, ...app.flash.filter((n) => n.id !== notice.id)].slice(0, 3);
+  app.flash = [{ ...notice, at: Date.now() }, ...app.flash.filter((n) => n.id !== notice.id)].slice(0, 3);
 }
 
 /** Record done / skipped / deferred / rescheduled / dropped, with an Undo. */
@@ -375,7 +375,8 @@ function renderNow() {
   const route = parseRoute();
   const routeKey = `${route.name}/${route.sub}/${route.rest.join('/')}`;
   const changed = routeKey !== lastRouteKey;
-  if (changed && lastRouteKey !== null) { app.flash = []; app.ui.scrolledTo = null; }
+  // Leaving a screen clears its notices - except one raised just now (a save that then moved on).
+  if (changed && lastRouteKey !== null) { app.flash = app.flash.filter((n) => Date.now() - n.at < 1500); app.ui.scrolledTo = null; }
   const snap = captureFocus();
   const scrollY = window.scrollY;
 

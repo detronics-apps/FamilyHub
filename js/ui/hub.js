@@ -52,12 +52,13 @@ export function createHubFactory(ctx) {
     for (const r of resources.values()) r.invalidate();
   });
 
-  function collectionFor(appId, manifest, name, spec = {}) {
+  function collectionFor(appId, manifest, name, spec = {}, { readOnly = false } = {}) {
     const store = ctx.sync.appStore();
     if (!store) throw Object.assign(new Error('Reconnect your Drive folder to open this - it needs one click.'), { code: 'no-store' });
     const declared = manifest.data.collections.find((c) => c.name === name);
     if (!declared && appId === manifest.id) throw new Error(`${manifest.name} did not declare a "${name}" collection in its manifest.`);
-    const key = `${store.kind}:${store.name}:${appId}/${name}`;
+    // Another app's view of a collection is cached separately and never writes.
+    const key = `${readOnly ? 'ro:' : ''}${store.kind}:${store.name}:${appId}/${name}`;
     if (!collections.has(key)) {
       collections.set(key, createCollection(store, { app: appId, name, schema: declared?.schema ?? 1, ...spec }));
     }
@@ -66,8 +67,14 @@ export function createHubFactory(ctx) {
     return c;
   }
 
+  // Another app's records change without this app knowing, so its index is re-read on each ask
+  // (hub.use caches the answer until the next invalidate).
   const readOnly = (c) => ({
-    name: c.name, load: c.load.bind(c), count: c.count.bind(c), list: c.list.bind(c), search: c.search.bind(c), get: c.get.bind(c),
+    name: c.name,
+    count: async () => { await c.load({ refresh: true }); return c.count(); },
+    list: async (o) => { await c.load({ refresh: true }); return c.list(o); },
+    search: async (q, o) => { await c.load({ refresh: true }); return c.search(q, o); },
+    get: (id) => c.get(id),
   });
 
   return function createHub(manifest, granted, { otherManifests = () => [] } = {}) {
@@ -83,7 +90,8 @@ export function createHubFactory(ctx) {
       go: (screen, param) => ctx.go(hub.href(screen, param)),
       render: () => ctx.render(),
       use: res.use,
-      invalidate: res.invalidate,
+      /** Forget loaded data (after a change) and redraw, so the screen shows the new state. */
+      invalidate: (prefix) => { res.invalidate(prefix); ctx.render(); },
       ui: {
         notice(text, level = 'ok', action = null) {
           if (!has('notify')) throw new Error(`${manifest.name} may not show notices.`);
@@ -96,14 +104,12 @@ export function createHubFactory(ctx) {
     if (has('data:own')) {
       hub.data = {
         collection: (name, spec) => collectionFor(manifest.id, manifest, name, spec),
-        /** Records of another mini-app, only with a granted data:<app>:read or :write. */
-        of(appId, name, spec) {
-          const write = has(`data:${appId}:write`);
-          if (!write && !has(`data:${appId}:read`)) throw new Error(`${manifest.name} may not read ${appId} records.`);
+        /** Another mini-app's records, read-only, with a granted data:<app>:read. Null if it is not installed. */
+        of(appId, name) {
+          if (!has(`data:${appId}:read`)) throw new Error(`${manifest.name} may not read ${appId} records.`);
           const other = otherManifests().find((m) => m.id === appId);
           if (!other) return null;
-          const c = collectionFor(appId, other, name, spec);
-          return write ? c : readOnly(c);
+          return readOnly(collectionFor(appId, other, name, {}, { readOnly: true }));
         },
         installed: (appId) => otherManifests().some((m) => m.id === appId),
       };

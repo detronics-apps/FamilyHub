@@ -20,6 +20,56 @@ const RAW = [
     },
     load: () => import('./chores/app.js'),
   },
+  {
+    manifest: {
+      fhManifest: 1, id: 'tasks', name: 'Tasks', version: '1.0.1',
+      description: 'One-off jobs, repairs, errands and bigger projects.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
+      screens: [
+        { id: 'open', title: 'To do' }, { id: 'mine', title: 'Mine' }, { id: 'projects', title: 'Projects' },
+        { id: 'finished', title: 'Finished' }, { id: 'item', title: 'Task', nav: false }, { id: 'new', title: 'Add a task', nav: false },
+      ],
+      data: { collections: [{ name: 'tasks', schema: 1 }] },
+      permissions: ['data:own', 'people:read', 'notify', 'data:tickets:read', 'data:decisions:read'],
+    },
+    load: () => import('./tasks/app.js'),
+  },
+  {
+    manifest: {
+      fhManifest: 1, id: 'tickets', name: 'Tickets', version: '1.0.0',
+      description: 'Capture a concern, idea or appreciation in seconds - talk about it at the family meeting.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
+      screens: [
+        { id: 'capture', title: 'Log a ticket' }, { id: 'all', title: 'All tickets' }, { id: 'meeting', title: 'Family meeting' },
+        { id: 'item', title: 'Ticket', nav: false },
+      ],
+      data: { collections: [{ name: 'tickets', schema: 1 }] },
+      permissions: ['data:own', 'people:read', 'notify', 'data:tasks:read', 'data:decisions:read'],
+    },
+    load: () => import('./tickets/app.js'),
+  },
+  {
+    manifest: {
+      fhManifest: 1, id: 'principles', name: 'Principles', version: '1.0.0',
+      description: 'Family values and practical agreements, with the reasons behind them.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
+      screens: [{ id: 'list', title: 'Principles' }, { id: 'item', title: 'Principle', nav: false }, { id: 'new', title: 'Add a principle', nav: false }],
+      data: { collections: [{ name: 'principles', schema: 1 }] },
+      permissions: ['data:own', 'notify'],
+    },
+    load: () => import('./principles/app.js'),
+  },
+  {
+    manifest: {
+      fhManifest: 1, id: 'decisions', name: 'Decisions', version: '1.0.0',
+      description: 'Agreements and experiments: try something, look back, adapt.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
+      screens: [{ id: 'list', title: 'Decisions' }, { id: 'item', title: 'Decision', nav: false }, { id: 'new', title: 'New decision', nav: false }],
+      data: { collections: [{ name: 'decisions', schema: 1 }] },
+      permissions: ['data:own', 'people:read', 'notify', 'data:tickets:read', 'data:tasks:read'],
+    },
+    load: () => import('./decisions/app.js'),
+  },
 ];
 
 function check({ manifest, load }) {
