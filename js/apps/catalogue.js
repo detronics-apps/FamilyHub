@@ -70,6 +70,20 @@ const RAW = [
     },
     load: () => import('./decisions/app.js'),
   },
+  {
+    manifest: {
+      fhManifest: 1, id: 'meals', name: 'Meals', version: '1.0.0',
+      description: 'Recipes, a weekly meal plan and the shopping list that follows from it.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
+      screens: [
+        { id: 'week', title: 'This week' }, { id: 'recipes', title: 'Recipes' }, { id: 'shopping', title: 'Shopping' },
+        { id: 'item', title: 'Recipe', nav: false }, { id: 'new', title: 'Add a recipe', nav: false },
+      ],
+      data: { collections: [{ name: 'recipes', schema: 1 }, { name: 'plans', schema: 1 }, { name: 'shopping', schema: 1 }] },
+      permissions: ['data:own', 'notify'],
+    },
+    load: () => import('./meals/app.js'),
+  },
 ];
 
 function check({ manifest, load }) {
@@ -85,7 +99,6 @@ export const starter = (id) => STARTERS.find((s) => s.manifest.id === id) ?? nul
 /** On the roadmap, not built. Shown in the library so nobody mistakes them for working apps. */
 export const COMING_LATER = [
   { id: 'planner', name: 'Planner', purpose: 'A family calendar: the week at a glance, with chores, tasks, meals, trips and review dates from the other mini-apps in one place.' },
-  { id: 'meals', name: 'Meals', purpose: 'Recipes, a weekly meal plan and the shopping list that follows from it.' },
   { id: 'finance', name: 'Finance', purpose: 'Budgets, savings and debt goals, with the assumptions in plain view.' },
   { id: 'health', name: 'Health', purpose: 'Health goals, routines and appointment notes.' },
   { id: 'exercise', name: 'Exercise', purpose: 'Activity plans and family-friendly ways to move.' },
