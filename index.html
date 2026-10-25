@@ -13,6 +13,20 @@
 </head>
 <body>
 <noscript>Family Hub needs JavaScript to run. Nothing is sent anywhere - it all runs in this browser.</noscript>
-<script type="module" src="js/main.js"></script>
+<script type="module" src="js/main.js" onerror="familyHubLoadFailed()"></script>
+<script>
+  // Just after an update, a browser can still hold some of the old files for up to ten
+  // minutes, and old and new do not fit together. Say so, rather than show a blank page.
+  function familyHubLoadFailed() {
+    var p = document.createElement('div');
+    p.setAttribute('role', 'alert');
+    p.style.cssText = 'max-width:520px;margin:15vh auto;padding:24px;font:16px/1.5 system-ui,sans-serif;text-align:center;';
+    p.innerHTML = '<h1 style="font-size:22px">Family Hub was just updated</h1>'
+      + '<p>Your browser still has part of the previous version. Your family’s data is safe. '
+      + 'Please wait a minute, then reload the page.</p>'
+      + '<button type="button" onclick="location.reload()" style="font:inherit;padding:10px 20px;border-radius:999px;border:1px solid #a8461f;background:#a8461f;color:#fff;cursor:pointer">Reload</button>';
+    document.body.appendChild(p);
+  }
+</script>
 </body>
 </html>
