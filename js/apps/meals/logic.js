@@ -6,7 +6,7 @@
 // Nutrition values a person types in are shown as "supplied"; anything else
 // is "not known", never estimated.
 
-import { addDays, dayDiff } from '../../dates.js';
+import { addDays, dayDiff, weekStart } from '../../dates.js';
 
 export const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'];
 export const MEAL_LABEL = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack' };
@@ -114,11 +114,7 @@ export function nutritionRows(recipe) {
 
 /* ----------------------------------------------------------- the week */
 
-/** The Monday of the week a day falls in. */
-export function weekStart(day) {
-  const d = new Date(`${day}T12:00:00Z`).getUTCDay();   // 0 = Sunday
-  return addDays(day, -((d + 6) % 7));
-}
+export { weekStart };
 
 export const weekDays = (monday) => Array.from({ length: 7 }, (_, i) => addDays(monday, i));
 

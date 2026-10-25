@@ -106,6 +106,39 @@ const RAW = [
     },
     load: () => import('./finance/app.js'),
   },
+  {
+    manifest: {
+      fhManifest: 1, id: 'exercise', name: 'Exercise', version: '1.0.0',
+      description: 'Log activity, keep flexible weekly plans, and see what the family did together.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
+      screens: [{ id: 'week', title: 'This week' }, { id: 'log', title: 'Log activity' }, { id: 'plans', title: 'Plans and goals' }],
+      data: { collections: [{ name: 'activities', schema: 1 }, { name: 'plans', schema: 1 }] },
+      permissions: ['data:own', 'people:read', 'notify'],
+    },
+    load: () => import('./exercise/app.js'),
+  },
+  {
+    manifest: {
+      fhManifest: 1, id: 'health', name: 'Health', version: '1.0.0',
+      description: 'Appointments and healthy habits - not medical records.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
+      screens: [{ id: 'appointments', title: 'Appointments' }, { id: 'routines', title: 'Healthy habits' }, { id: 'item', title: 'Appointment', nav: false }, { id: 'new', title: 'Add an appointment', nav: false }],
+      data: { collections: [{ name: 'appointments', schema: 1 }, { name: 'routines', schema: 1 }] },
+      permissions: ['data:own', 'people:read', 'notify'],
+    },
+    load: () => import('./health/app.js'),
+  },
+  {
+    manifest: {
+      fhManifest: 1, id: 'faith', name: 'Faith', version: '1.0.0',
+      description: 'Bible reading plans, reflections and family discussion.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
+      screens: [{ id: 'reading', title: 'Reading' }, { id: 'journal', title: 'Journal' }, { id: 'plan', title: 'Reading plan', nav: false }],
+      data: { collections: [{ name: 'plans', schema: 1 }, { name: 'notes', schema: 1 }] },
+      permissions: ['data:own', 'people:read', 'notify'],
+    },
+    load: () => import('./faith/app.js'),
+  },
 ];
 
 function check({ manifest, load }) {
@@ -121,8 +154,5 @@ export const starter = (id) => STARTERS.find((s) => s.manifest.id === id) ?? nul
 /** On the roadmap, not built. Shown in the library so nobody mistakes them for working apps. */
 export const COMING_LATER = [
   { id: 'planner', name: 'Planner', purpose: 'A family calendar: the week at a glance, with chores, tasks, meals, trips and review dates from the other mini-apps in one place.' },
-  { id: 'health', name: 'Health', purpose: 'Health goals, routines and appointment notes.' },
-  { id: 'exercise', name: 'Exercise', purpose: 'Activity plans and family-friendly ways to move.' },
   { id: 'medical', name: 'Medical', purpose: 'Emergency summary and medical records - only once private records and access rules exist.' },
-  { id: 'faith', name: 'Faith', purpose: 'Bible reading, reflections and family discussion.' },
 ];

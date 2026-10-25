@@ -54,6 +54,12 @@ export function intervalDays(freq) {
   return { day: 1, week: 7, month: 30.44, year: 365.25 }[freq?.unit] * every || null;
 }
 
+/** The Monday of the week a day falls in. */
+export function weekStart(day) {
+  const d = new Date(`${day}T12:00:00Z`).getUTCDay();   // 0 = Sunday
+  return addDays(day, -((d + 6) % 7));
+}
+
 const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
