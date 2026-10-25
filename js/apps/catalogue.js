@@ -84,6 +84,17 @@ const RAW = [
     },
     load: () => import('./meals/app.js'),
   },
+  {
+    manifest: {
+      fhManifest: 1, id: 'holidays', name: 'Holidays', version: '1.0.0',
+      description: 'Trip ideas, itineraries, packing lists and budgets.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
+      screens: [{ id: 'list', title: 'Holidays' }, { id: 'item', title: 'Trip', nav: false }, { id: 'new', title: 'Add a trip', nav: false }],
+      data: { collections: [{ name: 'trips', schema: 1 }] },
+      permissions: ['data:own', 'people:read', 'notify'],
+    },
+    load: () => import('./holidays/app.js'),
+  },
 ];
 
 function check({ manifest, load }) {
@@ -103,6 +114,5 @@ export const COMING_LATER = [
   { id: 'health', name: 'Health', purpose: 'Health goals, routines and appointment notes.' },
   { id: 'exercise', name: 'Exercise', purpose: 'Activity plans and family-friendly ways to move.' },
   { id: 'medical', name: 'Medical', purpose: 'Emergency summary and medical records - only once private records and access rules exist.' },
-  { id: 'holidays', name: 'Holidays', purpose: 'Trip ideas, itineraries, packing lists and budgets.' },
   { id: 'faith', name: 'Faith', purpose: 'Bible reading, reflections and family discussion.' },
 ];
