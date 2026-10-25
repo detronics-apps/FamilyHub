@@ -1,24 +1,25 @@
-// Modules that are planned but not built. They say so plainly - nothing here
-// pretends to work.
+// A page that is not a core screen or an installed mini-app. Planned modules
+// say so plainly - nothing here pretends to work.
 
 import { el } from '../dom.js';
-import { MODULES } from '../../dashboard.js';
+import { COMING_LATER } from '../../apps/catalogue.js';
 
 export function placeholderView(ctx, route) {
-  const mod = MODULES.find((m) => m.id === route.name);
-  if (!mod) {
+  const planned = COMING_LATER.find((m) => m.id === route.name);
+  if (!planned) {
     return el('section', { class: 'panel empty' }, [
       el('h1', { text: 'That page does not exist' }),
-      el('a', { class: 'btn btn-primary', href: '#/', text: 'Back to home' }),
+      el('p', { text: 'It may belong to a mini-app that is not installed.' }),
+      el('div', { class: 'row', style: { justifyContent: 'center' } }, [
+        el('a', { class: 'btn btn-primary', href: '#/', text: 'Back to home' }),
+        el('a', { class: 'btn', href: '#/library', text: 'Mini-apps' }),
+      ]),
     ]);
   }
   return el('section', { class: 'panel empty' }, [
-    el('h1', { text: mod.name }),
-    el('p', { text: mod.purpose }),
-    el('p', { class: 'muted', text: `${mod.name} is not built yet. This first version builds Chores properly before adding more. You can hide this button in Settings if you will not use it.` }),
-    el('div', { class: 'row', style: { justifyContent: 'center' } }, [
-      el('a', { class: 'btn btn-primary', href: '#/chores', text: 'Go to Chores' }),
-      el('a', { class: 'btn', href: '#/', text: 'Back to home' }),
-    ]),
+    el('h1', { text: planned.name }),
+    el('p', { text: planned.purpose }),
+    el('p', { class: 'muted', text: `${planned.name} is not built yet. It will arrive as a mini-app you can install.` }),
+    el('a', { class: 'btn', href: '#/', text: 'Back to home' }),
   ]);
 }

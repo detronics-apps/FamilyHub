@@ -32,6 +32,13 @@ const SCREEN = /^[a-z][a-z0-9-]{0,30}$/;
 const COLLECTION = /^[a-z][a-z0-9-]{0,40}$/;
 const ENTRY = /^(?!.*\.\.)[A-Za-z0-9_-]+(\/[A-Za-z0-9_.-]+)*\.js$/;
 const SEMVER = /^(\d+)\.(\d+)\.(\d+)$/;
+const FIELD = /^[A-Za-z][A-Za-z0-9_]{0,40}$/;
+
+/** Which record fields go into the index (summary) and the search text. At most 12; defaults suit most apps. */
+const fieldList = (v) => {
+  const list = (Array.isArray(v) ? v : ['title', 'name', 'status']).filter((f) => typeof f === 'string' && FIELD.test(f));
+  return [...new Set(list)].slice(0, 12);
+};
 
 export function parseVersion(v) {
   const m = SEMVER.exec(String(v ?? ''));
@@ -133,7 +140,7 @@ export function validateManifest(raw, { source = 'folder' } = {}) {
       requires: { api: req.api, core: req.core ?? null },
       entry: m.entry ?? null,
       screens: screens.map((s) => ({ id: s.id, title: s.title.trim(), nav: s.nav !== false })),
-      data: { collections: collections.map((c) => ({ name: c.name, schema: c.schema })) },
+      data: { collections: collections.map((c) => ({ name: c.name, schema: c.schema, summary: fieldList(c.summary), search: fieldList(c.search ?? c.summary) })) },
       permissions: [...new Set(perms)],
       icon: typeof m.icon === 'string' ? m.icon.slice(0, 4) : null,
     },
@@ -294,6 +301,28 @@ export function reconcileStarters(registry, starterManifests, now = new Date().t
     }
   }
   return reg;
+}
+
+/**
+ * Merge two registries (two laptops installing or removing apps). Per app:
+ * a change on one side is taken; if both changed the same app differently,
+ * this device's choice stands and the case is reported.
+ */
+export function mergeRegistry(base, mine, theirs) {
+  const b = normaliseRegistry(base);
+  const m = normaliseRegistry(mine);
+  const t = normaliseRegistry(theirs);
+  const out = emptyRegistry();
+  const conflicts = [];
+  for (const part of ['apps', 'retained']) {
+    for (const id of new Set([...Object.keys(m[part]), ...Object.keys(t[part]), ...Object.keys(b[part])])) {
+      const [x, y, z] = [b[part][id], m[part][id], t[part][id]].map((v) => (v ? JSON.stringify(v) : null));
+      const pick = y === z ? m[part][id] : y === x ? t[part][id] : z === x ? m[part][id] : (conflicts.push(id), m[part][id]);
+      if (pick) out[part][id] = pick;
+    }
+  }
+  for (const id of Object.keys(out.apps)) delete out.retained[id];
+  return { registry: out, conflicts };
 }
 
 /** Is `op` allowed for an app with these granted permissions? */

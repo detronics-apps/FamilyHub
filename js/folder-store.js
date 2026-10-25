@@ -148,6 +148,18 @@ export function createMemoryStore(seed = {}) {
   };
 }
 
+/** Every file path under `dir`, depth first. */
+export async function walk(store, dir) {
+  const out = [];
+  const entries = (await store.list(dir)) ?? [];
+  for (const e of entries) {
+    const p = dir ? `${dir}/${e.name}` : e.name;
+    if (e.kind === 'directory') out.push(...await walk(store, p));
+    else out.push(p);
+  }
+  return out;
+}
+
 /** JSON with keys in a fixed order, so the same data always produces the same text. */
 export function stableStringify(value) {
   return JSON.stringify(sortKeys(value), null, 2);

@@ -1,12 +1,12 @@
 // Chores: Do something now (execute) · Rooms · Plan · Progress.
 
-import { el } from '../dom.js';
+import { el } from '../../ui/dom.js';
 import { findTasks, momentum, TIME_CHOICES, ENERGY_CHOICES, ORDER_RULES, defaultFilters } from '../../matching.js';
 import { occurrences, occurrence } from '../../recurrence.js';
 import { hasDemo, roomName } from '../../model.js';
 import { householdProgress, activity } from '../../progress.js';
 import { fmtDay } from '../../dates.js';
-import { choreCard, demoNotice } from '../common.js';
+import { choreCard, demoNotice } from '../../ui/common.js';
 import { planView } from './plan.js';
 
 const TABS = [

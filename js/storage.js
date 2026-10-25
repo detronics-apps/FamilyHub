@@ -11,12 +11,17 @@
 //              dashboard arrangement, theme, whether the welcome was seen
 
 import { migrate, validateHousehold } from './model.js';
-import { normalisePrefs } from './dashboard.js';
+import { ALWAYS_SHOWN } from './dashboard.js';
+import { normaliseMusicPrefs } from './music.js';
 
 export const KEYS = {
   household: 'familyhub.household',
   previous: 'familyhub.household.previous',
   device: 'familyhub.device',
+  registry: 'familyhub.registry',
+  folderBase: 'familyhub.folder.base',
+  registryBase: 'familyhub.registry.base',
+  fileBase: 'familyhub.file.base',
 };
 
 export const EXPORT_KIND = 'family-hub-household';
@@ -26,17 +31,33 @@ export const defaultDevice = () => ({
   prefs: {},                // personId (or 'anyone') -> { order, hidden }
   theme: 'system',
   onboardedAt: null,
+  storageMode: 'device',    // 'device' | 'folder' (the family's Drive folder)
+  folderName: null,
+  music: normaliseMusicPrefs(null),
+  fileSavedAt: null,        // last time a family file was saved (phones)
 });
 
+const strings = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x.length <= 64) : []);
+
+/**
+ * Repair device settings. Dashboard prefs are only sanitised here; they are
+ * matched against the installed mini-apps when the dashboard is drawn.
+ */
 export function normaliseDevice(raw) {
   const d = raw && typeof raw === 'object' ? raw : {};
   const prefs = {};
-  for (const [k, v] of Object.entries(d.prefs && typeof d.prefs === 'object' ? d.prefs : {})) prefs[k] = normalisePrefs(v);
+  for (const [k, v] of Object.entries(d.prefs && typeof d.prefs === 'object' ? d.prefs : {})) {
+    prefs[k] = { order: [...new Set(strings(v?.order))], hidden: [...new Set(strings(v?.hidden))].filter((id) => !ALWAYS_SHOWN.has(id)) };
+  }
   return {
     currentPersonId: typeof d.currentPersonId === 'string' ? d.currentPersonId : null,
     prefs,
     theme: ['system', 'light', 'dark'].includes(d.theme) ? d.theme : 'system',
     onboardedAt: typeof d.onboardedAt === 'string' ? d.onboardedAt : null,
+    storageMode: d.storageMode === 'folder' ? 'folder' : 'device',
+    folderName: typeof d.folderName === 'string' ? d.folderName : null,
+    music: normaliseMusicPrefs(d.music),
+    fileSavedAt: typeof d.fileSavedAt === 'string' ? d.fileSavedAt : null,
   };
 }
 
@@ -95,6 +116,17 @@ export function createLocalStore(backing) {
     saveDevice(device) {
       try { backing.setItem(KEYS.device, JSON.stringify(device)); return { ok: true }; } catch {
         return { ok: false, error: 'Your settings for this device could not be saved.' };
+      }
+    },
+
+    /** Installed mini-apps (this device's copy; the folder's Core/installed.json is authoritative). */
+    loadRegistry() {
+      try { const t = read(KEYS.registry); return t ? JSON.parse(t) : null; } catch { return null; }
+    },
+
+    saveRegistry(registry) {
+      try { backing.setItem(KEYS.registry, JSON.stringify(registry)); return { ok: true }; } catch {
+        return { ok: false, error: 'The list of installed mini-apps could not be saved on this device.' };
       }
     },
 

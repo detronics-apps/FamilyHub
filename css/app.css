@@ -317,3 +317,42 @@ dialog.modal::backdrop { background: rgb(40 25 15 / 45%); }
 @media (max-width: 360px) {
   .who-btn__name { display: none; }
 }
+
+/* ---------- platform: slots, status, session, player, mini-app frames ---------- */
+.slot-header, .slot-crumbs, .slot-footer, .view-host, .session-host { display: contents; }
+
+.chip-status { min-height: 36px; padding: 4px 12px; font-size: 13px; gap: 6px; border-color: var(--border); background: var(--panel-2); color: var(--text-dim); }
+.chip-status__glyph { font-weight: 700; }
+.chip-status--ok { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
+.chip-status--warn { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+.chip-status--busy .chip-status__glyph { display: inline-block; animation: spin 1.2s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.session { border-color: var(--accent); background: var(--accent-soft); display: flex; flex-direction: column; gap: var(--space-2); }
+.session__top { display: flex; gap: var(--space-3); align-items: center; }
+.session__clock { font: 700 28px/1 var(--font-mono); color: var(--text); white-space: nowrap; }
+.session__music { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; padding: var(--space-2) 0; border-top: 1px dashed var(--border-strong); }
+.session__music .checkline { min-height: 34px; }
+
+.player {
+  position: fixed; left: 50%; bottom: var(--space-3); transform: translateX(-50%);
+  z-index: 350; width: min(560px, calc(100vw - 24px));
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--panel); border: 1px solid var(--border-strong); border-radius: 999px;
+  box-shadow: var(--shadow-lg);
+}
+.player[hidden] { display: none; }
+.player__note { color: var(--accent-strong); font-size: 18px; }
+.player__title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+body:has(.player:not([hidden])) .app-footer { padding-bottom: 72px; }
+
+.miniapp-frame { width: 100%; min-height: 240px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); }
+
+.tile--core { background: var(--panel-2); box-shadow: none; }
+
+@media (max-width: 520px) {
+  .chip-status__text { display: none; }
+  .chip-status { width: var(--tap); padding: 0; }
+  .session__clock { font-size: 22px; }
+}

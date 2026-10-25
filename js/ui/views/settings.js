@@ -6,13 +6,16 @@ import { setHouseholdName, addPerson, updatePerson, removePerson, PERSON_COLOURS
 import { resolveDashboard, moveModule, hideModule, showModule } from '../../dashboard.js';
 import { exportData, exportFilename, parseImport } from '../../storage.js';
 import { prefsKey } from './dashboard.js';
+import { driveSection } from './drive.js';
+import { OFFER, END_ACTIONS, END_ACTION_LABEL } from '../../music.js';
 
 export function settingsView(ctx, route) {
-  const sections = [householdSection(ctx), peopleSection(ctx), dashboardSection(ctx), dataSection(ctx)];
-  if (route.sub === 'dashboard' && ctx.app.ui.scrolledTo !== location.hash) {
-    // Arriving from "Rearrange these buttons": bring that section into view, once.
+  const sections = [householdSection(ctx), peopleSection(ctx), driveSection(ctx), dashboardSection(ctx), musicSection(ctx), dataSection(ctx)];
+  const target = { dashboard: 'set-dashboard', drive: 'set-drive', music: 'set-music' }[route.sub];
+  if (target && ctx.app.ui.scrolledTo !== location.hash) {
+    // Arriving from a link to one section: bring it into view, once.
     ctx.app.ui.scrolledTo = location.hash;
-    requestAnimationFrame(() => document.getElementById('set-dashboard')?.scrollIntoView({ block: 'start' }));
+    requestAnimationFrame(() => document.getElementById(target)?.scrollIntoView({ block: 'start' }));
   }
   return el('section', { class: 'stack', 'aria-labelledby': 'settings-title' }, [
     el('h1', { id: 'settings-title', text: 'Settings' }),
@@ -80,27 +83,28 @@ function dashboardSection(ctx) {
   const key = prefsKey(ctx);
   const person = ctx.currentPerson();
   const prefs = ctx.app.device.prefs[key];
-  const { visible, hidden } = resolveDashboard(prefs);
+  const mods = ctx.dashboardModules();
+  const { visible, hidden } = resolveDashboard(prefs, mods);
   const save = (next) => { ctx.setDevice({ prefs: { ...ctx.app.device.prefs, [key]: next } }); ctx.render(); };
 
   return el('div', { class: 'panel stack', id: 'set-dashboard' }, [
     el('h2', { text: 'Your dashboard' }),
     el('p', { class: 'small muted', text: person
-      ? `The order and hidden buttons for ${person.name}, on this device. Everyone can arrange their own.`
+      ? `The order and hidden buttons for ${person.name}, on this device. Everyone can arrange their own. Hiding only takes a button off the home screen - to turn a mini-app off or remove it, use Mini-apps.`
       : 'You have not said who you are, so this arranges the shared "just looking" dashboard on this device.' }),
     el('ol', { class: 'list' }, visible.map((m, i) => el('li', {}, [
-      el('span', { class: 'list__main' }, [el('strong', { text: m.name }), m.status !== 'ready' ? el('span', { class: 'small muted', text: ' · not built yet' }) : null]),
-      el('button', { class: 'btn btn-small btn-icon', type: 'button', text: '↑', 'aria-label': `Move ${m.name} up`, disabled: i === 0, 'data-field': `up:${m.id}`, on: { click: () => save(moveModule(prefs, m.id, -1)) } }),
-      el('button', { class: 'btn btn-small btn-icon', type: 'button', text: '↓', 'aria-label': `Move ${m.name} down`, disabled: i === visible.length - 1, 'data-field': `down:${m.id}`, on: { click: () => save(moveModule(prefs, m.id, 1)) } }),
-      m.id === 'settings'
+      el('span', { class: 'list__main' }, [el('strong', { text: m.name }), null]),
+      el('button', { class: 'btn btn-small btn-icon', type: 'button', text: '↑', 'aria-label': `Move ${m.name} up`, disabled: i === 0, 'data-field': `up:${m.id}`, on: { click: () => save(moveModule(prefs, m.id, -1, mods)) } }),
+      el('button', { class: 'btn btn-small btn-icon', type: 'button', text: '↓', 'aria-label': `Move ${m.name} down`, disabled: i === visible.length - 1, 'data-field': `down:${m.id}`, on: { click: () => save(moveModule(prefs, m.id, 1, mods)) } }),
+      m.id === 'settings' || m.id === 'library'
         ? el('span', { class: 'small muted', style: { minWidth: '64px' }, text: 'always shown' })
-        : el('button', { class: 'btn btn-small', type: 'button', text: 'Hide', 'data-field': `hide:${m.id}`, 'aria-label': `Hide ${m.name}`, on: { click: () => save(hideModule(prefs, m.id)) } }),
+        : el('button', { class: 'btn btn-small', type: 'button', text: 'Hide', 'data-field': `hide:${m.id}`, 'aria-label': `Hide ${m.name}`, on: { click: () => save(hideModule(prefs, m.id, mods)) } }),
     ]))),
     hidden.length ? el('div', {}, [
       el('h3', { text: 'Hidden' }),
       el('ul', { class: 'list' }, hidden.map((m) => el('li', {}, [
         el('span', { class: 'list__main', text: m.name }),
-        el('button', { class: 'btn btn-small', type: 'button', text: 'Show', 'data-field': `show:${m.id}`, 'aria-label': `Show ${m.name}`, on: { click: () => save(showModule(prefs, m.id)) } }),
+        el('button', { class: 'btn btn-small', type: 'button', text: 'Show', 'data-field': `show:${m.id}`, 'aria-label': `Show ${m.name}`, on: { click: () => save(showModule(prefs, m.id, mods)) } }),
       ]))),
     ]) : null,
   ]);
@@ -153,18 +157,66 @@ function dataSection(ctx) {
     ]) : null,
     el('details', { class: 'more' }, [
       el('summary', { text: 'Delete everything on this device' }),
-      el('p', { class: 'small', text: 'Removes the household, its history, and this device’s settings. Export first if you might want any of it.' }),
+      el('p', { class: 'small', text: 'Removes the household, its history, mini-app records kept on this device, and this device’s settings. Your Google Drive folder is not touched. Export first if you might want any of it.' }),
       el('button', {
         class: 'btn btn-danger', type: 'button', text: 'Delete everything',
         on: {
           click: async () => {
             if (!await confirmAction({ title: 'Delete everything?', text: 'This cannot be undone.', confirmLabel: 'Delete everything', danger: true })) return;
             ctx.store.clearAll();
+            try { indexedDB.deleteDatabase('familyhub'); } catch { /* nothing stored there */ }
             location.hash = '#/';
             location.reload();   // a clean start: the welcome appears again
           },
         },
       }),
     ]),
+  ]);
+}
+
+function musicSection(ctx) {
+  const prefs = ctx.app.device.music;
+  const save = (patch) => { ctx.setDevice({ music: { ...prefs, ...patch } }); ctx.render(); };
+  const folderMode = ctx.sync.appStore()?.kind === 'folder';
+  const count = el('span', { class: 'small muted' });
+  if (prefs.source === 'folder') {
+    ctx.media.listTracks('folder').then((t) => {
+      count.textContent = folderMode
+        ? `${t.length} music file${t.length === 1 ? '' : 's'} found in Data / Media / Music.`
+        : 'Connect your Drive folder to play music from it, or choose files on this device.';
+    }).catch(() => {});
+  } else {
+    const n = ctx.media.deviceFileCount();
+    count.textContent = `${n} file${n === 1 ? '' : 's'} chosen for this session.`;
+  }
+  const picker = el('input', { type: 'file', accept: 'audio/*', multiple: true, hidden: true });
+  picker.addEventListener('change', () => { ctx.media.chooseDeviceFiles(picker.files); save({ source: 'device' }); });
+  const sel = (id, value, options, onChange) => el('select', {
+    class: 'select', id, 'data-field': id, style: { maxWidth: '320px' }, on: { change: (e) => onChange(e.target.value) },
+  }, options.map(([v, label]) => el('option', { value: v, text: label, selected: v === value })));
+  const m = ctx.media.state;
+  const playing = m.status === 'playing' || m.status === 'loading';
+  const field = (id, label, control) => el('div', { class: 'field' }, [el('label', { class: 'field__label', for: id, text: label }), control]);
+
+  return el('div', { class: 'panel stack', id: 'set-music' }, [
+    el('h2', { text: 'Music' }),
+    el('p', { class: 'small', text: 'Optional music while you do a timed task. It plays from your own files - nothing is uploaded, and only the track that is playing is held in memory.' }),
+    el('div', { class: 'grid-2' }, [
+      field('mu-offer', 'When I start a timed task', sel('mu-offer', prefs.offer, OFFER.map((o) => [o, { ask: 'Ask me', always: 'Play music', never: 'No music' }[o]]), (v) => save({ offer: v }))),
+      field('mu-end', 'When the timer ends', sel('mu-end', prefs.endAction, END_ACTIONS.map((a) => [a, END_ACTION_LABEL[a]]), (v) => save({ endAction: v }))),
+      field('mu-src', 'Play from', sel('mu-src', prefs.source, [['folder', 'My Drive folder (Data / Media / Music)'], ['device', 'Files I choose on this device']], (v) => save({ source: v }))),
+      field('mu-vol', 'Volume', el('input', { type: 'range', id: 'mu-vol', min: '0', max: '1', step: 'any', value: String(prefs.volume), 'data-field': 'mu-vol', on: { change: (e) => save({ volume: Number(e.target.value) }) } })),
+    ]),
+    el('label', { class: 'checkline' }, [el('input', { type: 'checkbox', checked: prefs.shuffle, on: { change: (e) => save({ shuffle: e.target.checked }) } }), 'Shuffle']),
+    count,
+    el('div', { class: 'row' }, [
+      prefs.source === 'device' || !ctx.folderSupported() ? el('button', { class: 'btn', type: 'button', text: 'Choose music files', on: { click: () => picker.click() } }) : null,
+      playing
+        ? el('button', { class: 'btn', type: 'button', text: 'Stop music', on: { click: () => ctx.media.stop() } })
+        : el('button', { class: 'btn', type: 'button', text: 'Try it', 'data-field': 'mu-try', on: { click: () => ctx.media.start() } }),
+      picker,
+    ]),
+    m.status === 'error' && m.error ? el('p', { class: 'small muted', role: 'status', text: m.error }) : null,
+    el('p', { class: 'small muted', text: 'Spotify and other streaming services are not supported - their playback rules are different. Formats: mp3, m4a, aac, ogg, opus, wav, flac, webm (what plays depends on your browser).' }),
   ]);
 }

@@ -10,7 +10,7 @@
 //
 // Records always carry: id, rev (counts edits), createdAt, updatedAt, schema.
 
-import { stableStringify } from './folder-store.js';
+import { stableStringify, walk } from './folder-store.js';
 import { mergeRecord3 } from './merge.js';
 
 export const INDEX_KIND = 'family-hub-index';
@@ -219,4 +219,45 @@ export function createCollection(store, spec) {
       return out;
     },
   };
+}
+
+/* ------------------------------------------------------------------ *
+ * Moving mini-app data between stores - this device <-> the Drive folder -
+ * without losing anything: a record is copied only where the target has no
+ * copy or an older one (lower rev); indexes are merged entry by entry.
+ * The household and chores files are not touched here (folder-sync.js owns them).
+ * ------------------------------------------------------------------ */
+
+const OWNED_ELSEWHERE = [/^Data\/household\//, /^Data\/chores\/(chores\.json|events\/)/, /^Data\/Media\//];
+
+export async function copyAppData(from, to) {
+  const report = { copied: 0, merged: 0, kept: 0, skipped: [] };
+  const paths = (await walk(from, 'Data')).filter((p) => !OWNED_ELSEWHERE.some((re) => re.test(p)));
+  for (const path of paths) {
+    const src = await from.read(path);
+    if (src == null) continue;
+    const dst = await to.read(path);
+    if (dst == null) { await to.write(path, src); report.copied += 1; continue; }
+    if (dst === src) continue;
+    try {
+      const a = JSON.parse(src);
+      const b = JSON.parse(dst);
+      if (path.endsWith('/index.json') && a.kind === INDEX_KIND && b.kind === INDEX_KIND) {
+        const merged = { ...b, entries: { ...b.entries } };
+        for (const [id, e] of Object.entries(a.entries ?? {})) {
+          if (!merged.entries[id] || (e.rev ?? 0) > (merged.entries[id].rev ?? 0)) merged.entries[id] = e;
+        }
+        await to.write(path, stableStringify(merged));
+        report.merged += 1;
+      } else if ((a.rev ?? 0) > (b.rev ?? 0)) {
+        await to.write(path, src);
+        report.copied += 1;
+      } else {
+        report.kept += 1;     // the target's copy is as new or newer
+      }
+    } catch {
+      report.skipped.push(path);
+    }
+  }
+  return report;
 }

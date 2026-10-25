@@ -1,7 +1,7 @@
 // Plan: the household's chore definitions, the editor, and the rooms.
 
-import { el } from '../dom.js';
-import { modal, confirmAction, choreMeta, statusLine } from '../common.js';
+import { el } from '../../ui/dom.js';
+import { modal, confirmAction, choreMeta, statusLine } from '../../ui/common.js';
 import { occurrences, occurrence } from '../../recurrence.js';
 import { addChore, updateChore, deleteChore, addRoom, renameRoom, removeRoom, normaliseChore } from '../../model.js';
 
