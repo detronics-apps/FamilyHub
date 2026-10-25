@@ -1,8 +1,10 @@
-// Boot, app state, routing and the frame. Views live in js/ui/views/.
+// Boot, app state, routing and the frame. Screens live in js/ui/views/ (core)
+// and js/apps/<id>/ (mini-apps).
 //
-// The household is only ever changed through `commit(next)`, which saves it
-// through the storage boundary and re-renders. Nothing here touches
-// localStorage directly.
+// The household is only ever changed through `commit(next)`: saved on this
+// device straight away, then written to the family's Drive folder by the sync
+// controller (js/ui/sync.js). Mini-apps get a `hub` (js/ui/hub.js) holding only
+// what their permissions allow; third-party ones run sandboxed (js/ui/sandbox.js).
 
 import { createLocalStore } from './storage.js';
 import { emptyHousehold, recordEvent, removeEvent, addPerson, normaliseHousehold } from './model.js';
@@ -10,20 +12,30 @@ import { toDay, fmtDay } from './dates.js';
 import { occurrence } from './recurrence.js';
 import { defaultFilters } from './matching.js';
 import { demoHousehold } from './demo.js';
+import { CORE_TILES } from './dashboard.js';
+import { starterRegistry, reconcileStarters, normaliseRegistry, setEnabled } from './miniapps.js';
+import { starterManifests, starter } from './apps/catalogue.js';
 import { el, clear } from './ui/dom.js';
 import { renderNotices, captureFocus, restoreFocus } from './ui/patterns.js';
 import { avatar, modal, HOUSE_ICON } from './ui/common.js';
+import { createSync, folderSupported } from './ui/sync.js';
+import { createHubFactory } from './ui/hub.js';
+import { createMedia } from './ui/media.js';
+import { createSession, sessionPanel } from './ui/session.js';
+import { renderThirdParty, postRoute } from './ui/sandbox.js';
+import { cachedPackage } from './ui/packages.js';
 import { dashboardView } from './ui/views/dashboard.js';
-import { choresView } from './ui/views/chores.js';
 import { settingsView } from './ui/views/settings.js';
+import { libraryView } from './ui/views/library.js';
 import { helpView } from './ui/views/help.js';
 import { placeholderView } from './ui/views/placeholder.js';
 import { recoveryView } from './ui/views/recovery.js';
 import { openWelcome } from './ui/views/welcome.js';
 import { openDoc } from './ui/views/docs.js';
-import { MODULES } from './dashboard.js';
+import { syncChip, syncNotices } from './ui/views/drive.js';
+import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.1.0';
+export const APP_VERSION = '0.2.0';
 
 const store = createLocalStore(window.localStorage);
 
@@ -32,6 +44,7 @@ const app = {
   household: null,
   loadError: null,          // { error, previousAvailable } when the saved data is unreadable
   device: store.loadDevice(),
+  registry: null,           // installed mini-apps (miniapps.js)
   flash: [],                // short-lived notices (with Undo) shown until the next navigation
   storageError: null,
   execute: { filters: defaultFilters(), phase: 'choose', justDone: null, showAll: false },
@@ -52,7 +65,30 @@ function commit(next, { quiet = false } = {}) {
   app.household = next;
   const result = store.saveHousehold(next);
   app.storageError = result.ok ? null : result.error;
+  ctx.sync.schedule();
   if (!quiet) render();
+}
+
+/** Another device's version arrived (or a merge finished): show it, without writing it back. */
+function replaceHousehold(next, message = null) {
+  app.household = next;
+  const result = store.saveHousehold(next);
+  app.storageError = result.ok ? null : result.error;
+  if (message) flash({ id: `sync:${Date.now()}`, level: 'info', text: message });
+  render();
+}
+
+function saveRegistry(next) {
+  app.registry = normaliseRegistry(next);
+  const r = store.saveRegistry(app.registry);
+  if (!r.ok) app.storageError = r.error;
+  ctx.sync.schedule();
+  render();
+}
+
+function replaceRegistry(next) {
+  app.registry = normaliseRegistry(next);
+  store.saveRegistry(app.registry);
 }
 
 function setDevice(patch) {
@@ -62,7 +98,7 @@ function setDevice(patch) {
 }
 
 function flash(notice) {
-  app.flash = [notice, ...app.flash.filter((n) => n.id !== notice.id)].slice(0, 3);
+  app.flash = [{ ...notice, at: Date.now() }, ...app.flash.filter((n) => n.id !== notice.id)].slice(0, 3);
 }
 
 /** Record done / skipped / deferred / rescheduled / dropped, with an Undo. */
@@ -122,10 +158,89 @@ function startOwn(name, personName) {
   setDevice({ currentPersonId: person?.id ?? null });
 }
 
+/* ------------------------------------------------------------ mini-apps */
+
+const loadedModules = new Map();     // starter id -> module | Error
+const loadingModules = new Set();
+
+/** Installed, enabled mini-apps as dashboard tiles, followed by the core tiles. */
+function dashboardModules() {
+  const apps = Object.entries(app.registry.apps).filter(([, a]) => a.enabled).map(([id, a]) => ({
+    id, name: a.name, purpose: manifestFor(id)?.description ?? '', status: 'ready', source: a.source,
+  }));
+  return [...apps, ...CORE_TILES];
+}
+
+function manifestFor(id) {
+  return starter(id)?.manifest ?? cachedPackage(id)?.manifest ?? null;
+}
+
+function installedManifests() {
+  return Object.keys(app.registry.apps).map(manifestFor).filter(Boolean);
+}
+
+function starterModule(id) {
+  if (loadedModules.has(id)) return loadedModules.get(id);
+  if (!loadingModules.has(id)) {
+    loadingModules.add(id);
+    starter(id).load().then(
+      (m) => { loadedModules.set(id, m); loadingModules.delete(id); render(); },
+      (err) => { loadedModules.set(id, err); loadingModules.delete(id); render(); },
+    );
+  }
+  return null;
+}
+
+/** A mini-app's screen. Any failure stays inside this panel - the rest of Family Hub carries on. */
+function appView(route, notices) {
+  const id = route.name;
+  const entry = app.registry.apps[id];
+  const label = entry?.name ?? starter(id)?.manifest.name ?? id;
+
+  if (!entry) {
+    if (!starter(id) && !app.registry.retained[id]) return placeholderView(ctx, route);
+    return el('section', { class: 'panel empty' }, [
+      el('h1', { text: label }),
+      el('p', { text: `${label} is not installed.${app.registry.retained[id] ? ' Its records are still kept in your folder.' : ''}` }),
+      el('a', { class: 'btn btn-primary', href: '#/library', text: 'Open Mini-apps to install it' }),
+    ]);
+  }
+  if (!entry.enabled) {
+    return el('section', { class: 'panel empty' }, [
+      el('h1', { text: label }),
+      el('p', { text: `${label} is turned off. Its records are kept.` }),
+      el('button', { class: 'btn btn-primary', type: 'button', text: `Turn ${label} on`, on: { click: () => saveRegistry(setEnabled(app.registry, id, true)) } }),
+    ]);
+  }
+
+  const failed = (err) => el('section', { class: 'panel stack', role: 'alert' }, [
+    el('h1', { text: label }),
+    el('p', { text: `${label} was stopped. The rest of Family Hub is fine, and nothing was lost.` }),
+    el('p', { class: 'small muted', text: String(err?.message || err) }),
+    el('div', { class: 'row' }, [
+      el('button', { class: 'btn', type: 'button', text: 'Try again', on: { click: () => { loadedModules.delete(id); render(); } } }),
+      el('button', { class: 'btn', type: 'button', text: `Turn ${label} off`, on: { click: () => saveRegistry(setEnabled(app.registry, id, false)) } }),
+    ]),
+  ]);
+
+  if (entry.source === 'folder') return renderThirdParty(ctx, id, route, failed);
+
+  const mod = starterModule(id);
+  if (!mod) return el('p', { class: 'muted', text: `Opening ${label}…` });
+  if (mod instanceof Error) return failed(mod);
+  try {
+    const hub = ctx.hubFor(starter(id).manifest, entry.granted);
+    return mod.render(hub, route, notices);
+  } catch (err) {
+    console.error(err);
+    return failed(err);
+  }
+}
+
 /* -------------------------------------------------------------- routing */
 
 function parseRoute() {
-  const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
   return { name: parts[0] || 'home', sub: parts[1] || null, rest: parts.slice(2) };
 }
 
@@ -133,8 +248,6 @@ function go(hash) {
   if (location.hash === hash) render();
   else location.hash = hash;
 }
-
-let lastRouteKey = null;
 
 /* ---------------------------------------------------------------- frame */
 
@@ -159,6 +272,7 @@ function buildHeader() {
       ]),
     ]),
     el('div', { class: 'header-actions' }, [
+      app.household ? syncChip(ctx) : null,
       app.household ? el('button', {
         class: 'btn who-btn', type: 'button', 'data-field': 'who',
         title: 'Who is using Family Hub? (a convenience, not a login)',
@@ -198,18 +312,26 @@ function openWho() {
   });
 }
 
-function buildCrumbs(route) {
+function routeLabel(route) {
   if (route.name === 'home') return null;
-  const mod = MODULES.find((m) => m.id === route.name);
-  const label = mod?.name ?? { help: 'How to use' }[route.name] ?? 'Page';
+  return { help: 'How to use', settings: 'Settings', library: 'Mini-apps' }[route.name]
+    ?? app.registry.apps[route.name]?.name ?? starter(route.name)?.manifest.name ?? 'Page';
+}
+
+function buildCrumbs(route) {
+  const label = routeLabel(route);
+  if (!label) return null;
   return el('nav', { class: 'crumbs', 'aria-label': 'You are here' }, [
     el('a', { href: '#/', text: 'Home' }), ' › ', el('span', { text: label }),
   ]);
 }
 
 function buildFooter() {
+  const where = app.device.storageMode === 'folder'
+    ? 'Your family’s data lives in your own Google Drive folder. Nothing goes anywhere else.'
+    : 'Everything stays in this browser - nothing is uploaded.';
   return el('footer', { class: 'app-footer' }, [
-    el('span', { text: 'Everything stays in this browser - nothing is uploaded.' }),
+    el('span', { text: where }),
     el('nav', { 'aria-label': 'About this app' }, [
       el('a', { href: '#/help', text: 'How to use' }),
       el('button', { class: 'linkish', type: 'button', text: 'Privacy & your data', on: { click: () => openDoc('privacy') } }),
@@ -223,81 +345,134 @@ function buildFooter() {
 /* --------------------------------------------------------------- render */
 
 const ctx = {
-  app, store, commit, setDevice, act, undo, go, flash, seedDemo, startOwn,
+  app, store, commit, replaceHousehold, saveRegistry, replaceRegistry, setDevice, act, undo, go, flash, seedDemo, startOwn,
   render: () => render(),
   today,
   currentPerson,
+  dashboardModules,
+  manifestFor,
+  installedManifests,
+  folderSupported,
+  starterManifests,
 };
+ctx.sync = createSync(ctx);
+ctx.media = createMedia({ getStore: () => ctx.sync.appStore(), getPrefs: () => app.device.music, onChange: () => render() });
+ctx.session = createSession(ctx);
+ctx.timer = ctx.session;
+const createHub = createHubFactory(ctx);
+ctx.hubFor = (manifest, granted) => createHub(manifest, granted, { otherManifests: installedManifests });
+ctx.collectionFor = createHub.collectionFor;
+ctx.invalidateAll = createHub.invalidateAll;
+ctx.scanImports = () => scanImportFolder(ctx);
+
+let lastRouteKey = null;
+let renderQueued = false;
 
 function render() {
+  // Collapse bursts (a sync finishing while a click re-renders) into one frame's work.
+  if (renderQueued) return;
+  renderQueued = true;
+  queueMicrotask(() => { renderQueued = false; renderNow(); });
+}
+
+function renderNow() {
   const route = parseRoute();
-  const routeKey = `${route.name}/${route.sub}`;
+  const routeKey = `${route.name}/${route.sub}/${route.rest.join('/')}`;
   const changed = routeKey !== lastRouteKey;
-  if (changed && lastRouteKey !== null) { app.flash = []; app.ui.scrolledTo = null; }
+  // Leaving a screen clears its notices - except one raised just now (a save that then moved on).
+  if (changed && lastRouteKey !== null) { app.flash = app.flash.filter((n) => Date.now() - n.at < 1500); app.ui.scrolledTo = null; }
   const snap = captureFocus();
   const scrollY = window.scrollY;
 
-  clear(dom.root);
-  dom.root.append(buildHeader());
+  clear(dom.header).append(buildHeader());
+  clear(dom.crumbs);
   const crumbs = buildCrumbs(route);
-  if (crumbs) dom.root.append(crumbs);
-  const main = el('main', { class: 'app-main', id: 'main', tabindex: '-1' });
-  dom.root.append(main, buildFooter());
+  if (crumbs) dom.crumbs.append(crumbs);
+  clear(dom.footer).append(buildFooter());
 
   // Two slots: what just happened (with its Undo) is never folded away with
   // the standing notices underneath it.
-  const flashHost = el('div', { class: 'notices-host', 'aria-live': 'polite' });
-  const notices = el('div', { class: 'notices-host' });
-  main.append(flashHost, notices);
   const items = [];
   if (app.storageError) items.push({ id: `storage:${app.storageError}`, level: 'error', text: app.storageError });
+  // Drive notices that need an answer get their own slot, never folded in with the rest.
+  const driveItems = app.household ? syncNotices(ctx) : [];
 
+  let view;
+  let sticky = false;
   if (app.loadError) {
-    main.append(recoveryView(ctx));
+    view = recoveryView(ctx);
   } else if (!app.household) {
-    main.append(el('section', { class: 'panel empty' }, [
+    view = el('section', { class: 'panel empty' }, [
       el('h1', { text: 'Welcome to Family Hub' }),
       el('p', { text: 'A calm place to share the everyday load of running a home.' }),
       el('button', { class: 'btn btn-primary', type: 'button', text: 'Get started', on: { click: () => openWelcome(ctx) } }),
-    ]));
+    ]);
   } else {
-    const view = {
-      home: dashboardView, chores: choresView, settings: settingsView, help: helpView,
-    }[route.name] || placeholderView;
-    main.append(view(ctx, route, items));
+    const core = { home: dashboardView, settings: settingsView, help: helpView, library: libraryView }[route.name];
+    const entry = app.registry.apps[route.name];
+    sticky = !core && entry?.source === 'folder' && entry.enabled && Boolean(cachedPackage(route.name));
+    if (core) view = core(ctx, route, items);
+    else if (!(sticky && dom.viewStickyId === route.name)) view = appView(route, items);
   }
-  renderNotices(notices, items, render);
-  renderNotices(flashHost, app.flash.slice(0, 1), render);   // newest only
+
+  // A sandboxed mini-app keeps its frame (and its state) while you stay in it;
+  // a change of screen is passed in as a message instead of a reload.
+  if (sticky && dom.viewStickyId === route.name && !view) {
+    if (changed) postRoute(route.name, route);
+  } else {
+    clear(dom.viewHost).append(view);
+    dom.viewStickyId = sticky ? route.name : null;
+  }
+  clear(dom.session);
+  if (ctx.session.state()) dom.session.append(sessionPanel(ctx));
+  renderNotices(dom.drive, driveItems, render);
+  renderNotices(dom.notices, items, render);
+  renderNotices(dom.flash, app.flash.slice(0, 1), render);   // newest only
 
   restoreFocus(snap);
   if (changed) {
     window.scrollTo(0, 0);
-    if (lastRouteKey !== null) main.focus?.({ preventScroll: true });
+    if (lastRouteKey !== null) dom.main.focus?.({ preventScroll: true });
   } else {
     window.scrollTo(0, scrollY);
     requestAnimationFrame(() => window.scrollTo(0, scrollY));
   }
   lastRouteKey = routeKey;
-  document.title = route.name === 'home' ? 'Family Hub' : `${buildCrumbs(route)?.lastChild.textContent ?? ''} - Family Hub`;
+  const label = routeLabel(route);
+  document.title = label ? `${label} - Family Hub` : 'Family Hub';
 }
 
 /* ----------------------------------------------------------------- boot */
 
 function init() {
   applyTheme();
-  dom.root = el('div', { id: 'app', style: { display: 'contents' } });
-  document.body.append(dom.root);
+  dom.header = el('div', { class: 'slot-header' });
+  dom.crumbs = el('div', { class: 'slot-crumbs' });
+  dom.flash = el('div', { class: 'notices-host', 'aria-live': 'polite' });
+  dom.drive = el('div', { class: 'notices-host' });
+  dom.notices = el('div', { class: 'notices-host' });
+  dom.viewHost = el('div', { class: 'view-host' });
+  dom.session = el('div', { class: 'session-host' });
+  dom.main = el('main', { class: 'app-main', id: 'main', tabindex: '-1' }, [dom.flash, dom.drive, dom.notices, dom.session, dom.viewHost]);
+  dom.footer = el('div', { class: 'slot-footer' });
+  document.body.append(el('div', { id: 'app', style: { display: 'contents' } }, [dom.header, dom.crumbs, dom.main, dom.footer]));
 
   const loaded = store.loadHousehold();
   if (loaded.ok) app.household = loaded.household;
   else app.loadError = { error: loaded.error, previousAvailable: loaded.previousAvailable };
 
+  const storedRegistry = store.loadRegistry();
+  app.registry = reconcileStarters(storedRegistry ?? starterRegistry(starterManifests()), starterManifests());
+  store.saveRegistry(app.registry);
+
   window.addEventListener('hashchange', render);
-  render();
+  renderNow();
 
   // First visit: nothing saved yet. Ask, rather than invent a family.
   if (loaded.ok && !loaded.household && !app.device.onboardedAt) openWelcome(ctx);
   else if (loaded.ok && !loaded.household) commit(emptyHousehold());
+
+  if (loaded.ok) ctx.sync.restore();
 }
 
 init();

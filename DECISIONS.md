@@ -68,3 +68,82 @@ private tickets or any medical/financial data (Phases 6 and 8).
 ready; the rules are not.
 
 **O-6 Reminders/notifications** — none in this release.
+
+## Platform additions (2026-10-25) — workstreams W1 mini-apps, W2 Google Drive, W3 music
+
+Requirements: the owner's "Three Additional Requirements" brief. Work happens on the `platform`
+branch; `main` (the live site) is untouched until the owner merges.
+
+**D-013 (W2) No publisher, no sign-in: Drive is reached as a folder.** The owner's rule for every
+Detronics app holds: the app talks to no server, nobody signs in to anything of the publisher's,
+and each family's data is theirs alone. The Google Drive REST API was considered and rejected — it
+requires a registered publisher on every family's consent screen. Instead (the method in the
+detronics-app skill, `references/google-drive-sync.md`): Google Drive for Desktop puts the family's
+Drive folder on the computer; the person picks it once in the app (File System Access API); the app
+reads and writes ordinary files there and Drive for Desktop uploads them. Works in Chrome and Edge
+on a computer. The folder handle is remembered in IndexedDB; after a restart the browser may ask
+for permission again, which needs one click ("Reconnect").
+
+**D-014 (W2) Phones: manual open/save of a family file, honestly labelled.** Phone browsers cannot
+keep a live link to a folder. On a phone the app works fully on its own device copy, and offers
+"Save family file to Drive" (the phone's share menu → Drive) and "Open family file from Drive"
+(the phone's file picker), which merges using the same rules as below. The phone is never shown as
+"synced".
+
+**D-015 (W2) The Drive folder is authoritative; the browser keeps a working copy.** Every change is
+saved on the device first and then written to the folder within about a second. Status is always
+one of: *Saved to your Drive folder* (with time — Drive for Desktop then uploads it; the app cannot
+see the upload itself and says so), *Saving*, *On this device only* (folder not connected or not
+reachable), *Reconnect needed*, *Needs your decision*. "This device only" (the v0.1 mode) stays for
+anyone without Drive.
+
+**D-016 (W2) Conflicts are resolved by kind of data, never by blanket last-write-wins.** Another
+laptop can change the folder at any time (through Drive). Before each write the app re-reads the
+files and compares with the copy it last synced (the base):
+- Nobody else changed it → write.
+- They changed it, I did not → take theirs.
+- Both changed → three-way merge per record and per field. Different records or different fields →
+  both kept automatically. Completions (an append-only log) → both sides kept. A deletion on one
+  side and no change on the other → deleted. The same field changed differently, or an edit against
+  a deletion → the person chooses, seeing both values.
+- Indexes are derived and merged automatically.
+
+**D-017 (W2) Folder layout and identity.** Inside the folder the person picks:
+`familyhub.json` (marks the folder, schema version), `Core/` (household settings, installed
+mini-apps), `MiniApps/` (package folders; `ThirdParty/` for other people's), `Data/<app-id>/`
+(records), `Data/Media/Music/` (your audio), `Backups/`. Records carry stable ids, a `rev` and the
+collection's schema version inside the file; filenames are never the identity. Large collections
+are `index.json` (compact summaries) plus one file per record, so a search reads one file, not
+thousands.
+
+**D-018 (W1) Starter-pack mini-apps ship with the core; third-party mini-apps load from the
+folder.** Chores, Tasks, Tickets, Principles and Decisions are first-party: their code is served
+with the app (trusted, versioned with the core). Their manifests are mirrored into
+`MiniApps/<Name>/` so they are visible in Drive. *Deviation from "all packages live in Drive"* —
+needs the owner's OK; having the core execute first-party code read back from Drive adds risk and
+no benefit.
+
+**D-019 (W1) Third-party isolation.** Third-party code runs only in a sandboxed iframe
+(`sandbox="allow-scripts"`, no same-origin) with a Content Security Policy that blocks network
+requests. It cannot reach the app's storage, the folder, or other apps' data. It talks to the core
+only by messages; the core checks every request against the permissions declared in its manifest
+and approved by the person at install. Copying a folder in runs nothing: discovery → validation →
+the person reviews permissions → Install. The code is fingerprinted (SHA-256) at install; if it
+changes on disk it will not run until the change is reviewed. *Residual risk:* a sandboxed app
+could still leak data it was granted by navigating its own frame, so the install screen says to
+grant only apps you trust.
+
+**D-020 (W1) Uninstall keeps data.** Hide (dashboard only) → Disable (not loaded, still installed)
+→ Uninstall (removed, data kept in `Data/<app-id>/`) → Delete data (separate, confirmed).
+Reinstall reconnects retained data when its schema version is one the app understands; otherwise
+the data is left untouched and the person is told why.
+
+**D-021 (W3) Music = a core media service, offered when a timed activity starts.** One player for
+the whole app. Sources: audio files in `Data/Media/Music/` of the connected folder (read one track
+at a time, never uploaded anywhere), or files chosen on this device for the session (phones).
+Playback starts only from a click (browser autoplay rules). Timer, completion and music are
+separate: an audio error can never block Done. Spotify and other streaming services are separate
+future work.
+
+**O-7 (W2) Phone live sync.** Only possible through a registered Google app (rejected, D-013).
+Revisit only if browsers gain folder access on phones.

@@ -6,6 +6,6 @@
   "description": "A calm, local-first home for family chores, plans and shared information.",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "serve": "python -m http.server 8851"
+    "serve": "python tools/serve.py 8851"
   }
 }

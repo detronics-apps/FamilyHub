@@ -45,3 +45,72 @@ walkthrough with a screen reader, Safari/Firefox, a real phone.
 - Settings → Export, then Delete everything, then Import the file: everything returns.
 - Usability (plan §5.3): time how long it takes someone new to find and finish one chore; note
   hesitations; ask whether anything felt like pressure.
+
+## Platform additions (v0.2.0)
+
+### Automated
+
+| Requirement | Test file |
+|---|---|
+| Folder store on a real folder-handle interface; revoked permission reported | folder-store.test.js |
+| Household round-trips through readable files; only changed files written | folder-sync.test.js |
+| Another device changed it → adopted; both changed different things → merged; same field → conflict and nothing written | folder-sync.test.js, merge.test.js |
+| First connect into a folder with a family asks; a different household is never merged in | folder-sync.test.js |
+| Completions from two laptops both kept; an undo survives a merge; edit vs delete asks | merge.test.js |
+| Index + record files; search reads only the index; repair of renamed/deleted/added files | collections.test.js |
+| 5,000 recipes / 2,000 ingredients: one read to open, zero to search, one to open a recipe | collections.test.js (prints timings) |
+| Records never replaced by older copies when moving between device and folder | family-file.test.js |
+| Family file: everything in one file, bad files refused, v0.1 exports still open | family-file.test.js |
+| Manifest validation, permissions, compatibility; install / disable / update / uninstall keeping data / reinstall / delete | miniapps.test.js |
+| Third-party code cannot request first-party permissions or escape its package path | miniapps.test.js |
+| The example package is valid | miniapps.test.js |
+| Timer, play queue, fade, music preferences | media.test.js |
+| Tasks, Tickets, Principles, Decisions rules | tasks/tickets/principles/decisions.test.js |
+
+### Browser checks run (2026-10-25, `?folder=private` - the browser's private storage stands in for the Drive folder)
+
+1. v0.1 data on the device loads unchanged on v0.2. ✔
+2. Connect: folder structure created, household written as readable files, status "Saved to Drive". ✔
+3. Another laptop's change (file edited directly) is adopted on focus, with a notice. ✔
+4. Same chore field changed in the folder and here → "Needs a decision"; folder untouched; dialog
+   shows both values; choice applied to device and folder. ✔
+5. Music from `Data/Media/Music` plays on Start → "Play music"; Done records the chore while music
+   continues; next Start does not restart the playlist; timer end fades and stops; no-music case
+   explains and Done works. ✔
+6. Third-party: discovery, review screen requires "I trust", install. Probe package: network,
+   parent page, localStorage, IndexedDB, outside script, ungranted people, undeclared collection all
+   blocked; own collection allowed. ✔
+7. Changing a package's code on disk stops it with the reason; reviewing re-enables it. ✔
+8. Family Notes code inside the sandbox: add → stored; summary in the index; Read fetches the full
+   record. ✔
+9. Uninstall keeps `Data/<id>`; library lists it; reinstall recovers the records. ✔
+10. Tasks quick add, steps, done; Tickets capture → meeting → decision → trial → observation →
+    action task; links shown both ways; look back → Adapt; Principles examples. ✔
+11. No console errors. ✔
+
+### Not yet run
+
+- A real Google Drive for Desktop folder (needs the owner at the system folder picker).
+- Two real laptops at once; a real phone family-file round trip.
+- Safari/Firefox (folder sync is Chrome/Edge only by design; the rest should work).
+- Keyboard-only and screen-reader passes of the new screens.
+
+## Later modules and importing (v0.2.0, continued)
+
+### Automated
+
+| Requirement | Test file |
+|---|---|
+| Recipes: ingredient lines, scaling, units that may and may not be added, shopping list keeps manual and bought items, nutrition never estimated | meals.test.js |
+| Holidays: dates, budget (over only with a budget), packing, itinerary order | holidays.test.js |
+| Finance: month totals with unplanned spending, saving and debt projections (incl. "never pays off"), goal totals counted once | finance.test.js |
+| Exercise weeks and plans; Health agenda; Faith canon (1,189 chapters), portions and progress | wellbeing.test.js |
+| CSV (quotes, line breaks, BOM, semicolons); templates import their own examples; duplicates and bad lines; detection by name or columns | importer.test.js |
+
+### Browser checks run (2026-10-25, test folder)
+
+12. Meals: recipe typed as lines → scaled 2 → 4 → planned today → shopping list sums and marks "amount not given". ✔
+13. Holidays: trip with dates, plan, starter packing list, cost against budget. ✔
+14. Finance: category and spend → planned/spent/left; a debt below its interest says "never" and the payment that would work; recording a payment. ✔
+15. Exercise log, Health appointment, Faith plan (read a portion) and journal. ✔
+16. Import folder: templates and README written; recipes and chores files brought in and moved to Import/Imported with reports; an unrecognised file moved to Import/Not imported; an existing chore name skipped. ✔

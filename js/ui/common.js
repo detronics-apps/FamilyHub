@@ -113,9 +113,27 @@ export function choreCard(ctx, chore, occ, { label = null, reasons = [], onDone 
         text: 'Not now',
         on: { click: () => { ctx.app.ui.openLater = open ? null : chore.id; ctx.render(); } },
       }),
+      ctx.session && ctx.session.state()?.id !== chore.id ? el('button', {
+        class: 'btn', type: 'button', 'data-field': `start:${chore.id}`, text: 'Start',
+        title: 'Start a timer for this chore (with optional music)',
+        on: {
+          click: () => ctx.session.start({
+            id: chore.id,
+            title: chore.name,
+            minutes: chore.minutes ?? ctx.app.execute.filters.minutes ?? null,
+            onDone: () => { const ev = ctx.act(chore.id, 'done'); onDone?.(ev); },
+          }),
+        },
+      }) : null,
       el('button', {
         class: 'btn btn-primary', type: 'button', 'data-field': `done:${chore.id}`, text: 'Done',
-        on: { click: () => { const ev = ctx.act(chore.id, 'done'); onDone?.(ev); } },
+        on: {
+          click: () => {
+            if (ctx.session?.state()?.id === chore.id) ctx.session.stop();
+            const ev = ctx.act(chore.id, 'done');
+            onDone?.(ev);
+          },
+        },
       }),
     ]),
     open ? laterMenu(ctx, chore, today) : null,

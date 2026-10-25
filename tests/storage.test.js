@@ -81,7 +81,7 @@ test('device settings are kept apart from the household and repaired on load', (
   const d = store.loadDevice();
   assert.equal(d.currentPersonId, 'p1');
   assert.equal(d.theme, 'system');
-  assert.deepEqual(d.prefs.p1.order.slice(0, 2), ['tickets', 'chores']);
+  assert.deepEqual(d.prefs.p1.order, ['tickets', 'nope', 'chores'], 'matched against installed apps later, not here');
   assert.deepEqual(d.prefs.p1.hidden, ['meals']);
   assert.equal(backing.getItem(KEYS.household), null, 'device settings never land in the household');
   assert.deepEqual(normaliseDevice('garbage').prefs, {});
