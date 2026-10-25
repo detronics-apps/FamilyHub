@@ -6,7 +6,13 @@ const howtoText = (h) => `${h.title} ${h.steps.join(' ')}`;
 
 test('everyday words find the app\'s own terms', () => {
   const find = (q) => HOWTOS.filter((h) => guideMatches(howtoText(h), q)).map((h) => h.id);
-  assert.ok(find('backup').includes('export'));
+  assert.ok(find('backup').includes('backup'));
+  assert.ok(find('sync').includes('drive'));
+  assert.ok(find('iphone').includes('phone'));
+  assert.ok(find('overwrite').includes('conflict'));
+  assert.ok(find('uninstall').includes('miniapps'));
+  assert.ok(find('spotify').length === 0 || find('playlist').includes('music'));
+  assert.ok(find('agenda').includes('meeting'));
   assert.ok(find('postpone').includes('later'));
   assert.ok(find('five minutes').includes('quick'));
   assert.ok(find('login').includes('who'));

@@ -4,17 +4,27 @@
 // Each app term carries the everyday words a person might search with instead.
 export const SEARCH_ALIASES = {
   'do something now': ['five minutes', 'spare time', 'what should i do', 'quick job', 'suggest', 'find a task', 'execute'],
-  chore: ['housework', 'cleaning', 'job', 'task', 'tidy'],
+  chore: ['housework', 'cleaning', 'job', 'tidy'],
   plan: ['add a chore', 'create', 'new chore', 'set up', 'schedule', 'how often'],
   later: ['postpone', 'not now', 'tomorrow', 'defer', 'put off', 'snooze'],
   skip: ['miss', 'missed', 'not this time', 'skip it'],
-  export: ['backup', 'back up', 'save a copy', 'download', 'move to another device', 'transfer'],
-  import: ['restore', 'load', 'open a file', 'bring back'],
+  'drive folder': ['google drive', 'sync', 'cloud', 'save to drive', 'lost', 'safe', 'other laptop', 'another computer', 'backup', 'back up'],
+  'family file': ['phone', 'mobile', 'iphone', 'android', 'export', 'import', 'transfer', 'move to another device', 'save a copy', 'download'],
+  backup: ['restore', 'undo everything', 'go back', 'old version', 'recover'],
+  'two places': ['conflict', 'both changed', 'overwrite', 'which one', 'clash'],
+  'mini-app': ['module', 'install', 'uninstall', 'remove', 'add on', 'plugin', 'extension', 'turn off', 'disable'],
   dashboard: ['home screen', 'tiles', 'buttons', 'reorder', 'hide', 'rearrange'],
   'who are you': ['profile', 'switch person', 'login', 'sign in', 'user', 'account'],
   example: ['demo', 'sample', 'fake data', 'pretend family'],
   room: ['kitchen', 'bathroom', 'area', 'place'],
   review: ['keeps getting missed', 'never gets done', 'too much', 'overwhelmed', 'falling behind'],
+  music: ['song', 'songs', 'playlist', 'audio', 'mp3', 'sound', 'spotify'],
+  timer: ['start', 'countdown', 'how long', 'minutes'],
+  ticket: ['note', 'remember', 'complaint', 'thank you', 'appreciation', 'concern', 'idea', 'log'],
+  'family meeting': ['weekly meeting', 'talk', 'discuss', 'agenda', 'check-in'],
+  decision: ['agreement', 'experiment', 'try', 'trial', 'rule'],
+  principle: ['value', 'values', 'rules', 'guideline', 'agreement'],
+  task: ['to do', 'todo', 'errand', 'repair', 'project', 'job'],
 };
 
 export function searchText(text) {
@@ -37,24 +47,72 @@ export const HOWTOS = [
   { id: 'quick', title: 'Find something to do right now', steps: [
     'On the home screen, press Chores. It opens on "Do something now".',
     'Optionally say how much time you have, how your energy is, and where you want to be.',
-    'Pick any suggestion and press Done when it is finished.',
+    'Pick any suggestion and press Done when it is finished - or Start, for a timer and optional music.',
     'Do another one if you like, or press "Finish for now". Stopping is always fine.',
+  ] },
+  { id: 'drive', title: 'Keep everything safe in your Google Drive folder (computer)', steps: [
+    'Install Google Drive for Desktop (free, from Google) and sign in. Your Drive appears as a folder on the computer.',
+    'In Family Hub, open Settings, then Google Drive, and press "Choose my Drive folder". Use Chrome or Edge.',
+    'Pick a folder in your Drive, for example My Drive. Family Hub makes a FamilyHub folder inside it and saves everything there.',
+    'The status at the top says "Saved to Drive" after each change. On another laptop, do the same and pick the same FamilyHub folder.',
+  ] },
+  { id: 'phone', title: 'Use Family Hub on a phone', steps: [
+    'Open the same web address on the phone. It works fully and saves on the phone.',
+    'To bring in what is on your computer: on the computer, Settings, Google Drive, "Save a family file", into your Drive. On the phone, Settings, "Open from Drive", and choose that file.',
+    'To send phone changes back: Settings, "Save to Drive", then choose Drive in the share menu. On the computer, "Open a family file" and Combine.',
+    'Phones cannot keep a live link to a folder, so this step is by hand. The phone reminds you once a day when it has changes not yet in Drive.',
+  ] },
+  { id: 'reconnect', title: 'The top says "Not in Drive yet"', steps: [
+    'After the browser restarts it may ask again before Family Hub can use your folder. Press Reconnect on the notice, then Allow.',
+    'Your changes were kept on this device in the meantime and are saved to the folder as soon as you reconnect.',
+  ] },
+  { id: 'conflict', title: 'Something was "changed in two places"', steps: [
+    'This happens when two laptops changed the same thing before Drive had passed the change along.',
+    'Press Choose on the notice. Each item shows both versions - pick the one to keep. Everything else was already combined.',
+    'Nothing is overwritten until you choose. "Decide later" leaves it waiting.',
+  ] },
+  { id: 'backup', title: 'Make a backup, or go back to one', steps: [
+    'Settings, Google Drive, "Back up now" saves a complete copy in the folder’s Backups folder.',
+    'To go back, press Restore next to a backup. The household is replaced by the backup; mini-app records are combined.',
+    'Google Drive also keeps earlier versions of every file: right-click it in Drive, Manage versions.',
   ] },
   { id: 'add', title: 'Plan a new chore', steps: [
     'Open Chores, then the Plan tab.',
     'Press "Add a chore". Only the name is needed.',
     'Choose how often, roughly how long, and how much effort it takes, if you know.',
     'Open "More details" for instructions, who can do it, and what it depends on.',
-    'Press Save.',
   ] },
   { id: 'later', title: 'Put a chore off without guilt', steps: [
     'On any chore, press "Not now".',
-    'Choose Later today, Tomorrow, Next week, or a date of your own. For a repeating chore you can also Skip this time.',
+    'Choose Tomorrow, Next week, or a date of your own - it comes back later, on that day. For a repeating chore you can also Skip this time.',
     'A routine chore that is skipped simply comes round again on its normal cycle.',
   ] },
-  { id: 'room', title: 'Work through one room', steps: [
-    'Open Chores, then the Rooms tab.',
-    'Each room lists its own chores. Pressing Done on one never ticks off the others.',
+  { id: 'music', title: 'Play music while you work', steps: [
+    'Put music files in your Drive folder under Data, Media, Music (or, on a phone, choose files in Settings, Music).',
+    'Press Start on a chore. Family Hub asks "Music while you work?" - press Play music, or No thanks.',
+    'Tick "Remember my answer" to stop being asked. Settings, Music, sets what happens when the timer ends: stop, fade out, keep playing, or ask.',
+    'Done always works, whatever the music is doing.',
+  ] },
+  { id: 'ticket', title: 'Log a ticket in seconds', steps: [
+    'Open Tickets. Choose the kind - appreciation, concern, idea and so on.',
+    'Write a sentence and press Save. No need to solve anything or decide who is responsible.',
+  ] },
+  { id: 'meeting', title: 'Hold the weekly family meeting', steps: [
+    'Open Tickets, then Family meeting.',
+    'Read out what went well first.',
+    'Choose which concerns or ideas to talk about now; the rest wait.',
+    'For each: talk it through, then make a decision or experiment, turn it into a task, put it off, or close it.',
+  ] },
+  { id: 'decision', title: 'Try a decision as an experiment', steps: [
+    'Open Decisions, New decision (or "Make a decision" from a ticket).',
+    'Write what you agree to try, then press "Start trying it". You will be invited to look back in two weeks.',
+    'Add observations as you go. When it is time, press "Look back now" and choose: keep it, change it, stop, or try something else.',
+  ] },
+  { id: 'miniapps', title: 'Turn off, remove or add mini-apps', steps: [
+    'Open Mini-apps from the home screen.',
+    'Turn off: it stops loading, everything is kept. Uninstall: it is removed, its records stay in your folder for a reinstall.',
+    'To delete an uninstalled app’s records, use "Delete its records" - this is separate and asks first.',
+    'To add someone else’s mini-app, copy its folder into MiniApps/ThirdParty in your Drive folder, then press "Look again" and review it.',
   ] },
   { id: 'who', title: 'Say who is using the app', steps: [
     'Press the person button at the top right ("Who are you?").',
@@ -63,50 +121,52 @@ export const HOWTOS = [
   ] },
   { id: 'dash', title: 'Rearrange or hide dashboard buttons', steps: [
     'Open Settings, then "Your dashboard".',
-    'Use the up and down arrows to reorder, and Hide to tuck a module away.',
-    'Hidden modules are listed underneath with a Show button to bring them back.',
-  ] },
-  { id: 'export', title: 'Make a copy of your data, or move it to another device', steps: [
-    'Open Settings, then "Your data".',
-    'Press "Export household". A .json file is saved to your device.',
-    'On the other device, press "Import a file" and choose it. You will be asked before anything is replaced.',
+    'Use the up and down arrows to reorder, and Hide to tuck a button away. Hidden ones can be shown again.',
   ] },
   { id: 'demo', title: 'Remove the example family', steps: [
-    'Press "Remove examples" on the notice at the top of any Chores screen, or in Settings under "Your data".',
+    'Press "Remove examples" on the notice, or in Settings under "Your data".',
     'Only the example records go. Anything you added yourself stays.',
   ] },
 ];
 
 export const FAQS = [
+  { q: 'Where is our data kept?', a: 'If you connected your Google Drive folder: in that folder, as ordinary files you can see and back up in Drive. Nobody else - including whoever made this app - can see it. If not: only in this browser, on this device, which is not a backup. The header always says which.' },
+  { q: 'Will I lose my details when the app is updated?', a: 'No. Updates change the app, not your data. Data in your Drive folder or in this browser stays, and older data is brought up to date automatically.' },
+  { q: 'Does the phone sync with Google Drive?', a: 'Not automatically. Phone browsers cannot keep a live link to a folder, and the only other way would be signing in to a Google app run by a publisher, which Family Hub deliberately avoids. On a phone, save a family file to Drive and open the newest one - it takes two taps, and the phone reminds you daily if it has unsaved changes.' },
+  { q: 'What happens if two of us change something at the same time?', a: 'Different things are combined automatically - two chores ticked off on two laptops are both kept. Only when the very same detail was changed differently does Family Hub ask which to keep, showing both. Nothing is overwritten silently.' },
   { q: 'What happens when we miss a chore?', a: 'Nothing piles up. A repeating chore has one current turn: if it is missed, it simply stays ready until someone does it or skips it, then its normal cycle carries on. Missed chores are information about how much the week can hold, not extra work for tomorrow.' },
-  { q: 'Why is a chore asking for a review?', a: 'If a chore has been put off three times in a row, or has waited two whole cycles, the Plan tab gently asks whether the plan still fits - maybe it needs less often, a different time, a different person, or something that makes it easier. Nothing is added or changed unless you change it.' },
-  { q: 'How are suggestions chosen?', a: 'Your filters remove what does not fit (too long, too much effort, wrong room, not yours to do, or waiting on another chore). What is left is ordered: ready chores before optional ones, important before ordinary, then whatever has waited longest for its own cycle, then the quickest. The "Why these suggestions?" panel shows this with your current choices.' },
-  { q: 'Are the times exact?', a: 'No. Minutes and effort are rough guesses the family sets. A chore with no time set is still shown, and is labelled "Time not estimated".' },
-  { q: 'What is the difference between Skip, Later and No longer needed?', a: 'Skip this time: a repeating chore is let go for this round and comes back on its normal cycle. Later or a date: the same turn waits until then. No longer needed: a one-off chore is closed without being done.' },
-  { q: 'Is choosing my name a login?', a: 'No. Anyone using this device can choose any profile. It is a convenience for recording who did what and for keeping each person\'s dashboard. Real accounts and private records will come before anything sensitive, like medical details, is added.' },
-  { q: 'Where is our data kept?', a: 'Only in this browser, on this device. Nothing is sent anywhere. Browser storage is not a backup and does not sync between devices - use Export to keep a copy.' },
-  { q: 'Why do most dashboard buttons say "Not built yet"?', a: 'This first version builds Chores properly, end to end. The other modules are shown so you can arrange your dashboard, but they do nothing yet and say so.' },
+  { q: 'Why is a chore asking for a review?', a: 'If a chore has been put off three times in a row, or has waited two whole cycles, the Plan tab gently asks whether the plan still fits. Nothing is added or changed unless you change it.' },
+  { q: 'How are suggestions chosen?', a: 'Your filters remove what does not fit. What is left is ordered: ready chores before optional ones, important before ordinary, then whatever has waited longest for its own cycle, then the quickest. "Why these suggestions?" shows this with your current choices.' },
+  { q: 'Does uninstalling a mini-app delete its data?', a: 'No. Uninstalling keeps its records in your folder, and reinstalling brings them back. Deleting the records is a separate step that asks first.' },
+  { q: 'Is it safe to add someone else’s mini-app?', a: 'Family Hub runs it sealed off: no internet, no access to your other data, and only the permissions you approve when installing. But anything you let it see, it could misuse - so only install mini-apps from people you trust. If its files change later, it stops until you review the change.' },
+  { q: 'Which music works?', a: 'Your own files: mp3, m4a, aac, ogg, opus, wav, flac or webm (what plays depends on the browser). Spotify and other streaming services are not supported - their rules are different. Nothing is uploaded; only the track playing is held in memory.' },
+  { q: 'Are the times exact?', a: 'No. Minutes and effort are rough guesses the family sets. A chore with no time set is still shown, labelled "Time not estimated".' },
+  { q: 'Is choosing my name a login?', a: 'No. Anyone using this device can choose any profile. Real accounts and private records will come before anything sensitive, like medical details, is added.' },
   { q: 'Can a child use it?', a: 'A child profile only sees chores where they are named under "Who can do it". Adults see every chore that names no one, plus any that name them.' },
 ];
 
 export const FEATURES = [
-  { name: 'Avoid a room', where: 'Chores → Do something now', what: 'With "Anywhere" chosen, tap rooms under "Not today" to leave them out.' },
+  { name: 'Your Drive folder', where: 'Settings › Google Drive', what: 'Everything saved as files in your own Google Drive, shared across your laptops, with backups and version history.' },
+  { name: 'Timer and music', where: 'Chores › Start', what: 'A countdown for the chore you are doing, with optional music from your own files. Done works whenever you are ready.' },
+  { name: 'Family meeting', where: 'Tickets › Family meeting', what: 'Appreciations first, then the concerns you choose - ending in a decision, a task, later, or closed.' },
+  { name: 'Decisions as experiments', where: 'Decisions', what: 'Try an agreement for two weeks, note what you see, then keep, change or stop it. Earlier versions are kept.' },
+  { name: 'Mini-apps', where: 'Home › Mini-apps', what: 'Turn apps off, remove them (keeping their records) or add others from your Drive folder.' },
+  { name: 'Avoid a room', where: 'Chores › Do something now', what: 'With "Anywhere" chosen, tap rooms under "Not today" to leave them out.' },
   { name: 'Undo', where: 'After pressing Done', what: 'The confirmation has an Undo button, in case it was pressed by mistake.' },
-  { name: 'Dependencies', where: 'Plan → More details', what: 'A chore can wait for another, like vacuuming after the toys are tidied. It is not suggested until then.' },
-  { name: 'Optional improvements', where: 'Plan → Kind', what: 'Nice-to-do jobs stay available but are never treated as urgent.' },
-  { name: 'Your own dashboard', where: 'Settings → Your dashboard', what: 'Each profile has its own button order and hidden modules on this device.' },
-  { name: 'Recovering a damaged save', where: 'Shown automatically', what: 'Family Hub keeps the previous good copy and offers to go back to it if the latest one cannot be read.' },
+  { name: 'Your own dashboard', where: 'Settings › Your dashboard', what: 'Each profile has its own button order and hidden buttons on this device.' },
 ];
 
 export const PRIVACY = {
   title: 'Privacy & your data',
   sections: [
-    ['What leaves this device', 'Nothing. Family Hub has no server, no accounts, no analytics, no cookies and loads nothing from other websites.'],
-    ['Where your data is kept', 'In this browser\'s local storage, on this device only. Each device has its own copy. Clearing your browser data removes it.'],
-    ['It is not a backup', 'Browser storage can be cleared by the browser or by you. Use Settings → Your data → Export to keep a file you control. The app also keeps one previous copy, only to recover from a damaged save.'],
-    ['Profiles are not security', 'Choosing a name is not a login. Anyone using this device can see and change everything here. Do not store sensitive information, like medical details, in this version.'],
-    ['Hosting', 'If you use Family Hub from a website, that host may keep ordinary server logs of page requests, as any website does. Your household data is never sent to it.'],
-    ['Removing everything', 'Settings → Your data → "Delete everything on this device" removes the household and this device\'s settings.'],
+    ['What leaves this device', 'Nothing goes to Family Hub or to whoever made it. There is no server, no account, no analytics and no cookies, and nothing loads from other websites.'],
+    ['With a Google Drive folder', 'Your data is saved as files in a folder in your own Google Drive, which Google Drive for Desktop keeps in step across your computers. It is as private as the rest of your Drive. Family Hub reads and writes only that folder.'],
+    ['Without a folder', 'Your data stays in this browser’s local storage, on this device only. Clearing your browser data removes it.'],
+    ['It is not a backup', 'Browser storage on its own is not a backup. Use your Drive folder (with Back up now), or save a family file somewhere you control.'],
+    ['Profiles are not security', 'Choosing a name is not a login. Anyone using this device - or with access to your Drive folder - can see and change everything. Do not store sensitive information, like medical details, in this version.'],
+    ['Other people’s mini-apps', 'They run sealed off, with no internet access, and see only what you approve when installing them.'],
+    ['Hosting', 'If you use Family Hub from a website, that host may keep ordinary server logs of page requests, as any website does. Your family data is never sent to it.'],
+    ['Removing everything', 'Settings › Your data › "Delete everything on this device" removes what is kept in this browser. Your Drive folder is yours to keep or delete in Google Drive.'],
   ],
 };
 
@@ -114,7 +174,7 @@ export const ABOUT = {
   title: 'About Family Hub',
   sections: [
     ['What it is', 'A calm place for a household to share the everyday load. Capture quickly, think deeply later, and keep the useful outcome.'],
-    ['What this version does', 'Chores, end to end: plan them, find one that fits your time, energy and place, mark it done, and stop or carry on. Your dashboard, profiles, and export/import work. Other modules are placeholders.'],
+    ['What this version does', 'Chores with a timer and optional music; Tasks and projects; Tickets and the family meeting; Principles; Decisions as experiments. Your data can live in your own Google Drive folder. Mini-apps can be turned off, removed and added.'],
     ['What it will not do', 'Streaks, scores, leaderboards, or piling missed work onto tomorrow. Missed tasks are information about workload and systems.'],
   ],
 };

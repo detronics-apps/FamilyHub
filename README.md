@@ -1,88 +1,86 @@
 # Family Hub
 
-A calm, local-first place for a household to share the everyday load. This first release builds
-the foundation and one complete workflow — **Chores: Plan → Do something now → Done → optional
-next task → stop or carry on** — as set out in
-[Family_Hub_Product_and_Implementation_Plan.md](Family_Hub_Product_and_Implementation_Plan.md),
-which is the canonical product brief.
+**Live: https://detronics-apps.github.io/FamilyHub/**
 
-One static page. No backend, no build step, no dependencies, no network requests after load.
+A calm, local-first place for a household to share the everyday load. The product brief is
+[Family_Hub_Product_and_Implementation_Plan.md](Family_Hub_Product_and_Implementation_Plan.md);
+this README describes what is built.
 
-## What works now
+One static page. No backend, no build step, no dependencies, no accounts. Nothing is sent to the
+publisher or anyone else.
 
-- Dashboard of large module buttons; each profile can reorder, hide and restore them (saved per
-  profile, on this device, separate from household data).
-- "Who are you?" profile picker — a convenience, **not** authentication.
-- Chores
-  - **Do something now** — filter by time, energy, room (or "anywhere but…"), and who is asking;
-    transparent ordering with a "Why these suggestions?" panel; Done, Not now (tomorrow / next
-    week / a date / skip this time / no longer needed), Undo; momentum suggestions after each
-    completion; "Finish for now" as a normal ending.
-  - **Rooms** — each room's chores, each completed on its own.
-  - **Plan** — add/edit/delete chores (only a name is required), rooms, review prompts for chores
-    that keep not fitting in.
-  - **Progress** — neutral household totals, "still waiting" list, recent activity. No per-person
-    counts or rankings.
-- Settings — household name, people (adult/child, colour), your dashboard, export/import, remove
-  example data, delete everything.
-- Example family (clearly labelled, added only on request, removable in one step).
-- How to use guide with search in everyday words, and a first-run welcome.
+## What works now (v0.2.0)
 
-Every other module (Tasks, Tickets, Principles, Decisions, Meals, Finance, Health, Exercise,
-Medical, Holidays, Faith) is a labelled placeholder that says it is not built yet.
+- **Your own Google Drive folder as the home of the data** (Chrome/Edge on a computer, with Google
+  Drive for Desktop): pick the folder once; every change is saved there as readable files, other
+  laptops' changes are picked up, and anything changed in two places at once is shown to you to
+  choose - never silently overwritten. Backups in the folder. Phones open and save a "family file"
+  from Drive. Without a folder, everything stays in the browser.
+- **Mini-apps**: the starter pack - Chores, Tasks, Tickets, Principles, Decisions - can be turned
+  off, uninstalled (records kept), reinstalled (records back) or have their records deleted
+  separately. Other people's mini-apps are added by copying a folder into `MiniApps/ThirdParty`;
+  they are reviewed before installing and run sealed off. See [MINIAPPS.md](MINIAPPS.md).
+- **Chores**: plan; "Do something now" by time, energy and room; Start for a timer with optional
+  music from your own files; Done / Not now / Undo; next suggestions; Rooms; neutral Progress.
+- **Tasks**: one-off jobs and projects with steps and dependencies.
+- **Tickets**: capture in seconds; the weekly family meeting; turn into a decision or task.
+- **Principles**: values and agreements with reasons, exceptions and review triggers.
+- **Decisions**: agreements as experiments - try, observe, look back, adapt, revise with history.
+- Dashboard per person, "Who are you?" (a convenience, not a login), How to use guide with
+  everyday-word search, first-run welcome.
 
 ## Running it
 
 ```bash
-python -m http.server 8851
+python tools/serve.py 8851
 ```
 
-Then open http://localhost:8851. Any static server works.
+Then open http://localhost:8851. (`tools/serve.py` is a plain static server that turns off browser
+caching, so a reload always runs the current code. Any static server works.)
+
+Test mode for the Drive folder without a real Drive: open `http://localhost:8851/?folder=private`
+and the browser's private storage stands in for the folder.
 
 ## Tests
-
-The domain logic is pure (no DOM), so it runs under Node's built-in test runner with nothing to
-install:
 
 ```bash
 npm test
 ```
 
+Node's built-in runner, nothing to install. 151 tests, including a 5,000-recipe performance test.
+
 ## Deploying
 
-Any static host. For GitHub Pages: push to `main`, then Settings → Pages → Deploy from a branch →
-`main` / root. `.nojekyll` is present. There is nothing to build.
+GitHub Pages from `main` / root. `.nojekyll` is present. There is nothing to build.
 
 ## Layout of the code
 
 ```
 index.html                 the shell; everything else is built by JS
-css/tokens.css             the warm palette, light and dark
-css/app.css                layout and components
-css/patterns.css           notification and tooltip rules (from the Detronics app skill)
-js/dates.js                calendar-day arithmetic and friendly wording
-js/model.js                versioned household model, migration, validation, edit helpers
-js/recurrence.js           current occurrence of a chore, derived from definition + history
-js/matching.js             "what can I do now?" filters, ordering, momentum suggestions
-js/progress.js             neutral household progress and activity
-js/dashboard.js            module map and per-person dashboard preferences
-js/storage.js              storage interface, local adapter, export/import
-js/demo.js                 the example family
-js/guide.js                help content, search, privacy/about text
-js/main.js                 boot, app state, routing, frame
-js/ui/                     DOM helpers, shared UI, one file per screen in views/
+css/                       tokens (warm palette), app styles, notice patterns
+js/*.js                    pure domain modules (household, recurrence, matching, folder store,
+                           folder sync, merge, collections, family file, mini-apps, timer, music)
+js/apps/catalogue.js       the starter mini-apps (manifest + lazy loader each)
+js/apps/<id>/logic.js      each mini-app's rules (pure, tested)
+js/apps/<id>/app.js        each mini-app's screens
+js/apps/kit.js             shared screen pieces for mini-apps
+js/ui/                     the frame: hub, sync, sandbox, packages, media, session, IndexedDB, views
+examples/miniapps/         a complete third-party mini-app to copy
 tests/                     node --test over every pure module
+tools/serve.py             no-cache dev server
 ```
 
-**Everything under `js/` except `js/ui/` is pure.** See [ARCHITECTURE.md](ARCHITECTURE.md).
+Docs: [ARCHITECTURE.md](ARCHITECTURE.md) · [DECISIONS.md](DECISIONS.md) ·
+[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) · [TEST_PLAN.md](TEST_PLAN.md) ·
+[MINIAPPS.md](MINIAPPS.md).
 
 ## Privacy
 
-Nothing you enter leaves your browser. No server, no accounts, no analytics, no cookies, no
-third-party scripts or fonts. The household is kept in `localStorage` on this device only.
-**Browser storage is not a backup and does not sync between devices** — use Export.
-Choosing a profile is not a login; do not store sensitive information in this version.
+Nothing is sent to the publisher or anyone else: no server, no accounts, no analytics, no cookies,
+no third-party scripts or fonts. With a Drive folder, the family's data lives in their own Google
+Drive; without one, in this browser only (not a backup). Choosing a profile is not a login; do not
+store sensitive information in this version.
 
 ## Known limitations
 
-See the progress section of [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
+See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md#known-limitations).

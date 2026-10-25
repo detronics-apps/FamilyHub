@@ -41,6 +41,13 @@ export function openWelcome(ctx) {
       })]),
     ])]) : null,
     el('li', {}, [el('div', {}, [
+      el('strong', { text: 'Keep it safe in your own Google Drive' }),
+      el('span', { class: 'small muted', text: ctx.folderSupported()
+        ? 'On a computer with Google Drive for Desktop, pick your Drive folder once and everything saves there - shared across your laptops, never lost with an update.'
+        : 'On a phone, save a family file to your Drive now and then - Settings shows how.' }),
+      el('div', {}, [el('button', { class: 'btn', type: 'button', text: 'Set it up', on: { click: () => finish('#/settings/drive') } })]),
+    ])]),
+    el('li', {}, [el('div', {}, [
       el('strong', { text: 'Whenever you have a few minutes' }),
       el('span', { class: 'small', text: 'Open Chores. It starts on "Do something now": say how much time and energy you have, and it suggests something that fits. Do one, or more, or stop - all are fine.' }),
     ])]),

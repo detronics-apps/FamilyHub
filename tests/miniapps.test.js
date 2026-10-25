@@ -129,3 +129,12 @@ test('a hostile registry file is repaired, not trusted', () => {
   assert.deepEqual(reg.apps.ok.granted, ['notify']);
   assert.deepEqual(reg.retained, {});
 });
+
+test('the example package in examples/ is a valid, compatible third-party mini-app', async () => {
+  const { readFileSync } = await import('node:fs');
+  const raw = JSON.parse(readFileSync(new URL('../examples/miniapps/FamilyNotes/manifest.json', import.meta.url), 'utf8'));
+  const m = ok(raw);
+  assert.equal(compatibility(m).ok, true);
+  assert.deepEqual(m.data.collections[0].summary, ['title', 'author']);
+  assert.ok(readFileSync(new URL(`../examples/miniapps/FamilyNotes/${m.entry}`, import.meta.url), 'utf8').includes('FamilyHub.ready'));
+});
