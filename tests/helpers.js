@@ -24,6 +24,59 @@ export function fixture() {
   return { h, kitchen, bathroom, ann, kid, ids };
 }
 
+/**
+ * A stand-in for a File System Access directory handle (what Chrome returns
+ * when a person picks a folder), so createFolderStore runs its real code here.
+ * `deny` makes every call throw NotAllowedError, as after a revoked permission.
+ */
+export function fakeDirectory(name = 'FamilyHub') {
+  const state = { deny: false };
+  const err = (n) => new DOMException(n, n);
+  const make = (dirName) => {
+    const children = new Map();
+    const guard = () => { if (state.deny) throw err('NotAllowedError'); };
+    const dir = {
+      kind: 'directory',
+      name: dirName,
+      children,
+      async getDirectoryHandle(n, { create = false } = {}) {
+        guard();
+        const c = children.get(n);
+        if (c) { if (c.kind !== 'directory') throw err('TypeMismatchError'); return c; }
+        if (!create) throw err('NotFoundError');
+        const d = make(n);
+        children.set(n, d);
+        return d;
+      },
+      async getFileHandle(n, { create = false } = {}) {
+        guard();
+        const c = children.get(n);
+        if (c) { if (c.kind !== 'file') throw err('TypeMismatchError'); return c; }
+        if (!create) throw err('NotFoundError');
+        const f = {
+          kind: 'file',
+          name: n,
+          content: '',
+          async getFile() { guard(); const text = f.content; return { name: n, size: text.length, text: async () => text }; },
+          async createWritable() {
+            guard();
+            let buf = '';
+            return { write: async (t) => { buf += t; }, close: async () => { f.content = buf; } };
+          },
+        };
+        children.set(n, f);
+        return f;
+      },
+      async* entries() { guard(); for (const [n, h] of children) yield [n, h]; },
+      async removeEntry(n) { guard(); if (!children.delete(n)) throw err('NotFoundError'); },
+    };
+    return dir;
+  };
+  const root = make(name);
+  root.state = state;
+  return root;
+}
+
 /** A Storage-like object backed by a Map, for testing the local adapter in Node. */
 export function memoryStorage() {
   const m = new Map();
