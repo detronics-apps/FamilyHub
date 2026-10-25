@@ -21,7 +21,11 @@ function createResources(onSettled) {
         cache.set(key, entry);
         Promise.resolve().then(loader).then(
           (data) => { entry.loading = false; entry.data = data; onSettled(); },
-          (error) => { entry.loading = false; entry.error = error; onSettled(); },
+          (error) => {
+            // No folder yet (still reconnecting): forget the attempt so the next render tries again.
+            if (error?.code === 'no-store') { cache.delete(key); return; }
+            entry.loading = false; entry.error = error; onSettled();
+          },
         );
       }
       return cache.get(key);
@@ -50,7 +54,7 @@ export function createHubFactory(ctx) {
 
   function collectionFor(appId, manifest, name, spec = {}) {
     const store = ctx.sync.appStore();
-    if (!store) throw new Error('Reconnect your Drive folder to open this - it needs one click.');
+    if (!store) throw Object.assign(new Error('Reconnect your Drive folder to open this - it needs one click.'), { code: 'no-store' });
     const declared = manifest.data.collections.find((c) => c.name === name);
     if (!declared && appId === manifest.id) throw new Error(`${manifest.name} did not declare a "${name}" collection in its manifest.`);
     const key = `${store.kind}:${store.name}:${appId}/${name}`;

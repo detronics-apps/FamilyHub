@@ -214,7 +214,7 @@ function appView(route, notices) {
 
   const failed = (err) => el('section', { class: 'panel stack', role: 'alert' }, [
     el('h1', { text: label }),
-    el('p', { text: `${label} ran into a problem and was stopped. The rest of Family Hub is fine, and nothing was lost.` }),
+    el('p', { text: `${label} was stopped. The rest of Family Hub is fine, and nothing was lost.` }),
     el('p', { class: 'small muted', text: String(err?.message || err) }),
     el('div', { class: 'row' }, [
       el('button', { class: 'btn', type: 'button', text: 'Try again', on: { click: () => { loadedModules.delete(id); render(); } } }),

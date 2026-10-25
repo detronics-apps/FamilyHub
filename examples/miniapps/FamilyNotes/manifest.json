@@ -1,0 +1,19 @@
+{
+  "fhManifest": 1,
+  "id": "org.example.familynotes",
+  "name": "Family Notes",
+  "version": "1.0.0",
+  "description": "A shared notice board: short notes anyone in the family can add.",
+  "author": "Family Hub example",
+  "requires": { "api": 1, "core": ">=0.2.0 <1.0.0" },
+  "entry": "app.js",
+  "screens": [
+    { "id": "board", "title": "Notes" }
+  ],
+  "data": {
+    "collections": [
+      { "name": "notes", "schema": 1, "summary": ["title", "author"], "search": ["title", "body", "author"] }
+    ]
+  },
+  "permissions": ["data:own", "people:read", "notify"]
+}

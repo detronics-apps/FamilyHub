@@ -44,8 +44,14 @@ const BRIDGE = `(() => {
     else if (m.type === 'route') { hub.route = m.route; routeFns.forEach((f) => { try { f(m.route); } catch (err) { console.error(err); } }); }
     else if (m.type === 'init') { hub.app = m.app; hub.route = m.route; hub.theme = m.theme; started = true; waiting.splice(0).forEach((f) => f(hub)); }
   });
-  const size = () => parent.postMessage({ fh: 1, type: 'resize', height: document.documentElement.scrollHeight }, '*');
+  let last = 0;
+  const size = () => {
+    const h = document.documentElement.scrollHeight;
+    if (h !== last) { last = h; parent.postMessage({ fh: 1, type: 'resize', height: h }, '*'); }
+  };
   new ResizeObserver(size).observe(document.documentElement);
+  new MutationObserver(() => setTimeout(size, 0)).observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
+  addEventListener('message', (e) => { if (e.source === parent && e.data && e.data.type === 'init') setTimeout(() => { last = 0; size(); }, 0); });
   window.FamilyHub = { ready: (fn) => (started ? fn(hub) : waiting.push(fn)) };
   window.addEventListener('error', (e) => parent.postMessage({ fh: 1, type: 'error', message: String(e.message) }, '*'));
 })();`;
@@ -84,7 +90,10 @@ function listen() {
     if (!f) return;                                   // not one of ours
     const m = e.data;
     if (!m || m.fh !== 1) return;
-    if (m.type === 'resize') { f.iframe.style.height = `${Math.min(Math.max(Number(m.height) || 0, 120), 20000)}px`; return; }
+    if (m.type === 'resize') {
+      f.iframe.style.height = `${Math.min(Math.max(Number(m.height) || 0, 120), 20000) + 4}px`;   // + the frame's border
+      return;
+    }
     if (m.type === 'error') { console.warn(`[${f.manifest.name}]`, m.message); return; }
     if (m.type !== 'call') return;
     const reply = (ok, payload) => e.source.postMessage({ fh: 1, type: 'reply', id: m.id, ok, [ok ? 'result' : 'error']: payload }, '*');
@@ -155,9 +164,14 @@ export function renderThirdParty(ctx, id, route, failed) {
   const pkg = cachedPackage(id);
   if (!pkg) {
     if (loadErrors.has(id)) return failed(loadErrors.get(id));
+    const store = ctx.sync.appStore();
+    if (!store) {
+      // The folder is still reconnecting (or needs a click): wait rather than fail.
+      return el('p', { class: 'muted', text: ctx.sync.status.state === 'reconnect' ? `Reconnect your Drive folder to open ${entry.name} - it lives there.` : `Opening ${entry.name}…` });
+    }
     if (!loading.has(id)) {
       loading.add(id);
-      loadPackage(ctx.sync.appStore(), id, entry).then(
+      loadPackage(store, id, entry).then(
         () => { loading.delete(id); loadErrors.delete(id); ctx.render(); },
         (err) => { loading.delete(id); loadErrors.set(id, err); ctx.render(); },
       );

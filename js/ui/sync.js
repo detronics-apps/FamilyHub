@@ -41,10 +41,12 @@ export function createSync(ctx) {
   let running = null;
   let again = false;
 
+  // Start in the mode last used, so nothing reads from the wrong place while the folder reconnects.
+  const startInFolder = ctx.app.device.storageMode === 'folder';
   const s = {
-    mode: 'device',           // 'device' | 'folder'
-    state: 'device',          // device | saving | saved | reconnect | decision | first-connect | error
-    folderName: null,
+    mode: startInFolder ? 'folder' : 'device',   // 'device' | 'folder'
+    state: startInFolder ? 'saving' : 'device',  // device | saving | saved | reconnect | decision | first-connect | error
+    folderName: startInFolder ? ctx.app.device.folderName : null,
     lastSavedAt: null,
     message: '',
     conflict: null,           // { household, conflicts, theirs }
@@ -56,7 +58,7 @@ export function createSync(ctx) {
 
   /** Where mini-app records live right now. Null while the folder needs a click to reconnect. */
   function appStore() {
-    if (s.mode === 'folder') return folder;
+    if (s.mode === 'folder') return folder;      // null until the folder is reconnected
     return deviceStore;
   }
 
