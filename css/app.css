@@ -362,3 +362,7 @@ body:has(.player:not([hidden])) .app-footer { padding-bottom: 72px; }
 .cycle__step { counter-increment: c; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--panel-2); color: var(--text-faint); border: 1px solid var(--border); }
 .cycle__step::before { content: counter(c) ". "; }
 .cycle__step--now { background: var(--accent-soft); color: var(--text); border-color: var(--accent); font-weight: 700; }
+
+/* A simple progress bar (saving goals) */
+.progress { height: 10px; border-radius: 999px; background: var(--panel-3); overflow: hidden; }
+.progress__bar { height: 100%; background: var(--ok); border-radius: 999px; }
