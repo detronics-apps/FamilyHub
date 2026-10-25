@@ -12,7 +12,7 @@ export function dashboardView(ctx, route, notices) {
   const h = ctx.app.household;
   const person = ctx.currentPerson();
   if (hasDemo(h)) notices.push(demoNotice(ctx));
-  const { visible, hidden } = resolveDashboard(ctx.app.device.prefs[prefsKey(ctx)], ctx.dashboardModules());
+  const { visible } = resolveDashboard(ctx.app.device.prefs[prefsKey(ctx)], ctx.dashboardModules());
   const ready = findTasks(h, { personId: person?.id ?? null }, ctx.today()).filter((t) => t.occ.category !== 'optional').length;
 
   return el('section', { class: 'stack', 'aria-labelledby': 'home-title' }, [
@@ -29,9 +29,5 @@ export function dashboardView(ctx, route, notices) {
         ? el('span', { class: 'tile__meta', text: ready ? `${ready} ready${person ? ' for you' : ''} now` : 'Nothing waiting right now' })
         : null,
     ]))),
-    el('p', { class: 'small' }, [
-      el('a', { href: '#/settings/dashboard', text: 'Rearrange or hide these buttons' }),
-      hidden.length ? ` · ${hidden.length} hidden` : '',
-    ]),
   ]);
 }

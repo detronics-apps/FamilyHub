@@ -33,6 +33,7 @@ import { recoveryView } from './ui/views/recovery.js';
 import { openWelcome } from './ui/views/welcome.js';
 import { openDoc } from './ui/views/docs.js';
 import { syncChip, syncNotices } from './ui/views/drive.js';
+import { scanImportFolder } from './ui/imports.js';
 
 export const APP_VERSION = '0.2.0';
 
@@ -360,6 +361,9 @@ ctx.session = createSession(ctx);
 ctx.timer = ctx.session;
 const createHub = createHubFactory(ctx);
 ctx.hubFor = (manifest, granted) => createHub(manifest, granted, { otherManifests: installedManifests });
+ctx.collectionFor = createHub.collectionFor;
+ctx.invalidateAll = createHub.invalidateAll;
+ctx.scanImports = () => scanImportFolder(ctx);
 
 let lastRouteKey = null;
 let renderQueued = false;

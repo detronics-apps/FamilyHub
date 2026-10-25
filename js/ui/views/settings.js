@@ -7,11 +7,12 @@ import { resolveDashboard, moveModule, hideModule, showModule } from '../../dash
 import { exportData, exportFilename, parseImport } from '../../storage.js';
 import { prefsKey } from './dashboard.js';
 import { driveSection } from './drive.js';
+import { availableImporters, importFromDevice, downloadTemplate } from '../imports.js';
 import { OFFER, END_ACTIONS, END_ACTION_LABEL } from '../../music.js';
 
 export function settingsView(ctx, route) {
-  const sections = [householdSection(ctx), peopleSection(ctx), driveSection(ctx), dashboardSection(ctx), musicSection(ctx), dataSection(ctx)];
-  const target = { dashboard: 'set-dashboard', drive: 'set-drive', music: 'set-music' }[route.sub];
+  const sections = [householdSection(ctx), peopleSection(ctx), driveSection(ctx), importSection(ctx), dashboardSection(ctx), musicSection(ctx), dataSection(ctx)];
+  const target = { dashboard: 'set-dashboard', drive: 'set-drive', music: 'set-music', import: 'set-import' }[route.sub];
   if (target && ctx.app.ui.scrolledTo !== location.hash) {
     // Arriving from a link to one section: bring it into view, once.
     ctx.app.ui.scrolledTo = location.hash;
@@ -218,5 +219,35 @@ function musicSection(ctx) {
     ]),
     m.status === 'error' && m.error ? el('p', { class: 'small muted', role: 'status', text: m.error }) : null,
     el('p', { class: 'small muted', text: 'Spotify and other streaming services are not supported - their playback rules are different. Formats: mp3, m4a, aac, ogg, opus, wav, flac, webm (what plays depends on your browser).' }),
+  ]);
+}
+
+/** Bring in data: a template per kind, an import from this device, and the Import folder. */
+function importSection(ctx) {
+  const list = el('div', { class: 'stack' }, [el('p', { class: 'small muted', text: 'Loading the templates…' })]);
+  availableImporters(ctx).then((importers) => {
+    list.replaceChildren(el('ul', { class: 'list' }, importers.map((imp) => el('li', {}, [
+      el('div', { class: 'list__main' }, [
+        el('strong', { text: imp.label }),
+        el('details', { class: 'more' }, [
+          el('summary', { class: 'small', text: 'What goes in each column' }),
+          el('ul', { class: 'small' }, imp.columns.map((c) => el('li', {}, [el('strong', { text: `${c.name}${c.required ? ' *' : ''}` }), ` - ${c.help}`]))),
+        ]),
+      ]),
+      el('button', { class: 'btn btn-small', type: 'button', text: 'Download template', 'data-field': `template:${imp.kind}`, on: { click: () => downloadTemplate(imp) } }),
+    ]))));
+  });
+  const folder = ctx.sync.appStore()?.kind === 'folder';
+  return el('div', { class: 'panel stack', id: 'set-import' }, [
+    el('h2', { text: 'Bring in data' }),
+    el('p', { class: 'small', text: 'Already have recipes, chores or a to-do list somewhere? Download a template, fill it in with a spreadsheet (Excel, Google Sheets, Numbers), save it as CSV and bring it in. Things whose name already exists are left alone, so nothing is doubled.' }),
+    list,
+    el('div', { class: 'row' }, [
+      el('button', { class: 'btn btn-primary', type: 'button', text: 'Import a file', 'data-field': 'import-file-csv', on: { click: () => importFromDevice(ctx) } }),
+      folder ? el('button', { class: 'btn', type: 'button', text: 'Check the Import folder now', on: { click: async () => { const r = await ctx.scanImports(); if (!r.length) { ctx.flash({ id: `inbox-empty:${Date.now()}`, level: 'info', text: 'Nothing waiting in the Import folder.' }); ctx.render(); } } } }) : null,
+    ]),
+    el('p', { class: 'small muted', text: folder
+      ? 'Or drop filled-in files into the Import folder inside your Family Hub Drive folder - they are brought in automatically and moved to Import/Imported with a short report. Empty templates are waiting in Import/Templates.'
+      : 'With your Drive folder connected, you can also drop filled-in files into its Import folder and they are brought in automatically.' }),
   ]);
 }

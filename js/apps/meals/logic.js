@@ -7,6 +7,7 @@
 // is "not known", never estimated.
 
 import { addDays, dayDiff, weekStart } from '../../dates.js';
+import { split, numOrNull } from '../../importer.js';
 
 export const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'];
 export const MEAL_LABEL = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack' };
@@ -217,3 +218,45 @@ export const toggleItem = (list, id) => ({ ...list, items: list.items.map((i) =>
 export const clearBought = (list) => ({ ...list, items: list.items.filter((i) => !i.checked) });
 
 export const isPastWeek = (monday, today) => dayDiff(addDays(monday, 6), today) > 0;
+
+/* ---------------------------------------------------------- importing */
+
+/** The recipes spreadsheet template (Settings > Bring in data, or the Import folder). */
+export const IMPORTER = {
+  kind: 'recipes', label: 'Recipes', singular: 'recipe', app: 'meals', collection: 'recipes', prefix: 'rec',
+  columns: [
+    { name: 'title', required: true, help: 'The recipe name.' },
+    { name: 'servings', help: 'How many it serves (a number).' },
+    { name: 'prep_minutes', help: 'Preparation time in minutes.' },
+    { name: 'cook_minutes', help: 'Cooking time in minutes.' },
+    { name: 'ingredients', help: 'One per line in the cell, or separated by ";" - e.g. "200 g flour; 2 eggs".' },
+    { name: 'method', help: 'Steps, one per line in the cell, or separated by ";".' },
+    { name: 'tags', help: 'Separated by commas, e.g. "quick, vegetarian".' },
+    { name: 'contains', help: `Allergens, separated by commas: ${ALLERGENS.join(', ')}.` },
+    { name: 'notes', help: 'Anything else.' },
+    { name: 'source', help: 'Where it came from.' },
+    ...NUTRIENTS.map(([k, unit]) => ({ name: k, help: `Per serving, in ${unit}, only if known.` })),
+  ],
+  example: [
+    { title: 'Vegetable soup', servings: '4', prep_minutes: '15', cook_minutes: '30', ingredients: '2 carrots; 1 onion; 1 l stock; salt', method: 'Chop the vegetables; Simmer in the stock for 25 minutes; Season', tags: 'quick, vegetarian', contains: '', notes: 'Freezes well', source: 'Gran' },
+    { title: 'Pancakes', servings: '4', prep_minutes: '10', cook_minutes: '15', ingredients: '200 g flour; 2 eggs; 300 ml milk', method: 'Whisk everything; Rest 10 minutes; Fry thin pancakes', tags: 'weekend, kids', contains: 'gluten, egg, dairy', calories: '210' },
+  ],
+  summary: recipeSummary,
+  text: recipeText,
+  key: (r) => r.title.trim().toLowerCase(),
+  fromRow(v) {
+    if (!v.title) return { error: 'No title.' };
+    const contains = split(v.contains, /\s*,\s*/).map((a) => a.toLowerCase());
+    const unknown = contains.filter((a) => !ALLERGENS.includes(a));
+    if (unknown.length) return { error: `Unknown allergen "${unknown[0]}" (use: ${ALLERGENS.join(', ')}).` };
+    return {
+      name: v.title,
+      record: normaliseRecipe({
+        title: v.title, servings: numOrNull(v.servings) ?? 4, prepMinutes: numOrNull(v.prep_minutes), cookMinutes: numOrNull(v.cook_minutes),
+        ingredients: split(v.ingredients).map(parseIngredient), instructions: split(v.method), tags: split(v.tags, /\s*,\s*/),
+        allergens: contains, notes: v.notes, source: v.source,
+        nutrition: Object.fromEntries(NUTRIENTS.map(([k]) => [k, numOrNull(v[k])])),
+      }),
+    };
+  },
+};

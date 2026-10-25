@@ -196,6 +196,8 @@ export function createSync(ctx) {
     writeJson(BASE_KEY, r.household);
     await syncRegistry();
     set({ state: 'saved', lastSavedAt: new Date(), message: '' });
+    // Files dropped into the Import folder are brought in after a good save.
+    try { await ctx.scanImports?.(); } catch (err) { console.warn('Import folder:', err); }
   }
 
   async function syncRegistry() {

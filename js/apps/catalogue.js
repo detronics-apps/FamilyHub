@@ -19,6 +19,7 @@ const RAW = [
       permissions: ['household:chores', 'people:read', 'rooms:read', 'notify', 'media:audio', 'timer'],
     },
     load: () => import('./chores/app.js'),
+    importer: () => import('./chores/importer.js').then((m) => m.IMPORTER),
   },
   {
     manifest: {
@@ -33,6 +34,7 @@ const RAW = [
       permissions: ['data:own', 'people:read', 'notify', 'data:tickets:read', 'data:decisions:read'],
     },
     load: () => import('./tasks/app.js'),
+    importer: () => import('./tasks/logic.js').then((m) => m.IMPORTER),
   },
   {
     manifest: {
@@ -83,6 +85,7 @@ const RAW = [
       permissions: ['data:own', 'notify'],
     },
     load: () => import('./meals/app.js'),
+    importer: () => import('./meals/logic.js').then((m) => m.IMPORTER),
   },
   {
     manifest: {
@@ -141,10 +144,10 @@ const RAW = [
   },
 ];
 
-function check({ manifest, load }) {
+function check({ manifest, load, importer = null }) {
   const r = validateManifest(manifest, { source: 'starter' });
   if (!r.ok) throw new Error(`Starter app ${manifest.id} has an invalid manifest: ${r.errors.join(' ')}`);
-  return { manifest: r.manifest, load };
+  return { manifest: r.manifest, load, importer };
 }
 
 export const STARTERS = RAW.map(check);

@@ -77,7 +77,7 @@ export function createHubFactory(ctx) {
     get: (id) => c.get(id),
   });
 
-  return function createHub(manifest, granted, { otherManifests = () => [] } = {}) {
+  function createHub(manifest, granted, { otherManifests = () => [] } = {}) {
     const has = (p) => granted.includes(p);
     if (!resources.has(manifest.id)) resources.set(manifest.id, createResources(() => ctx.render()));
     const res = resources.get(manifest.id);
@@ -141,5 +141,10 @@ export function createHubFactory(ctx) {
     if (has('timer')) hub.timer = ctx.timer;
     if (has('household:chores')) hub.core = ctx;       // first-party only (validateManifest enforces it)
     return hub;
-  };
+  }
+
+  // For the core's own importer: the same cached collections the app uses, so its index stays in step.
+  createHub.collectionFor = (appId, name, spec) => collectionFor(appId, ctx.manifestFor(appId), name, spec);
+  createHub.invalidateAll = () => { for (const r of resources.values()) r.invalidate(); ctx.render(); };
+  return createHub;
 }

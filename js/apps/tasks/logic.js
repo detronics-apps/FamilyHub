@@ -7,6 +7,7 @@
 // count (plan sections 3.7 and 8.6).
 
 import { dayDiff } from '../../dates.js';
+import { numOrNull, dayOrNull } from '../../importer.js';
 
 export const STATUSES = ['open', 'doing', 'done', 'dropped'];
 export const STATUS_LABEL = { open: 'To do', doing: 'In progress', done: 'Done', dropped: 'No longer needed' };
@@ -119,4 +120,39 @@ export const FILTERS = {
   mine: (s, personId) => isOpen(s) && s.assignees.includes(personId),
   projects: (s) => s.kind === 'project' && s.status !== 'dropped',
   finished: (s) => !isOpen(s),
+};
+
+/* ---------------------------------------------------------- importing */
+
+/** The tasks spreadsheet template. */
+export const IMPORTER = {
+  kind: 'tasks', label: 'Tasks', singular: 'task', app: 'tasks', collection: 'tasks', prefix: 'tsk',
+  columns: [
+    { name: 'title', required: true, help: 'What needs doing.' },
+    { name: 'notes', help: 'Anything else.' },
+    { name: 'planned_for', help: 'A day, written YYYY-MM-DD (optional).' },
+    { name: 'category', help: `One of: ${CATEGORIES.join(', ')}.` },
+    { name: 'minutes', help: 'Roughly how long, in minutes.' },
+    { name: 'steps', help: 'Separated by ";" - becomes a checklist.' },
+    { name: 'project', help: 'Write "yes" if this is a project rather than a single task.' },
+  ],
+  example: [
+    { title: 'Fix the gate hinge', notes: 'It squeaks', planned_for: '', category: 'repair', minutes: '30', steps: 'Buy a hinge; Fit it' },
+    { title: 'Sort out the garage', category: 'household', project: 'yes' },
+  ],
+  summary: taskSummary,
+  text: taskText,
+  key: (t) => t.title.trim().toLowerCase(),
+  fromRow(v) {
+    if (!v.title) return { error: 'No title.' };
+    if (v.planned_for && !dayOrNull(v.planned_for)) return { error: `"${v.planned_for}" is not a day written YYYY-MM-DD.` };
+    const steps = String(v.steps || '').split(/\s*;\s*/).filter(Boolean).map((text, i) => ({ id: `ck${i}`, text, done: false }));
+    return {
+      name: v.title,
+      record: normaliseTask({
+        title: v.title, description: v.notes, due: dayOrNull(v.planned_for), category: String(v.category || '').toLowerCase(),
+        minutes: numOrNull(v.minutes), checklist: steps, kind: /^(y|yes|true|1)$/i.test(v.project || '') ? 'project' : 'task',
+      }),
+    };
+  },
 };
