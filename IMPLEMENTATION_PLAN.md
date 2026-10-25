@@ -16,7 +16,11 @@ workstreams W1-W3. This file records status only.
 | 6 Tickets, Principles, Decisions | **Built (v0.2.0)** as starter mini-apps, plus Tasks/Projects (§9). Tickets are shared-only until accounts exist (O-4, O-5). |
 | 7 Cloud storage | Replaced by W2 (folder method, no publisher). Phone live sync not possible under that rule (D-013, O-7). |
 | 8 Medical | Not started - needs access rules first. |
-| 9-12 | Not started. Planned modules are listed under Mini-apps → Coming later. |
+| 9 Meals | **Built**: recipes (index, search, allergen filter, scaling), weekly plan, shopping list (compatible units only). **Not built on purpose:** nutrition estimates and meal suggestions (9.4-9.6 need reliable data sources and a safety review). |
+| 10 Finance | **Built**: monthly budgets, savings and debt goals with visible-assumption projections; totals count each goal once. No bank links. |
+| 11 Health, Exercise, Holidays, Faith | **Built** as separate starter mini-apps. Health holds appointments and habits only - no medical data. |
+| 12 Hardening | Not started. |
+| Onboarding import (product-patterns) | **Built**: CSV templates for recipes, chores, tasks; import in Settings with a summary, or via the Drive folder's `Import/`. Additive and idempotent. |
 
 ## Platform workstreams (v0.2.0, `platform` branch)
 
@@ -58,7 +62,7 @@ workstreams W1-W3. This file records status only.
 
 ## Test results
 
-`npm test`: **151 tests, 151 pass** (Node 24). Browser checks: see TEST_PLAN.md.
+`npm test`: **181 tests, 181 pass** (Node 24). Browser checks: see TEST_PLAN.md.
 
 ## Known limitations
 

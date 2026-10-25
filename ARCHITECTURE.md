@@ -103,6 +103,9 @@ Three workstreams added on the `platform` branch, kept separate here as in the p
   MiniApps/<Name>/manifest.json   starter apps (mirror, for visibility)
   MiniApps/ThirdParty/<Pkg>/      other people's packages
   Backups/backup-<date>.json      family files
+  Import/                         drop filled-in CSV templates here
+  Import/Templates/               one template per kind (kept up to date by the app)
+  Import/Imported/, Not imported/ processed files, each with a .txt report
 ```
 
 - **Access**: File System Access API on a folder Drive for Desktop syncs (`folder-store.js`). The
@@ -144,3 +147,12 @@ Three workstreams added on the `platform` branch, kept separate here as in the p
   the single shared player (folder music read one track at a time via the folder handle, or device
   files for the session). Timer end only affects the music (`stop`/`fade`/`continue`/`ask`);
   completion is the activity's own Done and never depends on audio.
+
+### Bringing in data (onboarding import)
+
+`js/csv.js` reads and writes spreadsheet CSV; `js/importer.js` plans an import (new / already there /
+problem lines) without writing. Each app that accepts imports exports an `IMPORTER` next to its
+rules (`apps/meals/logic.js`, `apps/tasks/logic.js`, `apps/chores/importer.js`): the template's
+columns, example rows, the natural key (the name) and `fromRow`. `ui/imports.js` applies a plan -
+chores into the household, everything else through the app's own cached collection so the index
+stays consistent - from Settings (after a summary) or from the folder's `Import/` after each save.

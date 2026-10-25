@@ -26,6 +26,17 @@ publisher or anyone else.
 - **Tickets**: capture in seconds; the weekly family meeting; turn into a decision or task.
 - **Principles**: values and agreements with reasons, exceptions and review triggers.
 - **Decisions**: agreements as experiments - try, observe, look back, adapt, revise with history.
+- **Meals**: recipes (search, allergen filter, scaling), a weekly plan, and a shopping list that
+  adds up compatible amounts. No nutrition estimates or advice.
+- **Holidays**: trips and ideas with a day-by-day plan, packing per person, and a budget.
+- **Finance**: monthly budgets (planned against spent) and savings/debt goals with projections
+  that show their assumptions. No bank connections, no advice.
+- **Exercise**: activity log, flexible weekly plans, personal goals, what the family did together.
+- **Health**: appointments and healthy habits (not medical records).
+- **Faith**: Bible reading plans at your own pace, and a journal.
+- **Bring in data**: spreadsheet templates (CSV) for recipes, chores and tasks - import in
+  Settings, or drop filled-in files into the `Import` folder of the Drive folder.
+- Planned, not built: **Planner** (family calendar) and **Medical** (needs private records first).
 - Dashboard per person, "Who are you?" (a convenience, not a login), How to use guide with
   everyday-word search, first-run welcome.
 
@@ -47,7 +58,7 @@ and the browser's private storage stands in for the folder.
 npm test
 ```
 
-Node's built-in runner, nothing to install. 151 tests, including a 5,000-recipe performance test.
+Node's built-in runner, nothing to install. 181 tests, including a 5,000-recipe performance test.
 
 ## Deploying
 

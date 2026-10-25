@@ -94,3 +94,23 @@ walkthrough with a screen reader, Safari/Firefox, a real phone.
 - Two real laptops at once; a real phone family-file round trip.
 - Safari/Firefox (folder sync is Chrome/Edge only by design; the rest should work).
 - Keyboard-only and screen-reader passes of the new screens.
+
+## Later modules and importing (v0.2.0, continued)
+
+### Automated
+
+| Requirement | Test file |
+|---|---|
+| Recipes: ingredient lines, scaling, units that may and may not be added, shopping list keeps manual and bought items, nutrition never estimated | meals.test.js |
+| Holidays: dates, budget (over only with a budget), packing, itinerary order | holidays.test.js |
+| Finance: month totals with unplanned spending, saving and debt projections (incl. "never pays off"), goal totals counted once | finance.test.js |
+| Exercise weeks and plans; Health agenda; Faith canon (1,189 chapters), portions and progress | wellbeing.test.js |
+| CSV (quotes, line breaks, BOM, semicolons); templates import their own examples; duplicates and bad lines; detection by name or columns | importer.test.js |
+
+### Browser checks run (2026-10-25, test folder)
+
+12. Meals: recipe typed as lines → scaled 2 → 4 → planned today → shopping list sums and marks "amount not given". ✔
+13. Holidays: trip with dates, plan, starter packing list, cost against budget. ✔
+14. Finance: category and spend → planned/spent/left; a debt below its interest says "never" and the payment that would work; recording a payment. ✔
+15. Exercise log, Health appointment, Faith plan (read a portion) and journal. ✔
+16. Import folder: templates and README written; recipes and chores files brought in and moved to Import/Imported with reports; an unrecognised file moved to Import/Not imported; an existing chore name skipped. ✔

@@ -25,6 +25,14 @@ export const SEARCH_ALIASES = {
   decision: ['agreement', 'experiment', 'try', 'trial', 'rule'],
   principle: ['value', 'values', 'rules', 'guideline', 'agreement'],
   task: ['to do', 'todo', 'errand', 'repair', 'project', 'job'],
+  'bring in data': ['import', 'csv', 'spreadsheet', 'excel', 'google sheets', 'template', 'upload', 'existing', 'already have'],
+  recipe: ['meal', 'meals', 'cooking', 'food', 'dinner', 'menu'],
+  'shopping list': ['groceries', 'shop', 'buy', 'ingredients'],
+  trip: ['holiday', 'vacation', 'travel', 'packing', 'itinerary'],
+  budget: ['money', 'spending', 'expenses', 'finance', 'savings', 'debt', 'loan'],
+  activity: ['exercise', 'sport', 'walk', 'run', 'fitness', 'move'],
+  appointment: ['doctor', 'dentist', 'clinic', 'health', 'check-up'],
+  'reading plan': ['bible', 'scripture', 'devotion', 'faith', 'chapter'],
 };
 
 export function searchText(text) {
@@ -108,6 +116,35 @@ export const HOWTOS = [
     'Write what you agree to try, then press "Start trying it". You will be invited to look back in two weeks.',
     'Add observations as you go. When it is time, press "Look back now" and choose: keep it, change it, stop, or try something else.',
   ] },
+  { id: 'import', title: 'Bring in data you already have (recipes, chores, tasks)', steps: [
+    'Open Settings, then "Bring in data", and press "Download template" for the kind you need. (With your Drive folder connected, the templates are also in its Import/Templates folder.)',
+    'Fill it in with a spreadsheet - Excel, Google Sheets or Numbers. Keep the first row; columns marked * are needed.',
+    'Save it as CSV. Then either press "Import a file" in Settings, or put the file in the Import folder inside your Family Hub Drive folder.',
+    'Things whose name already exists are left alone, so nothing is doubled. Lines with a problem are listed by line number.',
+  ] },
+  { id: 'meals', title: 'Plan the week’s meals and make the shopping list', steps: [
+    'Open Meals. On "This week", press Plan next to a day and choose a recipe - or just type a meal.',
+    'Press "Make the shopping list". Amounts from all the week’s meals are added up, scaled to the servings you chose.',
+    'Tick things off in Shopping as you buy them. Your own additions and ticked items stay when the plan changes.',
+  ] },
+  { id: 'trip', title: 'Plan a trip', steps: [
+    'Open Holidays and press "Add a trip or idea". Only a name is needed - dates can come later.',
+    'Add the plan day by day, start a packing list (each item can be for one person), and add costs against a budget.',
+  ] },
+  { id: 'budget', title: 'Keep a monthly budget', steps: [
+    'Open Finance. Add the categories you want to watch with a planned amount.',
+    'When you spend something, add it under "Spent something?". The table shows what is left in each category.',
+    'Next month, press "Start from last month’s plan".',
+  ] },
+  { id: 'exercise', title: 'Log exercise and plan to move more', steps: [
+    'Open Exercise, then "Log activity". Tick everyone who took part - doing it together counts for the family.',
+    'In "Plans and goals", add a flexible plan like "walk three times a week", and set your own weekly minutes goal.',
+  ] },
+  { id: 'reading', title: 'Follow a Bible reading plan', steps: [
+    'Open Faith and press "Start a reading plan". Choose the Gospels, a book, or your own selection, and how many chapters at a time.',
+    'Press "Read it" after each reading. There is no schedule and no catching up - it simply remembers where you are.',
+    'Use the Journal for reflections, questions and family discussion notes.',
+  ] },
   { id: 'miniapps', title: 'Turn off, remove or add mini-apps', steps: [
     'Open Mini-apps from the home screen.',
     'Turn off: it stops loading, everything is kept. Uninstall: it is removed, its records stay in your folder for a reinstall.',
@@ -139,6 +176,10 @@ export const FAQS = [
   { q: 'How are suggestions chosen?', a: 'Your filters remove what does not fit. What is left is ordered: ready chores before optional ones, important before ordinary, then whatever has waited longest for its own cycle, then the quickest. "Why these suggestions?" shows this with your current choices.' },
   { q: 'Does uninstalling a mini-app delete its data?', a: 'No. Uninstalling keeps its records in your folder, and reinstalling brings them back. Deleting the records is a separate step that asks first.' },
   { q: 'Is it safe to add someone else’s mini-app?', a: 'Family Hub runs it sealed off: no internet, no access to your other data, and only the permissions you approve when installing. But anything you let it see, it could misuse - so only install mini-apps from people you trust. If its files change later, it stops until you review the change.' },
+  { q: 'Can I bring in the recipes (or chores, or tasks) I already have?', a: 'Yes. Settings, Bring in data: download the template, fill it in with a spreadsheet, and import it - or drop it into the Import folder in your Drive folder. Importing the same file twice adds nothing, because names that already exist are left alone.' },
+  { q: 'Does Meals tell us how healthy a meal is?', a: 'No. It shows nutrition only where you entered it from a packet or recipe source, and says "not known" otherwise. It does not estimate nutrition or give dietary advice - that needs reliable data sources and a safety review first.' },
+  { q: 'Does Finance connect to the bank or give advice?', a: 'No. You enter what you want to track. Projections are arithmetic on your own amounts and rates, assumed to stay the same - not predictions and not financial advice.' },
+  { q: 'Can we keep medical records in Health?', a: 'Not yet. Health is for appointments and healthy habits. Medical details need private records and access rules first, which are planned for the Medical mini-app.' },
   { q: 'Which music works?', a: 'Your own files: mp3, m4a, aac, ogg, opus, wav, flac or webm (what plays depends on the browser). Spotify and other streaming services are not supported - their rules are different. Nothing is uploaded; only the track playing is held in memory.' },
   { q: 'Are the times exact?', a: 'No. Minutes and effort are rough guesses the family sets. A chore with no time set is still shown, labelled "Time not estimated".' },
   { q: 'Is choosing my name a login?', a: 'No. Anyone using this device can choose any profile. Real accounts and private records will come before anything sensitive, like medical details, is added.' },
@@ -151,6 +192,9 @@ export const FEATURES = [
   { name: 'Family meeting', where: 'Tickets › Family meeting', what: 'Appreciations first, then the concerns you choose - ending in a decision, a task, later, or closed.' },
   { name: 'Decisions as experiments', where: 'Decisions', what: 'Try an agreement for two weeks, note what you see, then keep, change or stop it. Earlier versions are kept.' },
   { name: 'Mini-apps', where: 'Home › Mini-apps', what: 'Turn apps off, remove them (keeping their records) or add others from your Drive folder.' },
+  { name: 'Bring in data', where: 'Settings › Bring in data', what: 'Spreadsheet templates for recipes, chores and tasks - or drop files in the Import folder of your Drive folder.' },
+  { name: 'Shopping list from the plan', where: 'Meals › This week', what: 'One press adds up every ingredient for the week, scaled to the servings you chose.' },
+  { name: 'Projections with their assumptions', where: 'Finance › Goals', what: 'When a goal could be reached, or a debt paid off - and plainly when it never would at the current payment.' },
   { name: 'Avoid a room', where: 'Chores › Do something now', what: 'With "Anywhere" chosen, tap rooms under "Not today" to leave them out.' },
   { name: 'Undo', where: 'After pressing Done', what: 'The confirmation has an Undo button, in case it was pressed by mistake.' },
   { name: 'Your own dashboard', where: 'Settings › Your dashboard', what: 'Each profile has its own button order and hidden buttons on this device.' },
@@ -174,7 +218,8 @@ export const ABOUT = {
   title: 'About Family Hub',
   sections: [
     ['What it is', 'A calm place for a household to share the everyday load. Capture quickly, think deeply later, and keep the useful outcome.'],
-    ['What this version does', 'Chores with a timer and optional music; Tasks and projects; Tickets and the family meeting; Principles; Decisions as experiments. Your data can live in your own Google Drive folder. Mini-apps can be turned off, removed and added.'],
+    ['What this version does', 'Chores with a timer and optional music; Tasks and projects; Tickets and the family meeting; Principles; Decisions as experiments; Meals with a weekly plan and shopping list; Holidays; Finance; Exercise; Health appointments and habits; Faith reading plans and journal. Your data can live in your own Google Drive folder, and existing data can be brought in from spreadsheets. Mini-apps can be turned off, removed and added.'],
+    ['Coming later', 'A Planner (a family calendar gathering everything dated) and Medical (once private records exist).'],
     ['What it will not do', 'Streaks, scores, leaderboards, or piling missed work onto tomorrow. Missed tasks are information about workload and systems.'],
   ],
 };
