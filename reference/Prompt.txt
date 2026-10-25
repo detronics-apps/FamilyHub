@@ -1,0 +1,1 @@
+Build a new Detronics browser app called FamilyHub that does is explained in the Family_Hub_Product_and_Implementation_Plan.md. Use the detronics-app skill — scaffold with its script, read references/pitfalls.md before any viewport CSS or SVG, pure modules and tests first, then the UI. 

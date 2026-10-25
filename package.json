@@ -1,0 +1,11 @@
+{
+  "name": "family-hub",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A calm, local-first home for family chores, plans and shared information.",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "serve": "python -m http.server 8851"
+  }
+}

@@ -1,0 +1,132 @@
+/*
+ * Family Hub design tokens - a warm palette: cream and linen surfaces,
+ * cocoa ink, terracotta accent, sage for "done", honey for "worth a look".
+ *
+ * Components reference var(--...) only; retheme here, never in a component.
+ *
+ * Light is the base. Dark is redefined twice: once behind prefers-color-scheme
+ * for people who never touch the toggle, and once behind [data-theme] so the
+ * toggle wins in both directions.
+ */
+
+:root {
+  color-scheme: light;
+
+  --bg: #f7efe4;          /* linen */
+  --panel: #fffaf3;       /* cream */
+  --panel-2: #f6eadb;
+  --panel-3: #eedcc6;
+  --border: #e4d0b8;
+  --border-strong: #c8a983;
+
+  --text: #3b2a20;        /* cocoa */
+  --text-dim: #5c4636;
+  --text-faint: #7a6252;  /* 5:1 on linen - still body-text safe */
+
+  /* --accent fills and outlines. Text in the accent colour uses
+     --accent-strong, which keeps 4.5:1 on the cream surfaces. */
+  --accent: #e07a4f;      /* terracotta */
+  --accent-strong: #a8461f;
+  --accent-soft: #fbe2d2;
+  --accent-ink: #ffffff;
+
+  --ok: #4a7a3d;          /* sage */
+  --ok-soft: #e6efda;
+  --warn: #8a5a00;        /* honey */
+  --warn-soft: #fbecc9;
+  --danger: #a3302a;
+  --danger-soft: #f9e0dc;
+
+  --shadow-sm: 0 1px 2px rgb(59 42 32 / 8%);
+  --shadow-md: 0 4px 16px rgb(59 42 32 / 12%);
+  --shadow-lg: 0 12px 40px rgb(59 42 32 / 22%);
+
+  --radius-sm: 6px;
+  --radius: 12px;
+  --radius-lg: 18px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --header-h: 60px;
+  --content-w: 920px;
+  --tap: 44px;            /* minimum touch target */
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg: #1d1612;
+    --panel: #29201a;
+    --panel-2: #322720;
+    --panel-3: #3d3027;
+    --border: #4b3b2f;
+    --border-strong: #6b5543;
+
+    --text: #f6ece1;
+    --text-dim: #e2d2c1;
+    --text-faint: #bba692;
+
+    --accent: #e98a5f;
+    --accent-strong: #f4a57e;
+    --accent-soft: #4a2c1e;
+    --accent-ink: #2a1a10;
+
+    --ok: #a3cf90;
+    --ok-soft: #26331f;
+    --warn: #e8b85c;
+    --warn-soft: #3a2f18;
+    --danger: #f08a7a;
+    --danger-soft: #3e221d;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
+    --shadow-md: 0 4px 16px rgb(0 0 0 / 45%);
+    --shadow-lg: 0 12px 40px rgb(0 0 0 / 55%);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #1d1612;
+  --panel: #29201a;
+  --panel-2: #322720;
+  --panel-3: #3d3027;
+  --border: #4b3b2f;
+  --border-strong: #6b5543;
+
+  --text: #f6ece1;
+  --text-dim: #e2d2c1;
+  --text-faint: #bba692;
+
+  --accent: #e98a5f;
+  --accent-strong: #f4a57e;
+  --accent-soft: #4a2c1e;
+  --accent-ink: #2a1a10;
+
+  --ok: #a3cf90;
+  --ok-soft: #26331f;
+  --warn: #e8b85c;
+  --warn-soft: #3a2f18;
+  --danger: #f08a7a;
+  --danger-soft: #3e221d;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
+  --shadow-md: 0 4px 16px rgb(0 0 0 / 45%);
+  --shadow-lg: 0 12px 40px rgb(0 0 0 / 55%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
