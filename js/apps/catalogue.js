@@ -84,6 +84,7 @@ export const starter = (id) => STARTERS.find((s) => s.manifest.id === id) ?? nul
 
 /** On the roadmap, not built. Shown in the library so nobody mistakes them for working apps. */
 export const COMING_LATER = [
+  { id: 'planner', name: 'Planner', purpose: 'A family calendar: the week at a glance, with chores, tasks, meals, trips and review dates from the other mini-apps in one place.' },
   { id: 'meals', name: 'Meals', purpose: 'Recipes, a weekly meal plan and the shopping list that follows from it.' },
   { id: 'finance', name: 'Finance', purpose: 'Budgets, savings and debt goals, with the assumptions in plain view.' },
   { id: 'health', name: 'Health', purpose: 'Health goals, routines and appointment notes.' },

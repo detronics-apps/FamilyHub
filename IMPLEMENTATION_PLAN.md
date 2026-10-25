@@ -74,6 +74,23 @@ workstreams W1-W3. This file records status only.
 - Starter apps' code ships with the core rather than from Drive (D-018, needs approval).
 - Timer state is per window; closing the tab ends the session (the chore is unaffected).
 
+## Planned, not to be built yet
+
+### Planner (calendar) - owner request 2026-10-25
+
+**Planning only. Do not build until the owner says so.**
+
+- A calendar-style mini-app, and one of the first tiles on the home screen (near Chores).
+- The week at a glance (with a month view), gathering dated things from the other mini-apps
+  through read-only access (`data:<app>:read`): chore turns that are due, tasks with a planned
+  day, the weekly meal plan, holiday dates, decision review dates, principle review dates.
+- Its own simple events too (school play, dentist), stored in its own collection.
+- Questions to settle first: should it be a starter app or a core screen; how a planned-but-passed
+  item is shown without guilt (plan §3.7); whether it can move things (e.g. drag a task to
+  another day) - that would need the owning app's screen, since only an app writes its own
+  records (W1 rule).
+- Listed under Mini-apps → Coming later so nobody mistakes it for a working app.
+
 ## Next steps proposed
 
 1. Owner: connect a real Drive for Desktop folder on a laptop, then a second laptop; try a phone
