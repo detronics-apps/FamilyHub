@@ -408,3 +408,15 @@ body:has(.player:not([hidden])) .app-footer { padding-bottom: 72px; }
   .app-header, .app-footer, .slot-crumbs, .notices-host, .no-print, .tabs { display: none !important; }
   .panel { box-shadow: none; border: 0; }
 }
+
+/* Ingredient editor (js/ui/ingredient-editor.js) */
+.ing-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; padding-bottom: var(--space-2); border-bottom: 1px solid var(--border); }
+.ing-row__name { position: relative; flex: 1 1 220px; min-width: 0; }
+.ing-row__name .input { width: 100%; }
+.ing-row__full { flex-basis: 100%; }
+.ing-suggest { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 2px); margin: 0; padding: 4px; list-style: none; background: var(--panel); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); box-shadow: var(--shadow-md); max-height: 280px; overflow-y: auto; }
+.ing-suggest__item { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 6px 8px; border-radius: var(--radius-sm); cursor: pointer; color: var(--text); font: inherit; }
+.ing-suggest__item:hover, .ing-suggest__item:focus { background: var(--accent-soft); }
+.ing-suggest__item--own strong { color: var(--accent-strong); }
+.ing-status { font-weight: 700; color: var(--ok); min-width: 1em; text-align: center; }
+.ing-status--off { color: var(--warn); }

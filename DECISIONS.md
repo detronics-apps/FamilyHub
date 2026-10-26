@@ -253,6 +253,16 @@ change first and applies nothing without a tick.
 man, adult woman, teenager, child, toddler); their typical shares join the portion guide and the
 servings follow. No names or details are kept.
 
+**D-037 Ingredients picked, not typed; batches in halves; our own items (owner, 2026-10-26).**
+Ingredients are entered row by row: pick a food (our own items, the food guide, or the food
+database), the total amount and a unit from a list. A picked food is linked, so it counts towards
+calories; typed-only lines are kept and marked as not counted. A recipe can say what one batch
+makes (12 pancakes, 300 ml). It is made x1, x1.5, x2... (halves): the smallest batch that is
+enough and keeps whole-only ingredients whole (eggs by default; any counted item can be ticked).
+A meal can be marked "use as an ingredient" (home-made mayo); other recipes add part of its batch,
+and nutrition and shopping open it into its own ingredients (loops and depth are guarded).
+Ingredient suggestions can be limited to our own items. Recipe index version 3.
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).

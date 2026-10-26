@@ -28,7 +28,9 @@ export function createFoodDb(json) {
       if (!q.every((t) => f.words.some((w) => w.startsWith(t)))) continue;
       const lead = f.words[0]?.startsWith(q[0]) ? 0 : 6;
       const raw = f.words.includes('raw') ? -1 : 0;
-      hits.push([lead + raw + f.words.length * 0.6 + (f.type === 'N' ? 0.5 : 0), f]);
+      // "egg" should find eggs before eggplant: whole-word matches first.
+      const exact = q.every((t) => f.words.includes(t)) ? -2 : 0;
+      hits.push([lead + raw + exact + f.words.length * 0.6 + (f.type === 'N' ? 0.5 : 0), f]);
     }
     return hits.sort((a, b) => a[0] - b[0]).slice(0, limit).map(([, f]) => f);
   }

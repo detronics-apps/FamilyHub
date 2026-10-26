@@ -88,10 +88,11 @@ workstreams W1-W3. This file records status only.
 | Six-type spider charts, detail charts, calories per serving and per person | Done, tested, checked in browser |
 | How the week looks, Optimise My Week, Meal Assistant link to a planned meal | Done, tested, checked in browser |
 | Shopping: aisles, packaged items rounded up, copy and print | Done, tested, checked in browser |
+| Ingredient editor (pick, amount, unit), makes, batches in halves with whole eggs, our own items as ingredients | Done, tested, checked in browser |
 
 ## Test results
 
-`npm test`: **239 tests, 239 pass** (Node 24). Browser checks: see TEST_PLAN.md.
+`npm test`: **242 tests, 242 pass** (Node 24). Browser checks: see TEST_PLAN.md.
 
 ## Known limitations
 

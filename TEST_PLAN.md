@@ -181,3 +181,12 @@ walkthrough with a screen reader, Safari/Firefox, a real phone.
   switched to imperial (142 lb, 5 ft 6 in, lb input) and back; guidance on cards and home notices
   for a 6-month-old. 375 px: no sideways scroll. No console errors.
 - Not covered: recurring traditions and pantry (not in the app); a real Drive folder and a phone.
+
+### Ingredients, batches and our own items (2026-10-26)
+- Automated: batch multiplier (2 eggs: 5 portions of 4 = x1.5; 3 eggs: x2, with the reason;
+  untick whole = x1.5), mayo opened into its ingredients (half a batch: 1 egg, 125 ml oil),
+  nutrition through our own item, loop guard, egg found before eggplant.
+- Browser: made "Home-made mayo" (makes 300 ml, use as an ingredient) by picking eggs, olive oil
+  and lemon juice from the list with units; an "Egg salad" with "only our own items" suggesting
+  just the mayo; salad nutrition counts half the mayo (about 1,650 kcal a batch); shopping send
+  combined to 7 eggs, 125 ml oil, ½ tbsp lemon juice; a planned meal shows "Make the recipe x2".

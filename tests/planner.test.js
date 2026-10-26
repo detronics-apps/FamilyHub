@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import {
   normaliseRecipe, recipeSummary, ratingState, setRating, setTried, setPref, addNote, ratingMeaning,
   normalisePlan, setSlot, updateSlot, prepared, leftoverMeals, setReservation, addReservation, slotNeeds, ingredientsForPlan, scaleCarefully,
+  batchMultiplier, slotBatch, expandIngredients, collectRecipes, wholeOnly,
 } from '../js/apps/meals/logic.js';
 import { recipeFacts, passes, emptyFilters, describeFilters } from '../js/apps/meals/facts.js';
 import { proposeWeek, analyseWeek, optimiseWeek, additionFor, mixGroup } from '../js/apps/mealplan/logic.js';
@@ -42,7 +43,9 @@ test('B: changing leftovers from two portions to one updates everything that dep
   plan = addReservation(plan, id, { date: '2026-10-27', meal: 'lunch', portions: 2 }, 'res1');
   plan = setReservation(plan, id, 'res1', { portions: 1 });
   assert.equal(prepared(plan.slots[0]), 5);
-  assert.equal(ingredientsForPlan(plan, recipes).find((i) => /chicken/.test(i.name)).qty, 500);
+  // 5 portions of a 4-serving recipe: made x1.5 (in halves), so 600 g - with one portion spare.
+  assert.equal(ingredientsForPlan(plan, recipes).find((i) => /chicken/.test(i.name)).qty, 600);
+  assert.equal(slotBatch(plan.slots[0], chickenRice).spare, 1);
   assert.equal(leftoverMeals([plan], MONDAY)[0].portions, 1);
   plan = setReservation(plan, id, 'res1', { portions: 0 });
   assert.deepEqual(leftoverMeals([plan], MONDAY), [], 'cancelled');
@@ -58,7 +61,8 @@ test('leftovers from Sunday can be Monday’s lunch; extra portions are cooked w
 
 test('careful scaling: spices rounded and marked, counted things to the half, unknown stays unknown', () => {
   assert.deepEqual(scaleCarefully({ name: 'salt', qty: 1, unit: 'tsp', note: '' }, 1.5), { name: 'salt', qty: 1.5, unit: 'tsp', note: 'scaled - adjust to taste' });
-  assert.equal(scaleCarefully({ name: 'eggs', qty: 2, unit: '' }, 1.3).qty, 2.5);
+  assert.equal(scaleCarefully({ name: 'eggs', qty: 2, unit: '' }, 1.3).qty, 3, 'eggs stay whole');
+  assert.equal(scaleCarefully({ name: 'onions', qty: 2, unit: '' }, 1.3).qty, 2.5, 'other counted things to the half');
   assert.equal(scaleCarefully({ name: 'stock', qty: null, unit: '' }, 2).qty, null);
   assert.equal(scaleCarefully({ name: 'tomatoes', qty: 1, unit: 'tin' }, 1.5).qty, 2, 'a tin is bought whole');
 });
@@ -195,4 +199,32 @@ test('a new version from a planned meal keeps the original’s method, and point
   assert.ok(isRecipe(v));
   assert.equal(v.rating, null, 'its own ratings start empty');
   assert.equal(mealFromLink('nope'), null);
+});
+
+test('batch size in halves, keeping whole-only items whole: 12 pancakes with 2 eggs', () => {
+  const pancakes = normaliseRecipe({ title: 'Pancakes', servings: 4, yield: { qty: 12, unit: 'pancakes' }, ingredients: [{ name: 'flour', qty: 250, unit: 'g' }, { name: 'eggs', qty: 2, unit: '' }, { name: 'milk', qty: 500, unit: 'ml' }] });
+  assert.ok(wholeOnly(pancakes.ingredients[1]), 'eggs are whole-only unless untucked');
+  assert.deepEqual(batchMultiplier(pancakes.ingredients, 4, 5), { m: 1.5, makes: 6, spare: 1, blocked: [] });
+  assert.equal(batchMultiplier(pancakes.ingredients, 4, 4).m, 1);
+  assert.equal(batchMultiplier(pancakes.ingredients, 4, 8).m, 2);
+  const three = normaliseRecipe({ servings: 4, ingredients: [{ name: 'eggs', qty: 3, unit: '' }] });
+  const b = batchMultiplier(three.ingredients, 4, 5);
+  assert.equal(b.m, 2, '3 eggs x1.5 would be 4.5 - so x2');
+  assert.deepEqual(b.blocked, ['eggs']);
+  const loose = normaliseRecipe({ servings: 4, ingredients: [{ name: 'eggs', qty: 3, unit: '', whole: false }] });
+  assert.equal(batchMultiplier(loose.ingredients, 4, 5).m, 1.5, 'untick whole and it may be split');
+});
+
+test('our own items as ingredients: home-made mayo opens into its ingredients for shopping and nutrition', async () => {
+  const mayo = normaliseRecipe({ id: 'mayo', title: 'Home-made mayo', asIngredient: true, yield: { qty: 300, unit: 'ml' }, ingredients: [{ name: 'eggs', qty: 2, unit: '' }, { name: 'olive oil', qty: 250, unit: 'ml' }] });
+  const salad = normaliseRecipe({ id: 'salad', title: 'Egg salad', servings: 4, ingredients: [{ name: 'eggs', qty: 6, unit: '' }, { name: 'Home-made mayo', qty: 150, unit: 'ml', recipeId: 'mayo' }] });
+  const map = await collectRecipes(salad.ingredients, async (id) => (id === 'mayo' ? mayo : null));
+  assert.deepEqual([...map.keys()], ['mayo']);
+  const flat = expandIngredients(salad.ingredients, 1, (id) => map.get(id));
+  assert.deepEqual(flat.map((i) => [i.name, i.qty, i.unit]), [['eggs', 6, ''], ['eggs', 1, ''], ['olive oil', 125, 'ml']], 'half the mayo batch');
+  const n = mealNutrition(salad.ingredients, 4, db, { recipes: map });
+  const without = mealNutrition([salad.ingredients[0]], 4, db);
+  assert.ok(n.kcal.serving > without.kcal.serving + 100, 'the mayo’s oil counts');
+  const loop = normaliseRecipe({ id: 'loop', title: 'Loop', yield: { qty: 1, unit: 'jar' }, ingredients: [{ name: 'Loop', qty: 1, unit: 'jar', recipeId: 'loop' }] });
+  assert.equal(expandIngredients(loop.ingredients, 1, () => loop).length, 1, 'a loop stops instead of running forever');
 });

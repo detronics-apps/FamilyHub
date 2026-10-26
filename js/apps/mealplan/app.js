@@ -17,8 +17,9 @@ import { loading, failure, saveRecord } from '../kit.js';
 import {
   MEALS, MEAL_LABEL, WEEKDAYS, normaliseRecipe, recipeSummary, formatIngredient, parseIngredient,
   weekStart, weekDays, normalisePlan, slotAt, setSlot, updateSlot, copyPlan, planId, ingredientsForPlan, slotNeeds,
-  prepared, reserved, leftoverMeals, setReservation, addReservation, SUMMARY_VERSION,
+  prepared, reserved, leftoverMeals, setReservation, addReservation, SUMMARY_VERSION, slotBatch, collectRecipes,
 } from '../meals/logic.js';
+import { ingredientEditor } from '../../ui/ingredient-editor.js';
 import { recipeFacts, passes, emptyFilters, describeFilters, PROTEIN, CARB, GROUP, TRIAL, MEAL_TAGS } from '../meals/facts.js';
 import { MIX, proposeWeek, analyseWeek, optimiseWeek, additionFor } from './logic.js';
 import { GUIDE } from '../assistant/guide.js';
@@ -146,6 +147,8 @@ async function sendWeek(hub, plan, monday) {
       if (r) byId.set(s.recipeId, normaliseRecipe(r));
     }
   }
+  // Our own items inside them (home-made mayo) are bought as their own ingredients.
+  if (b) for (const s of plan.slots) await collectRecipes(s.ingredients ?? byId.get(s.recipeId)?.ingredients ?? [], (id) => b.get(id), byId);
   hub.open(sendHref({ source: `week:${monday}`, from: `Week of ${new Date(`${monday}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`, group: 'food', items: ingredientsForPlan(plan, byId) }));
 }
 
@@ -390,6 +393,7 @@ function slotScreen(hub, monday, slotId) {
   if (!slot) return el('div', { class: 'panel' }, [el('p', { text: 'That planned meal is no longer in the plan.' }), el('a', { class: 'btn', href: back, text: 'Back to the week' })]);
   const r = slot.recipeId ? loadRecipe(hub, slot.recipeId) : { data: null };
   const f = loadFood(hub);
+  const list = loadSummaries(hub);
   if (r.loading) return loading();
   const rec = r.data;
   const today = hub.today();
@@ -398,7 +402,13 @@ function slotScreen(hub, monday, slotId) {
   const update = async (patch) => { await savePlan(hub, monday, updateSlot(p.data, slot.id, patch)); };
   const ingredients = slot.ingredients ?? rec?.ingredients ?? [];
   const basis = slot.ingredients ? slot.basis : rec?.servings ?? slot.servings;
-  const n = f.data && ingredients.length ? mealNutrition(ingredients, basis, f.data) : null;
+  // Our own items used in it, loaded before anything is worked out.
+  const subs = hub.use(`subs:${slot.id}:${JSON.stringify(ingredients.filter((i) => i.recipeId).map((i) => i.recipeId))}`, () => (book(hub) ? collectRecipes(ingredients, (x) => book(hub).get(x)) : new Map()));
+  if (subs.loading) return loading();
+  const getSub = (x) => subs.data?.get(x) ?? null;
+  const n = f.data && ingredients.length ? mealNutrition(ingredients, basis, f.data, { recipes: subs.data }) : null;
+  const batch = slotBatch(slot, rec);
+  if (ui.slotDraft?.id !== `${monday}~${slot.id}`) ui.slotDraft = { id: `${monday}~${slot.id}`, rows: ingredients.map((i) => ({ ...i })) };
   const profiles = hub.foodProfiles();
   const guide = portionShares(profiles, today);
   const family = guide.map((s) => (slot.portions[s.id] ? { ...s, share: slot.portions[s.id], basis: 'set' } : s));
@@ -456,29 +466,26 @@ function slotScreen(hub, monday, slotId) {
         el('button', { class: 'btn btn-small', type: 'button', text: 'Add', 'data-field': 'res-add', on: { click: async () => { const v = document.getElementById('res-new').value; if (!v) return; const [d, m] = v.split('|'); await savePlan(hub, monday, addReservation(p.data, slot.id, { date: d, meal: m, portions: 1 })); } } }),
       ]),
       el('p', { class: 'small', text: `Cook ${prepared(slot)} portion${prepared(slot) === 1 ? '' : 's'}: ${slot.servings} now${slot.extra ? `, ${slot.extra} extra` : ''}${reserved(slot) ? `, ${reserved(slot)} set aside` : ''}.` }),
+      ingredients.length ? el('p', { class: 'small', 'data-field': 'batch' }, [
+        el('strong', { text: `Make the recipe x${batch.m}` }),
+        ` - ${batch.makes} servings${batch.spare >= 0.25 ? `, about ${fmtShare(Math.floor(batch.spare * 4) / 4)} spare` : ''}${rec?.yield?.qty ? `, ${Math.round(rec.yield.qty * batch.m * 10) / 10} ${rec.yield.unit}` : ''}.`,
+        batch.blocked.length ? ` A smaller batch would split the ${batch.blocked.join(' and ')}.` : '',
+      ]) : null,
       el('p', { class: 'small muted', text: 'Cooked leftovers keep about 3 days in the fridge (cool within 2 hours, reheat until steaming hot), or a few months frozen.' }),
     ]),
 
     el('div', { class: 'panel stack', 'aria-label': 'Ingredients' }, [
-      el('h2', { text: `Ingredients for ${prepared(slot)} portion${prepared(slot) === 1 ? '' : 's'}`, style: { margin: 0 } }),
-      // Everything cooked (leftovers included); a leftover meal's own additions are listed with it, not here.
-      ingredients.length ? el('ul', {}, slotNeeds({ ...slot, reserve: slot.reserve.map((x) => ({ ...x, additions: [] })) }, rec).map((i) => el('li', { text: `${formatIngredient(inSystem(i, sys))}${i.note ? ` (${i.note})` : ''}` }))) : el('p', { class: 'small muted', text: 'No ingredients recorded.' }),
+      el('h2', { text: `Ingredients (recipe x${batch.m}, ${batch.makes} servings)`, style: { margin: 0 } }),
+      // Everything cooked (leftovers included), our own items opened into theirs; a leftover meal's additions are listed with it.
+      ingredients.length ? el('ul', {}, slotNeeds({ ...slot, reserve: slot.reserve.map((x) => ({ ...x, additions: [] })) }, rec, getSub).map((i) => el('li', { text: `${formatIngredient(inSystem(i, sys))}${i.note ? ` (${i.note})` : ''}` }))) : el('p', { class: 'small muted', text: 'No ingredients recorded.' }),
       el('details', { class: 'measures' }, [
         el('summary', { text: changed ? 'Change this meal’s ingredients again' : 'Change the ingredients for this meal only' }),
-        el('form', {
-          class: 'stack', on: {
-            submit: async (e) => {
-              e.preventDefault();
-              const lines = e.target.elements.ings.value.split('\n').map((x) => x.trim()).filter(Boolean);
-              await update({ ingredients: lines.map(parseIngredient), basis });
-            },
-          },
-        }, [
-          el('label', { class: 'small', for: 'sl-ings', text: `One per line, for ${basis} servings (the recipe's own amounts) - scaled to what you cook.` }),
-          el('textarea', { class: 'input', id: 'sl-ings', name: 'ings', rows: '6', text: ingredients.map(formatIngredient).join('\n'), 'data-field': 'slot-ingredients' }),
+        el('div', { class: 'stack' }, [
+          el('p', { class: 'small', text: `Amounts for ${basis} servings (the recipe's own) - the batch is worked out from what you cook.` }),
+          ingredientEditor({ rows: ui.slotDraft.rows, db: f.data ?? null, own: (list.data ?? []).filter((s) => s.asIngredient), selfId: rec?.id ?? null }),
           el('div', { class: 'row' }, [
-            el('button', { class: 'btn btn-small', type: 'submit', text: 'Save for this meal' }),
-            changed && rec ? el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Go back to the recipe’s ingredients', on: { click: () => update({ ingredients: null }) } }) : null,
+            el('button', { class: 'btn btn-small', type: 'button', text: 'Save for this meal', 'data-field': 'slot-ing-save', on: { click: async () => { await update({ ingredients: ui.slotDraft.rows.filter((x) => x.name.trim()), basis }); ui.slotDraft = null; } } }),
+            changed && rec ? el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Go back to the recipe’s ingredients', on: { click: async () => { await update({ ingredients: null }); ui.slotDraft = null; } } }) : null,
           ]),
         ]),
       ]),
@@ -619,11 +626,15 @@ function weekOccasions(hub, monday, db) {
   const rs = ids.map((id) => [id, loadRecipe(hub, id)]);
   if (rs.some(([, r]) => r.loading)) return { loading: true };
   const recipes = new Map(rs.map(([id, r]) => [id, r.data]).filter(([, r]) => r));
+  const subIds = [...new Set([...recipes.values(), ...plan.slots].flatMap((x) => x.ingredients ?? []).filter((i) => i.recipeId).map((i) => i.recipeId))];
+  const subs = subIds.map((id) => [id, loadRecipe(hub, id)]);
+  if (subs.some(([, x]) => x.loading)) return { loading: true };
+  for (const [id, x] of subs) if (x.data) recipes.set(id, x.data);
   const about = (s) => {
     const rec = s.recipeId ? recipes.get(s.recipeId) : null;
     const ings = s.ingredients ?? rec?.ingredients ?? null;
     if (!ings?.length) return { facts: null, profile: null };
-    const n = mealNutrition(ings, s.ingredients ? s.basis : rec.servings, db);
+    const n = mealNutrition(ings, s.ingredients ? s.basis : rec.servings, db, { recipes });
     return { facts: recipeFacts({ ingredients: ings }), profile: nutrientProfile(n, db), rating: rec?.rating ?? null, prefsFavourite: rec ? Object.values(rec.prefs).includes('favourite') : false };
   };
   const occasions = [

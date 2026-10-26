@@ -76,7 +76,12 @@ export function normaliseRecipe(r = {}) {
   const ingredients = (Array.isArray(r.ingredients) ? r.ingredients : lines(r.ingredients).map(parseIngredient))
     .map((i) => (typeof i === 'string' ? parseIngredient(i) : i))
     .filter((i) => i && str(i.name))
-    .map((i) => ({ name: str(i.name, 120), qty: num(i.qty), unit: unitKey(str(i.unit, 20)), note: str(i.note, 120), ...(Number.isInteger(i.fdcId) && i.fdcId > 0 ? { fdcId: i.fdcId } : {}) }))
+    .map((i) => ({
+      name: str(i.name, 120), qty: num(i.qty), unit: unitKey(str(i.unit, 20)), note: str(i.note, 120),
+      ...(Number.isInteger(i.fdcId) && i.fdcId > 0 ? { fdcId: i.fdcId } : {}),
+      ...(str(i.recipeId, 40) ? { recipeId: str(i.recipeId, 40) } : {}),   // one of our own meals used as an ingredient (home-made mayo)
+      ...(typeof i.whole === 'boolean' ? { whole: i.whole } : {}),          // can only be used whole (eggs)
+    }))
     .slice(0, 80);
   const nutrition = {};
   for (const [k] of NUTRIENTS) { const v = num(r.nutrition?.[k]); if (v != null) nutrition[k] = v; }
@@ -103,6 +108,9 @@ export function normaliseRecipe(r = {}) {
       from: n.from === 'occurrence' ? 'occurrence' : 'recipe', occasion: str(n.occasion, 120),
     })),
     variantOf: str(r.variantOf, 40),   // set on a copy saved from a changed planned meal
+    // What one batch makes ("12 pancakes", "300 ml"), and whether other recipes can use it as an ingredient.
+    yield: { qty: num(r.yield?.qty), unit: str(r.yield?.unit, 30) },
+    asIngredient: r.asIngredient === true,
   };
 }
 
@@ -140,7 +148,7 @@ export function addNote(r, text, { from = 'recipe', occasion = '', at = new Date
 export const isRecipe = (r) => r.instructions.length > 0;
 
 /** Index version: an index written before this lacks the facts and feedback below and is rebuilt once. */
-export const SUMMARY_VERSION = 2;
+export const SUMMARY_VERSION = 3;
 
 /** What the index keeps per meal: enough to list, search and filter without opening each one. */
 export function recipeSummary(r) {
@@ -157,6 +165,7 @@ export function recipeSummary(r) {
     ingredientNames: r.ingredients.map((i) => i.name).slice(0, 40),
     tried: r.tried ?? false, rating: r.rating ?? null, prefs: r.prefs ?? {},
     variantOf: r.variantOf ?? '',
+    asIngredient: r.asIngredient ?? false, yield: r.yield ?? { qty: null, unit: '' },
   };
 }
 
@@ -387,22 +396,83 @@ const SEASONING = /\b(salt|pepper|spices?|herbs?|cumin|paprika|chilli|chili|turm
 
 const WHOLE = /^(tins?|cans?|packs?|bunch(es)?|cloves?|slices?)$/;
 
+/** Can only be used whole: ticked so, or eggs counted by the piece unless untucked. */
+export const wholeOnly = (i) => i.whole === true || (i.whole === undefined && !i.unit && /\beggs?\b/i.test(i.name));
+
+/**
+ * How many times to make a recipe for `needed` servings: in halves (x1, x1.5,
+ * x2...), the smallest that is enough and keeps every whole-only ingredient
+ * whole - 2 eggs can be made x1.5 (3 eggs) but never x1.25 (2.5 eggs).
+ * @returns {{ m, makes, spare, blocked: [names that forced a bigger batch] }}
+ */
+export function batchMultiplier(ingredients, servings, needed) {
+  const want = Math.max(needed, 0.01) / servings;
+  const whole = ingredients.filter((i) => wholeOnly(i) && i.qty != null);
+  const isWhole = (m) => whole.every((i) => Math.abs(i.qty * m - Math.round(i.qty * m)) < 0.01);
+  const first = Math.max(0.5, Math.ceil(want * 2 - 1e-9) / 2);
+  let m = first;
+  while (!isWhole(m) && m < first + 10) m += 0.5;
+  if (!isWhole(m)) m = first;
+  const blocked = m > first ? whole.filter((i) => Math.abs(i.qty * first - Math.round(i.qty * first)) >= 0.01).map((i) => i.name) : [];
+  return { m, makes: servings * m, spare: Math.max(0, servings * m - needed), blocked };
+}
+
+/**
+ * Ingredient lines for `factor` times a recipe, with our own items (a line with
+ * `recipeId`) opened into their own ingredients, scaled by how much of their
+ * batch is used. A loop, an item that cannot be found, or one without a "makes"
+ * amount stays as one line rather than being guessed.
+ */
+export function expandIngredients(lines, factor, getRecipe = () => null, depth = 0, seen = new Set()) {
+  const out = [];
+  for (const i of lines) {
+    const sub = i.recipeId ? getRecipe(i.recipeId) : null;
+    if (sub && sub.yield?.qty && i.qty != null && depth < 4 && !seen.has(sub.id)) {
+      out.push(...expandIngredients(sub.ingredients, (i.qty * factor) / sub.yield.qty, getRecipe, depth + 1, new Set([...seen, sub.id])));
+    } else out.push(scaleCarefully(i, factor));
+  }
+  return out;
+}
+
+/** Every meal our own ingredients point to, however deep (for loading them before working anything out). */
+export async function collectRecipes(lines, get, map = new Map(), depth = 0) {
+  for (const i of lines) {
+    if (!i.recipeId || map.has(i.recipeId) || depth > 4) continue;
+    const r = await get(i.recipeId);
+    if (!r) continue;
+    const rec = normaliseRecipe(r);
+    map.set(rec.id ?? i.recipeId, rec);
+    await collectRecipes(rec.ingredients, get, map, depth + 1);
+  }
+  return map;
+}
+
 /** One ingredient for `factor` times the recipe. Unknown amounts stay unknown. */
 export function scaleCarefully(i, factor) {
   if (i.qty == null || factor === 1) return { ...i };
   const raw = i.qty * factor;
   if (SEASONING.test(i.name)) return { ...i, qty: Math.max(0.25, Math.round(raw * 4) / 4), note: [i.note, 'scaled - adjust to taste'].filter(Boolean).join('; ') };
+  if (wholeOnly(i)) return { ...i, qty: Math.max(1, Math.round(raw)) };
   if (!i.unit) return { ...i, qty: Math.max(0.5, Math.round(raw * 2) / 2) };
   // Bought whole: tins, packs, bunches, cloves and slices round up.
   if (WHOLE.test(i.unit)) return { ...i, qty: Math.max(1, Math.ceil(raw - 0.01)) };
   return { ...i, qty: raw };
 }
 
-/** What one planned meal needs bought: its ingredients for every portion cooked, plus leftover additions. */
-export function slotNeeds(slot, recipe) {
+/** How many times the recipe is made for a planned meal (x1, x1.5...), keeping whole-only items whole. */
+export function slotBatch(slot, recipe) {
+  const list = slot.ingredients ?? recipe?.ingredients ?? [];
+  const basis = slot.ingredients ? slot.basis : recipe?.servings ?? slot.servings;
+  return { ...batchMultiplier(list, basis, prepared(slot)), basis };
+}
+
+/**
+ * What one planned meal needs bought: its ingredients for the batch made (our
+ * own items opened into theirs), plus what leftover meals add.
+ */
+export function slotNeeds(slot, recipe, getRecipe = () => null) {
   const list = slot.ingredients ?? recipe?.ingredients ?? null;
-  const basis = slot.ingredients ? slot.basis : recipe?.servings;
-  const out = list ? list.map((i) => scaleCarefully(i, prepared(slot) / basis)) : [];
+  const out = list ? expandIngredients(list, slotBatch(slot, recipe).m, getRecipe) : [];
   for (const r of slot.reserve) out.push(...r.additions);
   return out;
 }
@@ -413,7 +483,7 @@ export function slotNeeds(slot, recipe) {
  */
 export function ingredientsForPlan(plan, recipes) {
   const out = [];
-  for (const s of plan.slots) out.push(...slotNeeds(s, s.recipeId ? recipes.get(s.recipeId) : null));
+  for (const s of plan.slots) out.push(...slotNeeds(s, s.recipeId ? recipes.get(s.recipeId) : null, (id) => recipes.get(id)));
   return combineIngredients(out);
 }
 

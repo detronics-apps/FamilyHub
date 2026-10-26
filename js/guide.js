@@ -155,6 +155,12 @@ export const HOWTOS = [
     'Set how many are eating and the leftovers: cook extra to decide later, or set portions aside for a later meal. The later meal shows them as already cooked.',
     'Open the planned meal to add guests, change its ingredients for this time only, add a note, or send it to Meal Assistant for ideas.',
   ] },
+  { id: 'ingredients', title: 'Add ingredients, and use your own sauces in other recipes', steps: [
+    'In Meals & Recipes, press Add a meal (or Edit). Press "+ Add an ingredient", start typing and pick the food from the list - ✓ means its calories count.',
+    'Enter the total amount for the whole recipe and choose the unit. Say what one batch makes, e.g. 12 pancakes.',
+    'For something home-made like mayo, tick "Use this as an ingredient" and say what it makes (300 ml). It then appears with a ★ when adding ingredients elsewhere - tick "Only suggest our own items" to see just yours.',
+    'When planning, the recipe is made x1, x1.5 or x2 so eggs and other whole-only items stay whole.',
+  ] },
   { id: 'rate', title: 'Rate a meal and record favourites', steps: [
     'Open a meal in Meals & Recipes. Tick "We have tried it", then choose a family rating from 1 to 10.',
     'Set each person’s preference - favourite, likes, neutral or dislikes. A 7/10 meal can still be one child’s favourite.',

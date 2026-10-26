@@ -100,12 +100,22 @@ export function resolveIngredient(i, db) {
  * What a meal holds, for `servings` servings.
  * @returns { batch, perServing: {key: {value, missing}}, resolved, counted, of, approx, kcal, colours }
  */
-export function mealNutrition(ingredients, servings, db) {
-  const resolved = ingredients.map((i) => resolveIngredient(i, db));
+export function mealNutrition(ingredients, servings, db, { recipes = null, depth = 0 } = {}) {
+  const resolved = ingredients.map((i) => {
+    // One of our own items (home-made mayo): what it holds per unit of its batch, times the amount used.
+    const sub = i.recipeId && recipes ? recipes.get(i.recipeId) : null;
+    if (sub && sub.yield?.qty && i.qty != null && depth < 4) {
+      const inner = mealNutrition(sub.ingredients, 1, db, { recipes, depth: depth + 1 });
+      const share = i.qty / sub.yield.qty;
+      const values = Object.fromEntries(Object.entries(inner.batch).map(([k, t]) => [k, t.missing ? null : t.value * share]));
+      return { ingredient: i, food: null, grams: inner.counted ? 1 : null, how: 'own', approx: inner.approx, values };
+    }
+    return resolveIngredient(i, db);
+  });
   const batch = {};
   for (const k of db.keys) batch[k] = { value: 0, missing: 0 };
   for (const r of resolved) {
-    const a = r.grams !== null ? amounts(r.food, r.grams) : null;
+    const a = r.values ?? (r.grams !== null ? amounts(r.food, r.grams) : null);
     for (const k of db.keys) {
       if (!a || a[k] === null) batch[k].missing += 1; else batch[k].value += a[k];
     }

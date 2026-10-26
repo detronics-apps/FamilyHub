@@ -14,10 +14,12 @@ import { el } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
 import { loading, failure, recordForm, saveRecord } from '../kit.js';
 import {
-  ALLERGENS, NUTRIENTS, normaliseRecipe, recipeSummary, recipeText, scaleIngredients, nutritionRows,
+  ALLERGENS, NUTRIENTS, normaliseRecipe, recipeSummary, recipeText, nutritionRows,
   formatIngredient, isRecipe, keepFoodLinks, mealFromPlate, mealFromLink,
   PREFS, ratingMeaning, ratingState, setRating, setTried, setPref, addNote, SUMMARY_VERSION,
+  batchMultiplier, expandIngredients, collectRecipes, scaleCarefully, combineIngredients,
 } from './logic.js';
+import { ingredientEditor } from '../../ui/ingredient-editor.js';
 import { mealNutrition } from '../../meal-nutrition.js';
 import { nutritionPanel } from '../../ui/nutrition-view.js';
 import { portionShares, portionPlan, fmtShare, LEFTOVERS } from '../../portions.js';
@@ -116,15 +118,24 @@ function recipeScreen(hub, id, back) {
   const serves = ui.servings[id] ?? rec.servings;
   const setServes = (n) => { ui.servings[id] = Math.max(1, n); hub.render(); };
   const rows = nutritionRows(rec).filter((x) => x.known);
+  // Our own items used in it (home-made mayo), however deep - loaded before anything is worked out.
+  const subs = hub.use(`subs:${id}:${r.data.rev ?? 0}`, () => collectRecipes(rec.ingredients, (x) => recipes(hub).get(x)));
+  if (subs.loading) return loading();
+  const getSub = (x) => subs.data?.get(x) ?? null;
   // One calculation for this page's calories, chart and per-person figures (js/meal-nutrition.js).
-  const n = f.data && rec.ingredients.length ? mealNutrition(rec.ingredients, rec.servings, f.data) : null;
+  const n = f.data && rec.ingredients.length ? mealNutrition(rec.ingredients, rec.servings, f.data, { recipes: subs.data }) : null;
   const kcal = n?.kcal.known && n.kcal.complete ? n.kcal.serving : null;
   const original = rec.variantOf ? hub.use(`recipe:${rec.variantOf}`, () => recipes(hub).get(rec.variantOf)) : null;
 
   return el('section', { class: 'stack' }, [
     backLink(back) ?? el('a', { href: hub.href('recipes'), class: 'small', text: '‹ Meals & recipes' }),
     el('article', { class: 'panel stack' }, [
-      el('div', { class: 'row' }, [el('h1', { text: rec.title, style: { margin: 0 } }), el('span', { class: `badge${isRecipe(rec) ? ' badge--ok' : ''}`, text: isRecipe(rec) ? 'Recipe' : 'Meal' })]),
+      el('div', { class: 'row' }, [
+        el('h1', { text: rec.title, style: { margin: 0 } }), el('span', { class: `badge${isRecipe(rec) ? ' badge--ok' : ''}`, text: isRecipe(rec) ? 'Recipe' : 'Meal' }),
+        rec.asIngredient ? el('span', { class: 'badge', text: 'Also an ingredient' }) : null,
+      ]),
+      rec.yield.qty ? el('p', { class: 'small', style: { margin: 0 }, text: `Makes ${fmtQtyText(rec.yield.qty * (serves / rec.servings))} ${rec.yield.unit}${serves !== rec.servings ? ` (for ${serves} servings)` : ''}.` }) : null,
+      rec.asIngredient && !rec.yield.qty ? el('p', { class: 'small', text: 'To use it in other recipes, Edit it and say what one batch makes (e.g. 300 ml).' }) : null,
       rec.variantOf ? el('p', { class: 'small' }, ['A version of ', el('a', { href: hub.href('item', rec.variantOf), text: original?.data?.title ?? 'another meal' }), ' - its notes and ratings are its own.']) : null,
       rec.description ? el('p', { text: rec.description }) : null,
       el('p', { class: 'small muted', text: [rec.prepMinutes != null ? `prep ${rec.prepMinutes} min` : null, rec.cookMinutes != null ? `cook ${rec.cookMinutes} min` : null, rec.tags.join(', ') || null, rec.allergens.length ? `contains ${rec.allergens.join(', ')}` : null].filter(Boolean).join(' · ') }),
@@ -135,7 +146,11 @@ function recipeScreen(hub, id, back) {
         el('button', { class: 'btn btn-small btn-icon', type: 'button', text: '+', 'aria-label': 'More servings', on: { click: () => setServes(serves + 1) } }),
       ]),
       el('h2', { text: 'Ingredients' }),
-      rec.ingredients.length ? el('ul', {}, scaleIngredients(rec, serves).map((i) => el('li', { text: formatIngredient(inSystem(i, hub.units())) + (i.note ? ` (${i.note})` : '') }))) : el('p', { class: 'small muted', text: 'No ingredients listed.' }),
+      // Whole-only items (eggs) stay whole when the servings change.
+      rec.ingredients.length ? el('ul', {}, rec.ingredients.map((i) => scaleCarefully(i, serves / rec.servings)).map((i) => el('li', {}, [
+        i.recipeId && getSub(i.recipeId) ? el('a', { href: hub.href('item', i.recipeId), text: formatIngredient(inSystem(i, hub.units())) }) : formatIngredient(inSystem(i, hub.units())),
+        i.note ? ` (${i.note})` : '', i.recipeId ? el('span', { class: 'small muted', text: ' - our own' }) : null,
+      ]))) : el('p', { class: 'small muted', text: 'No ingredients listed.' }),
       rec.instructions.length ? el('div', {}, [el('h2', { text: 'Method' }), el('ol', { class: 'howto-steps' }, rec.instructions.map((s) => el('li', { text: s })))])
         : el('p', { class: 'small' }, ['A meal without a method. ', el('a', { href: hub.href('edit', rec.id), text: 'Add the method', 'data-field': 'add-method' }), ' to make it a recipe.']),
       rec.source ? el('p', { class: 'small muted', text: `Source: ${rec.source}` }) : null,
@@ -154,7 +169,7 @@ function recipeScreen(hub, id, back) {
     portionsPanel(hub, rec, serves, setServes, kcal),
     el('div', { class: 'row' }, [
       hub.data.installed('mealplan') ? el('a', { class: 'btn btn-primary', href: `#/mealplan/add/${encodeURIComponent(`${rec.id}~${serves}`)}`, text: 'Plan it', 'data-field': 'plan-meal' }) : null,
-      hub.data.installed('shopping') && rec.ingredients.length ? el('a', { class: 'btn', href: sendHref({ source: `meal:${rec.id}`, from: rec.title, group: 'food', items: scaleIngredients(rec, serves) }), text: 'Send to the shopping list', 'data-field': 'send-shopping' }) : null,
+      hub.data.installed('shopping') && rec.ingredients.length ? el('a', { class: 'btn', href: sendHref({ source: `meal:${rec.id}`, from: rec.title, group: 'food', items: combineIngredients(expandIngredients(rec.ingredients, serves / rec.servings, getSub)) }), text: 'Send to the shopping list', 'data-field': 'send-shopping' }) : null,
       el('a', { class: 'btn', href: hub.href('edit', rec.id), text: 'Edit' }),
       hub.data.installed('assistant') ? el('a', { class: 'btn', href: `#/assistant/meal/recipe:${encodeURIComponent(rec.id)}`, text: 'Ideas to improve it', 'data-field': 'improve-recipe' }) : null,
       el('button', {
@@ -177,10 +192,17 @@ function editScreen(hub, id, param = null) {
   const fromPlate = !existing && param?.startsWith('plate:') ? mealFromPlate(param.slice(6)) : null;
   const base = existing ?? fromPlate ?? (handed && !id ? handed : null) ?? normaliseRecipe({ title: '' });
   const rec = existing && handed ? { ...existing, ingredients: handed.ingredients, servings: handed.servings } : base;
+  // The ingredient rows being edited live here, so a redraw of the page never loses them.
+  const draftKey = `${id ?? 'new'}:${param ?? ''}`;
+  if (ui.draft?.key !== draftKey) ui.draft = { key: draftKey, rows: rec.ingredients.map((i) => ({ ...i })) };
+  const f = hub.use('food', () => hub.food.load());
+  const ix = ensureIndex(hub);
+  if (ix.loading) return loading('Bringing the list up to date…');
+  const own = hub.use('own-items', async () => (await recipes(hub).list({ limit: 100000, filter: (s) => s.asIngredient })).items);
   const flat = {
     ...rec,
     title: existing || ((fromPlate || handed) && rec.title !== 'Untitled meal') ? rec.title : '',
-    ingredients: rec.ingredients.map(formatIngredient),
+    yieldQty: rec.yield.qty, yieldUnit: rec.yield.unit,
     tags: rec.tags.join(', '),
     ...Object.fromEntries(NUTRIENTS.map(([k]) => [`n_${k}`, rec.nutrition[k] ?? null])),
   };
@@ -196,7 +218,16 @@ function editScreen(hub, id, param = null) {
         { key: 'servings', label: 'Serves', type: 'number' },
         { key: 'prepMinutes', label: 'Preparation (minutes)', type: 'number', hint: 'Prep plus cooking time lets you find quick meals when time is short.' },
         { key: 'cookMinutes', label: 'Cooking (minutes)', type: 'number' },
-        { key: 'ingredients', label: 'Ingredients', type: 'lines', rows: 6, hint: 'One per line, e.g. "200 g flour", "2 eggs", "1/2 cup milk".' },
+        { key: 'yieldQty', label: 'Makes (optional)', type: 'number', placeholder: 'e.g. 12', hint: 'What one batch makes, e.g. 12 pancakes or 300 ml.' },
+        { key: 'yieldUnit', label: 'of', placeholder: 'e.g. pancakes, ml, jars' },
+        {
+          key: 'ingredients', label: 'Ingredients', type: 'custom',
+          control: () => ({
+            node: ingredientEditor({ rows: ui.draft.rows, db: f.data ?? null, own: own.data ?? [], selfId: existing?.id ?? null }),
+            get: () => ui.draft.rows.filter((x) => x.name.trim()),
+          }),
+        },
+        { key: 'asIngredient', label: 'Use this as an ingredient in other recipes (home-made mayo, a base sauce)', type: 'check' },
         { key: 'instructions', label: 'Method', type: 'lines', rows: 6, hint: 'One step per line. Leave it empty for a meal; adding steps makes it a recipe.' },
         { key: 'description', label: 'Description', type: 'textarea', more: true },
         { key: 'tags', label: 'Tags', more: true, hint: 'Separated by commas, e.g. quick, vegetarian, kids like it.' },
@@ -205,13 +236,16 @@ function editScreen(hub, id, param = null) {
         { key: 'notes', label: 'Family notes', type: 'textarea', more: true },
         { key: 'source', label: 'Where it came from', more: true },
       ],
-      onCancel: () => (existing ? hub.go('item', existing.id) : hub.go('recipes')),
+      onCancel: () => { ui.draft = null; if (existing) hub.go('item', existing.id); else hub.go('recipes'); },
       onSave: async (values) => {
         const nutrition = Object.fromEntries(NUTRIENTS.map(([k]) => [k, values[`n_${k}`]]));
         for (const [k] of NUTRIENTS) delete values[`n_${k}`];
+        if (values.asIngredient && !values.yieldQty) { hub.ui.notice('To use it as an ingredient, say what one batch makes (for example 300 ml).', 'warn'); return; }
+        values.yield = { qty: values.yieldQty, unit: values.yieldUnit };
+        delete values.yieldQty; delete values.yieldUnit;
         const next = normaliseRecipe({ ...rec, ...values, nutrition });
         const saved = await saveRecord(hub, recipes(hub), { ...next, ingredients: keepFoodLinks(next.ingredients, rec.ingredients) });
-        if (saved) { hub.ui.notice(isRecipe(saved) ? 'Saved as a recipe.' : 'Saved as a meal.'); hub.go('item', saved.id); }
+        if (saved) { ui.draft = null; hub.invalidate('own-items'); hub.ui.notice(isRecipe(saved) ? 'Saved as a recipe.' : 'Saved as a meal.'); hub.go('item', saved.id); }
       },
     }),
   ]);
@@ -291,6 +325,20 @@ function noteScreen(hub, id, param) {
   ]);
 }
 
+const fmtQtyText = (n) => String(Math.round(n * 10) / 10);
+/** The recipe is made x1, x1.5, x2... - enough for the portions wanted, with whole-only items whole. */
+const batch = (rec, plan) => batchMultiplier(rec.ingredients, rec.servings, plan.total);
+function batchLine(rec, plan) {
+  const b = batch(rec, plan);
+  const portions = (n) => `${fmtShare(n)} portion${n > 1 ? 's' : ''}`;
+  return el('p', {}, [
+    `Altogether about ${portions(plan.eating)}${plan.extra ? `, plus ${portions(plan.extra)} for leftovers` : ''}: `,
+    el('strong', { text: `make the recipe x${b.m}` }),
+    ` - ${b.makes} servings${rec.yield.qty ? `, ${fmtQtyText(rec.yield.qty * b.m)} ${rec.yield.unit}` : ''}${b.spare >= 0.25 ? `, about ${fmtShare(Math.floor(b.spare * 4) / 4)} spare` : ''}.`,
+    b.blocked.length ? el('span', { class: 'small muted', text: ` A smaller batch would split the ${b.blocked.join(' and ')}.` }) : null,
+  ]);
+}
+
 /** How the meal might be shared out among whoever is eating, with or without leftovers. */
 function portionsPanel(hub, rec, serves, setServes, kcalPerServing) {
   const profiles = hub.foodProfiles();
@@ -317,13 +365,10 @@ function portionsPanel(hub, rec, serves, setServes, kcalPerServing) {
         el('div', { class: 'small', text: s.basis === 'baby' ? 'Under one - follow your clinic’s feeding guidance' : `about ${portions(s.share)}${kcalPerServing ? ` · about ${Math.round(s.share * kcalPerServing)} kcal` : ''}` }),
       ]),
     ]))) : el('p', { class: 'small muted', text: 'Choose who is eating.' }),
-    shares.length ? el('p', {}, [
-      `Altogether about ${portions(plan.eating)}${plan.extra ? `, plus ${portions(plan.extra)} for leftovers` : ''}: `,
-      el('strong', { text: `make ${plan.cook} serving${plan.cook === 1 ? '' : 's'}` }), '.',
-    ]) : null,
-    shares.length && plan.cook !== serves ? el('button', {
-      class: 'btn', type: 'button', text: `Use ${plan.cook} servings for the ingredients`, style: { alignSelf: 'flex-start' }, 'data-field': 'use-portions',
-      on: { click: () => setServes(plan.cook) },
+    shares.length ? batchLine(rec, plan) : null,
+    shares.length && batch(rec, plan).makes !== serves ? el('button', {
+      class: 'btn', type: 'button', text: `Use x${batch(rec, plan).m} for the ingredients`, style: { alignSelf: 'flex-start' }, 'data-field': 'use-portions',
+      on: { click: () => setServes(batch(rec, plan).makes) },
     }) : null,
     el('p', { class: 'small muted', text: 'A rough guide from each person’s age and gender, and height and weight where recorded on the People page. One portion is one serving of this meal, sized for an adult. Appetites vary from day to day - let everyone eat to their hunger.' }),
   ]);

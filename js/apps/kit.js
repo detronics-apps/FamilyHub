@@ -64,6 +64,12 @@ export function recordForm({ fields, record = {}, people = [], onSave, onCancel 
         control = el('input', { class: 'input', id, type: 'number', min: '0', step: 'any', inputmode: 'decimal', value: v ?? '', style: { maxWidth: '160px' }, placeholder: f.placeholder ?? '' });
         getters[f.key] = () => (control.value === '' ? null : Math.max(0, Number(control.value)));
         break;
+      case 'custom': {
+        // A control built by the caller: { node, get }.
+        const c = f.control();
+        getters[f.key] = c.get;
+        return el('div', { class: 'field' }, [el('span', { class: 'field__label', text: f.label }), c.node, f.hint ? el('div', { class: 'field__hint', text: f.hint }) : null]);
+      }
       case 'check': {
         const box = el('input', { type: 'checkbox', id, checked: Boolean(v) });
         getters[f.key] = () => box.checked;

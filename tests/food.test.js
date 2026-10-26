@@ -179,3 +179,8 @@ test('age guidance reaches the plate: honey for a baby, tea for a child, wine in
   assert.ok(run('toast and tea', ['c']).cautions.some((c) => /Lily: Avoid caffeinated drinks/.test(c)));
   assert.ok(!run('toast and tea', ['a']).cautions.some((c) => /caffeinated/.test(c)), 'adults are not told off for tea');
 });
+
+test('food search: a whole-word match comes before a longer word that starts the same', () => {
+  const first = db.search('egg', 5)[0].name.toLowerCase();
+  assert.ok(first.startsWith('egg,') || first.startsWith('egg '), first);
+});
