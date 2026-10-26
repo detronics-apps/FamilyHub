@@ -125,3 +125,27 @@ test('a batch weighs what its ingredients add up to (salad dressing: 239 g)', as
   assert.deepEqual(normaliseRecipe({ title: 'x', yield: { qty: 239, unit: 'grams', auto: true } }).yield, { qty: 239, unit: 'g', auto: true });
   assert.deepEqual(normaliseRecipe({ title: 'x', yield: { qty: 12, unit: '' } }).yield, { qty: 12, unit: '' });
 });
+
+test('shopping remembers what we buy, finds it by kind, and shows everything there is for a first time', async () => {
+  const { findItems, kindOf, KINDS, STARTER } = await import('../js/apps/shopping/logic.js');
+  let list = addShoppingItem(normaliseShopping({}), 'toothpaste', 't1', 'hygiene');
+  list = addShoppingItem(list, '2 l milk', 'm1', 'dairy');
+  assert.deepEqual(list.known.map((k) => k.name).sort(), ['milk', 'toothpaste'], 'added items are ours');
+  list = toggleItem(list, 't1', '2026-10-26');
+  list = toggleItem(list, 't1', '2026-10-27');
+  list = toggleItem(list, 't1', '2026-10-28');
+  assert.equal(list.known.find((k) => k.name === 'toothpaste').times, 2, 'ticking bought counts; unticking does not');
+  assert.equal(list.known.find((k) => k.name === 'toothpaste').last, '2026-10-28');
+  assert.equal(kindOf('dairy'), 'food');
+  assert.equal(kindOf('hygiene'), 'hygiene');
+  assert.deepEqual(findItems(list, { kind: 'hygiene' }).map((f) => f.name), ['toothpaste'], 'ours by kind');
+  const all = findItems(list, { kind: 'hygiene', ours: false });
+  assert.equal(all[0].name, 'toothpaste', 'ours first');
+  assert.ok(all.some((f) => f.name === 'shampoo' && !f.ours), 'and everything else there is');
+  assert.ok(!all.some((f) => kindOf(f.group) !== 'hygiene'));
+  assert.ok(findItems(list, { query: 'mil' }).some((f) => f.name === 'milk' && f.onList));
+  assert.ok(findItems(list, { kind: 'food', ours: false, query: 'tofu' }).length, 'everyday foods to choose from');
+  assert.ok(Object.keys(STARTER).every((k) => KINDS[k]));
+  const again = normaliseShopping(JSON.parse(JSON.stringify(list)));
+  assert.equal(again.known.length, 2, 'kept with the list');
+});

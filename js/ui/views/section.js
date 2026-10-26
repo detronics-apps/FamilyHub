@@ -4,7 +4,7 @@
 
 import { el } from '../dom.js';
 import { section, appsIn } from '../../sections.js';
-import { setEnabled } from '../../miniapps.js';
+import { setEnabled, MODES } from '../../miniapps.js';
 import { STARTERS } from '../../apps/catalogue.js';
 import { doInstall } from './library.js';
 
@@ -17,9 +17,20 @@ export function sectionView(ctx, route) {
   const installed = appsIn(s.id, ctx.installedManifests()).sort((a, b) => rank(a) - rank(b));
   const offered = appsIn(s.id, STARTERS.map((x) => x.manifest)).filter((m) => !reg.apps[m.id]);
 
+  // The ways in that the mini-apps name, grouped by what you have time for.
+  const on = installed.filter((m) => reg.apps[m.id].enabled);
+  const ways = Object.entries(MODES).map(([k, mode]) => [k, mode, on.flatMap((m) => (m.modes ?? []).filter((x) => x.mode === k).map((x) => ({ ...x, app: m })))]).filter(([, , list]) => list.length);
   return el('section', { class: 'stack', 'aria-labelledby': 'section-title' }, [
     el('h1', { id: 'section-title', text: s.name }),
     el('p', { class: 'muted', text: s.purpose }),
+    ways.length ? el('div', { class: 'modes' }, ways.map(([k, mode, list]) => el('div', { class: `panel stack mode mode--${k}`, 'data-field': `mode:${k}` }, [
+      el('div', {}, [el('h2', { text: mode.title, style: { margin: 0 } }), el('p', { class: 'small muted', style: { margin: 0 }, text: mode.when })]),
+      el('ul', { class: 'list' }, list.map((x) => el('li', {}, [el('a', { class: 'list__main', href: `#/${x.app.id}${x.screen ? `/${x.screen}` : ''}`, 'data-field': `way:${x.app.id}:${x.screen ?? ''}` }, [
+        el('strong', { text: x.label }),
+        el('div', { class: 'small muted', text: [x.hint, on.length > 1 ? x.app.name : null].filter(Boolean).join(' · ') }),
+      ])]))),
+    ]))) : null,
+    ways.length && installed.length ? el('h2', { text: `Everything in ${s.name}`, style: { margin: 'var(--space-2) 0 0' } }) : null,
     installed.length
       ? el('nav', { class: 'tiles', 'aria-label': `${s.name} mini-apps` }, installed.map((m) => {
         const on = reg.apps[m.id].enabled;

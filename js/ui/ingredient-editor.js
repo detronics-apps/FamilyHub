@@ -9,7 +9,7 @@
 
 import { el } from './dom.js';
 import { GUIDE } from '../apps/assistant/guide.js';
-import { parseIngredient, unitKey, typeOf, typeName } from '../apps/meals/logic.js';
+import { unitKey, typeOf, typeName, ingredientsFromCSV, INGREDIENT_CSV_TEMPLATE } from '../apps/meals/logic.js';
 import { tokens, foodSizes } from '../food.js';
 import { resolveIngredient } from '../meal-nutrition.js';
 import { fmtMass, sizeLabel } from '../units.js';
@@ -174,7 +174,11 @@ export function ingredientEditor({ rows, db = null, own = [], selfId = null, onC
   }
 
   function redraw() {
-    const paste = el('textarea', { class: 'input', rows: '3', placeholder: 'Paste several lines, e.g. "200 g flour"', 'aria-label': 'Paste ingredient lines' });
+    // A list kept elsewhere comes in as a .csv file (ingredient, amount, unit, note).
+    const file = el('input', {
+      type: 'file', accept: '.csv,text/csv', hidden: true, 'data-field': 'ing-csv',
+      on: { change: async (e) => { const f = e.target.files?.[0]; if (!f) return; rows.push(...ingredientsFromCSV(await f.text())); changed(); redraw(); } },
+    });
     box.replaceChildren(
       // What the suggestions search: everything, one of our own types, or the food database.
       el('div', { class: 'chipset', role: 'group', 'aria-label': 'Search in' }, [['all', 'All'], ['meal', 'Meals'], ['recipe', 'Recipes'], ['own', 'Own ingredients'], ['food', 'Ingredients']].map(([k, t]) => el('button', {
@@ -185,11 +189,9 @@ export function ingredientEditor({ rows, db = null, own = [], selfId = null, onC
       el('div', { class: 'row' }, [
         el('button', { class: 'btn btn-small', type: 'button', text: '+ Add an ingredient', 'data-field': 'ing-add', on: { click: () => { rows.push({ name: '', qty: null, unit: 'g' }); changed(); redraw(); box.querySelector(`[data-field="ing-name:${rows.length - 1}"]`)?.focus(); } } }),
       ]),
-      el('details', { class: 'measures' }, [
-        el('summary', { text: 'Paste several lines at once' }),
-        paste,
-        el('button', { class: 'btn btn-small', type: 'button', text: 'Add these lines', on: { click: () => { for (const line of paste.value.split('\n').map((x) => x.trim()).filter(Boolean)) rows.push(parseIngredient(line)); changed(); redraw(); } } }),
-        el('p', { class: 'small muted', text: 'Pasted lines are kept as written; pick each from the list afterwards to link it to the food database.' }),
+      el('div', { class: 'row' }, [
+        el('label', { class: 'btn btn-small', text: 'Add from a .csv file' }, [file]),
+        el('a', { class: 'small', href: `data:text/csv;charset=utf-8,${encodeURIComponent(INGREDIENT_CSV_TEMPLATE)}`, download: 'ingredients.csv', text: 'Download an example file' }),
       ]),
       el('p', { class: 'small muted', text: 'Amounts are the total for the whole recipe, in whatever you buy - "½ head" or "1 tin" - and the weight is shown next to it. ✓ = linked, so its calories count; ? = not linked yet.' }),
     );

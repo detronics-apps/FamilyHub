@@ -210,4 +210,18 @@ export function optimiseWeek({ analysis, occasions, meals = [], people = [], tod
 }
 
 /** The ingredient line a proposal adds to a planned meal: the guide's typical serving for every portion cooked. */
+/**
+ * A Meal Assistant idea applied to ingredient lines: { add: guideId } adds a usual
+ * amount for `servings`; { swap: [fromId, toId] } turns the matching lines into the
+ * other food. Null when the idea names a food the guide does not know.
+ */
+export function applyIdea(ings, idea, servings) {
+  const g = (id) => GUIDE.find((x) => x.id === id);
+  if (idea?.add) { const f = g(idea.add); return f ? [...ings, additionFor(f, servings)] : null; }
+  const [from, to] = (idea?.swap ?? []).map(g);
+  if (!from || !to) return null;
+  // A size of the old food (a head of lettuce) does not carry over to the new one.
+  return ings.map(({ each, ...i }) => ([from.name, ...from.also].some((n) => i.name.toLowerCase().includes(n)) ? { ...i, name: to.name, fdcId: to.fdc, unit: each ? 'g' : i.unit, qty: each && i.qty != null ? Math.round(i.qty * each) : i.qty } : { ...i, ...(each ? { each } : {}) }));
+}
+
 export const additionFor = (food, portions) => ({ name: food.name, qty: Math.round(food.g * portions), unit: 'g', note: '', fdcId: food.fdc });

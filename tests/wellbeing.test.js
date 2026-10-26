@@ -46,3 +46,33 @@ test('faith: next portion, marking read, progress, description', () => {
   assert.equal(faith.normalisePlan({ books: ['Hezekiah'] }).books[0], 'John', 'unknown books are ignored');
   assert.equal(faith.markUnread(p, 'John|1').read.includes('John|1'), false);
 });
+
+test('faith journal: heading, questions with where they stand, picked passages, topics and terms', async () => {
+  const { BOOK_GUIDE, TOPICS } = await import('../js/apps/faith/guide.js');
+  const n = faith.normaliseNote({
+    kind: 'question', heading: 'Loving my family better',
+    questions: [{ text: 'How do I love my wife better?', status: 'research' }, { text: '' }, { text: 'And the kids?', status: 'weird' }],
+    passages: [{ version: 'niv', book: 'Ephesians', chapter: 5, from: 25, to: 33 }, { book: 'Hezekiah', chapter: 1 }, { book: 'Jude', chapter: 9, from: 3, to: 2 }],
+    topics: ['marriage', 'parenting', 'made-up'], terms: ['Love ', 'love', 'Tattoos'], notes: 'Start with Ephesians 5.',
+  }, '2026-10-26');
+  assert.equal(n.heading, 'Loving my family better');
+  assert.deepEqual(n.questions.map((q) => q.status), ['research', 'new'], 'empty questions dropped; unknown status is "only the question"');
+  assert.deepEqual(n.passages.map(faith.passageRef), ['Ephesians 5:25-33 (NIV)', 'Jude 1:3'], 'only real books; a chapter past the end and a backwards range are fixed');
+  assert.deepEqual(n.topics, ['marriage', 'parenting']);
+  assert.deepEqual(n.terms, ['love', 'tattoos'], 'terms are lower case, once each');
+  const old = faith.normaliseNote({ kind: 'reflection', passage: 'John 15:5', text: 'Abide in me\nmore thoughts' }, '2026-01-01');
+  assert.equal(old.heading, 'Abide in me', 'an entry written before keeps its first line as the heading');
+  assert.equal(old.notes, 'Abide in me\nmore thoughts');
+  assert.equal(JSON.parse(JSON.stringify(old)).text, undefined);
+  const s = [{ id: 'a', ...faith.noteSummary(n) }, { id: 'b', ...faith.noteSummary(old) }];
+  assert.deepEqual(faith.filterNotes(s, { topic: 'marriage' }).map((x) => x.id), ['a']);
+  assert.deepEqual(faith.filterNotes(s, { status: 'research' }).map((x) => x.id), ['a']);
+  assert.deepEqual(faith.filterNotes(s, { term: 'tattoos', kind: 'reflection' }), []);
+  assert.deepEqual(faith.allQuestions(s.map((x) => ({ ...x, heading: x.title })), 'new').map((q) => q.text), ['And the kids?']);
+  assert.deepEqual(faith.termsUsed([n, faith.normaliseNote({ terms: ['tattoos'] }, '2026-01-01')]), ['tattoos', 'love']);
+  assert.ok(faith.noteText(n).includes('How do I love my wife better?'), 'questions are searchable');
+  assert.deepEqual(Object.keys(BOOK_GUIDE).sort(), faith.BOOKS.map(([b]) => b).sort(), 'all 66 books have a guide');
+  for (const [b, g] of Object.entries(BOOK_GUIDE)) for (const k of ['who', 'when', 'to', 'why', 'about']) assert.ok(g[k], `${b} ${k}`);
+  const books = new Set(faith.BOOKS.map(([b]) => b).concat(['Psalm']));
+  for (const t of Object.values(TOPICS)) for (const ref of t.start) assert.ok(books.has(ref.replace(/ \d.*$/, '')), ref);
+});

@@ -49,6 +49,9 @@ p { margin: 0 0 var(--space-3); }
 }
 .crumbs a { color: var(--text-dim); }
 .page-back { margin-top: var(--space-4); }
+/* A section's ways in: Plan, Check and note, Do - side by side when there is room. */
+.modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-3); align-items: start; }
+.mode--do { border-top: 3px solid var(--accent); }
 
 main.app-main {
   flex: 1 0 auto;
@@ -422,3 +425,6 @@ body:has(.player:not([hidden])) .app-footer { padding-bottom: 72px; }
 .ing-status { font-weight: 700; color: var(--ok); min-width: 1em; text-align: center; }
 .ing-status--off { color: var(--warn); }
 .ing-grams { white-space: nowrap; }
+/* At the shop: big rows, easy to tick with one thumb. */
+.shop-mode .shop-tick { font-size: 1.15rem; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.shop-mode .shop-tick input { width: 1.4em; height: 1.4em; }

@@ -13,9 +13,9 @@ export const SECTIONS = [
   { id: 'tickets', name: 'Tickets', purpose: 'Capture a concern, idea or appreciation - talk about it at the family meeting.' },
   { id: 'principles', name: 'Principles', purpose: 'Family values and agreements, with the reasons behind them.' },
   { id: 'decisions', name: 'Decisions', purpose: 'Agreements and experiments: try something, look back, adapt.' },
-  { id: 'holidays', name: 'Holidays', purpose: 'Trip ideas, itineraries, packing lists and budgets.' },
+  { id: 'holidays', name: 'Holidays', purpose: 'Big trips to plan, and places nearby to go on a free day.' },
   { id: 'finance', name: 'Finance', purpose: 'Budgets, and savings and debt goals with the assumptions in plain view.' },
-  { id: 'faith', name: 'Faith', purpose: 'Bible reading plans, reflections and family discussion.' },
+  { id: 'faith', name: 'Faith', purpose: 'Bible reading plans, a journal of questions and reflections, and a guide to every book.' },
   { id: 'more', name: 'More', purpose: 'Mini-apps that do not belong to one of the other sections.' },
 ];
 

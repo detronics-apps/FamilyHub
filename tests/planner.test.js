@@ -248,3 +248,32 @@ test('home-made items stay apart for shopping, so "already made" can leave them 
   const sent = readSend(JSON.stringify({ source: 'week:x', items: week.items, own: week.own }));
   assert.equal(sent.own[0].items.length, 2);
 });
+
+test('ingredients come in from a .csv file, with or without a header', async () => {
+  const { ingredientsFromCSV, INGREDIENT_CSV_TEMPLATE } = await import('../js/apps/meals/logic.js');
+  assert.deepEqual(ingredientsFromCSV(INGREDIENT_CSV_TEMPLATE).map((i) => [i.name, i.qty, i.unit, i.note]), [['flour', 200, 'g', ''], ['eggs', 2, '', ''], ['milk', 300, 'ml', 'full cream']]);
+  assert.deepEqual(ingredientsFromCSV('Unit;Name;Amount\ngrams;sugar;8\n;salt;\n').map((i) => [i.name, i.qty, i.unit]), [['sugar', 8, 'g'], ['salt', null, '']], 'any column order, ; as separator');
+  assert.deepEqual(ingredientsFromCSV('200,g,flour\n2,eggs\n').map((i) => [i.qty, i.unit, i.name]), [[200, 'g', 'flour'], [2, '', 'eggs']], 'no header: read like typed lines');
+  assert.deepEqual(ingredientsFromCSV(''), []);
+});
+
+test('an idea is applied to ingredient lines: add a usual amount, or swap one food for another', async () => {
+  const { applyIdea } = await import('../js/apps/mealplan/logic.js');
+  const { GUIDE } = await import('../js/apps/assistant/guide.js');
+  const spinach = GUIDE.find((g) => g.id === 'spinach') ?? GUIDE.find((g) => g.fdc);
+  const lines = [{ name: 'lettuce - iceberg', qty: 0.5, unit: 'head, medium', each: 539, fdcId: 169248 }, { name: 'peas', qty: 200, unit: 'g' }];
+  const added = applyIdea(lines, { add: spinach.id }, 4);
+  assert.equal(added.length, 3);
+  assert.equal(added[2].name, spinach.name);
+  assert.equal(added[2].unit, 'g');
+  const lettuce = GUIDE.find((g) => /lettuce/.test([g.name, ...g.also].join(' ')));
+  if (lettuce) {
+    const swapped = applyIdea(lines, { swap: [lettuce.id, spinach.id] }, 4);
+    assert.equal(swapped[0].name, spinach.name);
+    assert.equal(swapped[0].unit, 'g', 'a size of the old food becomes grams');
+    assert.equal(swapped[0].qty, 270);
+    assert.equal(swapped[0].each, undefined);
+    assert.equal(swapped[1].name, 'peas');
+  }
+  assert.equal(applyIdea(lines, { add: 'no-such-food' }, 4), null);
+});

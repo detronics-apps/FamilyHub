@@ -14,6 +14,7 @@ import { addDays, dayDiff, weekStart } from '../../dates.js';
 import { split, numOrNull } from '../../importer.js';
 import { ALLERGENS } from '../../model.js';
 import { recipeFacts } from './facts.js';
+import { parseCSV } from '../../csv.js';
 
 export { ALLERGENS };
 
@@ -498,6 +499,31 @@ export function planShopping(plan, recipes) {
     for (const r of s.reserve) base.push(...r.additions);
   }
   return { items: combineIngredients(base), own: mergeOwn(own) };
+}
+
+export const INGREDIENT_CSV_TEMPLATE = 'ingredient,amount,unit,note\nflour,200,g,\neggs,2,pieces,\nmilk,300,ml,full cream\n';
+
+/**
+ * Ingredient lines from a .csv file: columns ingredient (or name), amount, unit
+ * and note, in any order. A file without that header is read row by row like
+ * a typed line ("200,g,flour" -> 200 g flour). Units go through the same
+ * names as typed ones ("grams" -> g; "pieces" -> counted whole).
+ */
+export function ingredientsFromCSV(text) {
+  const rows = parseCSV(String(text ?? '')).filter((r) => r.some((c) => String(c).trim()));
+  if (!rows.length) return [];
+  const head = rows[0].map((h) => String(h).trim().toLowerCase());
+  const col = (...names) => head.findIndex((h) => names.includes(h));
+  const n = col('ingredient', 'name', 'food');
+  if (n < 0) return rows.map((r) => parseIngredient(r.map((c) => String(c).trim()).filter(Boolean).join(' '))).filter((i) => i.name);
+  const [q, u, note] = [col('amount', 'qty', 'quantity'), col('unit', 'units'), col('note', 'notes')];
+  const cell = (r, k) => (k >= 0 ? String(r[k] ?? '').trim() : '');
+  return rows.slice(1).filter((r) => cell(r, n)).map((r) => ({
+    name: cell(r, n).slice(0, 120),
+    qty: cell(r, q) !== '' && Number.isFinite(Number(cell(r, q))) ? Number(cell(r, q)) : null,
+    unit: /^(pieces?|whole|each)$/i.test(cell(r, u)) ? '' : unitKey(cell(r, u)),
+    note: cell(r, note).slice(0, 120),
+  }));
 }
 
 /** Every meal our own ingredients point to, however deep (for loading them before working anything out). */

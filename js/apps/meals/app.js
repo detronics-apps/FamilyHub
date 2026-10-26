@@ -189,6 +189,9 @@ function editScreen(hub, id, param = null) {
   // From This Week: `variant:<json>` saves a changed planned meal as a new version;
   // on an existing meal, `update:<json>` brings that planned meal's ingredients in for review.
   const handed = param?.startsWith('variant:') || param?.startsWith('update:') ? mealFromLink(param.slice(param.indexOf(':') + 1)) : null;
+  // Where the changed ingredients come from: the Meal Assistant's ideas, or a planned meal.
+  const fromIdeas = handed ? /"from":"ideas"/.test(param) : false;
+  const changedIn = fromIdeas ? 'the Meal Assistant ideas you applied' : 'the planned meal you changed';
   const r = id ? hub.use(`recipe:${id}`, () => recipes(hub).get(id)) : { data: null };
   if (r.loading) return loading();
   if (r.error) return failure(r.error);
@@ -223,8 +226,8 @@ function editScreen(hub, id, param = null) {
   return el('section', { class: 'stack' }, [
     el('h1', { text: existing ? `Edit ${existing.title}` : 'Add an item' }),
     fromPlate ? el('p', { class: 'small muted', text: 'From Calorie Checker. Give it a name, and say whether it is a meal, a recipe or an own ingredient - or leave it as an item for now.' }) : null,
-    handed && !id ? el('p', { class: 'small muted', text: 'A new version from a planned meal you changed. It gets its own notes and ratings; the original stays as it is.' }) : null,
-    handed && id ? el('p', { class: 'small', text: 'These are the ingredients from the planned meal you changed. Saving updates the saved recipe for every future time - its ratings and notes stay.' }) : null,
+    handed && !id ? el('p', { class: 'small muted', text: `A new version from ${changedIn}. It gets its own notes and ratings; the original stays as it is.` }) : null,
+    handed && id ? el('p', { class: 'small', text: `These are the ingredients from ${changedIn}. Saving updates the saved recipe for every future time - its ratings and notes stay.` }) : null,
     recordForm({
       record: flat,
       fields: [

@@ -34,6 +34,13 @@ export const PERMISSIONS = {
  */
 const CROSS = /^data:([a-z][a-z0-9.-]*):read$/;
 
+/** The three ways into a section: when there is time to think, for a quick look or note, and when it is time to do. */
+export const MODES = {
+  plan: { title: 'Plan', when: 'When you have time to sit and think it through' },
+  note: { title: 'Check and note', when: 'A quick look, or jotting something down before you forget' },
+  do: { title: 'Do', when: 'When you have 20 minutes to an hour to get things done' },
+};
+
 export const RESERVED_IDS = new Set(['home', 'settings', 'help', 'library', 'app', 'apps', 'core', 'data', 'media', 'household', 'system', 'section']);
 const ID = /^[a-z][a-z0-9]*(\.[a-z0-9][a-z0-9-]*)*$/;
 const SCREEN = /^[a-z][a-z0-9-]{0,30}$/;
@@ -117,6 +124,14 @@ export function validateManifest(raw, { source = 'folder' } = {}) {
     if (typeof s?.title !== 'string' || !s.title.trim()) errors.push(`Screen "${s?.id}" needs a title.`);
   }
 
+  // Where each way in fits: planning (time to think), a quick check or note, or doing (time to get things done).
+  const modes = Array.isArray(m.modes) ? m.modes : [];
+  for (const x of modes) {
+    if (!x || !MODES[x.mode]) errors.push(`A mode must be one of ${Object.keys(MODES).join(', ')}.`);
+    else if (x.screen != null && !screenIds.has(x.screen)) errors.push(`Mode "${x.label}" names a screen "${x.screen}" that is not listed.`);
+    if (typeof x?.label !== 'string' || !x.label.trim() || x.label.length > 60) errors.push('Each mode needs a label of 1 to 60 characters.');
+  }
+
   const collections = Array.isArray(m.data?.collections) ? m.data.collections : [];
   const names = new Set();
   for (const c of collections) {
@@ -151,6 +166,7 @@ export function validateManifest(raw, { source = 'folder' } = {}) {
       requires: { api: req.api, core: req.core ?? null },
       entry: m.entry ?? null,
       screens: screens.map((s) => ({ id: s.id, title: s.title.trim(), nav: s.nav !== false })),
+      modes: modes.slice(0, 12).map((x) => ({ mode: x.mode, screen: x.screen ?? null, label: x.label.trim(), hint: typeof x.hint === 'string' ? x.hint.slice(0, 140) : '' })),
       data: { collections: collections.map((c) => ({ name: c.name, schema: c.schema, summary: fieldList(c.summary), search: fieldList(c.search ?? c.summary) })) },
       permissions: [...new Set(perms)],
       icon: typeof m.icon === 'string' ? m.icon.slice(0, 4) : null,

@@ -216,3 +216,22 @@ walkthrough with a screen reader, Safari/Firefox, a real phone.
   › Cookbook", "Add an item", egg salad and chicken-and-rice show Item; Calorie Checker chips "For
   the family", "For Alex"..., "Add to the item for the family", "An item for the family", "Save to
   the Cookbook" opens "Add an item" with "an item (not decided yet)"; no "plate" on the page.
+- Ideas, warnings, csv (D-044): automated - the example csv gives flour 200 g, eggs 2, milk 300 ml;
+  any column order and ; work; no header reads like typed lines; adding spinach adds a usual
+  amount; swapping half a head of lettuce gives 270 g of the new food; warnings carry who.
+  Browser - egg salad: "Apply to the recipe" on spinach and broccoli marks them "✓ Applied";
+  Replace opens "Edit Egg salad" with both added and says they came from the Meal Assistant; New
+  opens "Egg salad (our version)"; no paste box, a .csv button instead; the 7-layer salad text gives
+  one panel for Mia (four tips) and one for Alex.
+- 0.7.0 (D-045 - D-049): automated - every starter names valid ways in; a bad mode is refused;
+  groups and colours (corn yellow, red peppers red, banana bread none); browsing sorted highest
+  first, dried left out, tofu found in a short list; shopping remembers added and bought items,
+  finds by kind, ours first, everything for a first purchase; places tags/filters/areas; faith
+  entries (questions, passages, topics, terms, old entries), all 66 books in the guide, every
+  starting passage a real book. Browser - section pages show Plan / Check and note / Do for Meals,
+  Shopping, Faith, Holidays and Chores; Calorie Checker: 80 everyday foods by protein, tofu under
+  beans, nuts and seeds; 126 yellow foods in 9 pages; Shopping: hygiene from Everything, add
+  toothpaste, it is then ours; a new item offered; At the shop ticks one off; Places: a place with
+  two tags, marked been and loved, found by "pet friendly"; Faith: an entry with a question
+  (needs more reading), Ephesians 5:25-33 (NIV), two topics and a term; found by topic; listed in
+  Questions; Ephesians' five Ws; Cook today shows tonight's batch and ingredients.

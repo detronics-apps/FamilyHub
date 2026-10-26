@@ -130,7 +130,9 @@ export const HOWTOS = [
     'Tick things off in Shopping as you buy them. Sending the week again updates its items; your own additions and ticked items stay.',
   ] },
   { id: 'shopping', title: 'Keep one shopping list', steps: [
-    'Open Shopping from the home screen. Type anything you need and choose Food, Cleaning, Household or Other.',
+    'Open Shopping from the home screen. Type what you need, or choose a kind - Food, Cleaning, Hygiene, Medical, Stationery... - to see the things you buy and add them with "+ Add".',
+    '"Ours" shows what the family has bought before or added; "Everything" also shows common things of each kind, for something you are buying for the first time. Anything not there: "+ Add ... as a new item".',
+    'At the shop, press "At the shop - tick things off": just the list, big, by aisle. "Done" clears what you bought.',
     'Send things to it from elsewhere: "Send to the shopping list" on a meal, "Send the week" in This Week, or a chore’s supplies in Chores.',
     'You see what is being sent and untick what you already have before it is added.',
   ] },
@@ -148,6 +150,7 @@ export const HOWTOS = [
     'On the People page, press "Food details" for each person: birthday, allergies, pregnancy, and what they would like more of. All optional.',
     'Open Meals, then Meal Assistant. Choose who is eating, type the meal in a few words ("oats with butter and sugar") and press Get ideas.',
     'Or open one of your recipes from the list (or press "Ideas to improve it" on a recipe in the Cookbook) to see ideas for it.',
+    'On a recipe, press "Apply to the recipe" on each idea you like. At the bottom, Replace puts them into the recipe and New saves a new version - either way you check the ingredients before saving.',
     'Each idea says who it helps and why. Press "Not in the house today" to keep it for next time, or "Not for us" to hide it.',
   ] },
   { id: 'plan-meal', title: 'Plan a meal with leftovers or guests', steps: [
@@ -159,6 +162,7 @@ export const HOWTOS = [
     'In the Cookbook, press Add an item (or Edit) and say what it is - or leave it as an item for now: a meal (what the family eats at one sitting), a recipe (one thing, like a cake) or an own ingredient (like home-made mayo). Press "+ Add an ingredient", start typing and pick from the list - ✓ means its calories count.',
     'Enter the total amount for the whole recipe and choose the unit. Say what one batch makes, e.g. 12 pancakes.',
     'For something home-made like mayo, make it an own ingredient and choose what one batch makes from the list (leave the amount empty with g and it is the weight of its ingredients, e.g. 239 g). Anything of your own can go into another entry - when adding an ingredient, the chips choose what to search: All, Meals, Recipes, Own ingredients or Ingredients (the food database).',
+    'Have the list somewhere else? "Add from a .csv file" takes columns ingredient, amount, unit and note - "Download an example file" shows the layout. Pick each line from the list afterwards so its calories count.',
     'Enter what you buy: after picking a food, the unit list has its own sizes (½ head of lettuce, 1 cucumber, 1 tin) and the weight shows next to the line. Not there? Choose "+ Add our own size" and type it off the packet once.',
     'When planning, the recipe is made x1, x1.5 or x2 so eggs and other whole-only items stay whole.',
     'Already made the mayo? When sending to the shopping list, tick "We already have the Home-made mayo" under Made at home - its eggs and oil are left off.',
@@ -181,7 +185,12 @@ export const HOWTOS = [
   { id: 'calories', title: 'Check what is in a food', steps: [
     'Open Meals, then Calorie Checker, and look up the food.',
     'Choose the amount - a cup, a slice, or grams - to see the calories and nutrients in what you actually eat.',
+    'Not sure what to look for? Browse the everyday foods: choose a type of food, a colour, or "Sort by - most protein / fibre / fat / carbs first", 15 at a time. A good way to discover foods like tofu or lentils. "The whole food database" browses all 13,000.',
     'Press "Add to the item" to add several foods up. Nothing is saved or logged.',
+  ] },
+  { id: 'places', title: 'Keep a list of places to go nearby', steps: [
+    'Open Holidays, then Places to go, and press "Add a place". Say where (pick a town you used before), what kind of place it is, and tick what it is good for - great for kids, play area, pet friendly, free...',
+    'On a free day, filter by area, kind and "good for" to find somewhere. Press "We went" afterwards, and say how it was.',
   ] },
   { id: 'trip', title: 'Plan a trip', steps: [
     'Open Holidays and press "Add a trip or idea". Only a name is needed - dates can come later.',
@@ -199,7 +208,17 @@ export const HOWTOS = [
   { id: 'reading', title: 'Follow a Bible reading plan', steps: [
     'Open Faith and press "Start a reading plan". Choose the Gospels, a book, or your own selection, and how many chapters at a time.',
     'Press "Read it" after each reading. There is no schedule and no catching up - it simply remembers where you are.',
-    'Use the Journal for reflections, questions and family discussion notes.',
+    'Press "About ..." next to the reading for who wrote the book, when, to whom, why and what it is about.',
+  ] },
+  { id: 'journal', title: 'Keep a faith journal, and the questions you are working on', steps: [
+    'In Faith, press "Write an entry" (Journal tab). Choose the kind - a reflection, a question, a message you heard... - and give it a heading.',
+    'Add the questions it is trying to answer, each with where it stands: only the question so far, needs more reading, or found a reasonable answer.',
+    'Add the passages it is about from the lists - version, book, chapter and verses - as many as you need. Tick topics like Marriage or End times, and add finer terms of your own like tattoos or trinity.',
+    'Look back in the Journal tab with filters, and go through your questions in the Questions tab. The Bible guide shows where to start reading on a topic.',
+  ] },
+  { id: 'modes', title: 'Plan, check and note, or do', steps: [
+    'Each section page groups what you can do by the time you have: Plan (time to sit and think), Check and note (a quick look, or jotting something down) and Do (20 minutes to an hour to get things done).',
+    'For example in Meals: plan the next meals; check what is in a food or jot down a meal to try; cook today’s meals.',
   ] },
   { id: 'miniapps', title: 'Turn off, remove or add mini-apps', steps: [
     'Open Mini-apps from the home screen.',

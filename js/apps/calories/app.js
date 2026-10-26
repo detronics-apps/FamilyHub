@@ -5,14 +5,22 @@
 
 import { el } from '../../ui/dom.js';
 import { loading, failure, field } from '../kit.js';
-import { amounts, total, fmtAmount } from '../../food.js';
+import { amounts, total, fmtAmount, browseFoods, FOOD_GROUPS, FOOD_COLOURS } from '../../food.js';
 import { portionShares, portionPlan, fmtShare } from '../../portions.js';
 import { foodWarnings } from '../../guidance.js';
 import { fmtMass, gramsFromOz, sizeLabel } from '../../units.js';
+import { GUIDE } from '../assistant/guide.js';
+
+// Everyday foods the Meal Assistant knows - a short list to explore, so a food like tofu or
+// lentils can be discovered by what it brings rather than only found by someone who knew its name.
+const EVERYDAY = new Map(GUIDE.filter((g) => g.fdc).map((g) => [g.fdc, g]));
 
 const MAIN = ['kcal', 'protein', 'carbs', 'sugars', 'fat', 'satFat', 'fibre', 'sodium'];
 // One item being built per target: 'family', or a person's id.
-const ui = { query: '', foodId: null, unit: 'g', count: 100, target: 'family', plates: {}, more: false };
+const ui = { query: '', foodId: null, unit: 'g', count: 100, target: 'family', plates: {}, more: false, group: '', colour: '', sort: '', page: 0, everyday: true, scope: 'explore' };
+const SORTS = { fibre: 'Fibre', protein: 'Protein', fat: 'Fat', carbs: 'Carbs' };
+const PAGE = 15;
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export function render(hub) {
   const f = hub.use('food', () => hub.food.load());
@@ -27,11 +35,12 @@ export function render(hub) {
   return el('section', { class: 'stack', 'aria-label': 'Calorie Checker' }, [
     el('form', {
       class: 'row', role: 'search',
-      on: { submit: (e) => { e.preventDefault(); ui.query = e.target.elements.q.value; ui.foodId = null; hub.render(); } },
+      on: { submit: (e) => { e.preventDefault(); ui.query = e.target.elements.q.value; ui.foodId = null; ui.page = 0; hub.render(); } },
     }, [
       el('input', { class: 'input', name: 'q', type: 'search', placeholder: 'A food, like "banana" or "brown rice cooked"', 'aria-label': 'Food to look up', value: ui.query, 'data-field': 'food-search', style: { flex: '1 1 220px' } }),
       el('button', { class: 'btn btn-primary', type: 'submit', text: 'Look up' }),
     ]),
+    food ? null : browseControls(hub),
     people.length ? el('div', { class: 'chipset', role: 'group', 'aria-label': 'Building' }, [
       el('span', { class: 'small', text: 'Building:' }),
       ...[['family', 'For the family'], ...people.map((p) => [p.id, `For ${p.name}`])].map(([id, label]) => el('button', {
@@ -45,16 +54,62 @@ export function render(hub) {
   ]);
 }
 
+/** Narrow the foods by type and colour, and sort by one nutrient. Any change starts again at page 1. */
+function browseControls(hub) {
+  const pick = (key, label, options, any) => el('label', { class: 'small stack', style: { gap: '2px' } }, [label, el('select', {
+    class: 'select', style: { width: 'auto' }, 'data-field': `browse-${key}`,
+    on: { change: (e) => { ui[key] = e.target.value; ui.page = 0; hub.render(); } },
+  }, [['', any], ...options].map(([v, t]) => el('option', { value: v, text: t, selected: ui[key] === v })))]);
+  return el('div', { class: 'stack' }, [
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Browse in' }, [
+      el('span', { class: 'small', text: 'Browse:' }),
+      ...[['explore', `Everyday foods to explore (${EVERYDAY.size})`], ['all', 'The whole food database']].map(([k, t]) => el('button', {
+        class: 'chip', type: 'button', 'aria-pressed': String(ui.scope === k), text: t, 'data-field': `scope:${k}`,
+        on: { click: () => { ui.scope = k; ui.page = 0; hub.render(); } },
+      })),
+    ]),
+    el('div', { class: 'row', role: 'group', 'aria-label': 'Find foods by' }, [
+    pick('group', 'Type of food', FOOD_GROUPS.map(([k, t]) => [k, t]), 'All foods'),
+    pick('colour', 'Colour (fruit and vegetables)', Object.entries(FOOD_COLOURS), 'Any colour'),
+    pick('sort', 'Sort by', Object.entries(SORTS).map(([k, t]) => [k, `Most ${t.toLowerCase()} first`]), 'Best match'),
+    el('label', { class: 'checkline small', style: { alignSelf: 'flex-end' } }, [
+      el('input', { type: 'checkbox', checked: ui.everyday, 'data-field': 'browse-everyday', on: { change: (e) => { ui.everyday = e.target.checked; ui.page = 0; hub.render(); } } }),
+      'Leave out dried and powdered foods',
+    ]),
+    ]),
+  ]);
+}
+
 function results(hub, db) {
-  if (!ui.query.trim()) return el('p', { class: 'muted', text: 'Type a food and press Look up. Generic foods come first - "raw" and "cooked" in the name tell you which state the numbers are for.' });
-  const hits = db.search(ui.query, 25);
-  if (!hits.length) return el('p', { class: 'panel', text: 'Nothing matches. Try a simpler word ("chicken" rather than "chicken thighs") or check the spelling.' });
-  return el('ul', { class: 'list panel', 'aria-label': 'Foods found' }, hits.map((h) => el('li', {}, [
+  // Words search the whole database; without words, the list is browsed - by default the everyday foods.
+  const words = ui.query.trim();
+  const explore = !words && ui.scope === 'explore';
+  const all = browseFoods(db, { query: ui.query, group: ui.group || null, colour: ui.colour || null, sort: ui.sort || null, everyday: ui.everyday, only: explore ? new Set(EVERYDAY.keys()) : null });
+  if (!words && !explore && !(ui.group || ui.colour || ui.sort)) return el('p', { class: 'muted', text: 'Type a food and press Look up - or choose a type of food, a colour or a sort to browse all 13,000 foods. Generic foods come first - "raw" and "cooked" in the name tell you which state the numbers are for.' });
+  if (!all.length) return el('p', { class: 'panel', text: ui.query.trim() ? 'Nothing matches. Try a simpler word ("chicken" rather than "chicken thighs"), check the spelling, or clear a filter.' : 'Nothing matches these filters.' });
+  const pages = Math.ceil(all.length / PAGE);
+  ui.page = Math.min(ui.page, pages - 1);
+  const hits = all.slice(ui.page * PAGE, (ui.page + 1) * PAGE);
+  const sortLine = (h) => (ui.sort ? (h.per100[ui.sort] == null ? `${SORTS[ui.sort].toLowerCase()} not known · ` : `${fmtAmount(h.per100[ui.sort])} g ${SORTS[ui.sort].toLowerCase()} · `) : '');
+  const turn = (to) => { ui.page = to; hub.render(); };
+  return el('div', { class: 'stack' }, [
+    el('p', { class: 'small muted', 'data-field': 'browse-count', text: `${all.length.toLocaleString()} ${explore ? 'everyday ' : ''}food${all.length === 1 ? '' : 's'}${ui.sort ? `, most ${SORTS[ui.sort].toLowerCase()} per 100 g first` : ''}.${explore ? ' A short list to discover something new - sort by protein or fibre, or pick a colour, and see what you have not tried yet.' : ''}` }),
+    el('ul', { class: 'list panel', 'aria-label': 'Foods found' }, hits.map((h) => el('li', {}, [
     el('button', {
       class: 'linkish list__main', type: 'button', style: { textAlign: 'left', textDecoration: 'none' }, 'data-field': `food:${h.id}`,
       on: { click: () => { ui.foodId = h.id; ui.unit = defaultPortion(h, hub.units()); ui.count = ui.unit === 'g' ? 100 : ui.unit === 'oz' ? 4 : 1; hub.render(); } },
-    }, [el('strong', { text: h.name }), el('div', { class: 'small muted', text: `${fmtAmount(h.per100.kcal)} kcal per 100 g · ${h.category || db.types[h.type]}` })]),
-  ])));
+    }, [
+      el('strong', { text: EVERYDAY.has(h.id) ? cap(EVERYDAY.get(h.id).name) : h.name }),
+      EVERYDAY.has(h.id) ? el('span', { class: 'small muted', text: ` - ${h.name}` }) : null,
+      el('div', { class: 'small muted', text: `${sortLine(h)}${fmtAmount(h.per100.kcal)} kcal per 100 g · ${h.category || db.types[h.type]}` }),
+    ]),
+    ]))),
+    pages > 1 ? el('div', { class: 'row', role: 'navigation', 'aria-label': 'Pages' }, [
+      el('button', { class: 'btn btn-small', type: 'button', text: '‹ Previous', disabled: ui.page === 0, 'data-field': 'page-prev', on: { click: () => turn(ui.page - 1) } }),
+      el('span', { class: 'small', 'data-field': 'page-of', text: `Page ${ui.page + 1} of ${pages}` }),
+      el('button', { class: 'btn btn-small', type: 'button', text: 'Next ›', disabled: ui.page >= pages - 1, 'data-field': 'page-next', on: { click: () => turn(ui.page + 1) } }),
+    ]) : null,
+  ]);
 }
 
 // The amount: a portion the source lists (by its index), or a weight - grams, or ounces when Settings says imperial.

@@ -61,7 +61,70 @@ export function createFoodDb(json) {
     return hits.sort((a, b) => a[0] - b[0]).slice(0, limit).map(([, f]) => f);
   }
 
-  return { source: json.source, types: json.types, keys, meta, count: foods.length, search, get: (id) => byId.get(Number(id)) ?? null };
+  return { source: json.source, types: json.types, keys, meta, count: foods.length, foods, search, get: (id) => byId.get(Number(id)) ?? null };
+}
+
+/**
+ * Plain groups over the database's ~200 categories. The first that matches wins,
+ * so "Seafood mixed dishes" is a dish and "Fruit drinks" a drink.
+ */
+export const FOOD_GROUPS = [
+  ['baby', 'Baby foods', /baby|infant|formula/i],
+  ['dishes', 'Dishes, soups and fast food', /mixed|dishes|fast food|restaurant|pizza|sandwich|burger|soup|entree|meals|burrito|taco|nacho/i],
+  ['drinks', 'Drinks', /beverage|coffee|\btea\b|water|soft drink|soda|alcohol|wine|beer|liquor|smoothie|shake|drink/i],
+  ['fruit', 'Fruit', /fruit|apple|banana|berr|melon|citrus|grape|mango|papaya|peach|nectarine|pear|pineapple/i],
+  ['veg', 'Vegetables', /vegetable|potato|tomato|lettuce|greens|salad|broccoli|cabbage|carrot|corn|onion|spinach|string beans|leafy/i],
+  ['legumes', 'Beans, nuts and seeds', /legume|\bnut|seed|bean|soy/i],
+  ['fish', 'Fish and seafood', /fish|seafood|shellfish/i],
+  ['poultry', 'Chicken and poultry', /poultry|chicken|turkey/i],
+  ['meat', 'Meat', /beef|pork|lamb|veal|game|sausage|luncheon|meat|frankfurter|bacon|\bham\b/i],
+  ['dairy', 'Dairy and eggs', /dairy|egg|milk|cheese|yogh?urt|cream/i],
+  ['grains', 'Bread, cereals and grains', /cereal|grain|pasta|rice|bread|baked|cracker|tortilla|bagel|biscuit|muffin|pancake|waffle|oat|rolls|buns/i],
+  ['sweets', 'Sweets and snacks', /sweet|snack|candy|cookie|cake|pie|dessert|chip|pretzel|popcorn|sugar|jam|pudding|gelatin|sorbet|\bices\b/i],
+  ['fats', 'Fats, oils and dressings', /\bfat|oil|butter|margarine|dressing|mayonnaise/i],
+  ['herbs', 'Herbs, spices and sauces', /spice|herb|condiment|sauce|grav|dip/i],
+];
+export const foodGroup = (category) => FOOD_GROUPS.find(([, , re]) => re.test(category ?? ''))?.[0] ?? 'other';
+
+export const FOOD_COLOURS = { red: 'Red', orange: 'Orange', yellow: 'Yellow', green: 'Green', purple: 'Blue or purple', white: 'White or beige' };
+// By the food's first word ("Corn, sweet, yellow" -> corn).
+const COLOUR_OF = [
+  ['yellow', /^(bananas?|corn|sweetcorn|pineapples?|lemons?)\b/],
+  ['orange', /^(carrots?|sweet ?potato(es)?|pumpkins?|butternut|oranges?|apricots?|mangos?|mangoes|papayas?|cantaloupe|melons?|peach(es)?|nectarines?|tangerines?|mandarins?|persimmons?|clementines?)\b/],
+  ['red', /^(tomato(es)?|strawberr(y|ies)|raspberr(y|ies)|watermelon|cherr(y|ies)|cranberr(y|ies)|radish(es)?|pomegranates?)\b/],
+  ['green', /^(spinach|broccoli|kale|lettuce|peas|cucumbers?|avocados?|kiwi(fruit)?s?|cabbage|celery|zucchini|courgettes?|asparagus|brussels sprouts|okra|limes?|chard|collards?|arugula|rocket|leeks?|edamame|parsley|basil|coriander|cilantro|pears?|grapes, green)\b/],
+  ['purple', /^(blueberr(y|ies)|blackberr(y|ies)|eggplant|aubergines?|brinjal|beets?|beetroot|plums?|grapes?|raisins?|prunes?|figs?)\b/],
+  ['white', /^(cauliflower|onions?|garlic|mushrooms?|potato(es)?|parsnips?|turnips?|ginger|jicama|coconut)\b/],
+];
+/**
+ * The colour of a fruit or vegetable: a colour named in it ("Peppers, sweet,
+ * red"), else what that food usually is. Null for anything else - colour is
+ * about plants, and a guess for "Bread, banana" would mislead.
+ */
+export function foodColour(food) {
+  if (!['fruit', 'veg', 'legumes'].includes(foodGroup(food.category))) return null;
+  const name = food.name.toLowerCase();
+  const said = /\b(red|yellow|green|orange|purple|white)\b/.exec(name.split(',').slice(1).join(','))?.[1];
+  if (said) return said;
+  return COLOUR_OF.find(([, re]) => re.test(name))?.[0] ?? null;
+}
+
+const DRIED = /\b(dried|dehydrated|freeze-dried|powder(ed)?|dry mix|crude|seed gums)\b/i;
+
+/**
+ * Foods to browse: matching the words (best match first) or all of them, then
+ * narrowed to a group and a colour, and sorted by one nutrient per 100 g -
+ * highest first, a food that does not report it last.
+ */
+export function browseFoods(db, { query = '', group = null, colour = null, sort = null, everyday = false, only = null } = {}) {
+  let list = String(query).trim() ? db.search(query, Infinity) : db.foods;
+  if (only) list = list.filter((f) => only.has(f.id));
+  // Per 100 g, a dried powder always wins; to find foods people actually eat, those can be left out.
+  if (everyday) list = list.filter((f) => !DRIED.test(f.name));
+  if (group) list = list.filter((f) => foodGroup(f.category) === group);
+  if (colour) list = list.filter((f) => foodColour(f) === colour);
+  if (sort) list = [...list].sort((a, b) => (b.per100[sort] ?? -1) - (a.per100[sort] ?? -1));
+  return list;
 }
 
 /** What `grams` of a food holds. Unknown stays null. */

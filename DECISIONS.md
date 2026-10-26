@@ -308,6 +308,51 @@ meals, as D-042 first had it). Calorie Checker builds an item, "for the family" 
 person, and saves it to the Cookbook - the word "plate" is gone from the app. Recipe index
 version 5.
 
+**D-044 Ideas applied to a recipe; warnings per person; ingredients from a file (owner,
+2026-10-26).** On a recipe opened in the Meal Assistant, each Add, Swap or Try-next-time idea has
+"Apply to the recipe"; the applied ones are listed at the bottom with **Replace** (into the recipe)
+and **New** ("(our version)", linked to the original), both opening the Cookbook to check before
+saving - the Assistant itself writes nothing. Time ideas change no ingredients, so have no button;
+there are no Remove ideas. "Worth knowing" is one panel per person. "Paste several lines" is
+replaced by "Add from a .csv file" (ingredient, amount, unit, note; any order; a file without a
+header is read like typed lines) with an example file to download.
+
+**D-045 Plan, check and note, do (owner, 2026-10-26).** A rule for the whole app: each section
+offers its ways in by the time you have - **Plan** (relaxed, time to think), **Check and note** (a
+quick look, or capturing something before it is forgotten) and **Do** (20 minutes to an hour,
+getting things done). Mini-app manifests name their ways in (`modes`: mode, screen, label, hint),
+validated like screens, and each section page groups them. New "Do" screens: Cook today (This
+Week) and At the shop (Shopping); Faith's study session is the reading plan.
+
+**D-046 Explore foods, not only find them (owner, 2026-10-26).** People cannot search for a food
+they have never heard of. Calorie Checker browses by type of food (13 plain groups over the
+database's ~200 categories), by colour (fruit and vegetables only: a colour in the name, else what
+the food usually is) and sorts by fibre, protein, fat or carbs per 100 g, 15 to a page. Browsing
+starts in the ~80 everyday foods the Meal Assistant knows (tofu, lentils...); "the whole database"
+browses all, with dried and powdered foods left out unless asked for. Words still search everything.
+
+**D-047 Shopping knows what we buy (owner, 2026-10-26).** Kinds: Food (in aisles), Cleaning,
+Hygiene, Medical, Stationery, Household, Pets, Other. Everything added or bought is remembered with
+the list (how often, when last), so "Ours" can show, say, every hygiene thing the family buys to
+see what needs replacing. "Everything" adds common things of each kind and the everyday foods, for
+a first purchase. Anything else is added as a new item, in a kind. "At the shop" is the list
+alone, big, by aisle.
+
+**D-048 Places to go, apart from trips (owner, 2026-10-26).** Holidays keeps big trips (travel,
+itinerary, packing, budget). A new mini-app, Places to go, keeps local outings: area (offered from
+earlier ones, one spelling per town), kind of place, tags from a list (great for kids, play area,
+pet friendly, free, rainy day...), want to go / been, and how it was.
+
+**D-049 The faith journal and Bible guide (owner, 2026-10-26).** Writing an entry and looking back
+are separate screens. An entry has a kind (adds "A message I heard"), a heading, questions with
+their status (only the question / needs more reading / found a reasonable answer) and answer,
+passages picked from lists (version incl. Afrikaans ones, book, chapter, verses - several per
+entry), notes, topics from a list and finer terms of your own (offered from earlier ones).
+Questions has its own tab to come back to. The Bible guide gives each of the 66 books' who, when,
+to whom, why and about (traditional view, with "traditionally" and "c." where it is debated), and
+where to start reading on 25 topics. Older entries keep their text as notes and their first line
+as the heading.
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).

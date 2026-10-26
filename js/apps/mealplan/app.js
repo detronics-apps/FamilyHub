@@ -21,7 +21,7 @@ import {
 } from '../meals/logic.js';
 import { ingredientEditor } from '../../ui/ingredient-editor.js';
 import { recipeFacts, passes, emptyFilters, describeFilters, PROTEIN, CARB, GROUP, TRIAL, MEAL_TAGS } from '../meals/facts.js';
-import { MIX, proposeWeek, analyseWeek, optimiseWeek, additionFor } from './logic.js';
+import { MIX, proposeWeek, analyseWeek, optimiseWeek, additionFor, applyIdea } from './logic.js';
 import { GUIDE } from '../assistant/guide.js';
 import { sendHref } from '../shopping/logic.js';
 import { mealNutrition, nutrientProfile } from '../../meal-nutrition.js';
@@ -29,7 +29,7 @@ import { nutritionPanel, comparePanel, radar } from '../../ui/nutrition-view.js'
 import { portionShares, fmtShare, GUESTS, guestShares, servingsFor } from '../../portions.js';
 import { inSystem } from '../../units.js';
 
-const ui = { showAllMeals: false, q: '', filters: emptyFilters(), compare: [], mix: { family: 4, individual: 0, untried: 2, other: 1, meal: 'dinner' }, proposal: null, optimise: null, rejected: [] };
+const ui = { cooked: new Set(), showAllMeals: false, q: '', filters: emptyFilters(), compare: [], mix: { family: 4, individual: 0, untried: 2, other: 1, meal: 'dinner' }, proposal: null, optimise: null, rejected: [] };
 
 const plans = (hub) => hub.data.collection('plans', { summary: (p) => ({ title: `Week of ${p.week}`, week: p.week, count: p.slots.length }) });
 const book = (hub) => (hub.data.installed('meals') ? hub.data.of('meals', 'recipes') : null);
@@ -71,6 +71,7 @@ export function render(hub, route) {
     case 'review': return reviewScreen(hub, a);
     case 'add': return addScreen(hub, a, b);
     case 'modify': return modifyScreen(hub, a, b, c);
+    case 'today': return todayScreen(hub);
     default: return weekScreen(hub, route.sub === 'week' ? route.rest[0] ?? null : null);
   }
 }
@@ -78,6 +79,47 @@ export function render(hub, route) {
 const weekOf = (param, hub) => weekStart(param && /^\d{4}-\d{2}-\d{2}$/.test(param) ? param : hub.today());
 
 /* ---------------------------------------------------------------- the week */
+
+/**
+ * Cooking today: each meal planned for today with the batch, what goes in and the
+ * method - nothing else on the page. Steps can be ticked as you go (not saved).
+ */
+function todayScreen(hub) {
+  const today = hub.today();
+  const monday = weekStart(today);
+  const p = loadPlan(hub, monday);
+  if (p.loading) return loading();
+  if (p.error) return failure(p.error);
+  const day = weekDays(monday).indexOf(today);
+  const slots = MEALS.map((m) => slotAt(p.data, day, m)).filter(Boolean);
+  const recs = slots.map((s) => (s.recipeId ? loadRecipe(hub, s.recipeId) : { data: null }));
+  if (recs.some((r) => r.loading)) return loading();
+  const sys = hub.units();
+  return el('section', { class: 'stack', 'aria-label': 'Cook today' }, [
+    el('h1', { text: `Cooking today${slots.length ? '' : ' - nothing planned'}` }),
+    slots.length ? null : el('p', { class: 'panel' }, ['Nothing is planned for today. ', el('a', { href: hub.href('week'), text: 'Plan a meal' }), ' first.']),
+    ...slots.map((s, i) => {
+      const rec = recs[i].data;
+      const batch = slotBatch(s, rec);
+      const ings = slotNeeds({ ...s, reserve: s.reserve.map((x) => ({ ...x, additions: [] })) }, rec);
+      const steps = rec?.instructions ?? [];
+      return el('article', { class: 'panel stack', 'data-field': `cook:${s.id}` }, [
+        el('div', { class: 'card__label', text: MEAL_LABEL[s.meal] }),
+        el('h2', { text: s.title, style: { margin: 0 } }),
+        el('p', { class: 'small', text: `For ${prepared(s)} portion${prepared(s) === 1 ? '' : 's'}${ings.length ? ` - the recipe x${batch.m}` : ''}${reserved(s) ? `, ${reserved(s)} set aside for later` : ''}.` }),
+        ings.length ? el('div', {}, [el('h3', { text: 'What goes in' }), el('ul', {}, ings.map((x) => el('li', { text: formatIngredient(inSystem(x, sys)) })))]) : null,
+        steps.length ? el('div', {}, [el('h3', { text: 'Method' }), el('ol', { class: 'stack', style: { gap: '6px' } }, steps.map((t, n) => {
+          const k = `${s.id}:${n}`;
+          return el('li', {}, [el('label', { class: 'checkline' }, [
+            el('input', { type: 'checkbox', checked: ui.cooked.has(k), on: { change: (e) => { if (e.target.checked) ui.cooked.add(k); else ui.cooked.delete(k); } } }),
+            el('span', { text: t }),
+          ])]);
+        }))]) : el('p', { class: 'small muted', text: rec ? 'No method saved for this one.' : 'A meal typed into the plan - no recipe to follow.' }),
+        el('a', { class: 'small', href: hub.href('slot', ref(monday, s.id)), text: 'The planned meal' }),
+      ]);
+    }),
+  ]);
+}
 
 function weekScreen(hub, param) {
   const monday = weekOf(param, hub);
@@ -746,8 +788,7 @@ function modifyScreen(hub, monday, slotId, param) {
   const add = idea.add ? GUIDE.find((g) => g.id === idea.add) : null;
   const swapFrom = idea.swap ? GUIDE.find((g) => g.id === idea.swap[0]) : null;
   const swapTo = idea.swap ? GUIDE.find((g) => g.id === idea.swap[1]) : null;
-  const next = add ? [...ings, additionFor(add, basis)]
-    : swapFrom && swapTo ? ings.map((g) => ([swapFrom.name, ...swapFrom.also].some((n) => g.name.toLowerCase().includes(n)) ? { ...g, name: swapTo.name, fdcId: swapTo.fdc } : g)) : null;
+  const next = applyIdea(ings, idea, basis);
   if (!next) return el('p', { class: 'panel', text: 'That idea is not one this planner understands.' });
   return el('section', { class: 'stack' }, [
     el('h1', { text: add ? `Add ${add.name} to ${slot.title}?` : `Use ${swapTo.name} instead of ${swapFrom.name}?` }),

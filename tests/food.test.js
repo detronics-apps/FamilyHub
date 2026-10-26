@@ -135,8 +135,8 @@ test('not today turns an idea into try next time', () => {
 
 test('what is already on the plate is checked for each person', () => {
   const r = run('grapes and peanuts', ['c']);
-  assert.ok(r.cautions.some((c) => /Lily is allergic to peanuts/.test(c)));
-  assert.ok(r.cautions.some((c) => /quarters/.test(c)));
+  assert.ok(r.cautions.some((c) => c.who === 'Lily' && /Allergic to peanuts/.test(c.text)));
+  assert.ok(r.cautions.some((c) => /quarters/.test(c.text)));
 });
 
 test('babies under one get no suggestions; an unknown meal gets none either', () => {
@@ -175,9 +175,9 @@ test('a family recipe is read as a meal from its ingredients; seasonings are not
 test('age guidance reaches the plate: honey for a baby, tea for a child, wine in pregnancy', () => {
   const baby = run('oats with honey', ['d']);
   assert.equal(baby.cards.length, 0, 'still no ideas for a baby');
-  assert.ok(baby.cautions.some((c) => /Baby: No honey before their first birthday/.test(c)));
-  assert.ok(run('toast and tea', ['c']).cautions.some((c) => /Lily: Avoid caffeinated drinks/.test(c)));
-  assert.ok(!run('toast and tea', ['a']).cautions.some((c) => /caffeinated/.test(c)), 'adults are not told off for tea');
+  assert.ok(baby.cautions.some((c) => c.who === 'Baby' && /No honey before their first birthday/.test(c.text)));
+  assert.ok(run('toast and tea', ['c']).cautions.some((c) => c.who === 'Lily' && /Avoid caffeinated drinks/.test(c.text)));
+  assert.ok(!run('toast and tea', ['a']).cautions.some((c) => /caffeinated/.test(c.text)), 'adults are not told off for tea');
 });
 
 test('food search: a whole-word match comes before a longer word that starts the same', () => {
@@ -205,4 +205,24 @@ test('a size given twice: the later one counts; "wedge (1.33 oz)" reads "wedge"'
   const { foodSizes } = await import('../js/food.js');
   const s = foodSizes({ portions: [{ label: '1 wedge (1.33 oz)', grams: 38 }] }, [{ label: 'ring', grams: 20, at: 1 }, { label: 'ring', grams: 200, at: 2 }]);
   assert.deepEqual(s.map((x) => [x.unit, x.each]), [['ring', 200], ['wedge', 38]]);
+});
+
+test('foods can be browsed by type and colour, sorted by a nutrient, to discover new ones', async () => {
+  const { browseFoods, foodGroup, foodColour } = await import('../js/food.js');
+  const db = createFoodDb(JSON.parse(fs.readFileSync('data/foods.json', 'utf8')));
+  assert.equal(foodGroup('Vegetables and Vegetable Products'), 'veg');
+  assert.equal(foodGroup('Seafood mixed dishes'), 'dishes');
+  assert.equal(foodGroup('Bananas'), 'fruit');
+  assert.equal(foodColour({ name: 'Corn, sweet, yellow, raw', category: 'Vegetables and Vegetable Products' }), 'yellow');
+  assert.equal(foodColour({ name: 'Peppers, sweet, red, raw', category: 'Vegetables and Vegetable Products' }), 'red');
+  assert.equal(foodColour({ name: 'Bananas, raw', category: 'Fruits and Fruit Juices' }), 'yellow');
+  assert.equal(foodColour({ name: 'Bread, banana', category: 'Baked Products' }), null, 'colour is for plants only');
+  const yellow = browseFoods(db, { colour: 'yellow' });
+  assert.ok(yellow.length > 20 && yellow.every((f) => foodColour(f) === 'yellow'));
+  const fibre = browseFoods(db, { group: 'fruit', sort: 'fibre', everyday: true });
+  for (let i = 1; i < 30; i++) assert.ok((fibre[i - 1].per100.fibre ?? -1) >= (fibre[i].per100.fibre ?? -1), 'highest first');
+  assert.ok(!fibre.some((f) => /dried|powder/i.test(f.name)), 'dried and powdered left out on request');
+  const tofu = browseFoods(db, { group: 'legumes', sort: 'protein', only: new Set([172475, 173757]) });
+  assert.equal(tofu[0].id, 172475, 'a short list can be browsed - tofu is found by what it brings');
+  assert.ok(browseFoods(db, { query: 'egg' })[0].name.toLowerCase().startsWith('egg'), 'words still search as before');
 });

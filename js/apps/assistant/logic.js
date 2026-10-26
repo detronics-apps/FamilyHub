@@ -258,7 +258,7 @@ export function suggest({ text, profiles, selected = [], db, today, notToday = [
   for (const p of chosen) {
     const baby = everyone.find((c) => c.id === p.id)?.baby;
     for (const { rule } of foodWarnings(p, today, names, { skip: baby ? [] : ['choking', 'preg-food'] })) {
-      result.cautions.push(`${p.name}: ${rule.text}`);
+      result.cautions.push({ who: p.name, text: rule.text });
     }
   }
   if (!people.length) {
@@ -270,9 +270,9 @@ export function suggest({ text, profiles, selected = [], db, today, notToday = [
   for (const f of items) {
     for (const c of people) {
       const hit = f.allergens.filter((a) => c.allergies.has(a));
-      if (hit.length) { result.cautions.push(`${c.name} is allergic to ${list(hit)} - keep the ${f.name} away from ${c.name}.`); continue; }
-      if (f.child && c.age < f.child.under) result.cautions.push(f.child.avoid ? `${cap(f.name)} ${f.name.endsWith('s') ? 'are' : 'is'} not safe for children under ${f.child.under} - leave ${f.name.endsWith('s') ? 'them' : 'it'} out of ${c.name}’s portion.` : `For ${c.name}, the ${f.name}: ${f.child.prep}.`);
-      if (f.preg && c.pregnant) result.cautions.push(`${c.name}: ${f.preg.note}`);
+      if (hit.length) { result.cautions.push({ who: c.name, text: `Allergic to ${list(hit)} - keep the ${f.name} away.` }); continue; }
+      if (f.child && c.age < f.child.under) result.cautions.push({ who: c.name, text: f.child.avoid ? `${cap(f.name)} ${f.name.endsWith('s') ? 'are' : 'is'} not safe for children under ${f.child.under} - leave ${f.name.endsWith('s') ? 'them' : 'it'} out of their portion.` : `The ${f.name}: ${f.child.prep}.` });
+      if (f.preg && c.pregnant) result.cautions.push({ who: c.name, text: f.preg.note });
     }
   }
 

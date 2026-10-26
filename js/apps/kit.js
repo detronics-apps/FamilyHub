@@ -104,8 +104,10 @@ export function recordForm({ fields, record = {}, people = [], onSave, onCancel 
           f.hint ? el('div', { class: 'field__hint', text: f.hint }) : null]);
       }
       default:
-        control = el('input', { class: 'input', id, value: v ?? '', placeholder: f.placeholder ?? '', autocomplete: 'off', maxlength: f.max ?? 200 });
+        control = el('input', { class: 'input', id, value: v ?? '', placeholder: f.placeholder ?? '', autocomplete: 'off', maxlength: f.max ?? 200, ...(f.suggest?.length ? { list: `${id}-list` } : {}) });
         getters[f.key] = () => control.value.trim();
+        // Earlier answers offered as you type, so the same thing is spelt the same way.
+        if (f.suggest?.length) return field(f.label, el('span', {}, [control, el('datalist', { id: `${id}-list` }, f.suggest.map((s) => el('option', { value: s })))]), f.hint);
     }
     if (f.required) control.required = true;
     return field(`${f.label}${f.required ? ' *' : ''}`, control, f.hint);

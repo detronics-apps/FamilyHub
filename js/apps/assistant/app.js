@@ -8,9 +8,11 @@ import { tabs, loading, failure } from '../kit.js';
 import { suggest, recipeMealText, TYPES } from './logic.js';
 import { INTERACTIONS } from './interactions.js';
 import { FOCUS, LIFE_STAGES, lifeStageAllowed } from '../../model.js';
-import { planId, normalisePlan } from '../meals/logic.js';
+import { planId, normalisePlan, normaliseRecipe } from '../meals/logic.js';
+import { applyIdea } from '../mealplan/logic.js';
 
-const ui = { text: '', asked: '', selected: [], notToday: [], hidden: [], recipe: null, slot: null };
+// `work`: the opened recipe's ingredients with the ideas applied so far, and which ones.
+const ui = { text: '', asked: '', selected: [], notToday: [], hidden: [], recipe: null, slot: null, work: null };
 const EXAMPLES = ['oats with butter and sugar', 'chicken and rice', 'pap and boerewors', 'toast with peanut butter'];
 
 export function render(hub, route) {
@@ -59,7 +61,11 @@ function mealScreen(hub, recipeId) {
   // Arriving from a recipe (the picker below, or "Ideas to improve it" in the Cookbook).
   if (recipeId && book && ui.recipe?.id !== recipeId) {
     const r = hub.use(`recipe:${recipeId}`, () => book.get(recipeId));
-    if (r.data) { ui.text = recipeMealText(r.data); ui.asked = ui.text; ui.recipe = { id: recipeId, title: r.data.title }; ui.notToday = []; ui.hidden = []; }
+    if (r.data) {
+      const rec = normaliseRecipe(r.data);
+      ui.text = recipeMealText(r.data); ui.asked = ui.text; ui.recipe = { id: recipeId, title: rec.title, rec }; ui.notToday = []; ui.hidden = [];
+      ui.work = { ingredients: rec.ingredients.map((i) => ({ ...i })), applied: [] };
+    }
     else if (r.loading) return el('section', { class: 'stack' }, [nav(hub, null), loading('Opening the recipe…')]);
   }
   const toggle = (id) => { ui.selected = ui.selected.includes(id) ? ui.selected.filter((x) => x !== id) : [...ui.selected, id]; hub.render(); };
@@ -121,9 +127,14 @@ function results(hub, db, profiles) {
       `Reading this as: ${r.items.map((i) => i.name).join(', ')}.`,
       r.unknown.length ? ` Not recognised: ${r.unknown.slice(0, 8).join(', ')}${r.unknown.length > 8 ? ` and ${r.unknown.length - 8} more` : ''} - the ideas are based on the rest.` : '',
     ]),
-    ...r.cautions.map((c) => el('div', { class: 'panel caution', role: 'note' }, [el('strong', { text: 'Worth knowing: ' }), c])),
+    // Worth knowing, one panel per person.
+    ...[...r.cautions.reduce((m, c) => m.set(c.who, [...(m.get(c.who) ?? []), c]), new Map())].map(([who, list]) => el('div', { class: 'panel caution', role: 'note', 'data-field': `caution:${who}` }, [
+      el('strong', { text: `Worth knowing for ${who}` }),
+      el('ul', { style: { margin: 'var(--space-1) 0 0' } }, [...new Set(list.map((c) => c.text))].map((t) => el('li', { text: t }))),
+    ])),
     cards.length ? el('div', { class: 'stack' }, cards.map((c) => card(hub, c)))
       : el('p', { class: 'panel', text: 'This meal already covers the easy wins I know about. Enjoy it.' }),
+    ui.recipe && ui.work?.applied.length ? changes(hub) : null,
     ...notes(r),
   ]);
 }
@@ -143,11 +154,48 @@ function card(hub, c) {
       ui.slot && (c.type === 'add' || c.type === 'swap')
         ? el('a', { class: 'btn btn-small btn-primary', href: `#/mealplan/modify/${encodeURIComponent(`${ui.slot.monday}~${ui.slot.id}~${JSON.stringify(c.type === 'add' ? { add: c.foodId } : { swap: [c.fromId, c.foodId] })}`)}`, text: 'Use in this planned meal', 'data-field': `use:${c.id}` })
         : null,
+      ui.recipe && ui.work && c.foodId && c.type !== 'time' ? applyButton(hub, c) : null,
       c.type === 'add' || c.type === 'swap'
         ? el('button', { class: 'btn btn-small', type: 'button', text: 'Not in the house today', on: { click: () => { ui.notToday.push(c.foodId); hub.render(); } } })
         : null,
       el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Not for us', on: { click: () => { ui.hidden.push(c.id); hub.render(); } } }),
     ]),
+  ]);
+}
+
+/** Apply an idea to the opened recipe's ingredients (nothing is saved until Replace or New). */
+function applyButton(hub, c) {
+  if (ui.work.applied.some((a) => a.id === c.id)) return el('span', { class: 'badge badge--ok', text: '✓ Applied', 'data-field': `applied:${c.id}` });
+  const idea = c.fromId ? { swap: [c.fromId, c.foodId] } : { add: c.foodId };
+  return el('button', {
+    class: 'btn btn-small btn-primary', type: 'button', text: 'Apply to the recipe', 'data-field': `apply:${c.id}`,
+    on: {
+      click: () => {
+        const next = applyIdea(ui.work.ingredients, idea, ui.recipe.rec.servings);
+        if (next) { ui.work.ingredients = next; ui.work.applied.push({ id: c.id, title: c.title }); }
+        hub.render();
+      },
+    },
+  });
+}
+
+/** The ideas applied so far, and the two ways to keep them - both open the Cookbook to look before saving. */
+function changes(hub) {
+  const rec = ui.recipe.rec;
+  const update = { servings: rec.servings, ingredients: ui.work.ingredients, from: 'ideas' };
+  const copy = {
+    title: `${rec.title} (our version)`, servings: rec.servings, ingredients: ui.work.ingredients, variantOf: rec.id, type: rec.type, from: 'ideas',
+    instructions: rec.instructions, tags: rec.tags, prepMinutes: rec.prepMinutes, cookMinutes: rec.cookMinutes, allergens: rec.allergens, description: rec.description,
+  };
+  return el('div', { class: 'panel stack', 'data-field': 'applied-ideas' }, [
+    el('h2', { text: `Changes to ${rec.title}`, style: { margin: 0 } }),
+    el('ul', {}, ui.work.applied.map((a) => el('li', { text: a.title }))),
+    el('div', { class: 'row' }, [
+      el('a', { class: 'btn btn-primary', href: `#/meals/edit/${encodeURIComponent(rec.id)}/${encodeURIComponent(`update:${JSON.stringify(update)}`)}`, text: 'Replace', 'data-field': 'ideas-replace' }),
+      el('a', { class: 'btn', href: `#/meals/new/${encodeURIComponent(`variant:${JSON.stringify(copy)}`)}`, text: 'New', 'data-field': 'ideas-new' }),
+      el('button', { class: 'btn btn-quiet', type: 'button', text: 'Undo all', on: { click: () => { ui.work = { ingredients: rec.ingredients.map((i) => ({ ...i })), applied: [] }; hub.render(); } } }),
+    ]),
+    el('p', { class: 'small muted', text: `Replace puts these changes into ${rec.title} itself; New keeps it as it is and makes "${rec.title} (our version)". Either way the Cookbook shows the ingredients to check before you save.` }),
   ]);
 }
 

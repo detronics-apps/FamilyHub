@@ -5,11 +5,15 @@
 
 import { el } from '../../ui/dom.js';
 import { loading, failure, saveRecord } from '../kit.js';
-import { formatIngredient, combineIngredients } from '../meals/logic.js';
+import { formatIngredient, combineIngredients, parseIngredient } from '../meals/logic.js';
 import { inSystem } from '../../units.js';
-import { GROUPS, LIST_ID, normaliseShopping, addFromSource, addShoppingItem, toggleItem, clearBought, removeItem, byGroup, readSend, listText } from './logic.js';
+import {
+  GROUPS, KINDS, LIST_ID, normaliseShopping, addFromSource, addShoppingItem, toggleItem, clearBought, removeItem, byGroup, readSend, listText,
+  findItems, kindOf, categorise,
+} from './logic.js';
 
-const ui = { group: 'other' };
+// find: what the finder shows - words, a kind, and only our own items or everything there is.
+const ui = { find: { query: '', kind: '', ours: true } };
 const shopping = (hub) => hub.data.collection('list', { summary: (l) => ({ title: 'Shopping list', count: l.items.filter((i) => !i.checked).length }) });
 
 const loadList = (hub) => hub.use('list', async () => {
@@ -24,18 +28,77 @@ export function render(hub, route) {
   if (l.error) return failure(l.error);
   const save = async (next) => { await saveRecord(hub, shopping(hub), { ...next, id: LIST_ID }); };
   if (route.sub === 'add') return addScreen(hub, l.data, save, route.rest[0] ?? '');
+  if (route.sub === 'shop') return shopScreen(hub, l.data, save);
   return listScreen(hub, l.data, save);
 }
 
+/**
+ * Find something to put on the list: by words or by kind ("what hygiene things
+ * do we buy?"), from our own items (bought before or added by us) or from
+ * everything there is - or add it as a new item. Typing redraws only the results.
+ */
+function finder(hub, list, save) {
+  const st = ui.find;
+  const results = el('div', { class: 'stack', 'data-field': 'shop-results' });
+  const add = (name, group) => save(addShoppingItem(list, name, undefined, group));
+  const draw = () => {
+    const words = parseIngredient(st.query).name || st.query.trim();
+    if (!words && !st.kind && !st.ours) { results.replaceChildren(el('p', { class: 'small muted', text: 'Choose a kind - Cleaning, Hygiene... - or type, to see what there is.' })); return; }
+    const found = findItems(list, { query: words, kind: st.kind || null, ours: st.ours });
+    const exact = found.some((f) => f.name.toLowerCase() === words.toLowerCase());
+    const fresh = st.query.trim() && !exact ? newItem(st.query.trim()) : null;
+    results.replaceChildren(
+      found.length ? el('ul', { class: 'list' }, found.slice(0, 40).map((f) => el('li', {}, [
+        el('span', { class: 'list__main' }, [
+          el('strong', { text: f.name }),
+          el('span', { class: 'small muted', text: ` · ${KINDS[kindOf(f.group)]}${f.times ? ` · bought ${f.times} time${f.times === 1 ? '' : 's'}${f.last ? `, last ${f.last}` : ''}` : f.ours ? ' · added by us' : ''}` }),
+        ]),
+        f.onList ? el('span', { class: 'badge badge--ok', text: 'On the list' })
+          : el('button', { class: 'btn btn-small', type: 'button', text: '+ Add', 'data-field': `find-add:${f.name}`, on: { click: () => add(f.name, f.group) } }),
+      ]))) : el('p', { class: 'small muted', text: st.ours ? 'Nothing of ours matches yet - choose "Everything" to see more, or add it as a new item.' : 'Nothing matches.' }),
+      found.length > 40 ? el('p', { class: 'small muted', text: `${found.length - 40} more - type a word to narrow it down.` }) : null,
+      fresh,
+    );
+  };
+  // A new item, in the kind being looked at (food goes to its aisle).
+  const newItem = (text) => {
+    const name = parseIngredient(text).name || text;
+    const guess = st.kind && st.kind !== 'food' ? st.kind : categorise(name) !== 'food' || st.kind === 'food' ? categorise(name) : 'other';
+    const group = el('select', { class: 'select', style: { width: 'auto' }, 'aria-label': 'Where it goes', 'data-field': 'new-group' },
+      Object.entries(GROUPS).map(([k, t]) => el('option', { value: k, text: t, selected: k === guess })));
+    return el('div', { class: 'row' }, [
+      el('button', { class: 'btn btn-small btn-primary', type: 'button', text: `+ Add "${text}" as a new item`, 'data-field': 'find-new', on: { click: () => add(text, group.value) } }),
+      el('span', { class: 'small', text: 'in' }), group,
+    ]);
+  };
+  const input = el('input', {
+    class: 'input', type: 'search', value: st.query, placeholder: 'Find or add, e.g. "milk", "2 l milk" or "light bulbs"', 'aria-label': 'Find or add something', 'data-field': 'shop-add', style: { flex: '1 1 220px' },
+    on: {
+      input: (e) => { st.query = e.target.value; draw(); },
+      keydown: (e) => { if (e.key === 'Enter' && st.query.trim()) { e.preventDefault(); results.querySelector('[data-field="find-new"], [data-field^="find-add:"]')?.click(); } },
+    },
+  });
+  const chip = (pressed, text, field, click) => el('button', { class: 'chip', type: 'button', 'aria-pressed': String(pressed), text, 'data-field': field, on: { click } });
+  draw();
+  return el('div', { class: 'panel stack no-print', 'aria-label': 'Find or add' }, [
+    el('div', { class: 'row' }, [input]),
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Kind' }, [
+      chip(!st.kind, 'All', 'find-kind:all', () => { st.kind = ''; hub.render(); }),
+      ...Object.entries(KINDS).map(([k, t]) => chip(st.kind === k, t, `find-kind:${k}`, () => { st.kind = k; hub.render(); })),
+    ]),
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Look in' }, [
+      chip(st.ours, `Ours - bought before or added by us (${list.known.length})`, 'find-ours', () => { st.ours = true; hub.render(); }),
+      chip(!st.ours, 'Everything', 'find-all', () => { st.ours = false; hub.render(); }),
+    ]),
+    results,
+  ]);
+}
+
 function listScreen(hub, list, save) {
-  const input = el('input', { class: 'input', id: 'shop-add', placeholder: 'Add something, e.g. "2 l milk" or "light bulbs"', 'data-field': 'shop-add', style: { flex: '1 1 220px' } });
-  const group = el('select', { class: 'select', 'aria-label': 'Kind', 'data-field': 'shop-group', style: { width: 'auto' }, on: { change: (e) => { ui.group = e.target.value; } } },
-    Object.entries(GROUPS).map(([k, label]) => el('option', { value: k, text: label, selected: k === ui.group })));
-  const add = (e) => { e.preventDefault(); if (input.value.trim()) save(addShoppingItem(list, input.value, undefined, group.value)); };
   const bought = list.items.filter((i) => i.checked);
   const item = (i) => el('li', {}, [
     el('label', { class: 'checkline list__main' }, [
-      el('input', { type: 'checkbox', checked: i.checked, 'data-field': `shop:${i.id}`, on: { change: () => save(toggleItem(list, i.id)) } }),
+      el('input', { type: 'checkbox', checked: i.checked, 'data-field': `shop:${i.id}`, on: { change: () => save(toggleItem(list, i.id, hub.today())) } }),
       el('span', {}, [
         el('span', { text: formatIngredient(inSystem(i, hub.units())), style: i.checked ? { textDecoration: 'line-through', color: 'var(--text-faint)' } : null }),
         i.note ? el('span', { class: 'small muted', text: ` (${i.note})` }) : null,
@@ -46,10 +109,8 @@ function listScreen(hub, list, save) {
   ]);
 
   return el('section', { class: 'stack', 'aria-label': 'Shopping list' }, [
-    el('form', { class: 'row no-print', on: { submit: add } }, [
-      el('label', { class: 'sr-only', for: 'shop-add', text: 'Add to the list' }), input, group,
-      el('button', { class: 'btn', type: 'submit', text: 'Add' }),
-    ]),
+    list.items.some((i) => !i.checked) ? el('a', { class: 'btn btn-primary no-print', href: hub.href('shop'), text: 'At the shop - tick things off', 'data-field': 'go-shop', style: { alignSelf: 'flex-start' } }) : null,
+    finder(hub, list, save),
     ...byGroup({ items: list.items.filter((i) => !i.checked) }).map(([g, items]) => el('div', { class: 'panel' }, [
       el('h2', { text: `${GROUPS[g]} (${items.length})` }),
       el('ul', { class: 'list' }, items.map(item)),
@@ -67,6 +128,29 @@ function listScreen(hub, list, save) {
       el('button', { class: 'btn btn-small', type: 'button', text: 'Clear bought items', on: { click: () => save(clearBought(list)) } }),
     ]) : null,
     el('p', { class: 'small muted', text: 'Amounts in grams and kilos (or millilitres and litres) are added together. Different kinds of measure - cups and grams, say - are listed separately rather than guessed. Sending the same meal or week again updates its items instead of doubling them.' }),
+  ]);
+}
+
+/**
+ * At the shop: only the list, big, by aisle - tick each thing as it goes in the
+ * trolley. Nothing to add or change here; that is for the list screen.
+ */
+function shopScreen(hub, list, save) {
+  const left = list.items.filter((i) => !i.checked);
+  const got = list.items.filter((i) => i.checked);
+  const tick = (i) => el('label', { class: 'checkline shop-tick', 'data-field': `tick:${i.id}` }, [
+    el('input', { type: 'checkbox', checked: i.checked, on: { change: () => save(toggleItem(list, i.id, hub.today())) } }),
+    el('span', { text: formatIngredient(inSystem(i, hub.units())), style: i.checked ? { textDecoration: 'line-through', color: 'var(--text-faint)' } : null }),
+    i.note ? el('span', { class: 'small muted', text: ` (${i.note})` }) : null,
+  ]);
+  return el('section', { class: 'stack shop-mode', 'aria-label': 'At the shop' }, [
+    el('h1', { text: left.length ? `At the shop - ${left.length} to get` : 'Everything is in the trolley' }),
+    ...byGroup({ items: left }).map(([g, items]) => el('div', { class: 'panel stack' }, [el('h2', { text: GROUPS[g], style: { margin: 0 } }), ...items.map(tick)])),
+    got.length ? el('details', { class: 'panel' }, [el('summary', { text: `In the trolley (${got.length})` }), el('div', { class: 'stack' }, got.map(tick))]) : null,
+    el('div', { class: 'row' }, [
+      got.length ? el('button', { class: 'btn btn-primary', type: 'button', text: 'Done - clear what we bought', 'data-field': 'shop-done', on: { click: async () => { await save(clearBought(list)); hub.go(); } } }) : null,
+      el('a', { class: 'btn', href: hub.href(), text: 'Back to the list' }),
+    ]),
   ]);
 }
 

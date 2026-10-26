@@ -3,6 +3,10 @@
 // Progress is shown as where you are - never as "behind" or a streak. Pure.
 
 import { dayDiff } from '../../dates.js';
+import { TOPICS } from './guide.js';
+
+const TOPIC_IDS = new Set(Object.keys(TOPICS));
+const TOPIC_LABELS = Object.fromEntries(Object.entries(TOPICS).map(([k, t]) => [k, t.label]));
 
 /** The 66 books (Protestant canon) with their chapter counts. */
 export const BOOKS = [
@@ -85,18 +89,75 @@ export const planSummary = (p) => {
 /** Days since the plan started - offered as context, never compared with a target. */
 export const daysIn = (plan, today) => (plan.startDay ? Math.max(0, dayDiff(plan.startDay, today)) + 1 : null);
 
-export const NOTE_KINDS = { reflection: 'Reflection', lesson: 'Lesson', question: 'Question', passage: 'Meaningful passage', discussion: 'Family discussion' };
+// A journal entry. Each kind has a heading of its own, the questions it is trying
+// to answer (each with where it stands), the passages it is about (picked, not
+// typed), notes, topics from a list and finer terms of your own - so it can be
+// found again. Entries written before kept their text as notes.
+export const NOTE_KINDS = {
+  reflection: 'Reflection', lesson: 'Lesson', question: 'Question', passage: 'Meaningful passage',
+  message: 'A message I heard', discussion: 'Family discussion',
+};
+export const QUESTION_STATUS = { new: 'Only the question so far', research: 'Needs more reading', answered: 'Found a reasonable answer' };
+export const VERSIONS = {
+  niv: 'NIV', esv: 'ESV', kjv: 'KJV', nkjv: 'NKJV', nlt: 'NLT', nasb: 'NASB', csb: 'CSB', msg: 'The Message',
+  afr53: 'Afrikaans 1933/53', afr83: 'Afrikaans 1983', nlv: 'Nuwe Lewende Vertaling', b2020: 'Bybel 2020', other: 'Other',
+};
+export const chaptersIn = (book) => CHAPTERS.get(book) ?? 0;
+
+const int = (v, max) => { const n = Math.round(Number(v)); return Number.isFinite(n) && n >= 1 && n <= max ? n : null; };
+const terms = (v) => [...new Set((Array.isArray(v) ? v : []).map((t) => str(t, 40).toLowerCase()).filter(Boolean))].slice(0, 30);
+
+/** One passage: a book and chapter from the canon, verses optional ("John 15", "John 15:5", "John 15:5-8"). */
+export function normalisePassage(p = {}) {
+  if (!CHAPTERS.has(p.book)) return null;
+  const chapter = int(p.chapter, CHAPTERS.get(p.book)) ?? 1;
+  const from = int(p.from, 200);
+  const to = from ? int(p.to, 200) : null;
+  return { version: VERSIONS[p.version] ? p.version : '', book: p.book, chapter, from, to: to && to > from ? to : null };
+}
+export const passageRef = (p) => `${p.book} ${p.chapter}${p.from ? `:${p.from}${p.to ? `-${p.to}` : ''}` : ''}${p.version ? ` (${VERSIONS[p.version]})` : ''}`;
 
 export function normaliseNote(n = {}, today) {
+  const text = str(n.notes ?? n.text, 6000);
   return {
     ...n,
     kind: NOTE_KINDS[n.kind] ? n.kind : 'reflection',
-    passage: str(n.passage, 120),
-    text: str(n.text, 6000) || '(empty)',
+    heading: str(n.heading, 150) || text.split('\n')[0].slice(0, 90) || 'Untitled',
+    questions: (Array.isArray(n.questions) ? n.questions : []).filter((q) => q && str(q.text)).slice(0, 20).map((q, i) => ({
+      id: str(q.id, 40) || `q${i}`, text: str(q.text, 500), status: QUESTION_STATUS[q.status] ? q.status : 'new', answer: str(q.answer, 4000),
+    })),
+    passages: (Array.isArray(n.passages) ? n.passages : []).map(normalisePassage).filter(Boolean).slice(0, 30),
+    passage: str(n.passage, 120),                  // a passage typed before passages were picked from lists
+    notes: text,
+    topics: [...new Set((Array.isArray(n.topics) ? n.topics : []).filter((t) => TOPIC_IDS.has(t)))],
+    terms: terms(n.terms),
     day: typeof n.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(n.day) ? n.day : today,
     who: typeof n.who === 'string' ? n.who : null,
+    text: undefined,
   };
 }
 
-export const noteSummary = (n) => ({ title: n.text.split('\n')[0].slice(0, 90), kind: n.kind, passage: n.passage, day: n.day, who: n.who });
-export const noteText = (n) => `${n.passage} ${n.text} ${NOTE_KINDS[n.kind]}`;
+export const noteSummary = (n) => ({
+  ix: 2,
+  title: n.heading, kind: n.kind, day: n.day, who: n.who, topics: n.topics, terms: n.terms,
+  refs: [...n.passages.map(passageRef), n.passage].filter(Boolean),
+  questions: n.questions.map((q) => ({ id: q.id, text: q.text, status: q.status })),
+});
+export const noteText = (n) => [n.heading, NOTE_KINDS[n.kind], n.notes, n.passage, ...n.passages.map(passageRef), ...n.topics.map((t) => TOPIC_LABELS[t]), ...n.terms, ...n.questions.flatMap((q) => [q.text, q.answer])].join(' ');
+
+/** Entries matching a kind, a topic, a term and a question status - every one chosen must match. */
+export function filterNotes(list, { kind = '', topic = '', term = '', status = '' } = {}) {
+  return list.filter((n) => (!kind || n.kind === kind) && (!topic || n.topics.includes(topic)) && (!term || n.terms.includes(term))
+    && (!status || n.questions.some((q) => q.status === status)));
+}
+
+/** Every question across the journal, newest entry first - to come back to and reflect on. */
+export const allQuestions = (list, status = '') => list.flatMap((n) => n.questions.filter((q) => !status || q.status === status).map((q) => ({ ...q, entry: n.id, heading: n.heading, day: n.day })))
+  .sort((a, b) => String(b.day).localeCompare(String(a.day)));
+
+/** The terms already used, most used first - offered when adding one, so "tattoos" is always spelt the same. */
+export function termsUsed(list) {
+  const n = new Map();
+  for (const x of list) for (const t of x.terms) n.set(t, (n.get(t) ?? 0) + 1);
+  return [...n].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([t]) => t);
+}

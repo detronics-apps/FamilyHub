@@ -31,9 +31,12 @@ publisher or anyone else.
 - **Principles**: values and agreements with reasons, exceptions and review triggers.
 - **Decisions**: agreements as experiments - try, observe, look back, adapt, revise with history.
 - **Shopping**: one family list on the home screen - send meals, the week's plan or chore supplies
-  to it, or type anything in.
+  to it, or find things by kind (food, cleaning, hygiene, medical...) from what the family buys or
+  from everything there is. "At the shop" is the list alone, to tick off.
 - **Meals** section, four mini-apps sharing one food database (USDA FoodData Central, ~13,600
   foods) and the details on the People page:
+  - **Calorie Checker**: what is in a food; browse everyday foods by type, colour and most
+    protein / fibre / fat / carbs to discover new ones.
   - **Cookbook**: items, each called a meal, a recipe or an own ingredient (home-made mayo) - or
     left as an item until you decide. Anything can go into anything. Search, type and allergen
     filters, scaling, and a portion guide per person with or without leftovers. Plan it or send
@@ -47,11 +50,13 @@ publisher or anyone else.
   - **Meal Assistant**: type a meal in a few words, choose who is eating, get one or two easy
     ideas (add, swap, time, try next time) that fit their ages, allergies, diet, pregnancy and
     wishes - or open one of the family's recipes to see what could improve it. No scores, no tracking, not medical advice. See [docs/MEAL_ASSISTANT.md](docs/MEAL_ASSISTANT.md).
-- **Holidays**: trips and ideas with a day-by-day plan, packing per person, and a budget.
+- **Holidays**: big trips with a day-by-day plan, packing per person and a budget; and **Places to go** -
+  local outings tagged great for kids, pet friendly, free...
 - **Finance**: monthly budgets (planned against spent) and savings/debt goals with projections
   that show their assumptions. No bank connections, no advice.
 - **Exercise**: activity log, flexible weekly plans, personal goals, what the family did together.
-- **Faith**: Bible reading plans at your own pace, and a journal.
+- **Faith**: Bible reading plans at your own pace; a journal with headings, questions (and where each
+  stands), passages, topics and terms; and a guide to who wrote each book, when, to whom and why.
 - **Bring in data**: spreadsheet templates (CSV) for recipes, chores and tasks - import in
   Settings, or drop filled-in files into the `Import` folder of the Drive folder.
 - Planned, not built: **Planner** (family calendar) and **Medical** (needs private records first).

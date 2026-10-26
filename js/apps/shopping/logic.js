@@ -8,11 +8,32 @@
 
 import { parseIngredient, unitKey } from '../meals/logic.js';
 import { parseMeal } from '../assistant/logic.js';
+import { GUIDE } from '../assistant/guide.js';
+import { tokens } from '../../food.js';
 
-// Food sent from meals is sorted into aisles; 'food' stays for anything not recognised (and older lists).
+// Where an item sits on the list. Food is sorted into aisles; 'food' stays for anything not recognised (and older lists).
 export const GROUPS = {
   produce: 'Fruit and vegetables', meat: 'Meat and seafood', dairy: 'Dairy and eggs', grains: 'Bread, grains and pasta', pantry: 'Pantry',
-  food: 'Other food', cleaning: 'Cleaning', household: 'Household', other: 'Other',
+  food: 'Other food', cleaning: 'Cleaning', hygiene: 'Hygiene and toiletries', medical: 'Medical and first aid', stationery: 'Stationery',
+  household: 'Household', pets: 'Pets', other: 'Other',
+};
+/** The kinds people look by ("what hygiene things do we need?"); the food aisles are all Food. */
+export const KINDS = { food: 'Food', cleaning: 'Cleaning', hygiene: 'Hygiene', medical: 'Medical', stationery: 'Stationery', household: 'Household', pets: 'Pets', other: 'Other' };
+const FOOD_AISLES = new Set(['produce', 'meat', 'dairy', 'grains', 'pantry', 'food']);
+export const kindOf = (group) => (FOOD_AISLES.has(group) ? 'food' : KINDS[group] ? group : 'other');
+
+/**
+ * Things a family commonly buys, by kind - so someone buying something for the
+ * first time can see what there is, not only find what they already know to
+ * type. Food comes from the food guide (everyday foods) instead.
+ */
+export const STARTER = {
+  cleaning: ['dishwashing liquid', 'dishwasher tablets', 'washing powder', 'fabric softener', 'bleach', 'all-purpose cleaner', 'toilet cleaner', 'glass cleaner', 'floor cleaner', 'sponges', 'scourers', 'cloths', 'rubber gloves', 'bin bags', 'disinfectant', 'stain remover', 'oven cleaner', 'furniture polish', 'mop head', 'air freshener'],
+  hygiene: ['toothpaste', 'toothbrushes', 'dental floss', 'mouthwash', 'shampoo', 'conditioner', 'body wash', 'soap', 'hand wash', 'deodorant', 'razors', 'shaving cream', 'sanitary pads', 'tampons', 'toilet paper', 'tissues', 'cotton buds', 'cotton wool', 'body lotion', 'sunscreen', 'lip balm', 'nappies', 'baby wipes', 'nappy cream'],
+  medical: ['plasters', 'bandages', 'antiseptic cream', 'antiseptic liquid', 'pain relief', 'children’s pain relief', 'thermometer', 'rehydration sachets', 'antihistamine', 'cough syrup', 'throat lozenges', 'insect repellent', 'burn gel', 'saline nasal spray', 'eye drops', 'vitamins', 'hand sanitiser', 'face masks'],
+  stationery: ['pens', 'pencils', 'coloured pencils', 'crayons', 'erasers', 'sharpener', 'ruler', 'glue stick', 'scissors', 'sticky tape', 'printer paper', 'printer ink', 'exercise books', 'notebooks', 'sticky notes', 'highlighters', 'envelopes', 'stapler', 'staples', 'paper clips', 'files', 'book covering'],
+  household: ['light bulbs', 'batteries', 'candles', 'matches', 'foil', 'cling film', 'baking paper', 'freezer bags', 'paper towels', 'serviettes', 'refuse bags', 'extension lead', 'pegs', 'hangers', 'firelighters', 'charcoal', 'water filter'],
+  pets: ['dog food', 'cat food', 'pet treats', 'cat litter', 'flea treatment', 'deworming tablets', 'poo bags'],
 };
 const PANTRY = /\b(salt|pepper|spices?|herbs?|cumin|paprika|chilli|turmeric|cinnamon|oregano|basil|thyme|oil|vinegar|sauce|ketchup|stock|broth|flour|sugar|honey|jam|syrup|tinned|canned|tin|can|baking|yeast|cocoa|tea|coffee|cereal|lentils|beans|chickpeas|peanut butter|nuts?|seeds?)\b/i;
 
@@ -34,6 +55,26 @@ const str = (v, max = 200) => (typeof v === 'string' ? v.trim().slice(0, max) : 
 const num = (v) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) || Number(v) < 0 ? null : Number(v));
 const nameKey = (n) => String(n).toLowerCase().trim().replace(/\s+/g, ' ').replace(/(es|s)$/, '');
 
+/**
+ * What the family has bought before or added itself, kept with the list so it
+ * can be found again ("hygiene things we buy") without typing. One per name.
+ */
+function normaliseKnown(known) {
+  const seen = new Set();
+  return (Array.isArray(known) ? known : []).filter((k) => k && str(k.name)).map((k) => ({
+    name: str(k.name, 120), unit: unitKey(str(k.unit, 20)), group: GROUPS[k.group] ? k.group : 'other',
+    times: Math.max(0, Math.round(Number(k.times) || 0)), last: str(k.last, 10),
+  })).filter((k) => !seen.has(nameKey(k.name)) && seen.add(nameKey(k.name))).slice(0, 2000);
+}
+
+/** Remember an item: `bought` counts one more time it was bought (on `day`). */
+export function remember(list, item, { bought = false, day = '' } = {}) {
+  const key = nameKey(item.name);
+  const cur = list.known.find((k) => nameKey(k.name) === key);
+  const next = { name: cur?.name ?? str(item.name, 120), unit: item.unit ?? cur?.unit ?? '', group: GROUPS[item.group] ? item.group : cur?.group ?? 'other', times: (cur?.times ?? 0) + (bought ? 1 : 0), last: bought ? day : cur?.last ?? '' };
+  return { ...list, known: [next, ...list.known.filter((k) => nameKey(k.name) !== key)] };
+}
+
 export function normaliseShopping(list = {}) {
   const items = (Array.isArray(list.items) ? list.items : [])
     .filter((i) => i && str(i.name))
@@ -46,7 +87,7 @@ export function normaliseShopping(list = {}) {
       from: str(i.from, 80),
       group: GROUPS[i.group] ? i.group : 'food',
     }));
-  return { ...list, items };
+  return { ...list, items, known: normaliseKnown(list.known) };
 }
 
 /**
@@ -69,13 +110,43 @@ export function addFromSource(list, { source, from = '', group = 'food' }, neede
 /** The meal plan's own send, kept by name for the week screen. */
 export const refreshFromPlan = (list, monday, needed, newId) => addFromSource(list, { source: `week:${monday}`, from: `Week of ${monday}`, group: 'food' }, needed, newId);
 
+/** Something typed in or picked: on the list, and remembered as one of ours. */
 export function addShoppingItem(list, text, id = `it${Date.now().toString(36)}`, group = 'other') {
   const p = parseIngredient(text);
   if (!p.name) return list;
-  return { ...list, items: [...list.items, { id, ...p, note: '', checked: false, source: '', from: '', group: GROUPS[group] ? group : 'other' }] };
+  const item = { id, ...p, note: '', checked: false, source: '', from: '', group: GROUPS[group] ? group : 'other' };
+  return remember({ ...list, items: [...list.items, item] }, item);
 }
 
-export const toggleItem = (list, id) => ({ ...list, items: list.items.map((i) => (i.id === id ? { ...i, checked: !i.checked } : i)) });
+/** Ticking an item as bought also counts it as bought (so it is found again later). */
+export function toggleItem(list, id, day = '') {
+  const it = list.items.find((i) => i.id === id);
+  const next = { ...list, items: list.items.map((i) => (i.id === id ? { ...i, checked: !i.checked } : i)) };
+  return it && !it.checked ? remember(next, it, { bought: true, day }) : next;
+}
+
+/**
+ * Things to put on the list: our own (bought before or added by us) - most
+ * bought first - and, unless `ours`, everything else there is to choose from:
+ * everyday foods and common things of each kind. Narrowed by words and a kind.
+ * @returns [{ name, group, unit, ours, times, last, onList }]
+ */
+export function findItems(list, { query = '', kind = null, ours = true } = {}) {
+  const q = tokens(query);
+  const fits = (name, group) => (!kind || kindOf(group) === kind) && q.every((t) => tokens(name).some((w) => w.startsWith(t)));
+  const onList = new Set(list.items.filter((i) => !i.checked).map((i) => nameKey(i.name)));
+  const mine = list.known.filter((k) => fits(k.name, k.group)).sort((a, b) => b.times - a.times || a.name.localeCompare(b.name))
+    .map((k) => ({ ...k, ours: true, onList: onList.has(nameKey(k.name)) }));
+  if (ours) return mine;
+  const have = new Set(list.known.map((k) => nameKey(k.name)));
+  const more = [
+    ...GUIDE.filter((g) => g.suggest !== false || g.fdc).map((g) => ({ name: g.name, group: categorise(g.name) })),
+    ...Object.entries(STARTER).flatMap(([group, names]) => names.map((name) => ({ name, group }))),
+  ].filter((x) => !have.has(nameKey(x.name)) && fits(x.name, x.group))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((x) => ({ ...x, unit: '', ours: false, times: 0, last: '', onList: onList.has(nameKey(x.name)) }));
+  return [...mine, ...more];
+}
 export const clearBought = (list) => ({ ...list, items: list.items.filter((i) => !i.checked) });
 export const removeItem = (list, id) => ({ ...list, items: list.items.filter((i) => i.id !== id) });
 
