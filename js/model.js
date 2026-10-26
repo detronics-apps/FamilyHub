@@ -16,7 +16,7 @@
 //
 // Personal dashboard preferences are NOT part of this model; see dashboard.js.
 
-import { isDay, toDay } from './dates.js';
+import { isDay, toDay, dayDiff, addDays } from './dates.js';
 
 export const SCHEMA_VERSION = 1;
 
@@ -87,6 +87,8 @@ export function normalisePerson(p) {
     sex: oneOf(p.sex, ['female', 'male'], ''),
     // Pregnancy and breastfeeding are only kept for a female (age is checked by lifeStageAllowed).
     lifeStage: p.sex === 'female' ? oneOf(p.lifeStage, Object.keys(LIFE_STAGES), '') : '',
+    // Only kept while pregnant: it gives the weeks, the trimester and the due date.
+    conceived: p.sex === 'female' && p.lifeStage === 'pregnant' && isDay(p.conceived) ? p.conceived : '',
     weightKg: (() => { const n = numOrNull(p.weightKg); return n && n <= 400 ? Math.round(n * 10) / 10 : null; })(),
     allergies: pick(p.allergies, ALLERGENS),
     diet: pick(p.diet, Object.keys(DIETS)),
@@ -127,6 +129,20 @@ export function lifeStageAllowed(p, today) {
   if (p.sex !== 'female') return false;
   const age = ageOn(p.born, today);
   return age === null ? p.role === 'adult' : age >= 16;
+}
+
+/**
+ * How far along a pregnancy is, from the conception date. Weeks are counted the
+ * way clinics count them (from about two weeks before conception); the due date
+ * is 38 weeks after conception. Null when not pregnant or no date was given.
+ * `overdue` is set once the due date is two weeks past - time to update the card.
+ */
+export function pregnancyInfo(p, today) {
+  if (p.lifeStage !== 'pregnant' || !isDay(p.conceived) || !isDay(today)) return null;
+  const days = dayDiff(p.conceived, today);
+  if (days < 0) return null;
+  const weeks = Math.floor(days / 7) + 2;
+  return { weeks, trimester: weeks < 14 ? 1 : weeks < 28 ? 2 : 3, due: addDays(p.conceived, 266), overdue: days > 266 + 14 };
 }
 
 /** An energy goal is for an adult (18 or more; no birthday: role adult) who is not pregnant or breastfeeding. */

@@ -69,3 +69,17 @@ test('an energy goal moves an adult portion, never a child or a pregnant woman',
   assert.equal(energyGuide({ born: '2012-01-01', sex: 'male', energyGoal: -500 }, TODAY).goal, 0);
   assert.equal(normalisePerson({ name: 'X', energyGoal: -900 }).energyGoal, 0, 'only the offered steps');
 });
+
+test('pregnancy from the conception date: clinic weeks, trimester, due date; portions follow the trimester', async () => {
+  const { pregnancyInfo } = await import('../js/model.js');
+  const mum = (conceived) => normalisePerson({ name: 'M', sex: 'female', born: '1994-01-01', lifeStage: 'pregnant', conceived });
+  assert.deepEqual(pregnancyInfo(mum('2026-08-03'), TODAY), { weeks: 14, trimester: 2, due: '2027-04-26', overdue: false });
+  assert.equal(pregnancyInfo(mum('2026-10-01'), TODAY).trimester, 1);
+  assert.equal(pregnancyInfo(mum('2025-12-01'), TODAY).overdue, true);
+  assert.equal(pregnancyInfo(mum(''), TODAY), null);
+  assert.equal(normalisePerson({ name: 'B', sex: 'female', lifeStage: 'breastfeeding', conceived: '2026-01-01' }).conceived, '', 'only kept while pregnant');
+  const base = energyGuide({ born: '1994-01-01', sex: 'female' }, TODAY).kcal;
+  assert.equal(energyGuide(mum('2026-10-01'), TODAY).kcal, base, 'first trimester: nothing extra');
+  assert.equal(energyGuide(mum('2026-03-01'), TODAY).kcal, base + 452, 'third trimester');
+  assert.equal(energyGuide(mum(''), TODAY).kcal, base + 340, 'no date: the middle figure');
+});

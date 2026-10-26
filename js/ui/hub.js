@@ -151,8 +151,8 @@ export function createHubFactory(ctx) {
     if (has('people:food')) {
       // The food side of each profile, for the Meals section. Names come with it
       // so suggestions can say who they are for.
-      const food = ({ id, name, role, born, sex, lifeStage, weightKg, allergies, diet, avoid, likes, dislikes, focus, energyGoal }) => (
-        { id, name, role, born, sex, lifeStage, weightKg, allergies, diet, avoid, likes, dislikes, focus, energyGoal });
+      const food = ({ id, name, role, born, sex, lifeStage, conceived, weightKg, allergies, diet, avoid, likes, dislikes, focus, energyGoal }) => (
+        { id, name, role, born, sex, lifeStage, conceived, weightKg, allergies, diet, avoid, likes, dislikes, focus, energyGoal });
       // Weight and height are the latest dated ones from the People page (weight: an older undated entry if there is none).
       hub.foodProfiles = () => (ctx.app.household?.people ?? []).map((p) => {
         const m = latestMeasure(ctx.app.household, p.id);

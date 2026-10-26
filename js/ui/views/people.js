@@ -5,8 +5,8 @@
 import { el } from '../dom.js';
 import { avatar, confirmAction, modal } from '../common.js';
 import {
-  addPerson, updatePerson, removePerson, PERSON_COLOURS, ALLERGENS, DIETS, LIFE_STAGES, FOCUS, ageOn, lifeStageAllowed,
-  addMeasurement, removeMeasurement, measurementsFor, latestMeasure, personName, ENERGY_GOALS, energyGoalAllowed, STAGES, stageOf,
+  addPerson, updatePerson, removePerson, PERSON_COLOURS, ALLERGENS, DIETS, FOCUS, ageOn, lifeStageAllowed,
+  addMeasurement, removeMeasurement, measurementsFor, latestMeasure, personName, ENERGY_GOALS, energyGoalAllowed, STAGES, stageOf, pregnancyInfo,
 } from '../../model.js';
 const fmt = (n) => (n === null ? null : String(n).replace(/\.0$/, ''));
 // A record someone may read out at a clinic: always the full date, with the year.
@@ -58,6 +58,12 @@ function ageText(p, today) {
 function personCard(ctx, p) {
   const food = foodSummary(p, ctx.today());
   const stage = stageOf(p, ctx.today());
+  const preg = pregnancyInfo(p, ctx.today());
+  // Shown beside the age label, in the same style.
+  const life = !lifeStageAllowed(p, ctx.today()) || !p.lifeStage ? null
+    : p.lifeStage === 'breastfeeding' ? 'Breastfeeding'
+      : !preg ? 'Pregnant'
+        : preg.overdue ? `Pregnant · due ${longDay(preg.due)} (passed)` : `Pregnant · ${preg.weeks} weeks · due ${longDay(preg.due)}`;
   const update = (patch) => ctx.commit(updatePerson(ctx.app.household, p.id, patch));
   return el('article', { class: 'panel stack', 'aria-label': p.name, 'data-field': `person:${p.id}` }, [
     el('div', { class: 'row' }, [
@@ -79,9 +85,11 @@ function personCard(ctx, p) {
         on: { change: (e) => update({ sex: e.target.value }) },
       }, [['', 'Gender'], ['female', 'Female'], ['male', 'Male']].map(([v, t]) => el('option', { value: v, text: t, selected: p.sex === v }))),
     ]),
+    pregnancyRow(ctx, p, update),
     // Labels on their own line, under the inputs and above the colours.
-    stage || p.demo ? el('div', { class: 'row', style: { gap: 'var(--space-2)' } }, [
+    stage || p.demo || life ? el('div', { class: 'row', style: { gap: 'var(--space-2)' } }, [
       stage ? el('span', { class: 'badge', 'data-field': `pstage:${p.id}`, text: `${STAGES[stage]} · ${ageText(p, ctx.today())}` }) : null,
+      life ? el('span', { class: 'badge', 'data-field': `ppreg:${p.id}`, text: life }) : null,
       p.demo ? el('span', { class: 'badge badge--demo', text: 'Example' }) : null,
     ]) : null,
     el('div', { class: 'row', role: 'group', 'aria-label': `Colour for ${p.name}` }, PERSON_COLOURS.map((c, i) => el('button', {
@@ -108,6 +116,30 @@ function personCard(ctx, p) {
     ]),
   ]);
 }
+
+const longDay = (day) => new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+/** Pregnant or breastfeeding, for a female aged 16 or more; with the conception date when pregnant. */
+function pregnancyRow(ctx, p, update) {
+  if (!lifeStageAllowed(p, ctx.today())) return null;
+  const today = ctx.today();
+  return el('div', { class: 'row' }, [
+    el('label', { class: 'small', for: `pstage-${p.id}`, text: 'Pregnancy' }),
+    el('select', {
+      class: 'select', id: `pstage-${p.id}`, 'data-field': `plife:${p.id}`, style: { width: 'auto' },
+      on: { change: (e) => update({ lifeStage: e.target.value }) },
+    }, [['', 'Not pregnant or breastfeeding'], ['pregnant', 'Pregnant'], ['breastfeeding', 'Breastfeeding']].map(([v, t]) => el('option', { value: v, text: t, selected: p.lifeStage === v }))),
+    p.lifeStage === 'pregnant' ? el('label', { class: 'small', for: `pconc-${p.id}`, text: 'Conception date' }) : null,
+    p.lifeStage === 'pregnant' ? el('input', {
+      class: 'input', type: 'date', id: `pconc-${p.id}`, value: p.conceived, max: today, min: addDaysIso(today, -300), 'data-field': `pconc:${p.id}`, style: { width: 'auto' },
+      on: { change: (e) => update({ conceived: e.target.value }) },
+    }) : null,
+    p.lifeStage === 'pregnant' && !p.conceived ? el('span', { class: 'small muted', text: 'An estimate is fine - it gives the weeks and the due date.' }) : null,
+    pregnancyInfo(p, today)?.overdue ? el('span', { class: 'small muted', text: 'The due date has passed - change this to Breastfeeding or Not pregnant once the baby has arrived.' }) : null,
+  ]);
+}
+
+const addDaysIso = (day, n) => { const d = new Date(`${day}T12:00:00`); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
 
 /** Their own goals: words, and (adults only) an energy goal the portion guide follows. */
 function goalsBlock(ctx, p, update) {
@@ -206,7 +238,7 @@ function measuresBlock(ctx, p) {
 }
 
 function foodSummary(p, today) {
-  return [lifeStageAllowed(p, today) ? LIFE_STAGES[p.lifeStage] : null, p.allergies.length ? `allergic to ${p.allergies.join(', ')}` : null, ...p.focus.map((f) => FOCUS[f].toLowerCase())].filter(Boolean).join(' · ');
+  return [p.allergies.length ? `allergic to ${p.allergies.join(', ')}` : null, ...p.focus.map((f) => FOCUS[f].toLowerCase())].filter(Boolean).join(' · ');
 }
 
 /** The food side of a profile, read by the Meals section. Every field is optional. */
@@ -217,17 +249,9 @@ function editFood(ctx, p) {
   const input = (id, label, attrs, hint) => el('div', { class: 'field' }, [
     el('label', { class: 'field__label', for: id, text: label }), el('input', { class: 'input', id, ...attrs }), hint ? el('div', { class: 'field__hint', text: hint }) : null,
   ]);
-  const choice = (id, label, options, value) => el('div', { class: 'field' }, [
-    el('label', { class: 'field__label', for: id, text: label }),
-    el('select', { class: 'select', id }, Object.entries(options).map(([v, t]) => el('option', { value: v, text: t, selected: v === value }))),
-  ]);
-  // Only for a female aged 16 or more. Birthday and gender are set on the person's card.
-  const stage = choice('pf-stage', 'Pregnant or breastfeeding', { '': 'Neither', ...LIFE_STAGES }, p.lifeStage);
-  const showStage = () => { stage.hidden = !lifeStageAllowed(p, ctx.today()); };
   const form = el('form', { class: 'stack' }, [
     el('p', { class: 'small muted', text: 'Used by the Meals section to fit suggestions to each person. Leave anything blank you would rather not say. Weight comes from the height and weight record.' }),
-    p.born && p.sex ? null : el('p', { class: 'small muted', text: 'Add a birthday and gender on the person’s card: age decides child-sized portions and safety (no whole nuts under 5), and both decide nutrition values.' }),
-    stage,
+    p.born && p.sex ? null : el('p', { class: 'small muted', text: 'Add a birthday and gender on the person’s card: age decides child-sized portions and safety (no whole nuts under 5), and both decide nutrition values. Pregnancy is on the card too.' }),
     el('fieldset', {}, [el('legend', { class: 'field__label', text: 'Allergies' }), ticks('allergies', Object.fromEntries(ALLERGENS.map((a) => [a, a])), p.allergies)]),
     input('pf-avoid', 'Anything else to avoid', { value: p.avoid.join(', '), placeholder: 'e.g. lactose, chilli' }),
     el('fieldset', {}, [el('legend', { class: 'field__label', text: 'Diet' }), ticks('diet', DIETS, p.diet)]),
@@ -240,12 +264,10 @@ function editFood(ctx, p) {
     const v = (id) => form.querySelector(`#${id}`).value;
     const all = (name) => [...form.querySelectorAll(`input[name="${name}"]:checked`)].map((x) => x.value);
     ctx.commit(updatePerson(ctx.app.household, p.id, {
-      lifeStage: stage.hidden ? '' : v('pf-stage'),
       allergies: all('allergies'), diet: all('diet'), focus: all('focus'), avoid: v('pf-avoid'), likes: v('pf-likes'), dislikes: v('pf-dislikes'),
     }));
     close();
   };
-  showStage();
   const { close } = modal({
     title: `Food details: ${p.name}`,
     body: [form],

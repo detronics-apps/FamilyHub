@@ -208,7 +208,10 @@ read-only access to another app's undeclared collections for this.
 person's card (not in Food details). From it Family Hub works out baby (under 1), toddler (1-3),
 child (4-12), teen (13-17) or adult (18+), and adult-or-child for chores and "Who are you?" -
 so a child moves on by themselves as they grow. The adult/child choice is only asked while there
-is no birthday.
+is no birthday. Pregnancy sits on the card too (female, 16 or more), with an optional conception
+date: the card then shows clinic weeks and the due date (conception + 38 weeks) beside the age, and
+the portion guide adds 0 / 340 / 452 kcal by trimester (340 without a date). Two weeks past the due
+date, the card asks to be updated.
 
 **O-7 (W2) Phone live sync.** Only possible through a registered Google app (rejected, D-013).
 Revisit only if browsers gain folder access on phones.

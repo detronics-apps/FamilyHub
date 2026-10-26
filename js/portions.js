@@ -7,10 +7,11 @@
 // Academies' Estimated Energy Requirement equations at the "low active" level
 // (2005); otherwise typical needs by age and gender for a moderately active
 // person (Dietary Guidelines for Americans 2020-2025, Appendix 2). Pregnancy
-// adds 340 kcal (the second-trimester figure), breastfeeding 330. A person's own
+// adds nothing in the first trimester, 340 kcal in the second and 452 in the third
+// (340 when the conception date is not known); breastfeeding adds 330. A person's own
 // energy goal (People page; adults only) moves their figure up or down.
 
-import { ageOn, energyGoalAllowed } from './model.js';
+import { ageOn, energyGoalAllowed, pregnancyInfo } from './model.js';
 
 /** One standard portion = a 2,000 kcal-a-day adult's share of a meal. */
 export const STANDARD_KCAL = 2000;
@@ -51,7 +52,8 @@ export function energyGuide(p, today) {
   const useMeasured = known !== null && p.weightKg && p.heightCm;
   const each = sexes.map((s) => (useMeasured ? measured(s, age, p.weightKg, p.heightCm / 100) : typical(s, age)));
   let kcal = each.reduce((a, b) => a + b, 0) / each.length;
-  if (p.sex === 'female' && age >= 16) kcal += p.lifeStage === 'pregnant' ? 340 : p.lifeStage === 'breastfeeding' ? 330 : 0;
+  const trimester = pregnancyInfo(p, today)?.trimester;
+  if (p.sex === 'female' && age >= 16) kcal += p.lifeStage === 'pregnant' ? ({ 1: 0, 2: 340, 3: 452 }[trimester] ?? 340) : p.lifeStage === 'breastfeeding' ? 330 : 0;
   // Their own goal, where it is allowed (an adult, not pregnant or breastfeeding).
   const goal = p.energyGoal && energyGoalAllowed(p, today) ? p.energyGoal : 0;
   kcal += goal;
