@@ -175,5 +175,34 @@ the household (there are no private records yet - O-4/O-5) and are given only to
 breastfeeding is offered only for a female aged 16 or more (no birthday: an adult), and is ignored
 otherwise (owner, 2026-10-26).
 
+**D-026 People is its own page, with dated heights and weights (owner, 2026-10-26).** People
+moved out of Settings to a home-screen tile. Each person can have dated height and weight entries
+with a note (e.g. "clinic visit"), so the family can say what someone weighed when. Entries are a
+household list of their own (`measurements`, `Data/household/measurements.json`), merged by id
+like chore history, and kept when a person is removed. The Meals section uses the latest weight.
+Visible to everyone in the household, like the rest of People (O-4/O-5).
+
+**D-027 Meal Assistant reads family recipes (owner, 2026-10-26).** It may open a Recipe Book
+recipe (`data:meals:read`, read-only) and treat its ingredients as the meal.
+
+**D-028 Meals and recipes are one thing; portions per person (owner, 2026-10-26).** A meal is a
+name and its ingredients; adding a method makes it a recipe, at any time. Calorie Checker builds a
+family meal or one person's plate and hands it to Meals & Recipes in the link to be saved (only
+the owning app writes). Ingredients from Calorie Checker keep a link to the food database, so
+calories per serving are worked out for them - and only for them. Each meal shows a portion guide
+per person from estimated energy needs (National Academies EER with height and weight, typical
+values otherwise), with or without leftovers. An adult may set an energy goal (±250/500 kcal a
+day) on the People page that their portion follows; never for children or in pregnancy or
+breastfeeding. Free-text personal goals sit beside it.
+
+**D-029 Shopping and This Week are their own mini-apps (owner, 2026-10-26).** Shopping is a
+section on the home screen: one family list, grouped Food / Cleaning / Household / Other. Meals &
+Recipes, This Week and Chores (each chore's supplies) send items through a link
+(`#/shopping/add/<json>`); Shopping shows them and adds only on a yes. Sending from the same place
+again replaces its items rather than doubling them. This Week sits in the Meals section beside
+Meals & Recipes, Calorie Checker and Meal Assistant. Plans and the list kept by Meals & Recipes
+before the split are read in place (read-only) and never moved or deleted; the hub now allows
+read-only access to another app's undeclared collections for this.
+
 **O-7 (W2) Phone live sync.** Only possible through a registered Google app (rejected, D-013).
 Revisit only if browsers gain folder access on phones.

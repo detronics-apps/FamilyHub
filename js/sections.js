@@ -7,6 +7,7 @@
 export const SECTIONS = [
   { id: 'chores', name: 'Chores', purpose: 'Recurring household work: plan it, then find something that fits right now.' },
   { id: 'tasks', name: 'Tasks', purpose: 'One-off jobs, repairs, errands and bigger projects.' },
+  { id: 'shopping', name: 'Shopping', purpose: 'One family list: meals, the week’s plan, cleaning supplies and anything else you need.' },
   { id: 'meals', name: 'Meals', purpose: 'Recipes, the week’s meals, what is in a food, and easy ways to make a meal a little better.' },
   { id: 'exercise', name: 'Exercise', purpose: 'Activity, flexible weekly plans, and what the family did together.' },
   { id: 'tickets', name: 'Tickets', purpose: 'Capture a concern, idea or appreciation - talk about it at the family meeting.' },

@@ -1,8 +1,8 @@
-// Settings: household, people, this person's dashboard, data, appearance.
+// Settings: household, this person's dashboard, Drive, data, music. People have their own page (people.js).
 
 import { el, download } from '../dom.js';
-import { avatar, confirmAction, removeExamples, modal } from '../common.js';
-import { setHouseholdName, addPerson, updatePerson, removePerson, PERSON_COLOURS, hasDemo, ALLERGENS, DIETS, LIFE_STAGES, FOCUS, ageOn, lifeStageAllowed } from '../../model.js';
+import { confirmAction, removeExamples } from '../common.js';
+import { setHouseholdName, hasDemo } from '../../model.js';
 import { resolveDashboard, moveModule, hideModule, showModule } from '../../dashboard.js';
 import { exportData, exportFilename, parseImport } from '../../storage.js';
 import { prefsKey } from './dashboard.js';
@@ -11,8 +11,8 @@ import { availableImporters, importFromDevice, downloadTemplate } from '../impor
 import { OFFER, END_ACTIONS, END_ACTION_LABEL } from '../../music.js';
 
 export function settingsView(ctx, route) {
-  const sections = [householdSection(ctx), peopleSection(ctx), driveSection(ctx), importSection(ctx), dashboardSection(ctx), musicSection(ctx), dataSection(ctx)];
-  const target = { people: 'set-people', dashboard: 'set-dashboard', drive: 'set-drive', music: 'set-music', import: 'set-import' }[route.sub];
+  const sections = [householdSection(ctx), driveSection(ctx), importSection(ctx), dashboardSection(ctx), musicSection(ctx), dataSection(ctx)];
+  const target = { dashboard: 'set-dashboard', drive: 'set-drive', music: 'set-music', import: 'set-import' }[route.sub];
   if (target && ctx.app.ui.scrolledTo !== location.hash) {
     // Arriving from a link to one section: bring it into view, once.
     ctx.app.ui.scrolledTo = location.hash;
@@ -32,112 +32,8 @@ function householdSection(ctx) {
       el('label', { class: 'field__label', for: 'hh-name', text: 'Household name' }),
       el('input', { class: 'input', id: 'hh-name', 'data-field': 'hh-name', value: h.household.name, on: { change: (e) => ctx.commit(setHouseholdName(ctx.app.household, e.target.value)) } }),
     ]),
+    el('p', { class: 'small' }, ['The people in your family, with their food details and heights and weights, are on the ', el('a', { href: '#/people', text: 'People' }), ' page.']),
   ]);
-}
-
-function peopleSection(ctx) {
-  const h = ctx.app.household;
-  const newName = el('input', { class: 'input', id: 'new-person', placeholder: 'Name', 'data-field': 'new-person', style: { maxWidth: '200px' } });
-  const newRole = el('select', { class: 'select', 'aria-label': 'Adult or child', 'data-field': 'new-role', style: { width: 'auto' } }, [
-    el('option', { value: 'adult', text: 'Adult' }), el('option', { value: 'child', text: 'Child' }),
-  ]);
-  const add = () => {
-    if (!newName.value.trim()) { newName.focus(); return; }
-    const colour = PERSON_COLOURS[h.people.length % PERSON_COLOURS.length];
-    ctx.commit(addPerson(ctx.app.household, { name: newName.value, role: newRole.value, colour }).household);
-  };
-
-  return el('div', { class: 'panel stack', id: 'set-people' }, [
-    el('h2', { text: 'People' }),
-    el('p', { class: 'small muted', text: 'Choosing a person at the top of the screen is a convenience, not a login - anyone using this device can pick any name. Everyone in the family can see what is here, food details included.' }),
-    h.people.length ? el('ul', { class: 'list' }, h.people.map((p) => el('li', {}, [
-      avatar(p),
-      el('input', {
-        class: 'input', value: p.name, 'aria-label': `Name for ${p.name}`, 'data-field': `pname:${p.id}`, style: { flex: '1 1 140px', width: 'auto' },
-        on: { change: (e) => ctx.commit(updatePerson(ctx.app.household, p.id, { name: e.target.value })) },
-      }),
-      el('select', {
-        class: 'select', 'aria-label': `Adult or child: ${p.name}`, 'data-field': `prole:${p.id}`, style: { width: 'auto' },
-        on: { change: (e) => ctx.commit(updatePerson(ctx.app.household, p.id, { role: e.target.value })) },
-      }, [el('option', { value: 'adult', text: 'Adult', selected: p.role === 'adult' }), el('option', { value: 'child', text: 'Child', selected: p.role === 'child' })]),
-      el('select', {
-        class: 'select', 'aria-label': `Gender: ${p.name}`, 'data-field': `psex:${p.id}`, style: { width: 'auto' },
-        on: { change: (e) => ctx.commit(updatePerson(ctx.app.household, p.id, { sex: e.target.value })) },
-      }, [['', 'Gender'], ['female', 'Female'], ['male', 'Male']].map(([v, t]) => el('option', { value: v, text: t, selected: p.sex === v }))),
-      el('div', { class: 'row', role: 'group', 'aria-label': `Colour for ${p.name}` }, PERSON_COLOURS.map((c, i) => el('button', {
-        class: 'colour-dot', type: 'button', style: { background: c }, 'aria-pressed': String(p.colour === c), 'aria-label': `Colour ${i + 1}`,
-        on: { click: () => ctx.commit(updatePerson(ctx.app.household, p.id, { colour: c })) },
-      }))),
-      p.demo ? el('span', { class: 'badge badge--demo', text: 'Example' }) : null,
-      el('button', {
-        class: 'btn btn-small', type: 'button', text: 'Food details', 'aria-label': `Food details for ${p.name}`, 'data-field': `pfood:${p.id}`,
-        title: foodSummary(p, ctx.today()) || 'Age, allergies, pregnancy and what they would like more of - used by the Meals section',
-        on: { click: () => editFood(ctx, p) },
-      }),
-      el('button', {
-        class: 'btn btn-small', type: 'button', text: 'Remove', 'aria-label': `Remove ${p.name}`,
-        on: {
-          click: async () => {
-            if (!await confirmAction({ title: `Remove ${p.name}?`, text: 'Chores they completed stay in the history, shown as "a former member".', confirmLabel: 'Remove' })) return;
-            if (ctx.app.device.currentPersonId === p.id) ctx.setDevice({ currentPersonId: null });
-            ctx.commit(removePerson(ctx.app.household, p.id));
-          },
-        },
-      }),
-    ]))) : el('p', { class: 'muted', text: 'No one added yet.' }),
-    el('div', { class: 'row' }, [el('label', { class: 'sr-only', for: 'new-person', text: 'New person name' }), newName, newRole, el('button', { class: 'btn', type: 'button', text: 'Add person', on: { click: add } })]),
-  ]);
-}
-
-function foodSummary(p, today) {
-  const age = ageOn(p.born, today);
-  return [age !== null ? `${age} years` : null, lifeStageAllowed(p, today) ? LIFE_STAGES[p.lifeStage] : null, p.allergies.length ? `allergic to ${p.allergies.join(', ')}` : null, ...p.focus.map((f) => FOCUS[f].toLowerCase())].filter(Boolean).join(' · ');
-}
-
-/** The food side of a profile, read by the Meals section. Every field is optional. */
-function editFood(ctx, p) {
-  const ticks = (name, options, chosen) => el('div', { class: 'chipset', role: 'group', 'aria-label': name }, Object.entries(options).map(([value, label]) => el('label', { class: 'checkline small' }, [
-    el('input', { type: 'checkbox', name, value, checked: chosen.includes(value) }), label,
-  ])));
-  const input = (id, label, attrs, hint) => el('div', { class: 'field' }, [
-    el('label', { class: 'field__label', for: id, text: label }), el('input', { class: 'input', id, ...attrs }), hint ? el('div', { class: 'field__hint', text: hint }) : null,
-  ]);
-  const choice = (id, label, options, value) => el('div', { class: 'field' }, [
-    el('label', { class: 'field__label', for: id, text: label }),
-    el('select', { class: 'select', id }, Object.entries(options).map(([v, t]) => el('option', { value: v, text: t, selected: v === value }))),
-  ]);
-  // Only for a female aged 16 or more; follows the birthday as it is typed. Gender is set on the People list.
-  const stage = choice('pf-stage', 'Pregnant or breastfeeding', { '': 'Neither', ...LIFE_STAGES }, p.lifeStage);
-  const showStage = () => { stage.hidden = !lifeStageAllowed({ ...p, born: form.querySelector('#pf-born').value }, ctx.today()); };
-  const form = el('form', { class: 'stack' }, [
-    el('p', { class: 'small muted', text: 'Used by the Meals section to fit suggestions to each person. Leave anything blank you would rather not say.' }),
-    input('pf-born', 'Birthday', { type: 'date', value: p.born, max: ctx.today(), on: { input: () => showStage() } }, 'Age decides child-sized portions and safety, like no whole nuts under 5.'),
-    p.sex ? null : el('p', { class: 'small muted', text: 'Choose a gender on the People list for nutrition values that fit.' }),
-    stage,
-    input('pf-weight', 'Weight in kg', { type: 'number', min: '1', max: '400', step: '0.1', value: p.weightKg ?? '' }, 'Optional. Only used to size an adult’s protein.'),
-    el('fieldset', {}, [el('legend', { class: 'field__label', text: 'Allergies' }), ticks('allergies', Object.fromEntries(ALLERGENS.map((a) => [a, a])), p.allergies)]),
-    input('pf-avoid', 'Anything else to avoid', { value: p.avoid.join(', '), placeholder: 'e.g. lactose, chilli' }),
-    el('fieldset', {}, [el('legend', { class: 'field__label', text: 'Diet' }), ticks('diet', DIETS, p.diet)]),
-    el('fieldset', {}, [el('legend', { class: 'field__label', text: 'Would like more of' }), ticks('focus', FOCUS, p.focus),
-      el('div', { class: 'field__hint', text: 'A wish, not a diagnosis.' })]),
-    input('pf-likes', 'Likes', { value: p.likes.join(', '), placeholder: 'e.g. carrots, bananas' }),
-    input('pf-dislikes', 'Dislikes', { value: p.dislikes.join(', '), placeholder: 'e.g. mushrooms' }),
-  ]);
-  const save = () => {
-    const v = (id) => form.querySelector(`#${id}`).value;
-    const all = (name) => [...form.querySelectorAll(`input[name="${name}"]:checked`)].map((x) => x.value);
-    ctx.commit(updatePerson(ctx.app.household, p.id, {
-      born: v('pf-born'), lifeStage: stage.hidden ? '' : v('pf-stage'), weightKg: v('pf-weight'),
-      allergies: all('allergies'), diet: all('diet'), focus: all('focus'), avoid: v('pf-avoid'), likes: v('pf-likes'), dislikes: v('pf-dislikes'),
-    }));
-    close();
-  };
-  showStage();
-  const { close } = modal({
-    title: `Food details: ${p.name}`,
-    body: [form],
-    foot: [el('button', { class: 'btn', type: 'button', text: 'Cancel', on: { click: () => close() } }), el('button', { class: 'btn btn-primary', type: 'button', text: 'Save', 'data-field': 'pf-save', on: { click: save } })],
-  });
 }
 
 function dashboardSection(ctx) {

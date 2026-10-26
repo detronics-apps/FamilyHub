@@ -1,27 +1,40 @@
 // Meal Assistant (Meals section): type the meal, choose who is eating, get a
 // few easy ideas. Profiles (ages, allergies, pregnancy, wishes) come from
-// Settings › People, so nothing is asked again here. Nothing is logged.
+// the People page, so nothing is asked again here. A family recipe from the
+// Meals & Recipes can be opened instead of typing (read-only). Nothing is logged.
 
 import { el } from '../../ui/dom.js';
 import { tabs, loading, failure } from '../kit.js';
-import { suggest, TYPES } from './logic.js';
+import { suggest, recipeMealText, TYPES } from './logic.js';
 import { INTERACTIONS } from './interactions.js';
 import { FOCUS, LIFE_STAGES, lifeStageAllowed } from '../../model.js';
 
-const ui = { text: '', asked: '', selected: [], notToday: [], hidden: [] };
+const ui = { text: '', asked: '', selected: [], notToday: [], hidden: [], recipe: null };
 const EXAMPLES = ['oats with butter and sugar', 'chicken and rice', 'pap and boerewors', 'toast with peanut butter'];
 
 export function render(hub, route) {
   if (route.sub === 'about') return aboutScreen(hub);
-  return mealScreen(hub);
+  const param = route.rest[0] ?? '';
+  return mealScreen(hub, route.sub === 'meal' && param.startsWith('recipe:') ? param.slice(7) : null);
 }
 
 const nav = (hub, current) => tabs(hub, [{ screen: null, label: 'Improve a meal' }, { screen: 'about', label: 'How it decides' }], current);
 
-function mealScreen(hub) {
+/** The family's recipes, if the Meals & Recipes is installed. */
+const recipeBook = (hub) => (hub.data.installed('meals') ? hub.data.of('meals', 'recipes') : null);
+
+function mealScreen(hub, recipeId) {
   const f = hub.use('food', () => hub.food.load());
   const profiles = hub.foodProfiles();
-  const ask = (text) => { ui.text = text; ui.asked = text; ui.notToday = []; ui.hidden = []; hub.render(); };
+  const book = recipeBook(hub);
+  const list = book ? hub.use('recipes', () => book.list({ limit: 1000 })) : null;
+  const ask = (text, recipe = null) => { ui.text = text; ui.asked = text; ui.recipe = recipe; ui.notToday = []; ui.hidden = []; hub.render(); };
+  // Arriving from a recipe (the picker below, or "Ideas to improve it" in the Meals & Recipes).
+  if (recipeId && book && ui.recipe?.id !== recipeId) {
+    const r = hub.use(`recipe:${recipeId}`, () => book.get(recipeId));
+    if (r.data) { ui.text = recipeMealText(r.data); ui.asked = ui.text; ui.recipe = { id: recipeId, title: r.data.title }; ui.notToday = []; ui.hidden = []; }
+    else if (r.loading) return el('section', { class: 'stack' }, [nav(hub, null), loading('Opening the recipe…')]);
+  }
   const toggle = (id) => { ui.selected = ui.selected.includes(id) ? ui.selected.filter((x) => x !== id) : [...ui.selected, id]; hub.render(); };
   const chosen = ui.selected.length ? profiles.filter((p) => ui.selected.includes(p.id)) : profiles;
 
@@ -36,10 +49,10 @@ function mealScreen(hub) {
       ]),
       el('p', { class: 'small muted' }, [
         chosen.map((p) => wishes(p, hub.today())).filter(Boolean).join(' · ') || 'No wishes, allergies or ages set yet - suggestions are for the family in general.',
-        ' ', el('a', { href: '#/settings/people', text: 'Edit in Settings › People' }),
+        ' ', el('a', { href: '#/people', text: 'Edit in People' }),
       ]),
-    ]) : el('p', { class: 'small muted' }, ['Add your family in ', el('a', { href: '#/settings/people', text: 'Settings › People' }), ' - with ages, allergies and what each person would like more of - and suggestions will fit them.']),
-    el('form', { class: 'stack', on: { submit: (e) => { e.preventDefault(); ask(e.target.elements.meal.value.trim()); } } }, [
+    ]) : el('p', { class: 'small muted' }, ['Add your family in ', el('a', { href: '#/people', text: 'People' }), ' - with ages, allergies and what each person would like more of - and suggestions will fit them.']),
+    el('form', { class: 'stack', on: { submit: (e) => { e.preventDefault(); ask(e.target.elements.meal.value.trim()); if (recipeId) hub.go(null); } } }, [
       el('label', { class: 'field__label', for: 'meal-text', text: 'What’s on the plate?' }),
       el('div', { class: 'row' }, [
         el('input', { class: 'input', id: 'meal-text', name: 'meal', value: ui.text, placeholder: 'e.g. oats with butter and sugar', autocomplete: 'off', 'data-field': 'meal', style: { flex: '1 1 240px' } }),
@@ -47,6 +60,17 @@ function mealScreen(hub) {
       ]),
       ui.asked ? null : el('div', { class: 'chipset' }, EXAMPLES.map((x) => el('button', { class: 'chip', type: 'button', text: x, on: { click: () => ask(x) } }))),
     ]),
+    list?.data?.items.length ? el('div', { class: 'field' }, [
+      el('label', { class: 'field__label', for: 'meal-recipe', text: 'Or open one of our meals or recipes' }),
+      el('select', {
+        class: 'select', id: 'meal-recipe', 'data-field': 'meal-recipe',
+        on: { change: (e) => { if (e.target.value) hub.go('meal', `recipe:${e.target.value}`); } },
+      }, [
+        el('option', { value: '', text: `Choose from ${list.data.total} meal${list.data.total === 1 ? '' : 's'}…` }),
+        ...[...list.data.items].sort((a, b) => a.title.localeCompare(b.title)).map((x) => el('option', { value: x.id, text: x.title, selected: ui.recipe?.id === x.id })),
+      ]),
+    ]) : null,
+    ui.recipe ? el('p', { class: 'small' }, ['Ideas for the recipe ', el('a', { href: `#/meals/item/${encodeURIComponent(ui.recipe.id)}`, text: ui.recipe.title }), ' (its ingredients are above - change them to try something different).']) : null,
     ui.asked ? (f.loading ? loading('Opening the food database…') : f.error ? failure(f.error) : results(hub, f.data, profiles)) : null,
   ]);
 }
@@ -57,7 +81,7 @@ function wishes(p, today) {
 }
 
 function results(hub, db, profiles) {
-  const r = suggest({ text: ui.asked, profiles, selected: ui.selected, db, today: hub.today(), notToday: ui.notToday });
+  const r = suggest({ text: ui.asked, profiles, selected: ui.selected, db, today: hub.today(), notToday: ui.notToday, mealName: ui.recipe?.title.toLowerCase() ?? '' });
   if (!r.items.length) {
     return el('div', { class: 'panel', role: 'status' }, [el('p', { text: 'I did not recognise a food in that. Try simple words, like "chicken, rice and peas".' }), ...notes(r)]);
   }
@@ -67,7 +91,7 @@ function results(hub, db, profiles) {
   return el('div', { class: 'stack', 'aria-live': 'polite' }, [
     el('p', { class: 'small muted' }, [
       `Reading this as: ${r.items.map((i) => i.name).join(', ')}.`,
-      r.unknown.length ? ` Not recognised: ${r.unknown.join(', ')} - the ideas are based on the rest.` : '',
+      r.unknown.length ? ` Not recognised: ${r.unknown.slice(0, 8).join(', ')}${r.unknown.length > 8 ? ` and ${r.unknown.length - 8} more` : ''} - the ideas are based on the rest.` : '',
     ]),
     ...r.cautions.map((c) => el('div', { class: 'panel caution', role: 'note' }, [el('strong', { text: 'Worth knowing: ' }), c])),
     cards.length ? el('div', { class: 'stack' }, cards.map((c) => card(hub, c)))
@@ -112,7 +136,7 @@ function aboutScreen(hub) {
       el('ol', {}, [
         li('Safety first. A food someone at the table is allergic to, cannot eat for their diet, or that is a choking risk for a small child is never suggested. Pregnancy food rules are applied too.'),
         li('The family goal, always on: more variety, more colour, and the main nutrients - carbohydrates and fibre, healthy fats, minerals, plant compounds, protein and vitamins.'),
-        li('Each person’s own wishes from Settings › People - more iron, more protein, more colour, a small appetite, a selective eater - and their age and life stage.'),
+        li('Each person’s own wishes from the People page - more iron, more protein, more colour, a small appetite, a selective eater - and their age and life stage.'),
         li('Practical: it suits the meal (fruit with porridge, vegetables with dinner), costs little and takes little work. Foods someone likes rise; foods someone dislikes drop.'),
       ]),
       el('h2', { text: 'Four kinds of idea' }),

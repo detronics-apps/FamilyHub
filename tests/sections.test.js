@@ -7,7 +7,8 @@ const starters = STARTERS.map((s) => s.manifest);
 
 test('every starter app belongs to a real section; Meals holds its three', () => {
   for (const m of starters) assert.notEqual(sectionOf(m), 'more', m.id);
-  assert.deepEqual(appsIn('meals', starters).map((m) => m.id), ['meals', 'calories', 'assistant']);
+  assert.deepEqual(appsIn('meals', starters).map((m) => m.id), ['meals', 'mealplan', 'calories', 'assistant']);
+  assert.deepEqual(appsIn('shopping', starters).map((m) => m.id), ['shopping']);
   assert.ok(!starters.some((m) => m.id === 'health'), 'Health was split into Meals and Exercise');
 });
 

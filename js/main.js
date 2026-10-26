@@ -29,6 +29,7 @@ import { dashboardView } from './ui/views/dashboard.js';
 import { settingsView } from './ui/views/settings.js';
 import { libraryView } from './ui/views/library.js';
 import { sectionView } from './ui/views/section.js';
+import { peopleView } from './ui/views/people.js';
 import { helpView } from './ui/views/help.js';
 import { placeholderView } from './ui/views/placeholder.js';
 import { recoveryView } from './ui/views/recovery.js';
@@ -37,7 +38,7 @@ import { openDoc } from './ui/views/docs.js';
 import { syncChip, syncNotices } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.3.0';
+export const APP_VERSION = '0.4.0';
 
 const store = createLocalStore(window.localStorage);
 
@@ -314,14 +315,14 @@ function openWho() {
       el('button', { class: 'chip', type: 'button', 'aria-pressed': String(!currentPerson()), text: 'Just looking (no one)', on: { click: () => choose(null) } }),
       el('p', { class: 'small muted', text: 'Choosing a name is a convenience, not a login. It records who did what and keeps your own dashboard order on this device. Anyone using this device can pick any name.' }),
     ],
-    foot: [el('a', { class: 'btn btn-quiet', href: '#/settings', text: 'Add or edit people', on: { click: () => close() } })],
+    foot: [el('a', { class: 'btn btn-quiet', href: '#/people', text: 'Add or edit people', on: { click: () => close() } })],
   });
 }
 
 function routeLabel(route) {
   if (route.name === 'home') return null;
   if (route.name === 'section') return section(route.sub)?.name ?? 'Page';
-  return { help: 'How to use', settings: 'Settings', library: 'Mini-apps' }[route.name]
+  return { help: 'How to use', settings: 'Settings', library: 'Mini-apps', people: 'People' }[route.name]
     ?? app.registry.apps[route.name]?.name ?? starter(route.name)?.manifest.name ?? 'Page';
 }
 
@@ -420,7 +421,7 @@ function renderNow() {
       el('button', { class: 'btn btn-primary', type: 'button', text: 'Get started', on: { click: () => openWelcome(ctx) } }),
     ]);
   } else {
-    const core = { home: dashboardView, settings: settingsView, help: helpView, library: libraryView, section: sectionView }[route.name];
+    const core = { home: dashboardView, settings: settingsView, help: helpView, library: libraryView, section: sectionView, people: peopleView }[route.name];
     const entry = app.registry.apps[route.name];
     sticky = !core && entry?.source === 'folder' && entry.enabled && Boolean(cachedPackage(route.name));
     if (core) view = core(ctx, route, items);

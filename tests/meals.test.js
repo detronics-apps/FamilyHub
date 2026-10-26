@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {
   parseIngredient, formatIngredient, normaliseRecipe, recipeSummary, scaleIngredients, nutritionRows,
   weekStart, weekDays, normalisePlan, setSlot, slotAt, copyPlan, combineIngredients, ingredientsForPlan,
-  normaliseShopping, refreshFromPlan, addShoppingItem, toggleItem, clearBought,
 } from '../js/apps/meals/logic.js';
+import { normaliseShopping, refreshFromPlan, addShoppingItem, toggleItem, clearBought } from '../js/apps/shopping/logic.js';
 
 test('ingredient lines: numbers, fractions, units, and plain things', () => {
   assert.deepEqual(parseIngredient('200 g flour'), { qty: 200, unit: 'g', name: 'flour' });
@@ -96,4 +96,22 @@ test('the week’s list: scaled per meal, manual items and bought items preserve
   assert.equal(list.items.find((i) => i.name === 'carrot').checked, true, 'already bought stays bought');
   assert.equal(list.items.find((i) => i.name === 'carrot').qty, 4, 'totals follow the plan');
   assert.equal(clearBought(list).items.some((i) => i.name === 'carrot'), false);
+});
+
+test('shopping: anything can send; sending again replaces, bought stays bought, typed items untouched', async () => {
+  const { addFromSource, readSend, sendHref, byGroup, GROUPS } = await import('../js/apps/shopping/logic.js');
+  let list = addShoppingItem(normaliseShopping({}), 'light bulbs', 'mine', 'household');
+  list = addFromSource(list, { source: 'chore:c1', from: 'Clean the bathroom', group: 'cleaning' }, [{ name: 'bleach' }, { name: 'sponges', qty: 2 }]);
+  list = addFromSource(list, { source: 'meal:r1', from: 'Tuna pasta' }, [{ name: 'pasta', qty: 500, unit: 'g' }]);
+  list = toggleItem(list, list.items.find((i) => i.name === 'bleach').id);
+  list = addFromSource(list, { source: 'chore:c1', group: 'cleaning' }, [{ name: 'bleach' }, { name: 'gloves' }]);
+  assert.deepEqual(list.items.filter((i) => i.source === 'chore:c1').map((i) => i.name), ['bleach', 'gloves'], 'replaced, not doubled');
+  assert.equal(list.items.find((i) => i.name === 'bleach').checked, true);
+  assert.ok(list.items.find((i) => i.id === 'mine'));
+  assert.deepEqual(byGroup(list).map(([g]) => g), ['food', 'cleaning', 'household']);
+  assert.ok(Object.keys(GROUPS).includes('other'));
+  const href = sendHref({ source: 'meal:r1', from: 'Soup', items: [{ name: 'carrot', qty: 2 }] });
+  assert.equal(readSend(decodeURIComponent(href.split('/').at(-1))).items[0].name, 'carrot');
+  assert.equal(readSend('{"items": []}'), null, 'a send needs a source');
+  assert.equal(normaliseShopping({ items: [{ name: 'x', fromWeek: '2026-10-19' }] }).items[0].source, 'week:2026-10-19', 'older lists still read');
 });

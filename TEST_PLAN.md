@@ -139,3 +139,25 @@ walkthrough with a screen reader, Safari/Firefox, a real phone.
 - Calorie Checker: banana lookup, portions, nutrients, plate total.
 - Mini-apps screen: section shown on each app; Health under "Uninstalled, records kept".
 - No console errors.
+
+### People page, heights and weights, recipes in Meal Assistant (2026-10-26)
+- Automated: `tests/measurements.test.js` (validation, newest first, latest weight and height,
+  kept after removing a person, two laptops merge without a question, folder round trip);
+  `tests/food.test.js` (gender and pregnancy rule; a recipe read as a meal).
+- Browser: People tile on home, Settings no longer has People; added 64.5 kg / 168 cm "clinic
+  visit" - shown at a glance and in the dated table, saved to the folder; typed values survive a
+  redraw. Meal Assistant: picked "Tuna pasta" from the recipe list, and "Ideas to improve it" from
+  the Vegetable soup recipe - both read the ingredients and gave ideas. No console errors.
+
+### Meals and recipes, portions, goals, Shopping and This Week (2026-10-26)
+- Automated: `tests/portions.test.js` (energy estimates, quarter shares, leftovers, energy goals only
+  for adults outside pregnancy, meal → recipe, food links kept through edits, calories only from
+  linked gram amounts); `tests/meals.test.js` (shopping sends replace not double, bought stays
+  bought, typed items untouched, groups, older lists read); `tests/model.test.js` (chore supplies).
+- Browser: Calorie Checker family meal (chicken 600 g, rice 700 g = 1,665 kcal) shared Alex 1,
+  Sam 1¼, Mia ¾; Save as a meal → Meals & Recipes prefilled → saved as a Meal with per-person kcal;
+  leftovers "another family meal" → make 6, ingredients scaled; Plan it → This Week; Send the week
+  → Shopping confirm → on the list, with the older list picked up; a chore's supplies sent under
+  Cleaning; Alex's −500 kcal goal → ¾ portion; Mia (3) offered no energy goal.
+- Found and fixed while checking: read-only access to another app's undeclared collection was
+  refused by the hub.

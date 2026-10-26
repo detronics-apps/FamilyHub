@@ -5,7 +5,7 @@
 
 import { section } from './sections.js';
 
-export const CORE_VERSION = '0.3.0';
+export const CORE_VERSION = '0.4.0';
 export const API_VERSION = 1;
 export const MANIFEST_VERSION = 1;
 

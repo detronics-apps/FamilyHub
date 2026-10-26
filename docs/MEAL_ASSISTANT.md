@@ -7,11 +7,12 @@ that specification onto the code.
 
 | Spec | Where | How |
 |---|---|---|
+| Family recipes | `app.js`, Meals & Recipes | A recipe from the Meals & Recipes can be opened (picker, or "Ideas to improve it" on the recipe); its ingredients are read as the meal. Read-only (`data:meals:read`). |
 | 2.2 No full-day tracking | `logic.js` `parseMeal` | A meal is read from a few words; typical servings stand in for weights. Nothing is stored. |
 | 3 Three layers | `logic.js` `scoreFood` | A: family weights on the main nutrients, colour and plant variety, always on. B: each chosen person's wishes (`FOCUS`) and pregnancy add weight. C: add, swap, time, try next time. |
 | 4 Six nutrient categories | `reference.js`, `guide.js` | Carbohydrates/fibre, fats (omega-3), minerals, phytonutrients (via colour), protein, vitamins. Used inside the engine only; never shown as boxes to tick. |
 | 5 Colour and variety | `guide.js` `colour` | Five colour groups on plant foods; a colour the plate lacks earns a small bonus, more for a "colour" or "selective" wish. |
-| 6 Family profiles and filter | `model.js` `normalisePerson`, Settings › People › Food details | Optional birthday, sex, pregnancy/breastfeeding, weight, allergies, diet, avoid, likes, dislikes, wishes. The "Who is eating?" chips choose people; duplicates are merged into one card naming everyone it helps. |
+| 6 Family profiles and filter | `model.js` `normalisePerson`, the People page › Food details | Optional birthday, sex, pregnancy/breastfeeding, weight, allergies, diet, avoid, likes, dislikes, wishes. The "Who is eating?" chips choose people; duplicates are merged into one card naming everyone it helps. |
 | 8 Four recommendation types | `logic.js` `suggest` | Two adds of different kinds, at most one swap (`SWAPS`), time cards only for a real reason, and one try-next-time. "Not in the house today" turns an idea into try next time. |
 | 9 Interactions | `interactions.js` | Six documented effects with evidence strength, scope, limitations and source. Wording says when the effect is a single-meal one. No absorption is calculated. |
 | 10 Energy density | `guide.js` `dense`, focus `dense` | Energy-dense, nourishing foods rise only for someone with a small appetite. |

@@ -136,3 +136,9 @@ test('validation reports every problem', () => {
   assert.ok(bad.errors.some((e) => /repeats/.test(e)));
   assert.ok(bad.errors.some((e) => /not a record/.test(e)));
 });
+
+test('a chore can list the supplies it uses (comma or line separated, no repeats)', async () => {
+  const { normaliseChore } = await import('../js/model.js');
+  assert.deepEqual(normaliseChore({ name: 'Bathroom', supplies: 'bleach, sponges\nbleach,  ' }).supplies, ['bleach', 'sponges']);
+  assert.deepEqual(normaliseChore({ name: 'Old chore' }).supplies, []);
+});

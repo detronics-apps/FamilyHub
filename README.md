@@ -16,6 +16,8 @@ publisher or anyone else.
   laptops' changes are picked up, and anything changed in two places at once is shown to you to
   choose - never silently overwritten. Backups in the folder. Phones open and save a "family file"
   from Drive. Without a folder, everything stays in the browser.
+- **People**: its own page - name, adult/child, gender, colour, food details, personal goals
+  (including an energy goal for adults), and a dated record of height and weight.
 - **Sections and mini-apps**: the home screen shows sections of family life (Chores, Meals,
   Finance...). A section is part of Family Hub; the mini-apps inside it are what get installed or
   removed. The starter mini-apps can be turned
@@ -28,15 +30,19 @@ publisher or anyone else.
 - **Tickets**: capture in seconds; the weekly family meeting; turn into a decision or task.
 - **Principles**: values and agreements with reasons, exceptions and review triggers.
 - **Decisions**: agreements as experiments - try, observe, look back, adapt, revise with history.
-- **Meals** section, three mini-apps sharing one food database (USDA FoodData Central, ~13,600
-  foods) and the food details in Settings › People:
-  - **Recipe Book**: recipes (search, allergen filter, scaling), a weekly plan, and a shopping list
-    that adds up compatible amounts.
+- **Shopping**: one family list on the home screen - send meals, the week's plan or chore supplies
+  to it, or type anything in.
+- **Meals** section, four mini-apps sharing one food database (USDA FoodData Central, ~13,600
+  foods) and the details on the People page:
+  - **Meals & Recipes**: meals (a name and ingredients) and recipes (a meal with a method - add it
+    any time). Search, allergen filter, scaling, and a portion guide per person with or without
+    leftovers. Plan a meal or send its ingredients to Shopping.
+  - **This Week**: the week's meal plan; send everything it needs to Shopping.
   - **Calorie Checker**: calories and nutrients in the amount you actually eat (a cup, a slice,
-    grams); add several foods up as a plate. Nothing is logged.
+    grams); build up the family meal or someone's plate and save it as a meal. Nothing is logged.
   - **Meal Assistant**: type a meal in a few words, choose who is eating, get one or two easy
     ideas (add, swap, time, try next time) that fit their ages, allergies, diet, pregnancy and
-    wishes. No scores, no tracking, not medical advice. See [docs/MEAL_ASSISTANT.md](docs/MEAL_ASSISTANT.md).
+    wishes - or open one of the family's recipes to see what could improve it. No scores, no tracking, not medical advice. See [docs/MEAL_ASSISTANT.md](docs/MEAL_ASSISTANT.md).
 - **Holidays**: trips and ideas with a day-by-day plan, packing per person, and a budget.
 - **Finance**: monthly budgets (planned against spent) and savings/debt goals with projections
   that show their assumptions. No bank connections, no advice.

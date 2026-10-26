@@ -74,38 +74,61 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'meals', section: 'meals', name: 'Recipe Book', version: '1.1.0',
-      description: 'Your recipes, the week’s meal plan and the shopping list that follows from it.',
+      fhManifest: 1, id: 'meals', section: 'meals', name: 'Meals & Recipes', version: '1.2.0',
+      description: 'Your family’s meals and recipes, and how much each person might eat.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [
-        { id: 'recipes', title: 'Recipes' }, { id: 'week', title: 'This week' }, { id: 'shopping', title: 'Shopping' },
-        { id: 'item', title: 'Recipe', nav: false }, { id: 'new', title: 'Add a recipe', nav: false },
+        { id: 'recipes', title: 'Meals & recipes' }, { id: 'item', title: 'Meal', nav: false }, { id: 'new', title: 'Add a meal', nav: false },
       ],
-      data: { collections: [{ name: 'recipes', schema: 1 }, { name: 'plans', schema: 1 }, { name: 'shopping', schema: 1 }] },
-      permissions: ['data:own', 'notify'],
+      // Plans and the shopping list were kept here before This Week and Shopping became
+      // mini-apps of their own; those apps still read the old files, which stay untouched.
+      data: { collections: [{ name: 'recipes', schema: 1 }] },
+      permissions: ['data:own', 'notify', 'food:read', 'people:food'],
     },
     load: () => import('./meals/app.js'),
     importer: () => import('./meals/logic.js').then((m) => m.IMPORTER),
   },
   {
     manifest: {
-      fhManifest: 1, id: 'calories', section: 'meals', name: 'Calorie Checker', version: '1.0.0',
-      description: 'How many calories, and what else, is in a food - in the amount you actually eat.',
+      fhManifest: 1, id: 'mealplan', section: 'meals', name: 'This Week', version: '1.0.0',
+      description: 'Plan the week’s meals - as much or as little as helps - and send what they need to the shopping list.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
+      screens: [{ id: 'week', title: 'This week' }, { id: 'add', title: 'Plan a meal', nav: false }],
+      data: { collections: [{ name: 'plans', schema: 1 }] },
+      permissions: ['data:own', 'notify', 'data:meals:read'],
+    },
+    load: () => import('./mealplan/app.js'),
+  },
+  {
+    manifest: {
+      fhManifest: 1, id: 'shopping', section: 'shopping', name: 'Shopping', version: '1.0.0',
+      description: 'One family shopping list. Send meals, the week’s plan or cleaning supplies to it, or add anything else.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
+      screens: [{ id: 'list', title: 'Shopping list' }, { id: 'add', title: 'Add to the list', nav: false }],
+      data: { collections: [{ name: 'list', schema: 1 }] },
+      permissions: ['data:own', 'notify', 'data:meals:read'],
+    },
+    load: () => import('./shopping/app.js'),
+  },
+  {
+    manifest: {
+      fhManifest: 1, id: 'calories', section: 'meals', name: 'Calorie Checker', version: '1.1.0',
+      description: 'What is in a food, in the amount you actually eat. Build up a family meal or someone’s plate, and save it as a meal.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [{ id: 'check', title: 'Check a food' }],
       data: { collections: [] },
-      permissions: ['food:read'],
+      permissions: ['food:read', 'people:food'],
     },
     load: () => import('./calories/app.js'),
   },
   {
     manifest: {
-      fhManifest: 1, id: 'assistant', section: 'meals', name: 'Meal Assistant', version: '1.0.0',
+      fhManifest: 1, id: 'assistant', section: 'meals', name: 'Meal Assistant', version: '1.1.0',
       description: 'Type what you are eating and get one or two easy ways to make it a little better for the people at the table.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [{ id: 'meal', title: 'Improve a meal' }, { id: 'about', title: 'How it decides' }],
       data: { collections: [] },
-      permissions: ['food:read', 'people:food'],
+      permissions: ['data:own', 'food:read', 'people:food', 'data:meals:read'],
     },
     load: () => import('./assistant/app.js'),
   },

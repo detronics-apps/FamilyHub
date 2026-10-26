@@ -1,13 +1,17 @@
 // Calorie Checker (Meals section): look up a food in the shared food database
-// and see what is in the amount you actually eat. Several items can be added up
-// as a plate. Nothing is logged or kept - it is a lookup, not a diary.
+// and see what is in the amount you actually eat. Foods can be added up as the
+// family's meal or as one person's plate, and saved as a meal in Meals &
+// Recipes (which owns meals: the plate goes over in the link). Nothing is
+// logged - it is a lookup, not a diary.
 
 import { el } from '../../ui/dom.js';
 import { loading, failure, field } from '../kit.js';
 import { amounts, total, fmtAmount } from '../../food.js';
+import { portionShares, portionPlan, fmtShare } from '../../portions.js';
 
 const MAIN = ['kcal', 'protein', 'carbs', 'sugars', 'fat', 'satFat', 'fibre', 'sodium'];
-const ui = { query: '', foodId: null, unit: 'g', count: 100, plate: [], more: false };
+// One list per target: 'family' for the family meal, or a person's id for their plate.
+const ui = { query: '', foodId: null, unit: 'g', count: 100, target: 'family', plates: {}, more: false };
 
 export function render(hub) {
   const f = hub.use('food', () => hub.food.load());
@@ -15,6 +19,9 @@ export function render(hub) {
   if (f.error) return el('section', { class: 'stack' }, [failure(f.error)]);
   const db = f.data;
   const food = ui.foodId ? db.get(ui.foodId) : null;
+  const people = hub.foodProfiles();
+  if (ui.target !== 'family' && !people.some((p) => p.id === ui.target)) ui.target = 'family';
+  const plate = ui.plates[ui.target] ?? [];
 
   return el('section', { class: 'stack', 'aria-label': 'Calorie Checker' }, [
     el('form', {
@@ -24,8 +31,15 @@ export function render(hub) {
       el('input', { class: 'input', name: 'q', type: 'search', placeholder: 'A food, like "banana" or "brown rice cooked"', 'aria-label': 'Food to look up', value: ui.query, 'data-field': 'food-search', style: { flex: '1 1 220px' } }),
       el('button', { class: 'btn btn-primary', type: 'submit', text: 'Look up' }),
     ]),
-    food ? foodPanel(hub, db, food) : results(hub, db),
-    ui.plate.length ? platePanel(hub, db) : null,
+    people.length ? el('div', { class: 'chipset', role: 'group', 'aria-label': 'Building' }, [
+      el('span', { class: 'small', text: 'Building:' }),
+      ...[['family', 'The family meal'], ...people.map((p) => [p.id, `${p.name}’s plate`])].map(([id, label]) => el('button', {
+        class: 'chip', type: 'button', 'aria-pressed': String(ui.target === id), 'data-field': `target:${id}`,
+        text: `${label}${ui.plates[id]?.length ? ` (${ui.plates[id].length})` : ''}`, on: { click: () => { ui.target = id; hub.render(); } },
+      })),
+    ]) : null,
+    food ? foodPanel(hub, db, food, targetName(people)) : results(hub, db),
+    plate.length ? platePanel(hub, db, people, plate) : null,
     el('p', { class: 'small muted', text: `${db.count.toLocaleString()} foods from ${db.source} Amounts are typical values, not a measurement of your food.` }),
   ]);
 }
@@ -51,7 +65,9 @@ function defaultPortion(food) {
   return String(Math.max(0, medium));
 }
 
-function foodPanel(hub, db, food) {
+const targetName = (people) => (ui.target === 'family' ? 'the family meal' : `${people.find((p) => p.id === ui.target)?.name}’s plate`);
+
+function foodPanel(hub, db, food, target) {
   const grams = gramsOf(food);
   const a = amounts(food, grams);
   const rows = (keys) => keys.map((k) => el('tr', {}, [
@@ -78,32 +94,53 @@ function foodPanel(hub, db, food) {
     ]),
     el('div', { class: 'row' }, [
       el('button', {
-        class: 'btn', type: 'button', text: 'Add to the plate', 'data-field': 'add-plate', disabled: grams <= 0,
-        on: { click: () => { ui.plate.push({ foodId: food.id, grams, label: describe(food) }); ui.foodId = null; hub.render(); } },
+        class: 'btn btn-primary', type: 'button', text: `Add to ${target}`, 'data-field': 'add-plate', disabled: grams <= 0,
+        on: { click: () => { (ui.plates[ui.target] ??= []).push({ foodId: food.id, grams, label: describe(food) }); ui.foodId = null; hub.render(); } },
       }),
     ]),
     el('p', { class: 'small muted', text: `${db.types[food.type]} data. "Not known" means the source does not report it - it is not counted as zero.` }),
   ]);
 }
 
-function platePanel(hub, db) {
-  const items = ui.plate.map((p) => ({ ...p, food: db.get(p.foodId) })).filter((p) => p.food);
+function platePanel(hub, db, people, plate) {
+  const items = plate.map((p) => ({ ...p, food: db.get(p.foodId) })).filter((p) => p.food);
   const t = total(items);
   const line = (k) => {
     const x = t[k];
-    if (!x) return 'not known';
-    if (x.missing === items.length) return 'not known';
+    if (!x || x.missing === items.length) return 'not known';
     return `${x.missing ? 'at least ' : ''}${fmtAmount(x.value)} ${db.meta[k].unit}`;
   };
-  return el('div', { class: 'panel stack', 'aria-label': 'Plate' }, [
-    el('h2', { text: 'Plate' }),
+  const family = ui.target === 'family';
+  const person = people.find((p) => p.id === ui.target);
+  const shares = family ? portionShares(people, hub.today()).filter((s) => s.share > 0) : [];
+  const sum = shares.reduce((a, s) => a + s.share, 0);
+  const kcalKnown = t.kcal && !t.kcal.missing;
+  // Handed to Meals & Recipes, which saves it: names shortened to their first part, grams rounded.
+  const meal = {
+    title: items.slice(0, 3).map((p) => p.food.name.split(',')[0]).join(', '),
+    servings: family ? portionPlan(shares).cook : 1,
+    ingredients: items.map((p) => ({ name: p.food.name, qty: Math.round(p.grams), fdcId: p.food.id })),
+  };
+  return el('div', { class: 'panel stack', 'aria-label': family ? 'The family meal' : `${person.name}’s plate` }, [
+    el('h2', { text: family ? 'The family meal' : `${person.name}’s plate`, style: { margin: 0 } }),
     el('ul', { class: 'list' }, items.map((p, i) => el('li', {}, [
       el('div', { class: 'list__main' }, [el('strong', { text: p.food.name }), el('div', { class: 'small muted', text: `${p.label} · ${fmtAmount(amounts(p.food, p.grams).kcal)} kcal` })]),
-      el('button', { class: 'btn btn-small', type: 'button', text: 'Remove', on: { click: () => { ui.plate.splice(i, 1); hub.render(); } } }),
+      el('button', { class: 'btn btn-small', type: 'button', text: 'Remove', on: { click: () => { plate.splice(i, 1); hub.render(); } } }),
     ]))),
-    el('p', { class: 'stat-big' }, [el('strong', { text: `${line('kcal').replace(' kcal', '')} kcal` }), el('span', { class: 'small muted', text: ' altogether' })]),
+    el('p', { class: 'stat-big' }, [el('strong', { text: `${line('kcal').replace(' kcal', '')} kcal` }), el('span', { class: 'small muted', text: family ? ' for the whole meal' : ' altogether' })]),
     el('p', { class: 'small', text: ['protein', 'carbs', 'fat', 'fibre'].map((k) => `${db.meta[k].label} ${line(k)}`).join(' · ') }),
     t.kcal?.missing ? el('p', { class: 'small muted', text: 'One or more items does not report everything, so some totals are "at least".' }) : null,
-    el('button', { class: 'btn btn-small', type: 'button', text: 'Clear the plate', style: { alignSelf: 'flex-start' }, on: { click: () => { ui.plate = []; hub.render(); } } }),
+    family && shares.length ? el('div', {}, [
+      el('h3', { text: 'Shared out', style: { margin: '0 0 var(--space-1)' } }),
+      el('ul', { class: 'small' }, shares.map((s) => el('li', {
+        text: `${s.name}: about ${fmtShare(s.share)} portion${s.share > 1 ? 's' : ''}${kcalKnown ? ` · about ${Math.round((t.kcal.value * s.share) / sum)} kcal` : ''}`,
+      }))),
+      el('p', { class: 'small muted', text: 'A rough guide from age and gender, and height and weight where recorded on the People page. Appetites vary - let everyone eat to their hunger.' }),
+    ]) : null,
+    el('div', { class: 'row' }, [
+      el('a', { class: 'btn btn-primary', href: `#/meals/new/${encodeURIComponent(`plate:${JSON.stringify(meal)}`)}`, text: 'Save as a meal', 'data-field': 'save-meal' }),
+      el('button', { class: 'btn btn-small', type: 'button', text: family ? 'Clear the meal' : 'Clear the plate', on: { click: () => { ui.plates[ui.target] = []; hub.render(); } } }),
+    ]),
+    el('p', { class: 'small muted', text: 'Saving opens Meals & Recipes with these foods filled in. Name it and save it as a meal; add the method any time to make it a recipe.' }),
   ]);
 }

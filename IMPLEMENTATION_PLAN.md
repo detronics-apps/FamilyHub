@@ -71,10 +71,16 @@ workstreams W1-W3. This file records status only.
 | Recipe Book (the former Meals app, recipes first) | Done, checked in browser |
 | Calorie Checker | Done, checked in browser |
 | Meal Assistant: guide of 83 foods, reference values, interactions, engine, screens | Done, tested, checked in browser (desktop and 375 px) |
+| Gender on people; pregnancy only for a female aged 16 or more | Done, tested, checked in browser |
+| People as its own page; dated heights and weights (merged by id, in the folder) | Done, tested, checked in browser |
+| Meal Assistant opens family recipes | Done, tested, checked in browser |
+| Meals and recipes as one record; Calorie Checker family meal / person's plate → save as a meal | Done, tested, checked in browser |
+| Portion guide per person, leftovers; energy goals and personal goals on People | Done, tested, checked in browser |
+| Shopping as its own section (send from meals, This Week, chores); This Week as its own mini-app | Done, tested, checked in browser |
 
 ## Test results
 
-`npm test`: **199 tests, 199 pass** (Node 24). Browser checks: see TEST_PLAN.md.
+`npm test`: **214 tests, 214 pass** (Node 24). Browser checks: see TEST_PLAN.md.
 
 ## Known limitations
 

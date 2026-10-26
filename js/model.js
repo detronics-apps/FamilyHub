@@ -3,7 +3,11 @@
 //
 // Shape (schema 1):
 //   { schema, household: {id, name, createdAt},
-//     people: [Person], rooms: [Room], chores: [Chore], events: [Event] }
+//     people: [Person], rooms: [Room], chores: [Chore], events: [Event],
+//     measurements: [Measurement] }
+//
+// A Measurement is one dated height and/or weight for a person - a record of
+// its own, so entries added on two laptops merge without asking.
 //
 // A Chore is a *definition* ("Clean basin, weekly"). Each time it is acted on
 // an Event is recorded (done / skipped / deferred / rescheduled / dropped).
@@ -39,6 +43,10 @@ export const FOCUS = {
   selective: 'Easier meals for a selective eater',
 };
 
+// A person's own energy goal, in kcal a day against their estimated needs. Only
+// for adults who are not pregnant or breastfeeding (energyGoalAllowed).
+export const ENERGY_GOALS = { '-500': 'About 500 kcal a day less', '-250': 'About 250 kcal a day less', 0: 'Keep as I am', 250: 'About 250 kcal a day more', 500: 'About 500 kcal a day more' };
+
 export const PERSON_COLOURS = ['#d9734e', '#d9a441', '#8fae7e', '#c07aa6', '#d77a7a', '#b58a62'];
 
 export function newId(prefix) {
@@ -63,6 +71,7 @@ export function emptyHousehold(name = 'Our family', now = nowIso()) {
     rooms: [],
     chores: [],
     events: [],
+    measurements: [],
   };
 }
 
@@ -84,6 +93,8 @@ export function normalisePerson(p) {
     likes: words(p.likes),
     dislikes: words(p.dislikes),
     focus: pick(p.focus, Object.keys(FOCUS)),
+    energyGoal: Object.keys(ENERGY_GOALS).includes(String(p.energyGoal)) ? Number(p.energyGoal) : 0,
+    goals: str(p.goals, 1000),
     demo: p.demo === true,
   };
 }
@@ -98,6 +109,13 @@ export function lifeStageAllowed(p, today) {
   if (p.sex !== 'female') return false;
   const age = ageOn(p.born, today);
   return age === null ? p.role === 'adult' : age >= 16;
+}
+
+/** An energy goal is for an adult (18 or more; no birthday: role adult) who is not pregnant or breastfeeding. */
+export function energyGoalAllowed(p, today) {
+  const age = ageOn(p.born, today);
+  if (age === null ? p.role !== 'adult' : age < 18) return false;
+  return !(lifeStageAllowed(p, today) && p.lifeStage);
 }
 
 /** Whole years on `today`, or null when no birthday was given. */
@@ -144,10 +162,26 @@ export function normaliseChore(c, now = nowIso()) {
     instructions: str(c.instructions, 4000),
     easier: str(c.easier, 2000),
     cost: numOrNull(c.cost),
+    // What it uses up (bleach, sponges...), to send to the shopping list.
+    supplies: [...new Set((Array.isArray(c.supplies) ? c.supplies : String(c.supplies ?? '').split(/[,\n]/)).map((x) => str(String(x), 80)).filter(Boolean))].slice(0, 30),
     visibility: oneOf(c.visibility, VISIBILITY, 'shared'),
     demo: c.demo === true,
     createdAt: created,
     updatedAt: typeof c.updatedAt === 'string' ? c.updatedAt : created,
+  };
+}
+
+/** One dated height and/or weight. Kept when the person is removed, like their chore history. */
+export function normaliseMeasurement(m) {
+  const within = (v, lo, hi) => { const n = numOrNull(v); return n !== null && n >= lo && n <= hi ? Math.round(n * 10) / 10 : null; };
+  return {
+    id: str(m.id, 40) || newId('m'),
+    personId: str(m.personId, 40),
+    day: isDay(m.day) ? m.day : null,
+    weightKg: within(m.weightKg, 0.5, 400),
+    heightCm: within(m.heightCm, 20, 250),
+    note: str(m.note, 200),
+    by: typeof m.by === 'string' ? m.by : null,
   };
 }
 
@@ -198,6 +232,8 @@ export function normaliseHousehold(data) {
   const chores = list(data.chores).map((c) => normaliseChore(c))
     .map((c) => (c.roomId && !roomIds.has(c.roomId) ? { ...c, roomId: null } : c));
   const events = list(data.events).map(normaliseEvent).filter((e) => e.type && e.day && e.choreId);
+  const measurements = list(data.measurements).map(normaliseMeasurement)
+    .filter((m) => m.personId && m.day && (m.weightKg !== null || m.heightCm !== null));
   return {
     schema: SCHEMA_VERSION,
     household: {
@@ -209,6 +245,7 @@ export function normaliseHousehold(data) {
     rooms,
     chores,
     events,
+    measurements,
   };
 }
 
@@ -217,7 +254,7 @@ export function validateHousehold(raw) {
   const errors = [];
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, errors: ['The file does not contain a household.'] };
   if (raw.schema !== undefined && !Number.isInteger(raw.schema)) errors.push('The data version is not a whole number.');
-  for (const key of ['people', 'rooms', 'chores', 'events']) {
+  for (const key of ['people', 'rooms', 'chores', 'events', 'measurements']) {
     if (raw[key] !== undefined && !Array.isArray(raw[key])) errors.push(`"${key}" should be a list.`);
   }
   if (!raw.household && !Array.isArray(raw.chores)) errors.push('No household or chores were found in the file.');
@@ -248,6 +285,28 @@ export function addPerson(h, fields) {
 
 export function updatePerson(h, id, patch) {
   return touch(h, { people: h.people.map((p) => (p.id === id ? normalisePerson({ ...p, ...patch, id }) : p)) });
+}
+
+export function addMeasurement(h, fields) {
+  const measurement = normaliseMeasurement({ ...fields, id: newId('m') });
+  if (!measurement.personId || !measurement.day || (measurement.weightKg === null && measurement.heightCm === null)) {
+    throw new Error('A measurement needs a date and a weight or a height.');
+  }
+  return { household: touch(h, { measurements: [...h.measurements, measurement] }), measurement };
+}
+
+export const removeMeasurement = (h, id) => touch(h, { measurements: h.measurements.filter((m) => m.id !== id) });
+
+/** One person's measurements, newest first. */
+export const measurementsFor = (h, personId) => (h.measurements ?? [])
+  .filter((m) => m.personId === personId).sort((a, b) => b.day.localeCompare(a.day) || b.id.localeCompare(a.id));
+
+/** The latest weight and the latest height, each with its date (they may come from different days). */
+export function latestMeasure(h, personId) {
+  const list = measurementsFor(h, personId);
+  const w = list.find((m) => m.weightKg !== null);
+  const t = list.find((m) => m.heightCm !== null);
+  return { weightKg: w?.weightKg ?? null, weightDay: w?.day ?? null, heightCm: t?.heightCm ?? null, heightDay: t?.day ?? null };
 }
 
 /** Removing a person keeps their history (shown as "a former member") but drops them from eligibility. */

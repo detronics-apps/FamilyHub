@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import { createFoodDb, amounts, total, tokens, fmtAmount } from '../js/food.js';
 import { GUIDE } from '../js/apps/assistant/guide.js';
 import { needsFor } from '../js/apps/assistant/reference.js';
-import { parseMeal, suggest, allowed, personContext } from '../js/apps/assistant/logic.js';
+import { parseMeal, suggest, allowed, personContext, recipeMealText } from '../js/apps/assistant/logic.js';
 import { normalisePerson, ageOn, lifeStageAllowed } from '../js/model.js';
 
 const db = createFoodDb(JSON.parse(fs.readFileSync(new URL('../data/foods.json', import.meta.url), 'utf8')));
@@ -161,4 +161,13 @@ test('pregnant or breastfeeding: only a female aged 16 or more', () => {
   assert.equal(lifeStageAllowed(p({ sex: 'female', role: 'adult' }), TODAY), true, 'no birthday: an adult');
   assert.equal(lifeStageAllowed(p({ sex: 'female', role: 'child' }), TODAY), false);
   assert.equal(personContext(p({ sex: 'female', born: '2012-01-01' }), TODAY).pregnant, false, 'the assistant ignores it under 16');
+});
+
+test('a family recipe is read as a meal from its ingredients; seasonings are not "unrecognised"', () => {
+  const recipe = { title: 'Chicken curry', ingredients: [{ name: 'chicken thighs' }, { name: 'onion' }, { name: 'curry powder' }, { name: 'salt' }, { name: 'rice' }] };
+  const text = recipeMealText(recipe);
+  const r = parseMeal(text);
+  assert.deepEqual(r.items.map((f) => f.id), ['chicken', 'onion', 'rice']);
+  assert.deepEqual(r.unknown, []);
+  assert.equal(recipeMealText({ title: 'Bobotie', ingredients: [] }), 'Bobotie');
 });

@@ -7,6 +7,7 @@
 //   Core/settings.json             household name and id
 //   Core/installed.json            installed mini-apps (written by the registry)
 //   Data/household/people.json     records by id
+//   Data/household/measurements.json  dated heights and weights
 //   Data/household/rooms.json
 //   Data/chores/chores.json
 //   Data/chores/events/YYYY-MM.json  completions etc., one file per month
@@ -26,6 +27,7 @@ export const PATHS = {
   settings: 'Core/settings.json',
   installed: 'Core/installed.json',
   people: 'Data/household/people.json',
+  measurements: 'Data/household/measurements.json',
   rooms: 'Data/household/rooms.json',
   chores: 'Data/chores/chores.json',
   eventsDir: 'Data/chores/events',
@@ -56,6 +58,7 @@ export function householdToFiles(h) {
   files.set(PATHS.settings, stableStringify({ kind: 'family-hub-settings', schema: SCHEMA_VERSION, household: h.household }));
   files.set(PATHS.people, recordFile('family-hub-people', h.people));
   files.set(PATHS.rooms, recordFile('family-hub-rooms', h.rooms));
+  files.set(PATHS.measurements, recordFile('family-hub-measurements', h.measurements ?? []));
   files.set(PATHS.chores, recordFile('family-hub-chores', h.chores));
   const months = new Map();
   for (const e of sortEvents(h.events)) {
@@ -86,6 +89,7 @@ export function filesToHousehold(files) {
     rooms: readRecords(files.get(PATHS.rooms)),
     chores: readRecords(files.get(PATHS.chores)),
     events,
+    measurements: readRecords(files.get(PATHS.measurements)),
   });
   return { ...h, events: sortEvents(h.events) };
 }
@@ -93,7 +97,7 @@ export function filesToHousehold(files) {
 /** Read every household file from the folder (one listing for the month files). */
 export async function readHouseholdFiles(store) {
   const files = new Map();
-  for (const p of [PATHS.marker, PATHS.settings, PATHS.people, PATHS.rooms, PATHS.chores]) {
+  for (const p of [PATHS.marker, PATHS.settings, PATHS.people, PATHS.measurements, PATHS.rooms, PATHS.chores]) {
     const text = await store.read(p);
     if (text != null) files.set(p, text);
   }

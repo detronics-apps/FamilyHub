@@ -8,6 +8,7 @@
 
 import { createCollection } from '../collections.js';
 import { createFoodDb } from '../food.js';
+import { latestMeasure } from '../model.js';
 
 // One copy of the food database for every app that reads it, fetched on first use.
 let foodDb = null;
@@ -64,7 +65,8 @@ export function createHubFactory(ctx) {
     const store = ctx.sync.appStore();
     if (!store) throw Object.assign(new Error('Reconnect your Drive folder to open this - it needs one click.'), { code: 'no-store' });
     const declared = manifest.data.collections.find((c) => c.name === name);
-    if (!declared && appId === manifest.id) throw new Error(`${manifest.name} did not declare a "${name}" collection in its manifest.`);
+    // An app writes only what it declared. Reading another app's older, undeclared files (read-only) is allowed.
+    if (!declared && !readOnly) throw new Error(`${manifest.name} did not declare a "${name}" collection in its manifest.`);
     // Another app's view of a collection is cached separately and never writes.
     const key = `${readOnly ? 'ro:' : ''}${store.kind}:${store.name}:${appId}/${name}`;
     if (!collections.has(key)) {
@@ -96,6 +98,8 @@ export function createHubFactory(ctx) {
       today: ctx.today,
       href: (screen = null, param = null) => `#/${manifest.id}${screen ? `/${screen}` : ''}${param ? `/${encodeURIComponent(param)}` : ''}`,
       go: (screen, param) => ctx.go(hub.href(screen, param)),
+      /** Open another mini-app's screen (e.g. Shopping with items to confirm). Navigation only - that app does any writing. */
+      open: (hash) => { if (/^#\/[a-z][a-z0-9.-]*(\/|$)/.test(hash)) ctx.go(hash); },
       render: () => ctx.render(),
       use: res.use,
       /** Forget loaded data (after a change) and redraw, so the screen shows the new state. */
@@ -147,9 +151,13 @@ export function createHubFactory(ctx) {
     if (has('people:food')) {
       // The food side of each profile, for the Meals section. Names come with it
       // so suggestions can say who they are for.
-      const food = ({ id, name, role, born, sex, lifeStage, weightKg, allergies, diet, avoid, likes, dislikes, focus }) => (
-        { id, name, role, born, sex, lifeStage, weightKg, allergies, diet, avoid, likes, dislikes, focus });
-      hub.foodProfiles = () => (ctx.app.household?.people ?? []).map(food);
+      const food = ({ id, name, role, born, sex, lifeStage, weightKg, allergies, diet, avoid, likes, dislikes, focus, energyGoal }) => (
+        { id, name, role, born, sex, lifeStage, weightKg, allergies, diet, avoid, likes, dislikes, focus, energyGoal });
+      // Weight and height are the latest dated ones from the People page (weight: an older undated entry if there is none).
+      hub.foodProfiles = () => (ctx.app.household?.people ?? []).map((p) => {
+        const m = latestMeasure(ctx.app.household, p.id);
+        return { ...food(p), weightKg: m.weightKg ?? p.weightKg, heightCm: m.heightCm };
+      });
     }
     if (has('food:read')) hub.food = { load: loadFoodDb };
     if (has('rooms:read')) hub.rooms = { list: () => (ctx.app.household?.rooms ?? []).map(({ id, name }) => ({ id, name })) };

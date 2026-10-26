@@ -33,9 +33,15 @@ const PREGNANCY = ['folate', 'iron', 'choline', 'calcium', 'protein'];
 const PLANT = new Set(['veg', 'fruit']);
 const IGNORE = new Set(('a an and or with of the in on some little bit plain fresh homemade home made cooked boiled fried grilled roasted baked steamed '
   + 'mashed toasted water side slice slices bowl cup cups glass piece pieces tsp tbsp spoon spoons teaspoon tablespoon handful '
-  + 'serving portion my our for lunch dinner breakfast supper snack meal plate leftover leftovers').split(' '));
+  + 'serving portion my our for lunch dinner breakfast supper snack meal plate leftover leftovers '
+  // Seasonings and kitchen basics in a recipe: not worth reporting as "not recognised".
+  + 'salt pepper black garlic ginger stock cube cubes spice spices herbs mixed cumin paprika chilli chili turmeric cinnamon '
+  + 'curry masala nutmeg oregano basil thyme parsley coriander rosemary bay leaf leaves vanilla baking powder soda vinegar sauce to taste').split(' '));
 
 /* ---------------------------------------------------------- the meal */
+
+/** A Meals & Recipes recipe read as a meal: its ingredients, or its name if it lists none. */
+export const recipeMealText = (recipe) => (recipe.ingredients?.length ? recipe.ingredients.map((i) => i.name).join(', ') : recipe.title ?? '');
 
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const ALIASES = GUIDE.flatMap((food) => [food.name, ...food.also].map((alias) => ({ alias: alias.toLowerCase(), food })))
@@ -229,11 +235,12 @@ function whoText(helps, people) {
 
 /**
  * @param text      the meal in a few words
- * @param profiles  people (from Settings › People), each with the food fields
+ * @param profiles  people (from the People page), each with the food fields
  * @param selected  ids of the people eating; empty = everyone
  * @param notToday  food ids the person said are not available today
+ * @param mealName  what to call the meal on the cards (a recipe's name); else its main foods
  */
-export function suggest({ text, profiles, selected = [], db, today, notToday = [] }) {
+export function suggest({ text, profiles, selected = [], db, today, notToday = [], mealName = '' }) {
   const { items, unknown } = parseMeal(text);
   const chosen = (selected.length ? profiles.filter((p) => selected.includes(p.id)) : profiles);
   const everyone = chosen.map((p) => personContext(p, today));
@@ -285,7 +292,7 @@ export function suggest({ text, profiles, selected = [], db, today, notToday = [
   }
   for (const s of adds) {
     const alts = ranked.filter((r) => r !== s && !adds.includes(r) && (r.food.group === s.food.group || (r.food.colour && r.food.colour === s.food.colour))).slice(0, 2);
-    const title = `${cap(s.food.name)} with the ${items.filter((f) => !['fat', 'sweet', 'drink'].includes(f.group)).map((f) => f.name).slice(0, 2).join(' and ') || 'meal'}`;
+    const title = `${cap(s.food.name)} with the ${mealName || items.filter((f) => !['fat', 'sweet', 'drink'].includes(f.group)).map((f) => f.name).slice(0, 2).join(' and ') || 'meal'}`;
     const c = card('add', s, { title, alternatives: alts.map((a) => a.food.name) });
     result.cards.push(notToday.includes(s.food.id) ? toNext(c, s) : c);
   }
@@ -340,7 +347,7 @@ export function suggest({ text, profiles, selected = [], db, today, notToday = [
 
   if (people.some((c) => c.pregnant)) notes.push('These are food ideas only. For supplements such as folic acid or iron, follow your antenatal clinic.');
   if (people.some((c) => c.focus.has('dense') || c.focus.has('selective'))) notes.push('If eating stays difficult, or you are worried about growth or weight, talk to your clinic or a dietitian.');
-  if (people.some((c) => c.assumedAge) && profiles.length) notes.push('Add birthdays in Settings › People so suggestions fit each age.');
+  if (people.some((c) => c.assumedAge) && profiles.length) notes.push('Add birthdays on the People page so suggestions fit each age.');
   return result;
 }
 

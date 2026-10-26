@@ -63,7 +63,7 @@ and styles go in your own `<style>` element.
 | `data.collections` | Your record types: `name`, `schema` (whole number, raise it when your record shape changes), optional `summary` and `search` field lists (≤ 12 each; defaults `title`, `name`, `status`). |
 | `permissions` | What you need - see below. Unknown permissions make the manifest invalid. |
 
-`section` puts the app inside one of the home screen's sections: `chores`, `tasks`, `meals`,
+`section` puts the app inside one of the home screen's sections: `chores`, `tasks`, `shopping`, `meals`,
 `exercise`, `tickets`, `principles`, `decisions`, `holidays`, `finance`, `faith` or `more`. Left
 out, or one this version does not know, it goes in **More**.
 
@@ -102,6 +102,7 @@ FamilyHub.ready(async (hub) => {
   await hub.rooms.list();                                               // needs rooms:read
   await hub.notify('Saved.', 'ok');                                     // needs notify; 'ok' | 'info' | 'warn'
   await hub.go('board', optionalParam);                                 // one of your declared screens
+  hub.open('#/shopping/add/' + encodeURIComponent(JSON.stringify(send))); // another app's screen; it does any writing
 });
 ```
 

@@ -9,7 +9,7 @@ const MODS = [...apps, ...CORE_TILES];
 
 test('default shows every installed app, then the core tiles', () => {
   const { visible, hidden } = resolveDashboard(defaultPrefs(), MODS);
-  assert.deepEqual(ids(visible), ['chores', 'tasks', 'tickets', 'finance', 'library', 'settings']);
+  assert.deepEqual(ids(visible), ['chores', 'tasks', 'tickets', 'finance', 'people', 'library', 'settings']);
   assert.deepEqual(hidden, []);
 });
 

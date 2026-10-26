@@ -12,7 +12,9 @@ export function sectionView(ctx, route) {
   const s = section(route.sub);
   if (!s) return el('section', { class: 'panel empty' }, [el('h1', { text: 'Not found' }), el('a', { class: 'btn', href: '#/', text: 'Back to home' })]);
   const reg = ctx.app.registry;
-  const installed = appsIn(s.id, ctx.installedManifests());
+  // Starter apps in the order they ship (most-used first), anything added after them.
+  const rank = (m) => { const i = STARTERS.findIndex((x) => x.manifest.id === m.id); return i < 0 ? 999 : i; };
+  const installed = appsIn(s.id, ctx.installedManifests()).sort((a, b) => rank(a) - rank(b));
   const offered = appsIn(s.id, STARTERS.map((x) => x.manifest)).filter((m) => !reg.apps[m.id]);
 
   return el('section', { class: 'stack', 'aria-labelledby': 'section-title' }, [

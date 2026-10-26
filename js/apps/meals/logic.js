@@ -1,5 +1,10 @@
-// Meals (product plan section 13): recipes, a weekly plan, and the shopping
-// list that follows from it. Pure - no DOM.
+// Meals & Recipes (product plan section 13): meals, a weekly plan, and the
+// shopping list that follows from it. Pure - no DOM.
+//
+// One record kind: a meal is a name and its ingredients; adding a method (steps)
+// makes it a recipe. So every recipe is a meal, not every meal is a recipe.
+// An ingredient may carry `fdcId`, a link to the shared food database (meals
+// built in Calorie Checker do), which lets calories per serving be worked out.
 //
 // Nutrition values a person types in are shown as "supplied"; anything else
 // is "not known". Looking foods up and meal ideas are separate mini-apps in
@@ -70,13 +75,13 @@ export function normaliseRecipe(r = {}) {
   const ingredients = (Array.isArray(r.ingredients) ? r.ingredients : lines(r.ingredients).map(parseIngredient))
     .map((i) => (typeof i === 'string' ? parseIngredient(i) : i))
     .filter((i) => i && str(i.name))
-    .map((i) => ({ name: str(i.name, 120), qty: num(i.qty), unit: unitKey(str(i.unit, 20)), note: str(i.note, 120) }))
+    .map((i) => ({ name: str(i.name, 120), qty: num(i.qty), unit: unitKey(str(i.unit, 20)), note: str(i.note, 120), ...(Number.isInteger(i.fdcId) && i.fdcId > 0 ? { fdcId: i.fdcId } : {}) }))
     .slice(0, 80);
   const nutrition = {};
   for (const [k] of NUTRIENTS) { const v = num(r.nutrition?.[k]); if (v != null) nutrition[k] = v; }
   return {
     ...r,
-    title: str(r.title, 200) || 'Untitled recipe',
+    title: str(r.title, 200) || 'Untitled meal',
     description: str(r.description),
     servings: Math.max(1, Math.round(num(r.servings) ?? 4)),
     prepMinutes: num(r.prepMinutes),
@@ -91,9 +96,13 @@ export function normaliseRecipe(r = {}) {
   };
 }
 
+/** A meal becomes a recipe once it has a method. */
+export const isRecipe = (r) => r.instructions.length > 0;
+
 export function recipeSummary(r) {
   return {
     title: r.title,
+    recipe: isRecipe(r),
     minutes: (r.prepMinutes ?? 0) + (r.cookMinutes ?? 0) || null,
     servings: r.servings,
     tags: r.tags,
@@ -112,6 +121,46 @@ export function scaleIngredients(recipe, servings) {
 /** Nutrition per serving as supplied, with every unknown nutrient said to be unknown. */
 export function nutritionRows(recipe) {
   return NUTRIENTS.map(([k, unit]) => ({ key: k, unit, value: recipe.nutrition[k] ?? null, known: recipe.nutrition[k] != null }));
+}
+
+/**
+ * After the ingredient lines are edited as text, keep each one's food-database
+ * link where the name is unchanged.
+ */
+export function keepFoodLinks(ingredients, previous) {
+  const links = new Map(previous.filter((i) => i.fdcId).map((i) => [i.name.toLowerCase(), i.fdcId]));
+  return ingredients.map((i) => (links.has(i.name.toLowerCase()) ? { ...i, fdcId: links.get(i.name.toLowerCase()) } : i));
+}
+
+const GRAMS = { g: 1, kg: 1000 };
+/**
+ * Amounts per serving from ingredients linked to the food database and given in
+ * grams. Says how many ingredients that covers, so a partial figure is never
+ * shown as the whole.
+ * @param get fdcId -> food (from the shared database)
+ */
+export function linkedNutrition(recipe, get, amountsOf) {
+  const usable = recipe.ingredients.filter((i) => i.fdcId && i.qty != null && GRAMS[i.unit] && get(i.fdcId));
+  const sum = {};
+  for (const i of usable) {
+    for (const [k, v] of Object.entries(amountsOf(get(i.fdcId), i.qty * GRAMS[i.unit]))) {
+      const t = (sum[k] ??= { value: 0, missing: 0 });
+      if (v === null) t.missing += 1; else t.value += v;
+    }
+  }
+  const perServing = Object.fromEntries(Object.entries(sum).map(([k, t]) => [k, { value: t.value / recipe.servings, missing: t.missing }]));
+  return { perServing, linked: usable.length, of: recipe.ingredients.length };
+}
+
+/** A plate built in Calorie Checker, handed over in the link as a new meal. Anything odd is dropped. */
+export function mealFromPlate(param) {
+  let raw;
+  try { raw = JSON.parse(param); } catch { return null; }
+  if (!raw || !Array.isArray(raw.ingredients)) return null;
+  return normaliseRecipe({
+    title: str(raw.title, 200), servings: raw.servings,
+    ingredients: raw.ingredients.slice(0, 80).map((i) => ({ name: i.name, qty: i.qty, unit: 'g', fdcId: i.fdcId })),
+  });
 }
 
 /* ----------------------------------------------------------- the week */
@@ -183,40 +232,7 @@ export function ingredientsForPlan(plan, recipes) {
   return combineIngredients(out);
 }
 
-export function normaliseShopping(list = {}) {
-  const items = (Array.isArray(list.items) ? list.items : [])
-    .filter((i) => i && str(i.name))
-    .map((i, n) => ({
-      id: str(i.id, 40) || `it${n}`,
-      name: str(i.name, 120), qty: num(i.qty), unit: unitKey(str(i.unit, 20)), note: str(i.note, 120),
-      checked: i.checked === true, fromWeek: typeof i.fromWeek === 'string' ? i.fromWeek : null,
-    }));
-  return { ...list, items };
-}
-
-/**
- * Refresh the list from a week's plan. Items you added yourself are never
- * touched; items already bought stay bought; the week's generated items are
- * replaced by the new totals.
- */
-export function refreshFromPlan(list, monday, needed, newId = (i) => `gen_${monday}_${i}`) {
-  const keep = list.items.filter((i) => i.fromWeek !== monday);
-  const before = new Map(list.items.filter((i) => i.fromWeek === monday).map((i) => [`${nameKey(i.name)}|${i.unit}`, i]));
-  const generated = needed.map((n, i) => {
-    const prev = before.get(`${nameKey(n.name)}|${n.unit}`);
-    return { id: prev?.id ?? newId(i), name: n.name, qty: n.qty, unit: n.unit, note: n.note, checked: prev?.checked ?? false, fromWeek: monday };
-  });
-  return { ...list, items: [...keep, ...generated] };
-}
-
-export function addShoppingItem(list, text, id = `it${Date.now().toString(36)}`) {
-  const p = parseIngredient(text);
-  if (!p.name) return list;
-  return { ...list, items: [...list.items, { id, ...p, note: '', checked: false, fromWeek: null }] };
-}
-
-export const toggleItem = (list, id) => ({ ...list, items: list.items.map((i) => (i.id === id ? { ...i, checked: !i.checked } : i)) });
-export const clearBought = (list) => ({ ...list, items: list.items.filter((i) => !i.checked) });
+// The shopping list itself lives in the Shopping mini-app (js/apps/shopping/logic.js).
 
 export const isPastWeek = (monday, today) => dayDiff(addDays(monday, 6), today) > 0;
 

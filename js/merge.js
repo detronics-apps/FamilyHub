@@ -85,7 +85,7 @@ export function mergeList2(mine = [], theirs = []) {
   return mergeList3([], mine, theirs);
 }
 
-const COLLECTIONS = ['people', 'rooms', 'chores', 'events'];
+const COLLECTIONS = ['people', 'rooms', 'chores', 'events', 'measurements'];
 
 /**
  * Merge two whole households. `base` may be null (two-way).

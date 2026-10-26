@@ -87,7 +87,7 @@ export function recordForm({ fields, record = {}, people = [], onSave, onCancel 
         });
         getters[f.key] = () => boxes.filter((b) => b.box.checked).map((b) => b.box.value);
         return el('fieldset', {}, [el('legend', { text: f.label }),
-          boxes.length ? el('div', { class: 'row' }, boxes.map((b) => b.node)) : el('p', { class: 'small muted', text: 'Add people in Settings to choose.' }),
+          boxes.length ? el('div', { class: 'row' }, boxes.map((b) => b.node)) : el('p', { class: 'small muted', text: 'Add people on the People page to choose.' }),
           f.hint ? el('div', { class: 'field__hint', text: f.hint }) : null]);
       }
       default:

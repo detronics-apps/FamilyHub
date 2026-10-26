@@ -7,8 +7,9 @@
 // preference is always repaired rather than trusted.
 
 export const CORE_TILES = [
+  { id: 'people', name: 'People', purpose: 'Everyone in the family: details, food details, and a dated record of height and weight.', status: 'ready' },
   { id: 'library', name: 'Mini-apps', purpose: 'Add, turn off, update or remove mini-apps. Nothing is deleted without asking.', status: 'ready' },
-  { id: 'settings', name: 'Settings', purpose: 'Household, people, your dashboard, your Drive folder and music.', status: 'ready' },
+  { id: 'settings', name: 'Settings', purpose: 'Household, your dashboard, your Drive folder and music.', status: 'ready' },
 ];
 
 /** Tiles that can never be hidden: they are the way back to everything else. */

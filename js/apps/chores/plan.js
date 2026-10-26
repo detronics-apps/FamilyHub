@@ -4,6 +4,11 @@ import { el } from '../../ui/dom.js';
 import { modal, confirmAction, choreMeta, statusLine } from '../../ui/common.js';
 import { occurrences, occurrence } from '../../recurrence.js';
 import { addChore, updateChore, deleteChore, addRoom, renameRoom, removeRoom, normaliseChore } from '../../model.js';
+import { sendHref } from '../shopping/logic.js';
+
+/** Shopping owns the list; chores send supplies over in a link, confirmed there. */
+const shoppingOn = (ctx) => Boolean(ctx.app.registry.apps.shopping?.enabled);
+const suppliesHref = (source, from, names) => sendHref({ source, from, group: 'cleaning', items: names.map((name) => ({ name })) });
 
 export function planView(ctx, notices) {
   const h = ctx.app.household;
@@ -30,6 +35,10 @@ export function planView(ctx, notices) {
     el('div', { class: 'row' }, [
       el('p', { class: 'muted', style: { margin: 0, flex: '1 1 240px' }, text: 'Decide what needs doing and roughly how often. Only a name is needed - the rest can come later.' }),
       el('button', { class: 'btn btn-primary', type: 'button', text: 'Add a chore', 'data-field': 'add-chore', on: { click: () => openEditor(ctx, null) } }),
+      shoppingOn(ctx) && h.chores.some((c) => c.supplies.length) ? el('a', {
+        class: 'btn', 'data-field': 'send-supplies',
+        href: suppliesHref('chores:supplies', 'Cleaning supplies', [...new Set(h.chores.flatMap((c) => c.supplies))]), text: 'Send cleaning supplies to Shopping',
+      }) : null,
     ]),
     groups.length ? null : el('div', { class: 'panel empty' }, [el('p', { text: 'No chores yet. Add the first one - "Wipe counters, daily, 5 minutes" is a good start.' })]),
     ...groups.map((g) => el('div', { class: 'panel' }, [
@@ -130,6 +139,7 @@ export function openEditor(ctx, choreId) {
   const description = el('textarea', { class: 'input', id: 'ed-desc', text: d.description, rows: '2' });
   const instructions = el('textarea', { class: 'input', id: 'ed-how', text: d.instructions, rows: '3', placeholder: 'Steps or a checklist, one per line' });
   const easier = el('textarea', { class: 'input', id: 'ed-easier', text: d.easier, rows: '2', placeholder: 'What would make this easier or more likely to happen?' });
+  const supplies = el('textarea', { class: 'input', id: 'ed-supplies', text: (d.supplies ?? []).join(', '), rows: '2', placeholder: 'e.g. bleach, sponges, bin bags' });
   const cost = el('input', { class: 'input', id: 'ed-cost', type: 'number', min: '0', step: 'any', value: d.cost ?? '', placeholder: 'none', style: { maxWidth: '160px' } });
   const optional = el('input', { type: 'checkbox', id: 'ed-opt', checked: d.optional });
 
@@ -149,7 +159,7 @@ export function openEditor(ctx, choreId) {
     'That is useful to know - not a failing. Worth asking: does it need doing this often? Is there a better time, or someone else who could do it? Would something make it easier (see "What makes it easier")? Or is it no longer needed?',
   ])]) : null;
 
-  const save = () => {
+  const save = (then = null) => {
     if (!name.value.trim()) { nameError.textContent = 'Give the chore a name - that is the only thing needed.'; name.focus(); return; }
     const preset = FREQ_PRESETS.find((p) => p.id === freq.value);
     const fields = {
@@ -165,6 +175,7 @@ export function openEditor(ctx, choreId) {
       instructions: instructions.value,
       easier: easier.value,
       cost: cost.value,
+      supplies: supplies.value,
       optional: optional.checked,
       eligible: people.filter((p) => p.box.checked).map((p) => p.box.value),
       dependsOn: deps.filter((x) => x.box.checked).map((x) => x.box.value),
@@ -173,6 +184,7 @@ export function openEditor(ctx, choreId) {
     close();
     ctx.flash({ id: `saved:${Date.now()}`, level: 'ok', text: existing ? `Saved changes to ${fields.name.trim()}.` : `Added ${fields.name.trim()}.` });
     ctx.commit(next);
+    if (then) ctx.go(then(next));
   };
 
   const { close } = modal({
@@ -201,9 +213,10 @@ export function openEditor(ctx, choreId) {
             field('Description', description),
             field('Instructions or checklist', instructions),
             field('What makes it easier', easier),
+            field('Supplies it uses', supplies, 'Separated by commas. Send them to the shopping list when you run low.'),
             el('fieldset', {}, [
               el('legend', { text: 'Who can do it' }),
-              people.length ? el('div', {}, people.map((p) => p.node)) : el('p', { class: 'small muted', text: 'Add people in Settings to choose.' }),
+              people.length ? el('div', {}, people.map((p) => p.node)) : el('p', { class: 'small muted', text: 'Add people on the People page to choose.' }),
               el('div', { class: 'field__hint', text: 'Tick no one and any adult can do it. Children only see chores they are ticked on.' }),
             ]),
             deps.length ? el('fieldset', {}, [
@@ -230,8 +243,12 @@ export function openEditor(ctx, choreId) {
           },
         },
       }) : null,
+      existing && shoppingOn(ctx) ? el('button', {
+        class: 'btn', type: 'button', text: 'Save and send supplies to Shopping', 'data-field': 'ed-send',
+        on: { click: () => save((h2) => suppliesHref(`chore:${existing.id}`, existing.name, h2.chores.find((c) => c.id === existing.id)?.supplies ?? [])) },
+      }) : null,
       el('button', { class: 'btn', type: 'button', text: 'Cancel', on: { click: () => close() } }),
-      el('button', { class: 'btn btn-primary', type: 'button', text: 'Save', 'data-field': 'ed-save', on: { click: save } }),
+      el('button', { class: 'btn btn-primary', type: 'button', text: 'Save', 'data-field': 'ed-save', on: { click: () => save() } }),
     ].filter(Boolean),
   });
   name.focus();
