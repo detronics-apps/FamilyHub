@@ -74,7 +74,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'meals', section: 'meals', name: 'Meals & Recipes', version: '1.3.0',
+      fhManifest: 1, id: 'meals', section: 'meals', name: 'Meals & Recipes', version: '1.4.0',
       description: 'Your family’s meals and recipes, and how much each person might eat.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [
@@ -82,7 +82,7 @@ const RAW = [
       ],
       // Plans and the shopping list were kept here before This Week and Shopping became
       // mini-apps of their own; those apps still read the old files, which stay untouched.
-      data: { collections: [{ name: 'recipes', schema: 1 }] },
+      data: { collections: [{ name: 'recipes', schema: 1 }, { name: 'sizes', schema: 1 }] },
       permissions: ['data:own', 'notify', 'food:read', 'people:food'],
     },
     load: () => import('./meals/app.js'),

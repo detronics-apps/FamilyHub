@@ -184,3 +184,25 @@ test('food search: a whole-word match comes before a longer word that starts the
   const first = db.search('egg', 5)[0].name.toLowerCase();
   assert.ok(first.startsWith('egg,') || first.startsWith('egg '), first);
 });
+
+test('a food comes in the sizes people buy: half a head of iceberg is 270 g', async () => {
+  const { foodSizes } = await import('../js/food.js');
+  const { resolveIngredient, batchGrams } = await import('../js/meal-nutrition.js');
+  const db = createFoodDb(JSON.parse(fs.readFileSync('data/foods.json', 'utf8')));
+  const iceberg = db.search('lettuce iceberg', 5).find((f) => f.portions.length);
+  const head = foodSizes(iceberg).find((s) => s.unit === 'head, medium');
+  assert.equal(head.each, 539);
+  assert.equal(resolveIngredient({ name: 'lettuce', qty: 0.5, unit: head.unit, each: head.each, fdcId: iceberg.id }, db).grams, 269.5);
+  const feta = db.search('cheese feta', 5)[0];
+  const sizes = foodSizes(feta, [{ label: 'Ring', grams: 200 }]);
+  assert.deepEqual(sizes[0], { unit: 'ring', label: 'Ring', each: 200, own: true }, 'our own sizes come first');
+  assert.ok(!sizes.some((s) => s.unit === 'oz'), 'plain weights are left out');
+  assert.equal(foodSizes({ portions: [{ label: '0.5 cup slices', grams: 52 }] })[0].each, 104, 'half a cup -> one cup');
+  assert.equal(batchGrams([{ name: 'feta', qty: 1, unit: 'ring', each: 200 }, { name: 'peas', qty: 200, unit: 'g' }]).grams, 400);
+});
+
+test('a size given twice: the later one counts; "wedge (1.33 oz)" reads "wedge"', async () => {
+  const { foodSizes } = await import('../js/food.js');
+  const s = foodSizes({ portions: [{ label: '1 wedge (1.33 oz)', grams: 38 }] }, [{ label: 'ring', grams: 20, at: 1 }, { label: 'ring', grams: 200, at: 2 }]);
+  assert.deepEqual(s.map((x) => [x.unit, x.each]), [['ring', 200], ['wedge', 38]]);
+});

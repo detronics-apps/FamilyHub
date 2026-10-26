@@ -77,8 +77,9 @@ export function normaliseRecipe(r = {}) {
     .map((i) => (typeof i === 'string' ? parseIngredient(i) : i))
     .filter((i) => i && str(i.name))
     .map((i) => ({
-      name: str(i.name, 120), qty: num(i.qty), unit: unitKey(str(i.unit, 20)), note: str(i.note, 120),
+      name: str(i.name, 120), qty: num(i.qty), unit: unitKey(str(i.unit, 40)), note: str(i.note, 120),
       ...(Number.isInteger(i.fdcId) && i.fdcId > 0 ? { fdcId: i.fdcId } : {}),
+      ...(num(i.each) > 0 ? { each: num(i.each) } : {}),   // grams in one of its unit ("head, medium" = 539 g)
       ...(str(i.recipeId, 40) ? { recipeId: str(i.recipeId, 40) } : {}),   // one of our own meals used as an ingredient (home-made mayo)
       ...(typeof i.whole === 'boolean' ? { whole: i.whole } : {}),          // can only be used whole (eggs)
     }))

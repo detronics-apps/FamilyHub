@@ -55,3 +55,13 @@ test('saved in the Drive folder as its own file, and read back', () => {
   assert.deepEqual(filesToHousehold(files).measurements, h.measurements);
   assert.deepEqual(normaliseHousehold({ ...h, measurements: undefined }).measurements, [], 'older data has none');
 });
+
+test('food sizes read in centimetres and grams when metric', async () => {
+  const { sizeLabel } = await import('../js/units.js');
+  assert.equal(sizeLabel('cucumber (8-1/4")', 'metric'), 'cucumber (21 cm)');
+  assert.equal(sizeLabel('head, medium (6" dia)', 'metric'), 'head, medium (15 cm dia)');
+  assert.equal(sizeLabel('cup, chopped (1/2" pieces, loosely packed)', 'metric'), 'cup, chopped (1.3 cm pieces, loosely packed)');
+  assert.equal(sizeLabel('wedge (1.33 oz)', 'metric'), 'wedge (38 g)');
+  assert.equal(sizeLabel('can (12 oz) yields', 'metric'), 'can (340 g) yields');
+  assert.equal(sizeLabel('cucumber (8-1/4")', 'imperial'), 'cucumber (8-1/4")');
+});

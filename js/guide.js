@@ -159,6 +159,7 @@ export const HOWTOS = [
     'In Meals & Recipes, press Add a meal (or Edit). Press "+ Add an ingredient", start typing and pick the food from the list - ✓ means its calories count.',
     'Enter the total amount for the whole recipe and choose the unit. Say what one batch makes, e.g. 12 pancakes.',
     'For something home-made like mayo, tick "Use this as an ingredient" and choose what one batch makes from the list (leave the amount empty with g and it is the weight of its ingredients, e.g. 239 g). It then appears with a ★ when adding ingredients elsewhere - tick "Only suggest our own items" to see just yours.',
+    'Enter what you buy: after picking a food, the unit list has its own sizes (½ head of lettuce, 1 cucumber, 1 tin) and the weight shows next to the line. Not there? Choose "+ Add our own size" and type it off the packet once.',
     'When planning, the recipe is made x1, x1.5 or x2 so eggs and other whole-only items stay whole.',
     'Already made the mayo? When sending to the shopping list, tick "We already have the Home-made mayo" under Made at home - its eggs and oil are left off.',
   ] },

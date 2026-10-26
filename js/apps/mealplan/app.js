@@ -394,6 +394,8 @@ function slotScreen(hub, monday, slotId) {
   const r = slot.recipeId ? loadRecipe(hub, slot.recipeId) : { data: null };
   const f = loadFood(hub);
   const list = loadSummaries(hub);
+  // The family's own sizes of foods, kept by Meals & Recipes.
+  const ourSizes = hub.use('meal-sizes', async () => { const c = hub.data.of('meals', 'sizes'); const m = new Map(); for (const s of c ? (await c.list({ limit: 100000 })).items : []) m.set(s.fdcId, [...(m.get(s.fdcId) ?? []), s]); return m; });
   if (r.loading) return loading();
   const rec = r.data;
   const today = hub.today();
@@ -482,7 +484,7 @@ function slotScreen(hub, monday, slotId) {
         el('summary', { text: changed ? 'Change this meal’s ingredients again' : 'Change the ingredients for this meal only' }),
         el('div', { class: 'stack' }, [
           el('p', { class: 'small', text: `Amounts for ${basis} servings (the recipe's own) - the batch is worked out from what you cook.` }),
-          ingredientEditor({ rows: ui.slotDraft.rows, db: f.data ?? null, own: (list.data ?? []).filter((s) => s.asIngredient), selfId: rec?.id ?? null }),
+          ingredientEditor({ rows: ui.slotDraft.rows, db: f.data ?? null, own: (list.data ?? []).filter((s) => s.asIngredient), selfId: rec?.id ?? null, sizes: ourSizes.data ?? new Map(), system: sys }),
           el('div', { class: 'row' }, [
             el('button', { class: 'btn btn-small', type: 'button', text: 'Save for this meal', 'data-field': 'slot-ing-save', on: { click: async () => { await update({ ingredients: ui.slotDraft.rows.filter((x) => x.name.trim()), basis }); ui.slotDraft = null; } } }),
             changed && rec ? el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Go back to the recipe’s ingredients', on: { click: async () => { await update({ ingredients: null }); ui.slotDraft = null; } } }) : null,

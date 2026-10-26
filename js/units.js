@@ -75,3 +75,19 @@ export function inSystem(item, sys) {
   }
   return item;
 }
+
+/**
+ * A portion name from the food database in the chosen system. The source is
+ * American, so in metric `cucumber (8-1/4")` reads `cucumber (21 cm)`,
+ * `wedge (1.33 oz)` reads `wedge (38 g)` and `1/2" pieces` reads `1.3 cm pieces`.
+ */
+export function sizeLabel(label, sys) {
+  if (systemOf(sys) !== 'metric') return label;
+  const cm = (inches) => (inches * 2.54 >= 3 ? String(Math.round(inches * 2.54)) : trim(inches * 2.54));
+  return String(label)
+    .replace(/(\d+)-(\d+)\/(\d+)"/g, (_, w, a, b) => `${cm(Number(w) + a / b)} cm`)
+    .replace(/(\d+)\/(\d+)"/g, (_, a, b) => `${cm(a / b)} cm`)
+    .replace(/(\d+(?:\.\d+)?)"/g, (_, n) => `${cm(Number(n))} cm`)
+    .replace(/(\d+(?:\.\d+)?)\s*oz\b/g, (_, n) => `${Math.round(n * G_PER_OZ)} g`)
+    .replace(/\bcubic inch\b/g, '2.5 cm cube');
+}

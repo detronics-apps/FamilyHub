@@ -88,6 +88,7 @@ export function resolveIngredient(i, db) {
     if (id) { food = db.get(id); how = food ? 'matched' : 'unmatched'; }
   }
   if (!food || i.qty == null) return { ingredient: i, food, grams: null, how, approx: false };
+  if (i.each > 0) return { ingredient: i, food, grams: i.qty * i.each, how, approx: false };
   if (G[i.unit]) return { ingredient: i, food, grams: i.qty * G[i.unit], how, approx: false };
   if (ML[i.unit]) return { ingredient: i, food, grams: i.qty * ML[i.unit], how, approx: true };
   const each = portionGrams(food, i.unit);
@@ -103,7 +104,7 @@ export function batchGrams(lines, db = null) {
   let grams = 0;
   let complete = true;
   for (const i of lines) {
-    const g = i.qty == null ? null : G[i.unit] ? i.qty * G[i.unit] : db ? resolveIngredient(i, db).grams : null;
+    const g = i.qty == null ? null : G[i.unit] ? i.qty * G[i.unit] : i.each > 0 ? i.qty * i.each : db ? resolveIngredient(i, db).grams : null;
     if (g == null) complete = false; else grams += g;
   }
   return { grams: Math.round(grams), complete };

@@ -9,7 +9,7 @@ import { loading, failure, field } from '../kit.js';
 import { amounts, total, fmtAmount } from '../../food.js';
 import { portionShares, portionPlan, fmtShare } from '../../portions.js';
 import { foodWarnings } from '../../guidance.js';
-import { fmtMass, gramsFromOz } from '../../units.js';
+import { fmtMass, gramsFromOz, sizeLabel } from '../../units.js';
 
 const MAIN = ['kcal', 'protein', 'carbs', 'sugars', 'fat', 'satFat', 'fibre', 'sodium'];
 // One list per target: 'family' for the family meal, or a person's id for their plate.
@@ -61,7 +61,7 @@ function results(hub, db) {
 // The amount: a portion the source lists (by its index), or a weight - grams, or ounces when Settings says imperial.
 const gramsOf = (food) => (ui.unit === 'g' ? Number(ui.count) || 0 : ui.unit === 'oz' ? gramsFromOz(ui.count) : (food.portions[Number(ui.unit)]?.grams ?? 0) * (Number(ui.count) || 0));
 const byWeight = () => ui.unit === 'g' || ui.unit === 'oz';
-const describe = (food) => (byWeight() ? `${ui.count} ${ui.unit}` : `${Number(ui.count) === 1 ? '' : `${ui.count} × `}${food.portions[Number(ui.unit)].label}`);
+const describe = (food, sys) => (byWeight() ? `${ui.count} ${ui.unit}` : `${Number(ui.count) === 1 ? '' : `${ui.count} × `}${sizeLabel(food.portions[Number(ui.unit)].label, sys)}`);
 /** A medium one where the source lists sizes, else its first portion, else grams. */
 function defaultPortion(food, sys) {
   if (!food.portions.length) return sys === 'imperial' ? 'oz' : 'g';
@@ -80,7 +80,7 @@ function foodPanel(hub, db, food, target) {
   ]));
   const count = el('input', { class: 'input', id: 'cal-amount', type: 'number', min: '0', step: 'any', value: ui.count, style: { maxWidth: '110px' }, 'data-field': 'amount', on: { change: (e) => { ui.count = Math.max(0, Number(e.target.value) || 0); hub.render(); } } });
   const unit = el('select', { class: 'input', id: 'cal-unit', 'data-field': 'unit', on: { change: (e) => { ui.unit = e.target.value; ui.count = ui.unit === 'g' ? 100 : ui.unit === 'oz' ? 4 : 1; hub.render(); } } }, [
-    ...food.portions.map((p, i) => el('option', { value: String(i), selected: ui.unit === String(i), text: `${p.label} (${fmtAmount(p.grams)} g)` })),
+    ...food.portions.map((p, i) => el('option', { value: String(i), selected: ui.unit === String(i), text: `${sizeLabel(p.label, hub.units())} (${fmtAmount(p.grams)} g)` })),
     hub.units() === 'imperial' ? el('option', { value: 'oz', selected: ui.unit === 'oz', text: 'ounces' }) : el('option', { value: 'g', selected: ui.unit === 'g', text: 'grams' }),
   ]);
   return el('div', { class: 'panel stack' }, [
@@ -89,7 +89,7 @@ function foodPanel(hub, db, food, target) {
     el('div', { class: 'row' }, [field('How much', count), field('Of', unit)]),
     el('p', { class: 'stat-big', 'aria-live': 'polite' }, [
       el('strong', { text: a.kcal === null ? 'Calories not known' : `${fmtAmount(a.kcal)} kcal` }),
-      el('span', { class: 'small muted', text: ` in ${describe(food)}${byWeight() ? '' : ` (${fmtMass(grams, hub.units())})`}` }),
+      el('span', { class: 'small muted', text: ` in ${describe(food, hub.units())}${byWeight() ? '' : ` (${fmtMass(grams, hub.units())})`}` }),
     ]),
     el('table', { class: 'facts' }, [el('tbody', {}, rows(MAIN.slice(1)))]),
     el('details', { open: ui.more, on: { toggle: (e) => { ui.more = e.target.open; } } }, [
@@ -99,7 +99,7 @@ function foodPanel(hub, db, food, target) {
     el('div', { class: 'row' }, [
       el('button', {
         class: 'btn btn-primary', type: 'button', text: `Add to ${target}`, 'data-field': 'add-plate', disabled: grams <= 0,
-        on: { click: () => { (ui.plates[ui.target] ??= []).push({ foodId: food.id, grams, label: describe(food) }); ui.foodId = null; hub.render(); } },
+        on: { click: () => { (ui.plates[ui.target] ??= []).push({ foodId: food.id, grams, label: describe(food, hub.units()) }); ui.foodId = null; hub.render(); } },
       }),
     ]),
     el('p', { class: 'small muted', text: `${db.types[food.type]} data. "Not known" means the source does not report it - it is not counted as zero.` }),

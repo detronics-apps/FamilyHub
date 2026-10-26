@@ -48,6 +48,7 @@ p { margin: 0 0 var(--space-3); }
   font-size: 14px; color: var(--text-faint);
 }
 .crumbs a { color: var(--text-dim); }
+.page-back { margin-top: var(--space-4); }
 
 main.app-main {
   flex: 1 0 auto;
@@ -420,3 +421,4 @@ body:has(.player:not([hidden])) .app-footer { padding-bottom: 72px; }
 .ing-suggest__item--own strong { color: var(--accent-strong); }
 .ing-status { font-weight: 700; color: var(--ok); min-width: 1em; text-align: center; }
 .ing-status--off { color: var(--warn); }
+.ing-grams { white-space: nowrap; }

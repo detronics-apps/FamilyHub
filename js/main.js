@@ -38,7 +38,7 @@ import { openDoc } from './ui/views/docs.js';
 import { syncChip, syncNotices } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.5.2';
+export const APP_VERSION = '0.5.3';
 
 const store = createLocalStore(window.localStorage);
 
@@ -335,8 +335,23 @@ function buildCrumbs(route) {
   return el('nav', { class: 'crumbs', 'aria-label': 'You are here' }, [
     el('a', { href: '#/', text: 'Home' }), ' › ',
     ...(s && s.name !== label ? [el('a', { href: `#/section/${s.id}`, text: s.name }), ' › '] : []),
-    el('span', { text: label }),
+    // On one of its inner screens (a recipe), the mini-app's name leads back to its first screen.
+    m && route.sub && route.sub !== m.screens[0]?.id ? el('a', { href: `#/${route.name}`, text: label }) : el('span', { text: label }),
   ]);
+}
+
+/**
+ * The way back at the bottom of every page but Home: an inner screen of a
+ * mini-app goes to its first screen, a mini-app to its section, anything else Home.
+ */
+function buildBack(route) {
+  if (route.name === 'home' || !app.household) return null;
+  const m = manifestFor(route.name);
+  const s = m ? section(sectionOf(m)) : null;
+  const [href, to] = m && route.sub && route.sub !== m.screens[0]?.id ? [`#/${route.name}`, routeLabel(route)]
+    : s && s.name !== routeLabel(route) ? [`#/section/${s.id}`, s.name]
+      : ['#/', 'Home'];
+  return el('nav', { class: 'page-back no-print', 'aria-label': 'Back' }, [el('a', { class: 'btn', href, text: `‹ Back to ${to}`, 'data-field': 'page-back' })]);
 }
 
 function buildFooter() {
@@ -438,6 +453,9 @@ function renderNow() {
   }
   clear(dom.session);
   if (ctx.session.state()) dom.session.append(sessionPanel(ctx));
+  clear(dom.back);
+  const back = buildBack(route);
+  if (back) dom.back.append(back);
   renderNotices(dom.drive, driveItems, render);
   renderNotices(dom.notices, items, render);
   renderNotices(dom.flash, app.flash.slice(0, 1), render);   // newest only
@@ -466,7 +484,8 @@ function init() {
   dom.notices = el('div', { class: 'notices-host' });
   dom.viewHost = el('div', { class: 'view-host' });
   dom.session = el('div', { class: 'session-host' });
-  dom.main = el('main', { class: 'app-main', id: 'main', tabindex: '-1' }, [dom.flash, dom.drive, dom.notices, dom.session, dom.viewHost]);
+  dom.back = el('div', { class: 'view-host' });
+  dom.main = el('main', { class: 'app-main', id: 'main', tabindex: '-1' }, [dom.flash, dom.drive, dom.notices, dom.session, dom.viewHost, dom.back]);
   dom.footer = el('div', { class: 'slot-footer' });
   document.body.append(el('div', { id: 'app', style: { display: 'contents' } }, [dom.header, dom.crumbs, dom.main, dom.footer]));
 

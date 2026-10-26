@@ -277,6 +277,21 @@ breakfast / lunch / supper / snack are tick boxes, not typed tags. Every form ke
 typed when the page redraws (a list finishing loading, a warning), until you leave the screen.
 Names, notes and searches stay free text: nothing is worked out from them.
 
+**D-040 Amounts in what you buy (owner, 2026-10-26).** Once a food is picked, its unit list also
+offers the sizes the food database knows for it ("head, medium" 539 g, "cucumber" 301 g, "can,
+drained" 298 g), and every line not already in grams shows its weight ("= 270 g", or "≈" where a
+cup or a whole one is an estimate). A size the database lacks (a ring of feta) is added once from
+the packet as one of the family's own sizes (Meals & Recipes keeps them, collection `sizes`) and is
+offered for that food in every recipe; adding the same name again corrects it. A line keeps the
+grams in one (`each`), so nutrition and the weight of a batch use it. In metric, the database's
+American sizes read in cm and g (8-1/4" -> 21 cm, 1.33 oz -> 38 g). Any of our own meals can be
+picked as an ingredient: one not yet set up is marked so, its weight becoming what it makes.
+
+**D-041 A way back at the bottom of every page (owner, 2026-10-26).** Every page but Home ends with
+"‹ Back to ...": an inner screen of a mini-app (a recipe, a planned meal) goes to that mini-app's
+first screen, a mini-app to its section, and a section or core page to Home. The breadcrumb's
+mini-app name is a link on inner screens too. It is drawn by the frame, so every mini-app has it.
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).

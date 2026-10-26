@@ -199,3 +199,9 @@ walkthrough with a screen reader, Safari/Firefox, a real phone.
   with four gram rows: the hint says 239 g; saving with "pieces" and no amount warns and keeps the
   name, the ticks and the rows; choosing g saves "Makes 239 g" and the edit screen shows it empty
   again (worked out); Lunch ticked shows as lunch.
+- Sizes (D-040): automated - iceberg's "head, medium" is 539 g and half is 269.5 g; our own "ring"
+  comes first and a later one corrects an earlier; oz sizes left out; "0.5 cup slices" -> 104 g a
+  cup; metric labels (8-1/4" -> 21 cm, 1/2" -> 1.3 cm, 1.33 oz -> 38 g). Browser - iceberg offers
+  its sizes in cm, ½ head shows "= 270 g"; 1 red onion "≈ 197 g"; feta "+ Add our own size" ring
+  200 g, picked and shown "= 200 g"; a dressing saved without "use as an ingredient" is offered as
+  "our own meal", and picking it marks it (makes 150 g) and adds it to the salad.

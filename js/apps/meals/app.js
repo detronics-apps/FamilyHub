@@ -33,6 +33,9 @@ const TIMES = [[null, 'Any time'], [20, 'Under 20 min'], [30, 'Under 30 min'], [
 const KINDS = { all: 'All', recipe: 'Recipes', meal: 'Meals without a method' };
 
 const recipes = (hub) => hub.data.collection('recipes', { summary: recipeSummary, text: recipeText, prefix: 'rec' });
+// The family's own sizes of a food ("1 ring of feta = 200 g"), one record each.
+const sizes = (hub) => hub.data.collection('sizes', { summary: (s) => ({ fdcId: s.fdcId, label: s.label, grams: s.grams, at: s.at }), prefix: 'size' });
+export const loadSizes = (list) => list.reduce((m, s) => m.set(s.fdcId, [...(m.get(s.fdcId) ?? []), s]), new Map());
 
 /** Back to where the person came from (This Week), when a link said so. */
 const backLink = (hash) => (hash && /^#\/mealplan\b/.test(hash) ? el('a', { href: hash, class: 'small', text: '‹ Back to This Week', 'data-field': 'back-planner' }) : null);
@@ -206,7 +209,9 @@ function editScreen(hub, id, param = null) {
   const f = hub.use('food', () => hub.food.load());
   const ix = ensureIndex(hub);
   if (ix.loading) return loading('Bringing the list up to date…');
-  const own = hub.use('own-items', async () => (await recipes(hub).list({ limit: 100000, filter: (s) => s.asIngredient })).items);
+  // All our own meals: any of them can be used in another (one not yet set up is set up when picked).
+  const own = hub.use('own-items', async () => (await recipes(hub).list({ limit: 100000 })).items);
+  const ourSizes = hub.use('sizes', async () => loadSizes((await sizes(hub).list({ limit: 100000 })).items));
   const flat = {
     ...rec,
     title: existing || ((fromPlate || handed) && rec.title !== 'Untitled meal') ? rec.title : '',
@@ -231,7 +236,12 @@ function editScreen(hub, id, param = null) {
         {
           key: 'ingredients', label: 'Ingredients', type: 'custom',
           control: () => ({
-            node: ingredientEditor({ rows: ui.draft.rows, db: f.data ?? null, own: own.data ?? [], selfId: existing?.id ?? null, onChange: () => ui.yieldHint?.() }),
+            node: ingredientEditor({
+              rows: ui.draft.rows, db: f.data ?? null, own: own.data ?? [], selfId: existing?.id ?? null, onChange: () => ui.yieldHint?.(),
+              sizes: ourSizes.data ?? new Map(), system: hub.units(),
+              onAddSize: async ({ fdcId, label, grams }) => { await sizes(hub).put({ fdcId, label, grams, at: Date.now() }); },
+              onMakeIngredient: (x) => makeIngredient(hub, x, f.data),
+            }),
             get: () => ui.draft.rows.filter((x) => x.name.trim()),
           }),
         },
@@ -344,6 +354,19 @@ function shopSplit(lines, factor, getSub) {
   return { items: combineIngredients(s.base), own: mergeOwn(s.own) };
 }
 const WEIGHT = { g: 1, kg: 1000 };
+
+/** Picked as an ingredient elsewhere: mark one of our meals so, weighing it if it does not say what it makes. */
+async function makeIngredient(hub, id, db) {
+  const r = normaliseRecipe(await recipes(hub).get(id));
+  let y = r.yield;
+  if (!y.qty) {
+    const w = batchGrams(r.ingredients, db ?? await hub.food.load());
+    if (!w.grams) { hub.ui.notice(`${r.title} has no amounts to weigh. Open it, say what one batch makes and tick "Use this as an ingredient".`, 'warn'); return null; }
+    y = { qty: w.grams, unit: 'g', auto: true };
+  }
+  await recipes(hub).put({ ...r, asIngredient: true, yield: y });
+  return y;
+}
 
 /** "One batch makes": an amount and a unit from the list (or another, typed), with the ingredients' weight as a guide. */
 function yieldControl(db) {
