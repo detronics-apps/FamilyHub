@@ -150,6 +150,11 @@ export const HOWTOS = [
     'Or open one of your recipes from the list (or press "Ideas to improve it" on a recipe in the Meals & Recipes) to see ideas for it.',
     'Each idea says who it helps and why. Press "Not in the house today" to keep it for next time, or "Not for us" to hide it.',
   ] },
+  { id: 'people', title: 'Add the family', steps: [
+    'Open People from the home screen. Type a name and a birthday, and press Add person.',
+    'With a birthday, Family Hub shows whether someone is a baby, toddler, child, teen or adult, and keeps it up to date. Without one, choose adult or child.',
+    'Choose a gender, then press Food details for allergies, diet and what they would like more of.',
+  ] },
   { id: 'measures', title: 'Keep a record of height and weight', steps: [
     'Open People from the home screen and open "Height and weight" under the person.',
     'Enter the date, a weight, a height or both, and a note if you like ("clinic visit"), then press Add.',

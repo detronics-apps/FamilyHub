@@ -6,7 +6,7 @@ import { el } from '../dom.js';
 import { avatar, confirmAction, modal } from '../common.js';
 import {
   addPerson, updatePerson, removePerson, PERSON_COLOURS, ALLERGENS, DIETS, LIFE_STAGES, FOCUS, ageOn, lifeStageAllowed,
-  addMeasurement, removeMeasurement, measurementsFor, latestMeasure, personName, ENERGY_GOALS, energyGoalAllowed,
+  addMeasurement, removeMeasurement, measurementsFor, latestMeasure, personName, ENERGY_GOALS, energyGoalAllowed, STAGES, stageOf,
 } from '../../model.js';
 const fmt = (n) => (n === null ? null : String(n).replace(/\.0$/, ''));
 // A record someone may read out at a clinic: always the full date, with the year.
@@ -15,13 +15,15 @@ const fmtDay = (day) => new Date(`${day}T12:00:00`).toLocaleDateString(undefined
 export function peopleView(ctx) {
   const h = ctx.app.household;
   const newName = el('input', { class: 'input', id: 'new-person', placeholder: 'Name', 'data-field': 'new-person', style: { maxWidth: '200px' } });
-  const newRole = el('select', { class: 'select', 'aria-label': 'Adult or child', 'data-field': 'new-role', style: { width: 'auto' } }, [
+  const newBorn = el('input', { class: 'input', id: 'new-born', type: 'date', max: ctx.today(), 'data-field': 'new-born', style: { width: 'auto' } });
+  const newRole = el('select', { class: 'select', 'aria-label': 'Adult or child (only used without a birthday)', 'data-field': 'new-role', style: { width: 'auto' } }, [
     el('option', { value: 'adult', text: 'Adult' }), el('option', { value: 'child', text: 'Child' }),
   ]);
+  newBorn.addEventListener('input', () => { newRole.hidden = Boolean(newBorn.value); });
   const add = () => {
     if (!newName.value.trim()) { newName.focus(); return; }
     const colour = PERSON_COLOURS[h.people.length % PERSON_COLOURS.length];
-    ctx.commit(addPerson(ctx.app.household, { name: newName.value, role: newRole.value, colour }).household);
+    ctx.commit(addPerson(ctx.app.household, { name: newName.value, born: newBorn.value, role: newRole.value, colour }).household);
   };
   const current = new Set(h.people.map((p) => p.id));
   const former = [...new Set(h.measurements.map((m) => m.personId))].filter((id) => !current.has(id));
@@ -31,16 +33,31 @@ export function peopleView(ctx) {
     el('p', { class: 'muted', text: 'Everyone in the family. Choosing a name at the top of the screen is a convenience, not a login - anyone using this device can pick any name, and everyone in the family can see what is here.' }),
     ...h.people.map((p) => personCard(ctx, p)),
     h.people.length ? null : el('p', { class: 'panel', text: 'No one added yet.' }),
-    el('div', { class: 'panel row' }, [
-      el('label', { class: 'sr-only', for: 'new-person', text: 'New person name' }), newName, newRole,
-      el('button', { class: 'btn', type: 'button', text: 'Add person', 'data-field': 'add-person', on: { click: add } }),
+    el('div', { class: 'panel stack' }, [
+      el('div', { class: 'row' }, [
+        el('label', { class: 'sr-only', for: 'new-person', text: 'New person name' }), newName,
+        el('label', { class: 'small', for: 'new-born', text: 'Birthday' }), newBorn, newRole,
+        el('button', { class: 'btn', type: 'button', text: 'Add person', 'data-field': 'add-person', on: { click: add } }),
+      ]),
+      el('p', { class: 'small muted', style: { margin: 0 }, text: 'With a birthday, Family Hub works out whether someone is a baby, toddler, child, teen or adult, and keeps it up to date as they grow. Without one, choose adult or child.' }),
     ]),
     former.length ? el('p', { class: 'small muted', text: `Heights and weights of ${former.length} former member${former.length > 1 ? 's' : ''} are kept in the family’s data.` }) : null,
   ]);
 }
 
+/** "3 years", or "8 months" for a baby. */
+function ageText(p, today) {
+  const years = ageOn(p.born, today);
+  if (years >= 1) return `${years} year${years === 1 ? '' : 's'}`;
+  const [y, m, d] = p.born.split('-').map(Number);
+  const [ty, tm, td] = today.split('-').map(Number);
+  const months = Math.max(0, (ty - y) * 12 + tm - m - (td < d ? 1 : 0));
+  return months < 1 ? 'under a month' : `${months} month${months === 1 ? '' : 's'}`;
+}
+
 function personCard(ctx, p) {
   const food = foodSummary(p, ctx.today());
+  const stage = stageOf(p, ctx.today());
   const update = (patch) => ctx.commit(updatePerson(ctx.app.household, p.id, patch));
   return el('article', { class: 'panel stack', 'aria-label': p.name, 'data-field': `person:${p.id}` }, [
     el('div', { class: 'row' }, [
@@ -49,10 +66,15 @@ function personCard(ctx, p) {
         class: 'input', value: p.name, 'aria-label': `Name for ${p.name}`, 'data-field': `pname:${p.id}`, style: { flex: '1 1 140px', width: 'auto' },
         on: { change: (e) => update({ name: e.target.value }) },
       }),
-      el('select', {
-        class: 'select', 'aria-label': `Adult or child: ${p.name}`, 'data-field': `prole:${p.id}`, style: { width: 'auto' },
-        on: { change: (e) => update({ role: e.target.value }) },
-      }, [el('option', { value: 'adult', text: 'Adult', selected: p.role === 'adult' }), el('option', { value: 'child', text: 'Child', selected: p.role === 'child' })]),
+      el('input', {
+        class: 'input', type: 'date', value: p.born, max: ctx.today(), 'aria-label': `Birthday: ${p.name}`, 'data-field': `pborn:${p.id}`, style: { width: 'auto' },
+        on: { change: (e) => update({ born: e.target.value }) },
+      }),
+      stage ? el('span', { class: 'badge', 'data-field': `pstage:${p.id}`, text: `${STAGES[stage]} · ${ageText(p, ctx.today())}` })
+        : el('select', {
+          class: 'select', 'aria-label': `Adult or child: ${p.name} (until a birthday is added)`, 'data-field': `prole:${p.id}`, style: { width: 'auto' },
+          on: { change: (e) => update({ role: e.target.value }) },
+        }, [el('option', { value: 'adult', text: 'Adult', selected: p.role === 'adult' }), el('option', { value: 'child', text: 'Child', selected: p.role === 'child' })]),
       el('select', {
         class: 'select', 'aria-label': `Gender: ${p.name}`, 'data-field': `psex:${p.id}`, style: { width: 'auto' },
         on: { change: (e) => update({ sex: e.target.value }) },
@@ -64,7 +86,7 @@ function personCard(ctx, p) {
       on: { click: () => update({ colour: c }) },
     }))),
     el('div', { class: 'row' }, [
-      el('span', { class: 'small', style: { flex: '1 1 200px' }, text: food ? `Food: ${food}` : 'No food details yet - age, allergies, pregnancy and wishes help the Meals section.' }),
+      el('span', { class: 'small', style: { flex: '1 1 200px' }, text: food ? `Food: ${food}` : 'No food details yet - allergies, diet and wishes help the Meals section.' }),
       el('button', { class: 'btn btn-small', type: 'button', text: 'Food details', 'aria-label': `Food details for ${p.name}`, 'data-field': `pfood:${p.id}`, on: { click: () => editFood(ctx, p) } }),
     ]),
     goalsBlock(ctx, p, update),
@@ -181,8 +203,7 @@ function measuresBlock(ctx, p) {
 }
 
 function foodSummary(p, today) {
-  const age = ageOn(p.born, today);
-  return [age !== null ? `${age} years` : null, lifeStageAllowed(p, today) ? LIFE_STAGES[p.lifeStage] : null, p.allergies.length ? `allergic to ${p.allergies.join(', ')}` : null, ...p.focus.map((f) => FOCUS[f].toLowerCase())].filter(Boolean).join(' · ');
+  return [lifeStageAllowed(p, today) ? LIFE_STAGES[p.lifeStage] : null, p.allergies.length ? `allergic to ${p.allergies.join(', ')}` : null, ...p.focus.map((f) => FOCUS[f].toLowerCase())].filter(Boolean).join(' · ');
 }
 
 /** The food side of a profile, read by the Meals section. Every field is optional. */
@@ -197,13 +218,12 @@ function editFood(ctx, p) {
     el('label', { class: 'field__label', for: id, text: label }),
     el('select', { class: 'select', id }, Object.entries(options).map(([v, t]) => el('option', { value: v, text: t, selected: v === value }))),
   ]);
-  // Only for a female aged 16 or more; follows the birthday as it is typed. Gender is set on the person's card.
+  // Only for a female aged 16 or more. Birthday and gender are set on the person's card.
   const stage = choice('pf-stage', 'Pregnant or breastfeeding', { '': 'Neither', ...LIFE_STAGES }, p.lifeStage);
-  const showStage = () => { stage.hidden = !lifeStageAllowed({ ...p, born: form.querySelector('#pf-born').value }, ctx.today()); };
+  const showStage = () => { stage.hidden = !lifeStageAllowed(p, ctx.today()); };
   const form = el('form', { class: 'stack' }, [
     el('p', { class: 'small muted', text: 'Used by the Meals section to fit suggestions to each person. Leave anything blank you would rather not say. Weight comes from the height and weight record.' }),
-    input('pf-born', 'Birthday', { type: 'date', value: p.born, max: ctx.today(), on: { input: () => showStage() } }, 'Age decides child-sized portions and safety, like no whole nuts under 5.'),
-    p.sex ? null : el('p', { class: 'small muted', text: 'Choose a gender on the person’s card for nutrition values that fit.' }),
+    p.born && p.sex ? null : el('p', { class: 'small muted', text: 'Add a birthday and gender on the person’s card: age decides child-sized portions and safety (no whole nuts under 5), and both decide nutrition values.' }),
     stage,
     el('fieldset', {}, [el('legend', { class: 'field__label', text: 'Allergies' }), ticks('allergies', Object.fromEntries(ALLERGENS.map((a) => [a, a])), p.allergies)]),
     input('pf-avoid', 'Anything else to avoid', { value: p.avoid.join(', '), placeholder: 'e.g. lactose, chilli' }),
@@ -217,7 +237,7 @@ function editFood(ctx, p) {
     const v = (id) => form.querySelector(`#${id}`).value;
     const all = (name) => [...form.querySelectorAll(`input[name="${name}"]:checked`)].map((x) => x.value);
     ctx.commit(updatePerson(ctx.app.household, p.id, {
-      born: v('pf-born'), lifeStage: stage.hidden ? '' : v('pf-stage'),
+      lifeStage: stage.hidden ? '' : v('pf-stage'),
       allergies: all('allergies'), diet: all('diet'), focus: all('focus'), avoid: v('pf-avoid'), likes: v('pf-likes'), dislikes: v('pf-dislikes'),
     }));
     close();

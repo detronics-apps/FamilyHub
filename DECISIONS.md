@@ -204,5 +204,11 @@ Meals & Recipes, Calorie Checker and Meal Assistant. Plans and the list kept by 
 before the split are read in place (read-only) and never moved or deleted; the hub now allows
 read-only access to another app's undeclared collections for this.
 
+**D-030 Birthdays decide the stage of life (owner, 2026-10-26).** The birthday sits on each
+person's card (not in Food details). From it Family Hub works out baby (under 1), toddler (1-3),
+child (4-12), teen (13-17) or adult (18+), and adult-or-child for chores and "Who are you?" -
+so a child moves on by themselves as they grow. The adult/child choice is only asked while there
+is no birthday.
+
 **O-7 (W2) Phone live sync.** Only possible through a registered Google app (rejected, D-013).
 Revisit only if browsers gain folder access on phones.

@@ -104,6 +104,23 @@ const pick = (v, allowed) => (Array.isArray(v) ? allowed.filter((x) => v.include
 const words = (v) => [...new Set((Array.isArray(v) ? v : String(v ?? '').split(/[,\n]/))
   .map((x) => str(String(x), 40).toLowerCase()).filter(Boolean))].slice(0, 30);
 
+// Stages of life, worked out from the birthday. Without one, the adult/child
+// choice on the person's card stands in.
+export const STAGES = { baby: 'Baby', toddler: 'Toddler', child: 'Child', teen: 'Teen', adult: 'Adult' };
+
+/** baby under 1, toddler 1-3, child 4-12, teen 13-17, adult 18+; null with no birthday. */
+export function stageOf(p, today) {
+  const age = ageOn(p.born, today);
+  if (age === null) return null;
+  return age < 1 ? 'baby' : age < 4 ? 'toddler' : age < 13 ? 'child' : age < 18 ? 'teen' : 'adult';
+}
+
+/** Adult or child for everything that asks (chores, "Who are you?"): from the birthday when there is one. */
+export function roleOf(p, today) {
+  const age = ageOn(p.born, today);
+  return age === null ? p.role : age < 18 ? 'child' : 'adult';
+}
+
 /** Pregnant or breastfeeding can be chosen for a female aged 16 or more (no birthday: an adult). */
 export function lifeStageAllowed(p, today) {
   if (p.sex !== 'female') return false;

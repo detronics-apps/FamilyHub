@@ -5,7 +5,7 @@
 // carries the reasons it was put where it is, so the screen can say why.
 
 import { blockedBy, occurrences } from './recurrence.js';
-import { EFFORTS } from './model.js';
+import { EFFORTS, roleOf } from './model.js';
 import { intervalDays } from './dates.js';
 
 export const TIME_CHOICES = [
@@ -46,7 +46,9 @@ export function eligible(chore, person) {
  */
 export function findTasks(household, filters, today) {
   const f = { ...defaultFilters(), ...filters };
-  const person = household.people.find((p) => p.id === f.personId) || null;
+  const found = household.people.find((p) => p.id === f.personId) || null;
+  // Adult or child follows the birthday, so a child moves on to grown-up chores at 18 by themselves.
+  const person = found && { ...found, role: roleOf(found, today) };
   const occ = occurrences(household, today);
   const out = [];
 

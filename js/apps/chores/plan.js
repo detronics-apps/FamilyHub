@@ -3,7 +3,7 @@
 import { el } from '../../ui/dom.js';
 import { modal, confirmAction, choreMeta, statusLine } from '../../ui/common.js';
 import { occurrences, occurrence } from '../../recurrence.js';
-import { addChore, updateChore, deleteChore, addRoom, renameRoom, removeRoom, normaliseChore } from '../../model.js';
+import { addChore, updateChore, deleteChore, addRoom, renameRoom, removeRoom, normaliseChore, roleOf } from '../../model.js';
 import { sendHref } from '../shopping/logic.js';
 
 /** Shopping owns the list; chores send supplies over in a link, confirmed there. */
@@ -145,7 +145,7 @@ export function openEditor(ctx, choreId) {
 
   const people = h.people.map((p) => {
     const box = el('input', { type: 'checkbox', value: p.id, checked: d.eligible.includes(p.id) });
-    return { box, node: el('label', { class: 'checkline' }, [box, `${p.name}${p.role === 'child' ? ' (child)' : ''}`]) };
+    return { box, node: el('label', { class: 'checkline' }, [box, `${p.name}${roleOf(p, today) === 'child' ? ' (child)' : ''}`]) };
   });
   // A chore may not wait on itself, nor on a chore that already waits on it.
   const candidates = h.chores.filter((c) => c.id !== choreId && !(choreId && c.dependsOn.includes(choreId)));

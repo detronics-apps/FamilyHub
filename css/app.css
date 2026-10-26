@@ -1,5 +1,7 @@
 /* Layout and components. Tokens only - no literal colours. Mobile first. */
 *, *::before, *::after { box-sizing: border-box; }
+/* Component display rules (flex, grid) must never un-hide something marked hidden. */
+[hidden] { display: none !important; }
 
 html { -webkit-text-size-adjust: 100%; }
 body {

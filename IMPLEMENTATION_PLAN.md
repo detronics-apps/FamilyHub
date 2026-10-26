@@ -77,10 +77,11 @@ workstreams W1-W3. This file records status only.
 | Meals and recipes as one record; Calorie Checker family meal / person's plate → save as a meal | Done, tested, checked in browser |
 | Portion guide per person, leftovers; energy goals and personal goals on People | Done, tested, checked in browser |
 | Shopping as its own section (send from meals, This Week, chores); This Week as its own mini-app | Done, tested, checked in browser |
+| Birthday on the person card; stage of life and adult/child worked out from it | Done, tested, checked in browser |
 
 ## Test results
 
-`npm test`: **214 tests, 214 pass** (Node 24). Browser checks: see TEST_PLAN.md.
+`npm test`: **216 tests, 216 pass** (Node 24). Browser checks: see TEST_PLAN.md.
 
 ## Known limitations
 

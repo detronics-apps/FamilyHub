@@ -142,3 +142,26 @@ test('a chore can list the supplies it uses (comma or line separated, no repeats
   assert.deepEqual(normaliseChore({ name: 'Bathroom', supplies: 'bleach, sponges\nbleach,  ' }).supplies, ['bleach', 'sponges']);
   assert.deepEqual(normaliseChore({ name: 'Old chore' }).supplies, []);
 });
+
+test('a birthday decides the stage of life and adult or child; without one, the choice stands', async () => {
+  const { stageOf, roleOf } = await import('../js/model.js');
+  const today = '2026-10-26';
+  const at = (born) => [stageOf({ born }, today), roleOf({ born, role: 'adult' }, today)];
+  assert.deepEqual(at('2026-03-01'), ['baby', 'child']);
+  assert.deepEqual(at('2023-10-26'), ['toddler', 'child']);
+  assert.deepEqual(at('2016-01-01'), ['child', 'child']);
+  assert.deepEqual(at('2010-01-01'), ['teen', 'child']);
+  assert.deepEqual(at('2008-10-26'), ['adult', 'adult'], '18 today');
+  assert.equal(stageOf({ born: '' }, today), null);
+  assert.equal(roleOf({ born: '', role: 'child' }, today), 'child');
+});
+
+test('chores follow the birthday: a child named on nothing sees no grown-up chores', async () => {
+  const { findTasks } = await import('../js/matching.js');
+  const { updatePerson } = await import('../js/model.js');
+  const { fixture, TODAY } = await import('./helpers.js');
+  const { h, ann } = fixture();
+  const asTeen = updatePerson(h, ann, { born: '2012-01-01' });    // stored as an adult, but 14
+  assert.ok(findTasks(h, { personId: ann }, TODAY).length > 0);
+  assert.deepEqual(findTasks(asTeen, { personId: ann }, TODAY).map((t) => t.chore.name), ['Empty bin'], 'only the chore that names them');
+});

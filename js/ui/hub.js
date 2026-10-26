@@ -8,7 +8,7 @@
 
 import { createCollection } from '../collections.js';
 import { createFoodDb } from '../food.js';
-import { latestMeasure } from '../model.js';
+import { latestMeasure, roleOf } from '../model.js';
 
 // One copy of the food database for every app that reads it, fetched on first use.
 let foodDb = null;
@@ -144,8 +144,8 @@ export function createHubFactory(ctx) {
     }
     if (has('people:read')) {
       hub.people = {
-        list: () => (ctx.app.household?.people ?? []).map(({ id, name, role, colour }) => ({ id, name, role, colour })),
-        current: () => { const p = ctx.currentPerson(); return p ? { id: p.id, name: p.name, role: p.role, colour: p.colour } : null; },
+        list: () => (ctx.app.household?.people ?? []).map((p) => ({ id: p.id, name: p.name, role: roleOf(p, ctx.today()), colour: p.colour })),
+        current: () => { const p = ctx.currentPerson(); return p ? { id: p.id, name: p.name, role: roleOf(p, ctx.today()), colour: p.colour } : null; },
       };
     }
     if (has('people:food')) {

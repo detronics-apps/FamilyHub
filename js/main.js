@@ -7,7 +7,7 @@
 // what their permissions allow; third-party ones run sandboxed (js/ui/sandbox.js).
 
 import { createLocalStore } from './storage.js';
-import { emptyHousehold, recordEvent, removeEvent, addPerson, normaliseHousehold } from './model.js';
+import { emptyHousehold, recordEvent, removeEvent, addPerson, normaliseHousehold, roleOf } from './model.js';
 import { toDay, fmtDay } from './dates.js';
 import { occurrence } from './recurrence.js';
 import { defaultFilters } from './matching.js';
@@ -38,7 +38,7 @@ import { openDoc } from './ui/views/docs.js';
 import { syncChip, syncNotices } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.4.0';
+export const APP_VERSION = '0.4.1';
 
 const store = createLocalStore(window.localStorage);
 
@@ -310,7 +310,7 @@ function openWho() {
         ? el('div', { class: 'chipset' }, h.people.map((p) => el('button', {
           class: 'chip', type: 'button', 'aria-pressed': String(p.id === app.device.currentPersonId),
           on: { click: () => choose(p.id) },
-        }, [p.name, p.role === 'child' ? ' (child)' : '', p.demo ? ' - example' : ''])))
+        }, [p.name, roleOf(p, today()) === 'child' ? ' (child)' : '', p.demo ? ' - example' : ''])))
         : el('p', { text: 'No one has been added yet.' }),
       el('button', { class: 'chip', type: 'button', 'aria-pressed': String(!currentPerson()), text: 'Just looking (no one)', on: { click: () => choose(null) } }),
       el('p', { class: 'small muted', text: 'Choosing a name is a convenience, not a login. It records who did what and keeps your own dashboard order on this device. Anyone using this device can pick any name.' }),
