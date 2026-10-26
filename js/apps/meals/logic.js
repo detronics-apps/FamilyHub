@@ -1,18 +1,19 @@
 // Meals (product plan section 13): recipes, a weekly plan, and the shopping
 // list that follows from it. Pure - no DOM.
 //
-// Deliberately NOT here: nutrition advice or calculated nutrition (plan 13.4,
-// Phase 9.4-9.6 - needs reliable data sources and a safety review first).
 // Nutrition values a person types in are shown as "supplied"; anything else
-// is "not known", never estimated.
+// is "not known". Looking foods up and meal ideas are separate mini-apps in
+// the Meals section (Calorie Checker, Meal Assistant) on the shared food database.
 
 import { addDays, dayDiff, weekStart } from '../../dates.js';
 import { split, numOrNull } from '../../importer.js';
+import { ALLERGENS } from '../../model.js';
+
+export { ALLERGENS };
 
 export const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'];
 export const MEAL_LABEL = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack' };
 export const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-export const ALLERGENS = ['gluten', 'dairy', 'egg', 'nuts', 'peanuts', 'soy', 'fish', 'shellfish', 'sesame'];
 export const NUTRIENTS = [['calories', 'kcal'], ['protein', 'g'], ['carbs', 'g'], ['fat', 'g'], ['fibre', 'g']];
 
 const str = (v, max = 2000) => (typeof v === 'string' ? v.trim().slice(0, max) : '');

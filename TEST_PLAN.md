@@ -114,3 +114,28 @@ walkthrough with a screen reader, Safari/Firefox, a real phone.
 14. Finance: category and spend → planned/spent/left; a debt below its interest says "never" and the payment that would work; recording a payment. ✔
 15. Exercise log, Health appointment, Faith plan (read a portion) and journal. ✔
 16. Import folder: templates and README written; recipes and chores files brought in and moved to Import/Imported with reports; an unrecognised file moved to Import/Not imported; an existing chore name skipped. ✔
+
+## Sections and the Meals section (v0.3.0)
+
+### Automated
+- `tests/sections.test.js`: every starter app sits in a real section; Meals holds Recipe Book,
+  Calorie Checker and Meal Assistant; home shows sections in order.
+- `tests/miniapps.test.js`: `section` in manifests (unknown → "more"); `people:food` refused to
+  third-party apps; a starter no longer shipped (Health) is uninstalled with records kept.
+- `tests/food.test.js`: the food database (13.6k foods, nulls kept), search, totals that say
+  "at least"; every guide food resolves to a USDA record; reference values; people's food fields
+  and age; reading a meal (longest name wins, typed order); safety (allergy, diet, under-5 choking,
+  pregnancy); the spec's oats and chicken-and-rice examples; timing only with an iron priority;
+  "not today" → try next time; cautions about what is already on the plate; no ideas for babies.
+
+### Browser checks run (2026-10-26, test folder)
+- Home shows sections; Health gone; Meals section lists its three mini-apps; crumbs read
+  Home › Meals › Meal Assistant.
+- Settings › People › Food details: saved, summary on the button, written to the folder.
+- Meal Assistant: oats example (fruit, eggs, banana-for-sugar swap); with a 3-year-old allergic
+  to peanuts, "toast with peanut butter and grapes" warned about the allergy and quartering grapes,
+  suggested no peanut foods, and offered fruit on the side for a selective eater. 375 px: no
+  sideways scroll.
+- Calorie Checker: banana lookup, portions, nutrients, plate total.
+- Mini-apps screen: section shown on each app; Health under "Uninstalled, records kept".
+- No console errors.

@@ -145,5 +145,35 @@ Playback starts only from a click (browser autoplay rules). Timer, completion an
 separate: an audio error can never block Done. Spotify and other streaming services are separate
 future work.
 
+**D-022 Sections hold mini-apps (owner, 2026-10-26).** The home screen shows sections of family
+life (Chores, Meals, Finance...), which are part of Family Hub and never installed or removed. The
+mini-apps inside a section are what get installed, turned off and uninstalled. A manifest names
+its section (`section`); a missing or unknown one lands in "More". A section with one mini-app
+switched on opens it directly. Existing data keeps its app id (the Meals recipes stay in
+`Data/meals`), so nothing moves.
+
+**D-023 Health removed (owner, 2026-10-26).** Its food side became the Meals section and its
+activity side is Exercise. A starter app a version no longer ships is uninstalled with its records
+kept, like any uninstall (D-020).
+
+**D-024 Nutrition is now in scope (owner, 2026-10-26).** This replaces the earlier "no nutrition
+estimates or advice" line (plan 13.4, Phase 9.4-9.6), which waited for a reliable source and a
+safety review. The source is USDA FoodData Central (public domain): Foundation, SR Legacy and
+FNDDS foods, built into `data/foods.json` by `tools/build_foods.py`; the 2 million US branded
+products are left out. Unknown values stay unknown, never zero. The Meal Assistant follows the
+owner's specification (docs/MEAL_ASSISTANT.md): suggestions only, no scores, no tracking, no
+supplement advice, no suggestions for babies under one, safety rules applied before any benefit.
+*Still open:* a review by a registered dietitian before wide release, and South African food
+composition data (SAFOODS) - it needs a licence, so USDA stand-ins are used for pap, samp, maas
+and the like.
+
+**D-025 Food details on people (owner, 2026-10-26).** Birthday, sex for reference values,
+pregnant/breastfeeding, weight, allergies, diet, things to avoid, likes, dislikes and food wishes
+are optional fields on each person, edited in Settings › People. They are visible to everyone in
+the household (there are no private records yet - O-4/O-5) and are given only to apps granted
+`people:food`, which is first-party only. Gender (Male/Female) is chosen on the People list itself; pregnant or
+breastfeeding is offered only for a female aged 16 or more (no birthday: an adult), and is ignored
+otherwise (owner, 2026-10-26).
+
 **O-7 (W2) Phone live sync.** Only possible through a registered Google app (rejected, D-013).
 Revisit only if browsers gain folder access on phones.

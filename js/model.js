@@ -26,6 +26,19 @@ export const EVENT_TYPES = ['done', 'skipped', 'deferred', 'rescheduled', 'dropp
 // without redesigning the model. Only 'shared' is offered in this version.
 export const VISIBILITY = ['shared', 'private'];
 
+// Food details on a person, read by the Meals section (with the 'people:food'
+// permission). All optional; a blank means "not said", never a default.
+export const ALLERGENS = ['gluten', 'dairy', 'egg', 'nuts', 'peanuts', 'soy', 'fish', 'shellfish', 'sesame'];
+export const DIETS = { vegetarian: 'Vegetarian', vegan: 'Vegan', pescatarian: 'Pescatarian', halal: 'Halal', kosher: 'Kosher', 'no-pork': 'No pork', 'no-beef': 'No beef' };
+export const LIFE_STAGES = { pregnant: 'Pregnant', breastfeeding: 'Breastfeeding' };
+// What someone would like more chances to eat - a wish, never a diagnosis.
+export const FOCUS = {
+  protein: 'More protein', iron: 'More iron-rich foods', variety: 'More fruit and vegetable variety',
+  colour: 'More colour and plant diversity', fibre: 'More fibre', calcium: 'More calcium-rich foods',
+  fats: 'More sources of healthy fats', dense: 'More nourishment in smaller portions',
+  selective: 'Easier meals for a selective eater',
+};
+
 export const PERSON_COLOURS = ['#d9734e', '#d9a441', '#8fae7e', '#c07aa6', '#d77a7a', '#b58a62'];
 
 export function newId(prefix) {
@@ -60,8 +73,39 @@ export function normalisePerson(p) {
     role: oneOf(p.role, ROLES, 'adult'),
     colour: PERSON_COLOURS.includes(p.colour) ? p.colour : PERSON_COLOURS[0],
     visibility: oneOf(p.visibility, VISIBILITY, 'shared'),
+    born: isDay(p.born) ? p.born : '',
+    sex: oneOf(p.sex, ['female', 'male'], ''),
+    // Pregnancy and breastfeeding are only kept for a female (age is checked by lifeStageAllowed).
+    lifeStage: p.sex === 'female' ? oneOf(p.lifeStage, Object.keys(LIFE_STAGES), '') : '',
+    weightKg: (() => { const n = numOrNull(p.weightKg); return n && n <= 400 ? Math.round(n * 10) / 10 : null; })(),
+    allergies: pick(p.allergies, ALLERGENS),
+    diet: pick(p.diet, Object.keys(DIETS)),
+    avoid: words(p.avoid),
+    likes: words(p.likes),
+    dislikes: words(p.dislikes),
+    focus: pick(p.focus, Object.keys(FOCUS)),
     demo: p.demo === true,
   };
+}
+
+const pick = (v, allowed) => (Array.isArray(v) ? allowed.filter((x) => v.includes(x)) : []);
+/** "kiwi, mushrooms" or a list -> ['kiwi', 'mushrooms'] */
+const words = (v) => [...new Set((Array.isArray(v) ? v : String(v ?? '').split(/[,\n]/))
+  .map((x) => str(String(x), 40).toLowerCase()).filter(Boolean))].slice(0, 30);
+
+/** Pregnant or breastfeeding can be chosen for a female aged 16 or more (no birthday: an adult). */
+export function lifeStageAllowed(p, today) {
+  if (p.sex !== 'female') return false;
+  const age = ageOn(p.born, today);
+  return age === null ? p.role === 'adult' : age >= 16;
+}
+
+/** Whole years on `today`, or null when no birthday was given. */
+export function ageOn(born, today) {
+  if (!isDay(born) || !isDay(today)) return null;
+  const [y, m, d] = born.split('-').map(Number);
+  const [ty, tm, td] = today.split('-').map(Number);
+  return Math.max(0, ty - y - (tm < m || (tm === m && td < d) ? 1 : 0));
 }
 
 export function normaliseRoom(r) {

@@ -36,6 +36,7 @@ and styles go in your own `<style>` element.
   "name": "Family Notes",
   "version": "1.0.0",
   "description": "A shared notice board.",
+  "section": "more",
   "author": "Your name",
   "requires": { "api": 1, "core": ">=0.2.0 <1.0.0" },
   "entry": "app.js",
@@ -62,6 +63,10 @@ and styles go in your own `<style>` element.
 | `data.collections` | Your record types: `name`, `schema` (whole number, raise it when your record shape changes), optional `summary` and `search` field lists (≤ 12 each; defaults `title`, `name`, `status`). |
 | `permissions` | What you need - see below. Unknown permissions make the manifest invalid. |
 
+`section` puts the app inside one of the home screen's sections: `chores`, `tasks`, `meals`,
+`exercise`, `tickets`, `principles`, `decisions`, `holidays`, `finance`, `faith` or `more`. Left
+out, or one this version does not know, it goes in **More**.
+
 ## Permissions
 
 | Permission | What it allows |
@@ -72,8 +77,9 @@ and styles go in your own `<style>` element.
 | `notify` | Show a short notice at the top of the screen. |
 | `data:<app-id>:read` | Read (never change) another mini-app's records. |
 
-`household:chores`, `household:people:write`, `media:audio` and `timer` are available to the
-starter apps only, in this version.
+`household:chores`, `household:people:write`, `food:read` (the shared food database) and
+`people:food` (age, allergies, pregnancy, weight and food wishes from people's profiles) are
+available to the starter apps only, in this version.
 
 ## The hub
 

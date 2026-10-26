@@ -16,9 +16,9 @@ workstreams W1-W3. This file records status only.
 | 6 Tickets, Principles, Decisions | **Built (v0.2.0)** as starter mini-apps, plus Tasks/Projects (§9). Tickets are shared-only until accounts exist (O-4, O-5). |
 | 7 Cloud storage | Replaced by W2 (folder method, no publisher). Phone live sync not possible under that rule (D-013, O-7). |
 | 8 Medical | Not started - needs access rules first. |
-| 9 Meals | **Built**: recipes (index, search, allergen filter, scaling), weekly plan, shopping list (compatible units only). **Not built on purpose:** nutrition estimates and meal suggestions (9.4-9.6 need reliable data sources and a safety review). |
+| 9 Meals | **Built** as a section of three mini-apps (v0.3.0): Recipe Book (recipes, weekly plan, shopping list), Calorie Checker and Meal Assistant, on one shared USDA food database and the food details in people's profiles (D-024, D-025). **Open:** dietitian review; South African composition data. |
 | 10 Finance | **Built**: monthly budgets, savings and debt goals with visible-assumption projections; totals count each goal once. No bank links. |
-| 11 Health, Exercise, Holidays, Faith | **Built** as separate starter mini-apps. Health holds appointments and habits only - no medical data. |
+| 11 Exercise, Holidays, Faith | **Built** as separate starter mini-apps. Health was built, then removed at the owner's request: split into Meals and Exercise (D-023). |
 | 12 Hardening | Not started. |
 | Onboarding import (product-patterns) | **Built**: CSV templates for recipes, chores, tasks; import in Settings with a summary, or via the Drive folder's `Import/`. Additive and idempotent. |
 
@@ -60,9 +60,21 @@ workstreams W1-W3. This file records status only.
 | Offer on Start, remember the answer, timer-end stop/fade/continue/ask | Done, checked in browser (fade verified) |
 | Failure paths: no music, unplayable file | Done; Done always works |
 
+## Sections and the Meals section (v0.3.0)
+
+| Step | Status |
+|---|---|
+| Sections on the home screen; mini-apps inside them; `section` in manifests | Done, tested, checked in browser |
+| Health removed; a starter no longer shipped is uninstalled with records kept | Done, tested, checked in browser |
+| Food database from USDA FoodData Central (`tools/build_foods.py` → `data/foods.json`, 13.6k foods, ~1 MB compressed) | Done, tested |
+| Food details on people (Settings › People › Food details) | Done, tested, checked in browser |
+| Recipe Book (the former Meals app, recipes first) | Done, checked in browser |
+| Calorie Checker | Done, checked in browser |
+| Meal Assistant: guide of 83 foods, reference values, interactions, engine, screens | Done, tested, checked in browser (desktop and 375 px) |
+
 ## Test results
 
-`npm test`: **181 tests, 181 pass** (Node 24). Browser checks: see TEST_PLAN.md.
+`npm test`: **199 tests, 199 pass** (Node 24). Browser checks: see TEST_PLAN.md.
 
 ## Known limitations
 
@@ -96,6 +108,9 @@ workstreams W1-W3. This file records status only.
 - Listed under Mini-apps → Coming later so nobody mistakes it for a working app.
 
 ## Next steps proposed
+
+0. Owner: try the Meals section with your own family's food details; say which sections should
+   be grouped (for example Tickets, Principles and Decisions as one "Family" section).
 
 1. Owner: connect a real Drive for Desktop folder on a laptop, then a second laptop; try a phone
    family-file round trip.

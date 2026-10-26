@@ -1,4 +1,4 @@
-// Meals: the week's plan (default), recipes, and the shopping list.
+// Recipe Book (Meals section): recipes (default), the week's plan, and the shopping list.
 // Recipes live in a collection with an index, so a library of thousands is
 // searched from one file and a recipe is read only when it is opened.
 
@@ -20,17 +20,17 @@ const plans = (hub) => hub.data.collection('plans', { summary: (p) => ({ title: 
 const shopping = (hub) => hub.data.collection('shopping', { summary: (l) => ({ title: 'Shopping list', count: l.items.filter((i) => !i.checked).length }) });
 
 export function render(hub, route) {
-  const screen = route.sub ?? 'week';
+  const screen = route.sub ?? 'recipes';
   if (screen === 'item') return recipeScreen(hub, route.rest[0]);
   if (screen === 'new') return editScreen(hub, null);
   if (screen === 'edit') return editScreen(hub, route.rest[0]);
-  if (screen === 'recipes') return recipesScreen(hub);
+  if (screen === 'week') return weekScreen(hub, route.rest[0] ?? null);
   if (screen === 'shopping') return shoppingScreen(hub);
-  return weekScreen(hub, route.rest[0] ?? null);
+  return recipesScreen(hub);
 }
 
 const nav = (hub, current) => tabs(hub, [
-  { screen: null, label: 'This week' }, { screen: 'recipes', label: 'Recipes' }, { screen: 'shopping', label: 'Shopping' },
+  { screen: null, label: 'Recipes' }, { screen: 'week', label: 'This week' }, { screen: 'shopping', label: 'Shopping' },
 ], current);
 
 const loadPlan = (hub, monday) => hub.use(`plan:${monday}`, async () => normalisePlan((await plans(hub).get(planId(monday))) ?? { id: planId(monday) }, monday));
@@ -41,15 +41,15 @@ function weekScreen(hub, param) {
   const monday = weekStart(param && /^\d{4}-\d{2}-\d{2}$/.test(param) ? param : hub.today());
   const p = loadPlan(hub, monday);
   const prev = loadPlan(hub, addDays(monday, -7));
-  if (p.loading) return el('section', { class: 'stack' }, [nav(hub, null), loading()]);
-  if (p.error) return el('section', { class: 'stack' }, [nav(hub, null), failure(p.error)]);
+  if (p.loading) return el('section', { class: 'stack' }, [nav(hub, 'week'), loading()]);
+  if (p.error) return el('section', { class: 'stack' }, [nav(hub, 'week'), failure(p.error)]);
   const plan = p.data;
   const today = hub.today();
   const meals = ui.showAllMeals ? MEALS : ['dinner'];
   const savePlan = async (next) => { await saveRecord(hub, plans(hub), { ...next, id: planId(monday), week: monday }); };
 
   return el('section', { class: 'stack', 'aria-label': 'This week’s meals' }, [
-    nav(hub, null),
+    nav(hub, 'week'),
     el('div', { class: 'row' }, [
       el('a', { class: 'btn btn-small', href: hub.href('week', addDays(monday, -7)), 'aria-label': 'Previous week', text: '‹' }),
       el('strong', { text: `Week of ${fmtDay(monday, today)}`, style: { flex: '1 1 auto', textAlign: 'center' } }),
@@ -137,7 +137,7 @@ function recipesScreen(hub) {
     filter: ui.avoid.length ? (s) => !s.allergens.some((a) => ui.avoid.includes(a)) : null,
   }));
   return el('section', { class: 'stack', 'aria-label': 'Recipes' }, [
-    nav(hub, 'recipes'),
+    nav(hub, null),
     el('div', { class: 'row' }, [
       el('div', { style: { flex: '1 1 220px' } }, [el('input', {
         class: 'input', type: 'search', placeholder: 'Search by name, ingredient or tag', 'aria-label': 'Search recipes', value: ui.query, 'data-field': 'recipe-search',

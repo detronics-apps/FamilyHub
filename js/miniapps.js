@@ -3,7 +3,9 @@
 // lifecycle (install, disable, enable, update, uninstall keeping data, reinstall).
 // Pure: no DOM, no storage. The developer guide is MINIAPPS.md.
 
-export const CORE_VERSION = '0.2.0';
+import { section } from './sections.js';
+
+export const CORE_VERSION = '0.3.0';
 export const API_VERSION = 1;
 export const MANIFEST_VERSION = 1;
 
@@ -19,6 +21,8 @@ export const PERMISSIONS = {
   'notify': { label: 'Show short notices', risk: 'low' },
   'media:audio': { label: 'Play music through the shared player', risk: 'low' },
   'timer': { label: 'Use the shared timer', risk: 'low' },
+  'food:read': { label: 'Look up foods in the shared food database', risk: 'low', firstParty: true },
+  'people:food': { label: 'See food details in people’s profiles: age, allergies, pregnancy, weight and food priorities', risk: 'high', firstParty: true },
   'household:chores': { label: 'Read and change chores and their history', risk: 'high', firstParty: true },
   'household:people:write': { label: 'Add and change people', risk: 'high', firstParty: true },
 };
@@ -30,7 +34,7 @@ export const PERMISSIONS = {
  */
 const CROSS = /^data:([a-z][a-z0-9.-]*):read$/;
 
-export const RESERVED_IDS = new Set(['home', 'settings', 'help', 'library', 'app', 'apps', 'core', 'data', 'media', 'household', 'system']);
+export const RESERVED_IDS = new Set(['home', 'settings', 'help', 'library', 'app', 'apps', 'core', 'data', 'media', 'household', 'system', 'section']);
 const ID = /^[a-z][a-z0-9]*(\.[a-z0-9][a-z0-9-]*)*$/;
 const SCREEN = /^[a-z][a-z0-9-]{0,30}$/;
 const COLLECTION = /^[a-z][a-z0-9-]{0,40}$/;
@@ -91,6 +95,7 @@ export function validateManifest(raw, { source = 'folder' } = {}) {
   if (typeof m.name !== 'string' || !m.name.trim() || m.name.length > 40) errors.push('"name" must be 1 to 40 characters.');
   if (!parseVersion(m.version)) errors.push('"version" must look like 1.0.0.');
   if (m.description !== undefined && (typeof m.description !== 'string' || m.description.length > 300)) errors.push('"description" must be text of at most 300 characters.');
+  if (m.section !== undefined && typeof m.section !== 'string') errors.push('"section" must be the id of a section, like "meals".');
 
   const req = m.requires ?? {};
   if (!Number.isInteger(req.api)) errors.push('"requires.api" must be a whole number.');
@@ -140,6 +145,8 @@ export function validateManifest(raw, { source = 'folder' } = {}) {
       name: m.name.trim(),
       version: m.version,
       description: m.description ?? '',
+      // A section this version does not know yet is kept as "more" rather than refused.
+      section: section(m.section) ? m.section : 'more',
       author: typeof m.author === 'string' ? m.author.slice(0, 80) : '',
       requires: { api: req.api, core: req.core ?? null },
       entry: m.entry ?? null,
@@ -303,6 +310,11 @@ export function reconcileStarters(registry, starterManifests, now = new Date().t
     else if (cur && cur.source === 'starter' && compareVersions(m.version, cur.version) > 0) {
       reg = update(reg, m, { granted: m.permissions, now }).registry;
     }
+  }
+  // A starter app this version no longer ships is uninstalled, its records kept.
+  const shipped = new Set(starterManifests.map((m) => m.id));
+  for (const [id, a] of Object.entries(reg.apps)) {
+    if (a.source === 'starter' && !shipped.has(id)) reg = uninstall(reg, id, { now });
   }
   return reg;
 }

@@ -13,6 +13,7 @@ import { occurrence } from './recurrence.js';
 import { defaultFilters } from './matching.js';
 import { demoHousehold } from './demo.js';
 import { CORE_TILES } from './dashboard.js';
+import { activeSections, appsIn, section, sectionOf } from './sections.js';
 import { starterRegistry, reconcileStarters, normaliseRegistry, setEnabled } from './miniapps.js';
 import { starterManifests, starter } from './apps/catalogue.js';
 import { el, clear } from './ui/dom.js';
@@ -27,6 +28,7 @@ import { cachedPackage } from './ui/packages.js';
 import { dashboardView } from './ui/views/dashboard.js';
 import { settingsView } from './ui/views/settings.js';
 import { libraryView } from './ui/views/library.js';
+import { sectionView } from './ui/views/section.js';
 import { helpView } from './ui/views/help.js';
 import { placeholderView } from './ui/views/placeholder.js';
 import { recoveryView } from './ui/views/recovery.js';
@@ -35,7 +37,7 @@ import { openDoc } from './ui/views/docs.js';
 import { syncChip, syncNotices } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.2.1';
+export const APP_VERSION = '0.3.0';
 
 const store = createLocalStore(window.localStorage);
 
@@ -163,12 +165,16 @@ function startOwn(name, personName) {
 const loadedModules = new Map();     // starter id -> module | Error
 const loadingModules = new Set();
 
-/** Installed, enabled mini-apps as dashboard tiles, followed by the core tiles. */
+/**
+ * Home-screen tiles: one per section of family life, followed by the core tiles.
+ * A section with a single mini-app switched on opens that app directly.
+ */
 function dashboardModules() {
-  const apps = Object.entries(app.registry.apps).filter(([, a]) => a.enabled).map(([id, a]) => ({
-    id, name: a.name, purpose: manifestFor(id)?.description ?? '', status: 'ready', source: a.source,
-  }));
-  return [...apps, ...CORE_TILES];
+  const installed = installedManifests();
+  return [...activeSections([...starterManifests(), ...installed]).map((s) => {
+    const on = appsIn(s.id, installed).filter((m) => app.registry.apps[m.id]?.enabled);
+    return { id: s.id, name: s.name, purpose: s.purpose, status: 'ready', href: on.length === 1 ? `#/${on[0].id}` : `#/section/${s.id}` };
+  }), ...CORE_TILES];
 }
 
 function manifestFor(id) {
@@ -314,6 +320,7 @@ function openWho() {
 
 function routeLabel(route) {
   if (route.name === 'home') return null;
+  if (route.name === 'section') return section(route.sub)?.name ?? 'Page';
   return { help: 'How to use', settings: 'Settings', library: 'Mini-apps' }[route.name]
     ?? app.registry.apps[route.name]?.name ?? starter(route.name)?.manifest.name ?? 'Page';
 }
@@ -321,8 +328,13 @@ function routeLabel(route) {
 function buildCrumbs(route) {
   const label = routeLabel(route);
   if (!label) return null;
+  // A mini-app sits inside its section; the section is named when it says something new.
+  const m = manifestFor(route.name);
+  const s = m ? section(sectionOf(m)) : null;
   return el('nav', { class: 'crumbs', 'aria-label': 'You are here' }, [
-    el('a', { href: '#/', text: 'Home' }), ' › ', el('span', { text: label }),
+    el('a', { href: '#/', text: 'Home' }), ' › ',
+    ...(s && s.name !== label ? [el('a', { href: `#/section/${s.id}`, text: s.name }), ' › '] : []),
+    el('span', { text: label }),
   ]);
 }
 
@@ -408,7 +420,7 @@ function renderNow() {
       el('button', { class: 'btn btn-primary', type: 'button', text: 'Get started', on: { click: () => openWelcome(ctx) } }),
     ]);
   } else {
-    const core = { home: dashboardView, settings: settingsView, help: helpView, library: libraryView }[route.name];
+    const core = { home: dashboardView, settings: settingsView, help: helpView, library: libraryView, section: sectionView }[route.name];
     const entry = app.registry.apps[route.name];
     sticky = !core && entry?.source === 'folder' && entry.enabled && Boolean(cachedPackage(route.name));
     if (core) view = core(ctx, route, items);

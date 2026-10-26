@@ -138,3 +138,20 @@ test('the example package in examples/ is a valid, compatible third-party mini-a
   assert.deepEqual(m.data.collections[0].summary, ['title', 'author']);
   assert.ok(readFileSync(new URL(`../examples/miniapps/FamilyNotes/${m.entry}`, import.meta.url), 'utf8').includes('FamilyHub.ready'));
 });
+
+test('a manifest names its section; an unknown or missing one becomes "more"', () => {
+  assert.equal(ok(third({ section: 'meals' })).section, 'meals');
+  assert.equal(ok(third({ section: 'gardening' })).section, 'more');
+  assert.equal(ok(third()).section, 'more');
+  assert.equal(validateManifest(third({ section: 7 })).ok, false);
+  assert.equal(validateManifest(third({ permissions: ['data:own', 'people:food'] })).ok, false, 'food profiles are for the apps that ship with Family Hub');
+});
+
+test('a starter app this version no longer ships is uninstalled, its records kept', () => {
+  const old = ok({ ...third(), id: 'health', entry: undefined }, { source: 'starter' });
+  const keep = ok({ ...third(), id: 'chores', entry: undefined }, { source: 'starter' });
+  const reg = reconcileStarters(starterRegistry([old, keep]), [keep]);
+  assert.ok(!reg.apps.health);
+  assert.equal(reg.retained.health.name, 'Notes');
+  assert.ok(reg.apps.chores);
+});

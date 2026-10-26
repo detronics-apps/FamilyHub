@@ -1,0 +1,128 @@
+// Meal Assistant (Meals section): type the meal, choose who is eating, get a
+// few easy ideas. Profiles (ages, allergies, pregnancy, wishes) come from
+// Settings › People, so nothing is asked again here. Nothing is logged.
+
+import { el } from '../../ui/dom.js';
+import { tabs, loading, failure } from '../kit.js';
+import { suggest, TYPES } from './logic.js';
+import { INTERACTIONS } from './interactions.js';
+import { FOCUS, LIFE_STAGES, lifeStageAllowed } from '../../model.js';
+
+const ui = { text: '', asked: '', selected: [], notToday: [], hidden: [] };
+const EXAMPLES = ['oats with butter and sugar', 'chicken and rice', 'pap and boerewors', 'toast with peanut butter'];
+
+export function render(hub, route) {
+  if (route.sub === 'about') return aboutScreen(hub);
+  return mealScreen(hub);
+}
+
+const nav = (hub, current) => tabs(hub, [{ screen: null, label: 'Improve a meal' }, { screen: 'about', label: 'How it decides' }], current);
+
+function mealScreen(hub) {
+  const f = hub.use('food', () => hub.food.load());
+  const profiles = hub.foodProfiles();
+  const ask = (text) => { ui.text = text; ui.asked = text; ui.notToday = []; ui.hidden = []; hub.render(); };
+  const toggle = (id) => { ui.selected = ui.selected.includes(id) ? ui.selected.filter((x) => x !== id) : [...ui.selected, id]; hub.render(); };
+  const chosen = ui.selected.length ? profiles.filter((p) => ui.selected.includes(p.id)) : profiles;
+
+  return el('section', { class: 'stack', 'aria-label': 'Meal Assistant' }, [
+    nav(hub, null),
+    el('p', { class: 'muted', text: 'What’s one easy thing that would make this meal a little better for the people eating it? No weighing, no counting, nothing to log.' }),
+    profiles.length ? el('fieldset', {}, [
+      el('legend', { class: 'small', text: 'Who is eating?' }),
+      el('div', { class: 'chipset' }, [
+        el('button', { class: 'chip', type: 'button', 'aria-pressed': String(!ui.selected.length), text: 'Everyone', on: { click: () => { ui.selected = []; hub.render(); } } }),
+        ...profiles.map((p) => el('button', { class: 'chip', type: 'button', 'aria-pressed': String(ui.selected.includes(p.id)), text: p.name, 'data-field': `who:${p.id}`, on: { click: () => toggle(p.id) } })),
+      ]),
+      el('p', { class: 'small muted' }, [
+        chosen.map((p) => wishes(p, hub.today())).filter(Boolean).join(' · ') || 'No wishes, allergies or ages set yet - suggestions are for the family in general.',
+        ' ', el('a', { href: '#/settings/people', text: 'Edit in Settings › People' }),
+      ]),
+    ]) : el('p', { class: 'small muted' }, ['Add your family in ', el('a', { href: '#/settings/people', text: 'Settings › People' }), ' - with ages, allergies and what each person would like more of - and suggestions will fit them.']),
+    el('form', { class: 'stack', on: { submit: (e) => { e.preventDefault(); ask(e.target.elements.meal.value.trim()); } } }, [
+      el('label', { class: 'field__label', for: 'meal-text', text: 'What’s on the plate?' }),
+      el('div', { class: 'row' }, [
+        el('input', { class: 'input', id: 'meal-text', name: 'meal', value: ui.text, placeholder: 'e.g. oats with butter and sugar', autocomplete: 'off', 'data-field': 'meal', style: { flex: '1 1 240px' } }),
+        el('button', { class: 'btn btn-primary', type: 'submit', text: 'Get ideas', 'data-field': 'get-ideas' }),
+      ]),
+      ui.asked ? null : el('div', { class: 'chipset' }, EXAMPLES.map((x) => el('button', { class: 'chip', type: 'button', text: x, on: { click: () => ask(x) } }))),
+    ]),
+    ui.asked ? (f.loading ? loading('Opening the food database…') : f.error ? failure(f.error) : results(hub, f.data, profiles)) : null,
+  ]);
+}
+
+function wishes(p, today) {
+  const bits = [lifeStageAllowed(p, today) ? LIFE_STAGES[p.lifeStage] : null, ...p.focus.map((x) => FOCUS[x].toLowerCase()), p.allergies.length ? `allergic to ${p.allergies.join(', ')}` : null].filter(Boolean);
+  return bits.length ? `${p.name}: ${bits.join(', ')}` : null;
+}
+
+function results(hub, db, profiles) {
+  const r = suggest({ text: ui.asked, profiles, selected: ui.selected, db, today: hub.today(), notToday: ui.notToday });
+  if (!r.items.length) {
+    return el('div', { class: 'panel', role: 'status' }, [el('p', { text: 'I did not recognise a food in that. Try simple words, like "chicken, rice and peas".' }), ...notes(r)]);
+  }
+  const cards = r.cards.filter((c) => !ui.hidden.includes(c.id));
+  const order = Object.keys(TYPES);
+  cards.sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type));
+  return el('div', { class: 'stack', 'aria-live': 'polite' }, [
+    el('p', { class: 'small muted' }, [
+      `Reading this as: ${r.items.map((i) => i.name).join(', ')}.`,
+      r.unknown.length ? ` Not recognised: ${r.unknown.join(', ')} - the ideas are based on the rest.` : '',
+    ]),
+    ...r.cautions.map((c) => el('div', { class: 'panel caution', role: 'note' }, [el('strong', { text: 'Worth knowing: ' }), c])),
+    cards.length ? el('div', { class: 'stack' }, cards.map((c) => card(hub, c)))
+      : el('p', { class: 'panel', text: 'This meal already covers the easy wins I know about. Enjoy it.' }),
+    ...notes(r),
+  ]);
+}
+
+function card(hub, c) {
+  return el('article', { class: `panel idea idea--${c.type}`, 'data-field': `idea:${c.id}` }, [
+    el('div', { class: 'idea__type', text: TYPES[c.type] }),
+    el('h3', { text: c.title }),
+    el('dl', {}, [
+      el('dt', { text: 'Who it helps' }), el('dd', { text: c.who }),
+      el('dt', { text: 'Why' }), el('dd', { text: c.why.join(' ') }),
+      c.effort ? [el('dt', { text: 'Effort' }), el('dd', { text: c.effort })] : null,
+      c.alternatives.length ? [el('dt', { text: 'Or' }), el('dd', { text: `${c.alternatives.join(', ')} - whatever the family already enjoys` })] : null,
+    ].flat()),
+    c.notes.length ? el('ul', { class: 'small' }, c.notes.map((n) => el('li', { text: n }))) : null,
+    el('div', { class: 'row', style: { marginTop: 'var(--space-2)' } }, [
+      c.type === 'add' || c.type === 'swap'
+        ? el('button', { class: 'btn btn-small', type: 'button', text: 'Not in the house today', on: { click: () => { ui.notToday.push(c.foodId); hub.render(); } } })
+        : null,
+      el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Not for us', on: { click: () => { ui.hidden.push(c.id); hub.render(); } } }),
+    ]),
+  ]);
+}
+
+const notes = (r) => [
+  ...r.notes.map((n) => el('p', { class: 'small', text: n })),
+  el('p', { class: 'small muted', text: 'General food ideas, not medical or dietary advice. Food values from USDA FoodData Central.' }),
+];
+
+function aboutScreen(hub) {
+  const li = (t) => el('li', { text: t });
+  return el('section', { class: 'stack', 'aria-label': 'How the Meal Assistant decides' }, [
+    nav(hub, 'about'),
+    el('div', { class: 'panel stack' }, [
+      el('h2', { text: 'What it does' }),
+      el('p', { text: 'It reads a meal from a few words, then looks for one or two easy improvements for the people eating it. It never scores a meal, never calls food good or bad, and never asks you to log or weigh anything. One meal says nothing about anyone’s diet, so it does not claim to know what anyone lacks.' }),
+      el('h2', { text: 'In this order' }),
+      el('ol', {}, [
+        li('Safety first. A food someone at the table is allergic to, cannot eat for their diet, or that is a choking risk for a small child is never suggested. Pregnancy food rules are applied too.'),
+        li('The family goal, always on: more variety, more colour, and the main nutrients - carbohydrates and fibre, healthy fats, minerals, plant compounds, protein and vitamins.'),
+        li('Each person’s own wishes from Settings › People - more iron, more protein, more colour, a small appetite, a selective eater - and their age and life stage.'),
+        li('Practical: it suits the meal (fruit with porridge, vegetables with dinner), costs little and takes little work. Foods someone likes rise; foods someone dislikes drop.'),
+      ]),
+      el('h2', { text: 'Four kinds of idea' }),
+      el('ul', {}, [li('Add - something alongside, keeping the meal as it is.'), li('Swap - the same role in the meal, with a little more to it.'), li('Time - eat something at another moment, only where there is a real reason.'), li('Try next time - for when today’s ingredients are not in the house.')]),
+      el('h2', { text: 'Foods that affect each other' }),
+      el('ul', { class: 'small' }, INTERACTIONS.map((i) => el('li', {}, [el('strong', { text: `${i.say}. ` }), `Evidence: ${i.evidence}. ${i.limitations} `, el('span', { class: 'muted', text: i.source })]))),
+      el('h2', { text: 'Where the numbers come from' }),
+      el('p', { class: 'small', text: 'Food values: USDA FoodData Central (public domain). Reference values for each age and life stage: the US National Academies’ Dietary Reference Intakes, used only to spot an opportunity - never shown as a target. Safety notes follow NHS guidance for young children and pregnancy.' }),
+      el('h2', { text: 'What it will not do' }),
+      el('ul', { class: 'small' }, [li('Diagnose a deficiency, or treat a wish for more iron as a diagnosis.'), li('Suggest supplements or doses - that is for your clinic.'), li('Make suggestions for babies under one.'), li('Replace a dietitian or doctor. If eating stays difficult or you are worried about growth, talk to one.')]),
+    ]),
+  ]);
+}

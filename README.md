@@ -9,14 +9,16 @@ this README describes what is built.
 One static page. No backend, no build step, no dependencies, no accounts. Nothing is sent to the
 publisher or anyone else.
 
-## What works now (v0.2.0)
+## What works now (v0.3.0)
 
 - **Your own Google Drive folder as the home of the data** (Chrome/Edge on a computer, with Google
   Drive for Desktop): pick the folder once; every change is saved there as readable files, other
   laptops' changes are picked up, and anything changed in two places at once is shown to you to
   choose - never silently overwritten. Backups in the folder. Phones open and save a "family file"
   from Drive. Without a folder, everything stays in the browser.
-- **Mini-apps**: the starter pack - Chores, Tasks, Tickets, Principles, Decisions - can be turned
+- **Sections and mini-apps**: the home screen shows sections of family life (Chores, Meals,
+  Finance...). A section is part of Family Hub; the mini-apps inside it are what get installed or
+  removed. The starter mini-apps can be turned
   off, uninstalled (records kept), reinstalled (records back) or have their records deleted
   separately. Other people's mini-apps are added by copying a folder into `MiniApps/ThirdParty`;
   they are reviewed before installing and run sealed off. See [MINIAPPS.md](MINIAPPS.md).
@@ -26,13 +28,19 @@ publisher or anyone else.
 - **Tickets**: capture in seconds; the weekly family meeting; turn into a decision or task.
 - **Principles**: values and agreements with reasons, exceptions and review triggers.
 - **Decisions**: agreements as experiments - try, observe, look back, adapt, revise with history.
-- **Meals**: recipes (search, allergen filter, scaling), a weekly plan, and a shopping list that
-  adds up compatible amounts. No nutrition estimates or advice.
+- **Meals** section, three mini-apps sharing one food database (USDA FoodData Central, ~13,600
+  foods) and the food details in Settings › People:
+  - **Recipe Book**: recipes (search, allergen filter, scaling), a weekly plan, and a shopping list
+    that adds up compatible amounts.
+  - **Calorie Checker**: calories and nutrients in the amount you actually eat (a cup, a slice,
+    grams); add several foods up as a plate. Nothing is logged.
+  - **Meal Assistant**: type a meal in a few words, choose who is eating, get one or two easy
+    ideas (add, swap, time, try next time) that fit their ages, allergies, diet, pregnancy and
+    wishes. No scores, no tracking, not medical advice. See [docs/MEAL_ASSISTANT.md](docs/MEAL_ASSISTANT.md).
 - **Holidays**: trips and ideas with a day-by-day plan, packing per person, and a budget.
 - **Finance**: monthly budgets (planned against spent) and savings/debt goals with projections
   that show their assumptions. No bank connections, no advice.
 - **Exercise**: activity log, flexible weekly plans, personal goals, what the family did together.
-- **Health**: appointments and healthy habits (not medical records).
 - **Faith**: Bible reading plans at your own pace, and a journal.
 - **Bring in data**: spreadsheet templates (CSV) for recipes, chores and tasks - import in
   Settings, or drop filled-in files into the `Import` folder of the Drive folder.

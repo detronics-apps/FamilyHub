@@ -18,12 +18,12 @@ export function dashboardView(ctx, route, notices) {
   return el('section', { class: 'stack', 'aria-labelledby': 'home-title' }, [
     el('h1', { id: 'home-title', text: person ? `Hello, ${person.name}` : h.household.name }),
     el('p', { class: 'muted', text: 'Pick what you want to look at.' }),
-    el('nav', { class: 'tiles', 'aria-label': 'Mini-apps' }, visible.map((m) => el('a', {
+    el('nav', { class: 'tiles', 'aria-label': 'Sections' }, visible.map((m) => el('a', {
       class: `tile${m.id === 'library' || m.id === 'settings' ? ' tile--core' : ''}`,
-      href: `#/${m.id}`,
+      href: m.href ?? `#/${m.id}`,
       'data-field': `tile:${m.id}`,
     }, [
-      el('span', { class: 'tile__name' }, [m.name, m.source === 'folder' ? el('span', { class: 'badge', text: 'Added' }) : null]),
+      el('span', { class: 'tile__name', text: m.name }),
       el('span', { class: 'tile__purpose', text: m.purpose }),
       m.id === 'chores'
         ? el('span', { class: 'tile__meta', text: ready ? `${ready} ready${person ? ' for you' : ''} now` : 'Nothing waiting right now' })

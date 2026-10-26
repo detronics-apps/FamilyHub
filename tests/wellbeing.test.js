@@ -1,8 +1,7 @@
-// Exercise, Health and Faith rules.
+// Exercise and Faith rules.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as ex from '../js/apps/exercise/logic.js';
-import * as health from '../js/apps/health/logic.js';
 import * as faith from '../js/apps/faith/logic.js';
 
 const MONDAY = '2026-10-19';
@@ -22,21 +21,6 @@ test('exercise: own minutes per week, what was done together, plan progress', ()
   assert.equal(ex.goalLine(55, 150), '55 of 150 minutes this week.');
   assert.match(ex.goalLine(160, 150), /goal reached/);
   assert.equal(ex.normaliseActivity({ minutes: -5, kind: 'flying' }, '2026-10-25').kind, 'other');
-});
-
-test('health: agenda splits coming up, passed-but-not-marked, and follow-ups due', () => {
-  const s = [
-    { id: '1', status: 'upcoming', day: '2026-10-30', time: '09:00' },
-    { id: '2', status: 'upcoming', day: '2026-10-27', time: '14:00' },
-    { id: '3', status: 'upcoming', day: '2026-10-20', time: '' },
-    { id: '4', status: 'done', day: '2026-04-01', followUp: '2026-10-01' },
-    { id: '5', status: 'done', day: '2026-09-01', followUp: '2027-03-01' },
-  ];
-  const a = health.agenda(s, '2026-10-25');
-  assert.deepEqual(a.upcoming.map((x) => x.id), ['2', '1']);
-  assert.deepEqual(a.passed.map((x) => x.id), ['3']);
-  assert.deepEqual(a.followUps.map((x) => x.id), ['4']);
-  assert.equal(health.normaliseAppointment({ time: '9am' }).time, '');
 });
 
 test('faith: the canon is complete - 39 + 27 books, 929 + 260 chapters', () => {

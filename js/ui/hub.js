@@ -7,6 +7,14 @@
 // messages, checked again by js/ui/sandbox.js.
 
 import { createCollection } from '../collections.js';
+import { createFoodDb } from '../food.js';
+
+// One copy of the food database for every app that reads it, fetched on first use.
+let foodDb = null;
+const loadFoodDb = () => (foodDb ??= fetch('data/foods.json').then((r) => {
+  if (!r.ok) throw new Error(`The food database could not be loaded (${r.status}).`);
+  return r.json();
+}).then(createFoodDb).catch((err) => { foodDb = null; throw err; }));
 
 /**
  * Async data for a synchronous render: `use(key, loader)` returns
@@ -136,6 +144,14 @@ export function createHubFactory(ctx) {
         current: () => { const p = ctx.currentPerson(); return p ? { id: p.id, name: p.name, role: p.role, colour: p.colour } : null; },
       };
     }
+    if (has('people:food')) {
+      // The food side of each profile, for the Meals section. Names come with it
+      // so suggestions can say who they are for.
+      const food = ({ id, name, role, born, sex, lifeStage, weightKg, allergies, diet, avoid, likes, dislikes, focus }) => (
+        { id, name, role, born, sex, lifeStage, weightKg, allergies, diet, avoid, likes, dislikes, focus });
+      hub.foodProfiles = () => (ctx.app.household?.people ?? []).map(food);
+    }
+    if (has('food:read')) hub.food = { load: loadFoodDb };
     if (has('rooms:read')) hub.rooms = { list: () => (ctx.app.household?.rooms ?? []).map(({ id, name }) => ({ id, name })) };
     if (has('media:audio')) hub.media = ctx.media;
     if (has('timer')) hub.timer = ctx.timer;

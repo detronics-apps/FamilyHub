@@ -11,6 +11,7 @@ import { install, update, uninstall, setEnabled, forgetRetained, permissionInfo,
 import { STARTERS, starter, COMING_LATER } from '../../apps/catalogue.js';
 import { discover, forgetPackage } from '../packages.js';
 import { clearLoadError } from '../sandbox.js';
+import { SECTIONS, section, sectionOf, appsIn } from '../../sections.js';
 
 let found = null;          // last discovery result
 let scanning = false;
@@ -29,14 +30,15 @@ const SOURCE = { starter: 'Comes with Family Hub', folder: 'From your Drive fold
 
 export function libraryView(ctx) {
   const reg = ctx.app.registry;
-  const installed = Object.entries(reg.apps);
+  const order = (id) => SECTIONS.findIndex((x) => x.id === sectionOf(ctx.manifestFor(id)));
+  const installed = Object.entries(reg.apps).sort(([a], [b]) => order(a) - order(b));
   const retained = Object.entries(reg.retained);
   const folderMode = ctx.sync.appStore()?.kind === 'folder';
   if (folderMode && found === null && !scanning) scan(ctx);
 
   return el('section', { class: 'stack', 'aria-labelledby': 'lib-title' }, [
     el('h1', { id: 'lib-title', text: 'Mini-apps' }),
-    el('p', { class: 'muted', text: 'Family Hub is made of mini-apps. Turn them off, remove them or add new ones - removing one never deletes its records unless you separately ask.' }),
+    el('p', { class: 'muted', text: 'Each section of Family Hub - Meals, Chores, Finance and the rest - is made of mini-apps. Turn them off, remove them or add new ones - removing one never deletes its records unless you separately ask.' }),
 
     el('div', { class: 'panel' }, [
       el('h2', { text: 'Installed' }),
@@ -44,7 +46,7 @@ export function libraryView(ctx) {
         el('div', { class: 'list__main' }, [
           el('strong', { text: a.name }), ' ',
           el('span', { class: `badge${a.enabled ? ' badge--ok' : ''}`, text: a.enabled ? 'On' : 'Off' }),
-          el('div', { class: 'small muted', text: `${SOURCE[a.source]} · version ${a.version}` }),
+          el('div', { class: 'small muted', text: `${section(sectionOf(ctx.manifestFor(id)))?.name ?? 'More'} · ${SOURCE[a.source]} · version ${a.version}` }),
           a.source === 'folder' ? el('div', { class: 'small muted', text: `Allowed to: ${a.granted.map((p) => permissionInfo(p)?.label.toLowerCase()).join('; ')}` }) : null,
         ]),
         el('button', {
@@ -96,13 +98,16 @@ export function libraryView(ctx) {
     ]) : null,
 
     el('div', { class: 'panel' }, [
-      el('h2', { text: 'Starter apps' }),
-      el('ul', { class: 'list' }, STARTERS.map(({ manifest: m }) => el('li', {}, [
-        el('div', { class: 'list__main' }, [el('strong', { text: m.name }), el('div', { class: 'small muted', text: m.description })]),
-        reg.apps[m.id] ? el('span', { class: 'badge badge--ok', text: 'Installed' })
-          : reg.retained[m.id] ? el('span', { class: 'small muted', text: 'Uninstalled - see above' })
-            : el('button', { class: 'btn btn-small', type: 'button', text: 'Install', on: { click: () => doInstall(ctx, m, { source: 'starter' }) } }),
-      ]))),
+      el('h2', { text: 'Come with Family Hub, by section' }),
+      ...SECTIONS.map((sec) => {
+        const apps = appsIn(sec.id, STARTERS.map((x) => x.manifest));
+        return apps.length ? [el('h3', { text: sec.name }), el('ul', { class: 'list' }, apps.map((m) => el('li', {}, [
+          el('div', { class: 'list__main' }, [el('strong', { text: m.name }), el('div', { class: 'small muted', text: m.description })]),
+          reg.apps[m.id] ? el('span', { class: 'badge badge--ok', text: 'Installed' })
+            : reg.retained[m.id] ? el('span', { class: 'small muted', text: 'Uninstalled - see above' })
+              : el('button', { class: 'btn btn-small', type: 'button', text: 'Install', 'data-field': `install:${m.id}`, on: { click: () => doInstall(ctx, m, { source: 'starter' }) } }),
+        ])))] : [];
+      }).flat(),
     ]),
 
     folderPanel(ctx, folderMode),
@@ -145,7 +150,7 @@ function folderPanel(ctx, folderMode) {
   ]);
 }
 
-function doInstall(ctx, manifest, { source, codeHash = null, packagePath = null } = {}) {
+export function doInstall(ctx, manifest, { source, codeHash = null, packagePath = null } = {}) {
   try {
     const { registry, recovered } = install(ctx.app.registry, manifest, { granted: manifest.permissions, source, codeHash, packagePath });
     ctx.flash({ id: `inst:${manifest.id}`, level: 'ok', text: `${manifest.name} is installed${recovered ? ', with the records kept from before' : ''}.` });

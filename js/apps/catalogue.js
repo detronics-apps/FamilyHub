@@ -8,7 +8,7 @@ import { validateManifest } from '../miniapps.js';
 const RAW = [
   {
     manifest: {
-      fhManifest: 1, id: 'chores', name: 'Chores', version: '1.0.0',
+      fhManifest: 1, id: 'chores', section: 'chores', name: 'Chores', version: '1.0.0',
       description: 'Recurring household work: plan it, then find something that fits right now.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [
@@ -23,7 +23,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'tasks', name: 'Tasks', version: '1.0.1',
+      fhManifest: 1, id: 'tasks', section: 'tasks', name: 'Tasks', version: '1.0.1',
       description: 'One-off jobs, repairs, errands and bigger projects.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [
@@ -38,7 +38,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'tickets', name: 'Tickets', version: '1.0.0',
+      fhManifest: 1, id: 'tickets', section: 'tickets', name: 'Tickets', version: '1.0.0',
       description: 'Capture a concern, idea or appreciation in seconds - talk about it at the family meeting.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [
@@ -52,7 +52,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'principles', name: 'Principles', version: '1.0.0',
+      fhManifest: 1, id: 'principles', section: 'principles', name: 'Principles', version: '1.0.0',
       description: 'Family values and practical agreements, with the reasons behind them.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'list', title: 'Principles' }, { id: 'item', title: 'Principle', nav: false }, { id: 'new', title: 'Add a principle', nav: false }],
@@ -63,7 +63,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'decisions', name: 'Decisions', version: '1.0.0',
+      fhManifest: 1, id: 'decisions', section: 'decisions', name: 'Decisions', version: '1.0.0',
       description: 'Agreements and experiments: try something, look back, adapt.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'list', title: 'Decisions' }, { id: 'item', title: 'Decision', nav: false }, { id: 'new', title: 'New decision', nav: false }],
@@ -74,11 +74,11 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'meals', name: 'Meals', version: '1.0.0',
-      description: 'Recipes, a weekly meal plan and the shopping list that follows from it.',
-      author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
+      fhManifest: 1, id: 'meals', section: 'meals', name: 'Recipe Book', version: '1.1.0',
+      description: 'Your recipes, the week’s meal plan and the shopping list that follows from it.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [
-        { id: 'week', title: 'This week' }, { id: 'recipes', title: 'Recipes' }, { id: 'shopping', title: 'Shopping' },
+        { id: 'recipes', title: 'Recipes' }, { id: 'week', title: 'This week' }, { id: 'shopping', title: 'Shopping' },
         { id: 'item', title: 'Recipe', nav: false }, { id: 'new', title: 'Add a recipe', nav: false },
       ],
       data: { collections: [{ name: 'recipes', schema: 1 }, { name: 'plans', schema: 1 }, { name: 'shopping', schema: 1 }] },
@@ -89,7 +89,29 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'holidays', name: 'Holidays', version: '1.0.0',
+      fhManifest: 1, id: 'calories', section: 'meals', name: 'Calorie Checker', version: '1.0.0',
+      description: 'How many calories, and what else, is in a food - in the amount you actually eat.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
+      screens: [{ id: 'check', title: 'Check a food' }],
+      data: { collections: [] },
+      permissions: ['food:read'],
+    },
+    load: () => import('./calories/app.js'),
+  },
+  {
+    manifest: {
+      fhManifest: 1, id: 'assistant', section: 'meals', name: 'Meal Assistant', version: '1.0.0',
+      description: 'Type what you are eating and get one or two easy ways to make it a little better for the people at the table.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
+      screens: [{ id: 'meal', title: 'Improve a meal' }, { id: 'about', title: 'How it decides' }],
+      data: { collections: [] },
+      permissions: ['food:read', 'people:food'],
+    },
+    load: () => import('./assistant/app.js'),
+  },
+  {
+    manifest: {
+      fhManifest: 1, id: 'holidays', section: 'holidays', name: 'Holidays', version: '1.0.0',
       description: 'Trip ideas, itineraries, packing lists and budgets.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'list', title: 'Holidays' }, { id: 'item', title: 'Trip', nav: false }, { id: 'new', title: 'Add a trip', nav: false }],
@@ -100,7 +122,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'finance', name: 'Finance', version: '1.0.0',
+      fhManifest: 1, id: 'finance', section: 'finance', name: 'Finance', version: '1.0.0',
       description: 'Monthly budgets, and savings and debt goals with the assumptions in plain view.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'month', title: 'Budget' }, { id: 'goals', title: 'Goals' }, { id: 'goal', title: 'Goal', nav: false }, { id: 'new-goal', title: 'Add a goal', nav: false }],
@@ -111,7 +133,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'exercise', name: 'Exercise', version: '1.0.0',
+      fhManifest: 1, id: 'exercise', section: 'exercise', name: 'Exercise', version: '1.0.0',
       description: 'Log activity, keep flexible weekly plans, and see what the family did together.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'week', title: 'This week' }, { id: 'log', title: 'Log activity' }, { id: 'plans', title: 'Plans and goals' }],
@@ -122,18 +144,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'health', name: 'Health', version: '1.0.0',
-      description: 'Appointments and healthy habits - not medical records.',
-      author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
-      screens: [{ id: 'appointments', title: 'Appointments' }, { id: 'routines', title: 'Healthy habits' }, { id: 'item', title: 'Appointment', nav: false }, { id: 'new', title: 'Add an appointment', nav: false }],
-      data: { collections: [{ name: 'appointments', schema: 1 }, { name: 'routines', schema: 1 }] },
-      permissions: ['data:own', 'people:read', 'notify'],
-    },
-    load: () => import('./health/app.js'),
-  },
-  {
-    manifest: {
-      fhManifest: 1, id: 'faith', name: 'Faith', version: '1.0.0',
+      fhManifest: 1, id: 'faith', section: 'faith', name: 'Faith', version: '1.0.0',
       description: 'Bible reading plans, reflections and family discussion.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'reading', title: 'Reading' }, { id: 'journal', title: 'Journal' }, { id: 'plan', title: 'Reading plan', nav: false }],

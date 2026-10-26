@@ -1,2 +1,6 @@
 node_modules/
 .DS_Store
+
+# The raw USDA download (3 GB) and third-party reference images stay local.
+# tools/build_foods.py turns the download into data/foods.json, which is committed.
+reference/Nutrition/
