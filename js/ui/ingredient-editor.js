@@ -9,7 +9,7 @@
 
 import { el } from './dom.js';
 import { GUIDE } from '../apps/assistant/guide.js';
-import { parseIngredient, unitKey } from '../apps/meals/logic.js';
+import { parseIngredient, unitKey, typeOf, typeName } from '../apps/meals/logic.js';
 import { tokens, foodSizes } from '../food.js';
 import { resolveIngredient } from '../meal-nutrition.js';
 import { fmtMass, sizeLabel } from '../units.js';
@@ -30,18 +30,19 @@ function shortName(name) {
 /**
  * @param rows      the ingredient lines (edited in place): { name, qty, unit, fdcId?, recipeId?, whole?, note? }
  * @param db        the food database, or null while it loads (suggestions then come from your items and the guide)
- * @param own       your own meals: [{ id, title, yield, asIngredient }]. Those not yet used as an
- *                  ingredient are offered too when `onMakeIngredient` can set them up.
- * @param onMakeIngredient async (id) => its new `yield`, or null - marks one of our meals as an ingredient
+ * @param own       our own entries (meals, recipes, own ingredients): [{ id, title, type, yield }]. One that
+ *                  does not say what it makes is offered when `onMakeIngredient` can weigh it.
+ * @param onMakeIngredient async (id) => its new `yield`, or null - weighs one of our entries
+ * @param show      which suggestions: 'all', a type ('meal', 'recipe', 'own') or 'food' (the food database)
  * @param selfId    this recipe's own id - it cannot be an ingredient of itself
  * @param onChange  called with the rows after every change
  * @param sizes     the family's own sizes: Map fdcId -> [{ label, grams }] ("ring" = 200 g)
  * @param onAddSize async ({ fdcId, label, grams }) => saves a new one; without it sizes cannot be added here
  * @param system    'metric' | 'imperial', for the weight shown next to each line
  */
-export function ingredientEditor({ rows, db = null, own = [], selfId = null, onChange = () => {}, ownOnly = false, sizes = new Map(), onAddSize = null, system = 'metric', onMakeIngredient = null }) {
+export function ingredientEditor({ rows, db = null, own = [], selfId = null, onChange = () => {}, show: shown = 'all', sizes = new Map(), onAddSize = null, system = 'metric', onMakeIngredient = null }) {
   const box = el('div', { class: 'stack ing-editor' });
-  let onlyOwn = ownOnly;
+  let show = shown;
   let openRow = null;
   let adding = null;   // the row whose "our own size" form is open
 
@@ -58,13 +59,13 @@ export function ingredientEditor({ rows, db = null, own = [], selfId = null, onC
     const q = tokens(text);
     if (!q.length) return [];
     const hit = (s) => q.every((t) => tokens(s).some((w) => w.startsWith(t)));
-    const usable = (r) => r.asIngredient || onMakeIngredient;
-    const mine = own.filter((r) => r.id !== selfId && usable(r) && hit(r.title)).slice(0, 6).map((r) => ({
+    const usable = (r) => r.yield?.qty || onMakeIngredient;
+    const mine = show === 'food' ? [] : own.filter((r) => r.id !== selfId && usable(r) && (show === 'all' || typeOf(r) === show) && hit(r.title)).slice(0, 6).map((r) => ({
       kind: 'own', label: r.title,
-      sub: r.asIngredient && r.yield?.qty ? `makes ${r.yield.qty} ${r.yield.unit}` : 'our own meal - picking it lets other recipes use it',
-      pick: { name: r.title, recipeId: r.id, unit: r.yield?.unit ?? '', fdcId: undefined, setUp: !r.asIngredient || !r.yield?.qty },
+      sub: `${typeName(typeOf(r))}${r.yield?.qty ? ` · makes ${r.yield.qty} ${r.yield.unit || 'pieces'}` : ' · weighed from its ingredients when picked'}`,
+      pick: { name: r.title, recipeId: r.id, unit: r.yield?.unit ?? '', fdcId: undefined, setUp: !r.yield?.qty },
     }));
-    if (onlyOwn) return mine;
+    if (show !== 'all' && show !== 'food') return mine;
     const guide = GUIDE.filter((g) => [g.name, ...g.also].some(hit)).slice(0, 5).map((g) => ({ kind: 'guide', label: g.name, sub: 'everyday food', pick: { name: g.name, fdcId: g.fdc, recipeId: undefined } }));
     const seen = new Set();
     const usda = db ? db.search(text, 14).filter((f) => !guide.some((g) => g.pick.fdcId === f.id) && !seen.has(f.name) && seen.add(f.name)).slice(0, 6).map((f) => ({ kind: 'usda', label: f.name, sub: `${Math.round(f.per100.kcal ?? 0)} kcal per 100 g`, pick: { name: shortName(f.name), fdcId: f.id, recipeId: undefined, usdaName: f.name } })) : [];
@@ -160,7 +161,7 @@ export function ingredientEditor({ rows, db = null, own = [], selfId = null, onC
       const y = await onMakeIngredient(p.recipeId);
       if (!y?.qty) { r.name = p.name; openRow = null; changed(); redraw(); return; }
       const o = own.find((x) => x.id === p.recipeId);
-      if (o) { o.asIngredient = true; o.yield = y; }
+      if (o) o.yield = y;
       p = { ...p, unit: y.unit, setUp: false };
     }
     r.name = p.name;
@@ -175,7 +176,11 @@ export function ingredientEditor({ rows, db = null, own = [], selfId = null, onC
   function redraw() {
     const paste = el('textarea', { class: 'input', rows: '3', placeholder: 'Paste several lines, e.g. "200 g flour"', 'aria-label': 'Paste ingredient lines' });
     box.replaceChildren(
-      el('label', { class: 'checkline small' }, [el('input', { type: 'checkbox', checked: onlyOwn, 'data-field': 'ing-own-only', on: { change: (e) => { onlyOwn = e.target.checked; } } }), 'Only suggest our own items (home-made sauces, bases and the like)']),
+      // What the suggestions search: everything, one of our own types, or the food database.
+      el('div', { class: 'chipset', role: 'group', 'aria-label': 'Search in' }, [['all', 'All'], ['meal', 'Meals'], ['recipe', 'Recipes'], ['own', 'Own ingredients'], ['food', 'Ingredients']].map(([k, t]) => el('button', {
+        class: 'chip', type: 'button', 'aria-pressed': String(show === k), text: t, 'data-field': `ing-show:${k}`,
+        on: { click: () => { show = k; redraw(); } },
+      }))),
       ...rows.map(rowNode),
       el('div', { class: 'row' }, [
         el('button', { class: 'btn btn-small', type: 'button', text: '+ Add an ingredient', 'data-field': 'ing-add', on: { click: () => { rows.push({ name: '', qty: null, unit: 'g' }); changed(); redraw(); box.querySelector(`[data-field="ing-name:${rows.length - 1}"]`)?.focus(); } } }),

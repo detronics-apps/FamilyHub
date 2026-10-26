@@ -41,7 +41,7 @@ const IGNORE = new Set(('a an and or with of the in on some little bit plain fre
 
 /* ---------------------------------------------------------- the meal */
 
-/** A Meals & Recipes recipe read as a meal: its ingredients, or its name if it lists none. */
+/** A the Cookbook recipe read as a meal: its ingredients, or its name if it lists none. */
 export const recipeMealText = (recipe) => (recipe.ingredients?.length ? recipe.ingredients.map((i) => i.name).join(', ') : recipe.title ?? '');
 
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -177,7 +177,7 @@ function scoreFood(db, food, ctx) {
     why.push(`Adds ${food.group === 'veg' ? 'a vegetable' : 'fruit'} to a meal that has none yet.`);
   } else if (food.colour && !colours.has(food.colour) && PLANT.has(food.group)) {
     score += wantsColour ? 0.5 : 0.3;
-    why.push(`Adds ${COLOURS[food.colour]} colour the plate does not have yet.`);
+    why.push(`Adds ${COLOURS[food.colour]} colour the meal does not have yet.`);
   }
   for (const c of people) {
     if (wantsColour && PLANT.has(food.group) && (c.focus.has('colour') || c.focus.has('variety')) && !helps.has(c.id)) helps.set(c.id, ['more colour and plant variety']);
@@ -214,7 +214,7 @@ function scoreFood(db, food, ctx) {
     if (food.child && c.age < food.child.under && food.child.prep) notes.push(`For ${c.name}: ${food.child.prep}.`);
     if (food.preg && c.pregnant && food.preg.note) notes.push(`${c.name}: ${food.preg.note}`);
   }
-  for (const c of dislikedBy) notes.push(`${c.name} is not keen on it - leave it off ${c.name}’s plate.`);
+  for (const c of dislikedBy) notes.push(`${c.name} is not keen on it - leave it out of ${c.name}’s portion.`);
   if (likedBy.length) why.push(`${list(likedBy.map((c) => c.name))} ${likedBy.length > 1 ? 'like' : 'likes'} it.`);
 
   return { food, score, why, helps, notes };
@@ -271,7 +271,7 @@ export function suggest({ text, profiles, selected = [], db, today, notToday = [
     for (const c of people) {
       const hit = f.allergens.filter((a) => c.allergies.has(a));
       if (hit.length) { result.cautions.push(`${c.name} is allergic to ${list(hit)} - keep the ${f.name} away from ${c.name}.`); continue; }
-      if (f.child && c.age < f.child.under) result.cautions.push(f.child.avoid ? `${cap(f.name)} ${f.name.endsWith('s') ? 'are' : 'is'} not safe for children under ${f.child.under} - leave ${f.name.endsWith('s') ? 'them' : 'it'} off ${c.name}’s plate.` : `For ${c.name}, the ${f.name}: ${f.child.prep}.`);
+      if (f.child && c.age < f.child.under) result.cautions.push(f.child.avoid ? `${cap(f.name)} ${f.name.endsWith('s') ? 'are' : 'is'} not safe for children under ${f.child.under} - leave ${f.name.endsWith('s') ? 'them' : 'it'} out of ${c.name}’s portion.` : `For ${c.name}, the ${f.name}: ${f.child.prep}.`);
       if (f.preg && c.pregnant) result.cautions.push(`${c.name}: ${f.preg.note}`);
     }
   }
@@ -346,7 +346,7 @@ export function suggest({ text, profiles, selected = [], db, today, notToday = [
     result.cards.push({
       type: 'time', id: `time:side:${plantAdd.food.id}`, foodId: plantAdd.food.id, title: `Offer the ${plantAdd.food.name} on the side`,
       who: list(picky.map((c) => c.name)),
-      why: ['A small amount next to familiar food, with no pressure to eat it, makes trying it easier. It can take many tries.', 'Keep the foods they already enjoy on the plate.'],
+      why: ['A small amount next to familiar food, with no pressure to eat it, makes trying it easier. It can take many tries.', 'Keep the foods they already enjoy alongside it.'],
       effort: 'Easy', notes: [], alternatives: [],
     });
   }

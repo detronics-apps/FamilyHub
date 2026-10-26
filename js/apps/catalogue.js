@@ -74,11 +74,11 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'meals', section: 'meals', name: 'Meals & Recipes', version: '1.4.0',
-      description: 'Your family’s meals and recipes, and how much each person might eat.',
+      fhManifest: 1, id: 'meals', section: 'meals', name: 'Cookbook', version: '1.5.0',
+      description: 'Your family’s meals, recipes and own ingredients, and how much each person might eat.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [
-        { id: 'recipes', title: 'Meals & recipes' }, { id: 'item', title: 'Meal', nav: false }, { id: 'new', title: 'Add a meal', nav: false },
+        { id: 'recipes', title: 'Cookbook' }, { id: 'item', title: 'Item', nav: false }, { id: 'new', title: 'Add an item', nav: false },
       ],
       // Plans and the shopping list were kept here before This Week and Shopping became
       // mini-apps of their own; those apps still read the old files, which stay untouched.
@@ -116,8 +116,8 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'calories', section: 'meals', name: 'Calorie Checker', version: '1.1.0',
-      description: 'What is in a food, in the amount you actually eat. Build up a family meal or someone’s plate, and save it as a meal.',
+      fhManifest: 1, id: 'calories', section: 'meals', name: 'Calorie Checker', version: '1.2.0',
+      description: 'What is in a food, in the amount you actually eat. Build up an item for the family or one person, and save it to the Cookbook.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [{ id: 'check', title: 'Check a food' }],
       data: { collections: [] },

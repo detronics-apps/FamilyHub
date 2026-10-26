@@ -1,4 +1,4 @@
-// Meals & Recipes (product plan section 13): meals, a weekly plan, and the
+// Cookbook (product plan section 13): meals, a weekly plan, and the
 // shopping list that follows from it. Pure - no DOM.
 //
 // One record kind: a meal is a name and its ingredients; adding a method (steps)
@@ -72,6 +72,22 @@ export function fmtQty(q) {
 
 /* ------------------------------------------------------------ recipes */
 
+/**
+ * What an entry is, for finding it - never a limit on where it can be used: a
+ * recipe can go into a meal, a meal into a recipe, an own ingredient into either.
+ * Ingredients from the food database have no type.
+ */
+export const TYPES = { meal: 'Meal', recipe: 'Recipe', own: 'Own ingredient' };
+/**
+ * An entry's type, '' while it is just an item (not chosen yet). One saved before
+ * types existed (no `type` at all), or its index line, is placed by what it has.
+ */
+export const typeOf = (r) => (TYPES[r.type] ? r.type
+  : r.type !== undefined ? ''
+    : r.asIngredient ? 'own' : (r.instructions?.length ?? 0) > 0 || r.recipe === true ? 'recipe' : '');
+/** "Meal", "Recipe", "Own ingredient" - or "Item" until one is chosen. */
+export const typeName = (t) => TYPES[t] ?? 'Item';
+
 export function normaliseRecipe(r = {}) {
   const ingredients = (Array.isArray(r.ingredients) ? r.ingredients : lines(r.ingredients).map(parseIngredient))
     .map((i) => (typeof i === 'string' ? parseIngredient(i) : i))
@@ -88,7 +104,8 @@ export function normaliseRecipe(r = {}) {
   for (const [k] of NUTRIENTS) { const v = num(r.nutrition?.[k]); if (v != null) nutrition[k] = v; }
   return {
     ...r,
-    title: str(r.title, 200) || 'Untitled meal',
+    type: typeOf({ ...r, instructions: lines(r.instructions) }),
+    title: str(r.title, 200) || 'Untitled item',
     description: str(r.description),
     servings: Math.max(1, Math.round(num(r.servings) ?? 4)),
     prepMinutes: num(r.prepMinutes),
@@ -109,10 +126,10 @@ export function normaliseRecipe(r = {}) {
       from: n.from === 'occurrence' ? 'occurrence' : 'recipe', occasion: str(n.occasion, 120),
     })),
     variantOf: str(r.variantOf, 40),   // set on a copy saved from a changed planned meal
-    // What one batch makes ("12 pancakes", "300 ml"), and whether other recipes can use it as an ingredient.
+    // What one batch makes ("12 pancakes", "300 ml") - what another entry uses a part of.
     // auto: the amount was worked out from the ingredients' weight, so it is worked out again on every save.
     yield: { qty: num(r.yield?.qty), unit: unitKey(str(r.yield?.unit, 30)), ...(r.yield?.auto === true ? { auto: true } : {}) },
-    asIngredient: r.asIngredient === true,
+    asIngredient: undefined,   // replaced by type 'own'
   };
 }
 
@@ -146,11 +163,10 @@ export function addNote(r, text, { from = 'recipe', occasion = '', at = new Date
   return { ...r, noteLog: [...r.noteLog, { id, at, text: str(text, 1000), from, occasion: str(occasion, 120) }] };
 }
 
-/** A meal becomes a recipe once it has a method. */
-export const isRecipe = (r) => r.instructions.length > 0;
+export const isRecipe = (r) => typeOf(r) === 'recipe';
 
 /** Index version: an index written before this lacks the facts and feedback below and is rebuilt once. */
-export const SUMMARY_VERSION = 3;
+export const SUMMARY_VERSION = 5;
 
 /** What the index keeps per meal: enough to list, search and filter without opening each one. */
 export function recipeSummary(r) {
@@ -158,7 +174,7 @@ export function recipeSummary(r) {
   return {
     ix: SUMMARY_VERSION,
     title: r.title,
-    recipe: isRecipe(r),
+    type: typeOf(r),
     minutes: (r.prepMinutes ?? 0) + (r.cookMinutes ?? 0) || null,
     servings: r.servings,
     tags: r.tags,
@@ -167,7 +183,7 @@ export function recipeSummary(r) {
     ingredientNames: r.ingredients.map((i) => i.name).slice(0, 40),
     tried: r.tried ?? false, rating: r.rating ?? null, prefs: r.prefs ?? {},
     variantOf: r.variantOf ?? '',
-    asIngredient: r.asIngredient ?? false, yield: r.yield ?? { qty: null, unit: '' },
+    yield: r.yield ?? { qty: null, unit: '' },
   };
 }
 
@@ -224,7 +240,7 @@ export function mealFromLink(param) {
   if (!raw || !Array.isArray(raw.ingredients)) return null;
   return normaliseRecipe({
     title: str(raw.title, 200), servings: raw.servings, ingredients: raw.ingredients, variantOf: str(raw.variantOf, 40), notes: str(raw.notes, 2000),
-    instructions: raw.instructions, tags: raw.tags, prepMinutes: raw.prepMinutes, cookMinutes: raw.cookMinutes, allergens: raw.allergens, description: raw.description,
+    instructions: raw.instructions, type: raw.type, tags: raw.tags, prepMinutes: raw.prepMinutes, cookMinutes: raw.cookMinutes, allergens: raw.allergens, description: raw.description,
   });
 }
 

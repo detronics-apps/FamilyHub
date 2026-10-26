@@ -34,9 +34,10 @@ publisher or anyone else.
   to it, or type anything in.
 - **Meals** section, four mini-apps sharing one food database (USDA FoodData Central, ~13,600
   foods) and the details on the People page:
-  - **Meals & Recipes**: meals (a name and ingredients) and recipes (a meal with a method - add it
-    any time). Search, allergen filter, scaling, and a portion guide per person with or without
-    leftovers. Plan a meal or send its ingredients to Shopping.
+  - **Cookbook**: items, each called a meal, a recipe or an own ingredient (home-made mayo) - or
+    left as an item until you decide. Anything can go into anything. Search, type and allergen
+    filters, scaling, and a portion guide per person with or without leftovers. Plan it or send
+    its ingredients to Shopping.
   - **This Week**: the week's meals as planned occasions - browse and filter your meals from the
     planner, set servings, guests and leftovers (set aside for a later meal, counted once), change
     one meal without touching the recipe, Plan my week (favourites plus new meals), How the week

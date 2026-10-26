@@ -125,7 +125,7 @@ export const HOWTOS = [
     'Things whose name already exists are left alone, so nothing is doubled. Lines with a problem are listed by line number.',
   ] },
   { id: 'meals', title: 'Plan the week’s meals and make the shopping list', steps: [
-    'Open Meals, then This Week. Press Plan next to a day and choose a meal - or just type one. (Or press "Plan it" on any meal in Meals & Recipes.)',
+    'Open Meals, then This Week. Press Plan next to a day and choose a meal - or just type one. (Or press "Plan it" on any meal in the Cookbook.)',
     'Press "Send the week to the shopping list". Amounts from all the week’s meals are added up, scaled to the servings you chose; untick what you already have.',
     'Tick things off in Shopping as you buy them. Sending the week again updates its items; your own additions and ticked items stay.',
   ] },
@@ -135,19 +135,19 @@ export const HOWTOS = [
     'You see what is being sent and untick what you already have before it is added.',
   ] },
   { id: 'portions', title: 'See how much each person might eat', steps: [
-    'Open a meal in Meals & Recipes. "Portions for the family" shows a rough share for each person, from their age, gender, height and weight on the People page.',
+    'Open a meal in the Cookbook. "Portions for the family" shows a rough share for each person, from their age, gender, height and weight on the People page.',
     'Choose who is eating and whether you want leftovers, then press the "Use ... servings" button to scale the ingredients.',
     'An adult can set an energy goal on the People page (for example about 500 kcal a day less); their portion follows it. Appetites vary - let everyone eat to their hunger.',
   ] },
   { id: 'meal-to-recipe', title: 'Build a meal and turn it into a recipe', steps: [
-    'In Calorie Checker, choose "The family meal" or someone’s plate, and add foods in the amounts you use.',
+    'In Calorie Checker, choose "For the family" or one person, and add foods in the amounts you use - they build up into an item.',
     'Press "Save as a meal", give it a name and save. It is a meal: a name and its ingredients.',
     'Whenever you like, edit it and add the method. Once it has steps, it is a recipe. Every recipe is a meal; not every meal is a recipe.',
   ] },
   { id: 'assistant', title: 'Get an easy idea to improve a meal', steps: [
     'On the People page, press "Food details" for each person: birthday, allergies, pregnancy, and what they would like more of. All optional.',
     'Open Meals, then Meal Assistant. Choose who is eating, type the meal in a few words ("oats with butter and sugar") and press Get ideas.',
-    'Or open one of your recipes from the list (or press "Ideas to improve it" on a recipe in the Meals & Recipes) to see ideas for it.',
+    'Or open one of your recipes from the list (or press "Ideas to improve it" on a recipe in the Cookbook) to see ideas for it.',
     'Each idea says who it helps and why. Press "Not in the house today" to keep it for next time, or "Not for us" to hide it.',
   ] },
   { id: 'plan-meal', title: 'Plan a meal with leftovers or guests', steps: [
@@ -156,15 +156,15 @@ export const HOWTOS = [
     'Open the planned meal to add guests, change its ingredients for this time only, add a note, or send it to Meal Assistant for ideas.',
   ] },
   { id: 'ingredients', title: 'Add ingredients, and use your own sauces in other recipes', steps: [
-    'In Meals & Recipes, press Add a meal (or Edit). Press "+ Add an ingredient", start typing and pick the food from the list - ✓ means its calories count.',
+    'In the Cookbook, press Add an item (or Edit) and say what it is - or leave it as an item for now: a meal (what the family eats at one sitting), a recipe (one thing, like a cake) or an own ingredient (like home-made mayo). Press "+ Add an ingredient", start typing and pick from the list - ✓ means its calories count.',
     'Enter the total amount for the whole recipe and choose the unit. Say what one batch makes, e.g. 12 pancakes.',
-    'For something home-made like mayo, tick "Use this as an ingredient" and choose what one batch makes from the list (leave the amount empty with g and it is the weight of its ingredients, e.g. 239 g). It then appears with a ★ when adding ingredients elsewhere - tick "Only suggest our own items" to see just yours.',
+    'For something home-made like mayo, make it an own ingredient and choose what one batch makes from the list (leave the amount empty with g and it is the weight of its ingredients, e.g. 239 g). Anything of your own can go into another entry - when adding an ingredient, the chips choose what to search: All, Meals, Recipes, Own ingredients or Ingredients (the food database).',
     'Enter what you buy: after picking a food, the unit list has its own sizes (½ head of lettuce, 1 cucumber, 1 tin) and the weight shows next to the line. Not there? Choose "+ Add our own size" and type it off the packet once.',
     'When planning, the recipe is made x1, x1.5 or x2 so eggs and other whole-only items stay whole.',
     'Already made the mayo? When sending to the shopping list, tick "We already have the Home-made mayo" under Made at home - its eggs and oil are left off.',
   ] },
   { id: 'rate', title: 'Rate a meal and record favourites', steps: [
-    'Open a meal in Meals & Recipes. Tick "We have tried it", then choose a family rating from 1 to 10.',
+    'Open a meal in the Cookbook. Tick "We have tried it", then choose a family rating from 1 to 10.',
     'Set each person’s preference - favourite, likes, neutral or dislikes. A 7/10 meal can still be one child’s favourite.',
     'Add notes for next time. A note about one particular meal goes on that day in This Week.',
   ] },
@@ -181,7 +181,7 @@ export const HOWTOS = [
   { id: 'calories', title: 'Check what is in a food', steps: [
     'Open Meals, then Calorie Checker, and look up the food.',
     'Choose the amount - a cup, a slice, or grams - to see the calories and nutrients in what you actually eat.',
-    'Press "Add to the plate" to add several foods up. Nothing is saved or logged.',
+    'Press "Add to the item" to add several foods up. Nothing is saved or logged.',
   ] },
   { id: 'trip', title: 'Plan a trip', steps: [
     'Open Holidays and press "Add a trip or idea". Only a name is needed - dates can come later.',
@@ -254,7 +254,7 @@ export const FEATURES = [
   { name: 'Meal Assistant', where: 'Meals › Meal Assistant', what: 'One or two easy ideas for the meal in front of you, fitted to who is eating - allergies, age, pregnancy and wishes included.' },
   { name: 'Calorie Checker', where: 'Meals › Calorie Checker', what: 'Calories and nutrients in the amount you actually eat, from 13,000 foods.' },
   { name: 'One shopping list', where: 'Home › Shopping', what: 'Meals, the week’s plan and chore supplies can all be sent to it; anything else can be typed in.' },
-  { name: 'Portions and leftovers', where: 'Meals › Meals & Recipes › a meal', what: 'How much each person might eat, and how many servings to make with or without leftovers.' },
+  { name: 'Portions and leftovers', where: 'Meals › Cookbook › an item', what: 'How much each person might eat, and how many servings to make with or without leftovers.' },
   { name: 'Projections with their assumptions', where: 'Finance › Goals', what: 'When a goal could be reached, or a debt paid off - and plainly when it never would at the current payment.' },
   { name: 'Avoid a room', where: 'Chores › Do something now', what: 'With "Anywhere" chosen, tap rooms under "Not today" to leave them out.' },
   { name: 'Undo', where: 'After pressing Done', what: 'The confirmation has an Undo button, in case it was pressed by mistake.' },

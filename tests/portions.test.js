@@ -33,11 +33,22 @@ test('shares: a quarter at a time; a plan adds leftovers and rounds up what to c
   assert.deepEqual([1.25, 1, 0.5, 0.75].map(fmtShare), ['1¼', '1', '½', '¾']);
 });
 
-test('a meal is a recipe once it has a method', () => {
-  const meal = normaliseRecipe({ title: 'Toast and eggs', ingredients: ['2 slices bread', '2 eggs'] });
-  assert.equal(isRecipe(meal), false);
-  assert.equal(recipeSummary(meal).recipe, false);
-  assert.equal(isRecipe(normaliseRecipe({ ...meal, instructions: 'Toast the bread\nFry the eggs' })), true);
+test('an entry is an item until it is called a meal, a recipe or an own ingredient', async () => {
+  const { typeOf, typeName } = await import('../js/apps/meals/logic.js');
+  const item = normaliseRecipe({ title: 'Toast and eggs', ingredients: ['2 slices bread', '2 eggs'] });
+  assert.equal(item.type, '');
+  assert.equal(typeName(item.type), 'Item');
+  assert.equal(recipeSummary(item).type, '');
+  assert.equal(normaliseRecipe({ title: 'Cake', instructions: ['Mix', 'Bake'] }).type, 'recipe', 'saved before types: a method made it a recipe');
+  assert.equal(normaliseRecipe({ title: 'Mayo', asIngredient: true, instructions: ['Whisk'] }).type, 'own', 'saved before types: "use as an ingredient"');
+  assert.equal(normaliseRecipe({ ...item, instructions: ['Toast the bread', 'Fry the eggs'] }).type, '', 'left as an item, a method does not change it');
+  assert.equal(normaliseRecipe({ ...item, type: 'meal', instructions: ['Toast'] }).type, 'meal', 'a chosen type stays');
+  assert.equal(isRecipe(normaliseRecipe({ ...item, type: 'recipe' })), true);
+  assert.equal(normaliseRecipe({ title: 'x', type: 'nonsense' }).type, '');
+  assert.equal(typeOf({ recipe: true }), 'recipe', 'an index line written before types');
+  assert.equal(typeOf({ recipe: false }), '');
+  assert.equal(JSON.parse(JSON.stringify(normaliseRecipe({ title: 'Mayo', asIngredient: true }))).asIngredient, undefined, 'the old flag is not kept');
+  assert.equal(normaliseRecipe({}).title, 'Untitled item');
 });
 
 test('meals from Calorie Checker keep their food links, even after the lines are edited', () => {

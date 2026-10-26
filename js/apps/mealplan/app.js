@@ -1,7 +1,7 @@
 // This Week (Meals section): the week's planned meals. Each slot is a planned
 // meal - one occasion, apart from the saved recipe it came from - with its own
 // servings, leftovers, ingredient changes, note and feedback (see normaliseSlot
-// in ../meals/logic.js). Meals and recipes come from Meals & Recipes
+// in ../meals/logic.js). Meals and recipes come from the Cookbook
 // (read-only); ratings, preferences and new versions are recorded there through
 // links, and the week's ingredients go to Shopping the same way. Weeks planned
 // before This Week was its own mini-app are read from where they were kept.
@@ -35,7 +35,7 @@ const plans = (hub) => hub.data.collection('plans', { summary: (p) => ({ title: 
 const book = (hub) => (hub.data.installed('meals') ? hub.data.of('meals', 'recipes') : null);
 const legacyPlans = (hub) => (hub.data.installed('meals') ? hub.data.of('meals', 'plans') : null);
 
-/** A week's plan: our own, else one kept by Meals & Recipes from before, else empty. */
+/** A week's plan: our own, else one kept by the Cookbook from before, else empty. */
 const loadPlan = (hub, monday) => hub.use(`plan:${monday}`, async () => {
   const own = await plans(hub).get(planId(monday));
   const old = own ? null : await legacyPlans(hub)?.get(planId(monday)).catch(() => null);
@@ -220,7 +220,7 @@ function chooseScreen(hub, monday, day, meal) {
     el('h1', { text: `${label(date, meal, today)}${current ? ` - instead of ${current.title}` : ''}` }),
     el('div', { class: 'row' }, [
       el('input', { class: 'input', type: 'search', value: ui.q, placeholder: 'Search by name or ingredient', 'aria-label': 'Search meals', 'data-field': 'choose-search', style: { flex: '1 1 220px' }, on: { change: (e) => { ui.q = e.target.value; hub.render(); } } }),
-      current ? el('button', { class: 'btn btn-quiet', type: 'button', text: 'Remove from the plan', 'data-field': 'remove-slot', on: { click: async () => { if (await confirmAction({ title: `Remove ${current.title} from ${label(date, meal, today)}?`, text: 'The saved meal stays in Meals & Recipes. Leftovers set aside from it are cancelled.', confirmLabel: 'Remove' })) { await savePlan(hub, monday, setSlot(p.data, day, meal, null)); hub.open(back); } } } }) : null,
+      current ? el('button', { class: 'btn btn-quiet', type: 'button', text: 'Remove from the plan', 'data-field': 'remove-slot', on: { click: async () => { if (await confirmAction({ title: `Remove ${current.title} from ${label(date, meal, today)}?`, text: 'The saved meal stays in the Cookbook. Leftovers set aside from it are cancelled.', confirmLabel: 'Remove' })) { await savePlan(hub, monday, setSlot(p.data, day, meal, null)); hub.open(back); } } } }) : null,
     ]),
     filterPanel(ui.filters, set, people),
     active.length ? el('div', { class: 'chipset', 'aria-label': 'Active filters' }, [
@@ -229,7 +229,7 @@ function chooseScreen(hub, monday, day, meal) {
     ]) : null,
     el('p', { class: 'small muted', text: `${results.length} of ${list.data.length} meal${list.data.length === 1 ? '' : 's'}` }),
     results.length ? el('ul', { class: 'list panel' }, results.slice(0, 60).map((s) => resultRow(hub, s, people, () => { ui.pick = { for: `${monday}~${day}~${meal}`, summary: s }; hub.render(); }, back))) : el('div', { class: 'panel' }, [
-      el('p', { text: list.data.length ? 'No meal matches every filter you chose.' : 'No meals saved yet - add some in Meals & Recipes, or type a meal below.' }),
+      el('p', { text: list.data.length ? 'No meal matches every filter you chose.' : 'No meals saved yet - add some in the Cookbook, or type a meal below.' }),
       active.length ? el('p', { class: 'small', text: `Try removing one: ${active.map(([t]) => t).join(', ')}.` }) : null,
     ]),
     ui.compare.length >= 2 && f.data ? compareLoaded(hub, f.data) : null,
@@ -244,7 +244,7 @@ function chooseScreen(hub, monday, day, meal) {
         },
       },
     }, [
-      el('input', { class: 'input', name: 'free', placeholder: 'Or just type a meal, e.g. "Takeaway" or "Leftover soup"', 'aria-label': 'A meal not in Meals & Recipes', style: { flex: '1 1 220px' } }),
+      el('input', { class: 'input', name: 'free', placeholder: 'Or just type a meal, e.g. "Takeaway" or "Leftover soup"', 'aria-label': 'A meal not in the Cookbook', style: { flex: '1 1 220px' } }),
       el('button', { class: 'btn', type: 'submit', text: 'Use what I typed' }),
     ]),
   ]);
@@ -338,12 +338,12 @@ function configureScreen(hub, { monday, day, meal, date, summary, current, back 
   ]);
 }
 
-/** Planning arrives from Meals & Recipes ("Plan it"): pick the day and meal, servings and leftovers. */
+/** Planning arrives from the Cookbook ("Plan it"): pick the day and meal, servings and leftovers. */
 function addScreen(hub, id, serves) {
   const r = id ? loadRecipe(hub, id) : { data: null };
   if (r.loading) return loading();
   if (r.error) return failure(r.error);
-  if (!r.data) return el('p', { class: 'panel', text: 'That meal was not found in Meals & Recipes.' });
+  if (!r.data) return el('p', { class: 'panel', text: 'That meal was not found in the Cookbook.' });
   const rec = r.data;
   const today = hub.today();
   const st = (ui.adding?.for === id ? ui.adding : (ui.adding = { for: id, date: today, meal: 'dinner', servings: Number(serves) || rec.servings, mode: 'none', portions: 2, target: defaultTarget(today) }));
@@ -394,7 +394,7 @@ function slotScreen(hub, monday, slotId) {
   const r = slot.recipeId ? loadRecipe(hub, slot.recipeId) : { data: null };
   const f = loadFood(hub);
   const list = loadSummaries(hub);
-  // The family's own sizes of foods, kept by Meals & Recipes.
+  // The family's own sizes of foods, kept by the Cookbook.
   const ourSizes = hub.use('meal-sizes', async () => { const c = hub.data.of('meals', 'sizes'); const m = new Map(); for (const s of c ? (await c.list({ limit: 100000 })).items : []) m.set(s.fdcId, [...(m.get(s.fdcId) ?? []), s]); return m; });
   if (r.loading) return loading();
   const rec = r.data;
@@ -428,7 +428,7 @@ function slotScreen(hub, monday, slotId) {
       changed ? el('span', { class: 'badge badge--demo', text: 'Changed this time' }) : null,
     ]),
     rec ? el('p', { class: 'small' }, ['From ', el('a', { href: mealHref(rec.id, here), text: rec.title }), ` · ${!rec.tried ? 'not tried yet' : rec.rating == null ? 'tried, not rated' : `family rating ${rec.rating}/10`}. Changes here are for this meal only.`])
-      : el('p', { class: 'small muted', text: 'A meal typed into the plan - not saved in Meals & Recipes.' }),
+      : el('p', { class: 'small muted', text: 'A meal typed into the plan - not saved in the Cookbook.' }),
 
     el('div', { class: 'panel stack', 'aria-label': 'Servings and leftovers' }, [
       el('h2', { text: 'Servings and leftovers', style: { margin: 0 } }),
@@ -484,7 +484,7 @@ function slotScreen(hub, monday, slotId) {
         el('summary', { text: changed ? 'Change this meal’s ingredients again' : 'Change the ingredients for this meal only' }),
         el('div', { class: 'stack' }, [
           el('p', { class: 'small', text: `Amounts for ${basis} servings (the recipe's own) - the batch is worked out from what you cook.` }),
-          ingredientEditor({ rows: ui.slotDraft.rows, db: f.data ?? null, own: (list.data ?? []).filter((s) => s.asIngredient), selfId: rec?.id ?? null, sizes: ourSizes.data ?? new Map(), system: sys }),
+          ingredientEditor({ rows: ui.slotDraft.rows, db: f.data ?? null, own: list.data ?? [], selfId: rec?.id ?? null, sizes: ourSizes.data ?? new Map(), system: sys }),
           el('div', { class: 'row' }, [
             el('button', { class: 'btn btn-small', type: 'button', text: 'Save for this meal', 'data-field': 'slot-ing-save', on: { click: async () => { await update({ ingredients: ui.slotDraft.rows.filter((x) => x.name.trim()), basis }); ui.slotDraft = null; } } }),
             changed && rec ? el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Go back to the recipe’s ingredients', on: { click: async () => { await update({ ingredients: null }); ui.slotDraft = null; } } }) : null,
@@ -502,7 +502,7 @@ function slotScreen(hub, monday, slotId) {
         el('div', { class: 'row' }, [
           el('span', { class: 'badge badge--ok', text: 'Kept for this time only' }),
           el('a', { class: 'btn btn-small', href: `#/meals/edit/${encodeURIComponent(rec.id)}/${encodeURIComponent(`update:${JSON.stringify({ servings: basis, ingredients: slot.ingredients })}`)}`, text: 'Replace the saved recipe', 'data-field': 'update-original' }),
-          el('a', { class: 'btn btn-small', href: `#/meals/new/${encodeURIComponent(`variant:${JSON.stringify({ title: `${rec.title} (our version)`, servings: basis, ingredients: slot.ingredients, variantOf: rec.id, notes: slot.note, instructions: rec.instructions, tags: rec.tags, prepMinutes: rec.prepMinutes, cookMinutes: rec.cookMinutes, allergens: rec.allergens, description: rec.description })}`)}`, text: 'Save as a new recipe', 'data-field': 'save-variant' }),
+          el('a', { class: 'btn btn-small', href: `#/meals/new/${encodeURIComponent(`variant:${JSON.stringify({ title: `${rec.title} (our version)`, servings: basis, ingredients: slot.ingredients, variantOf: rec.id, type: rec.type, notes: slot.note, instructions: rec.instructions, tags: rec.tags, prepMinutes: rec.prepMinutes, cookMinutes: rec.cookMinutes, allergens: rec.allergens, description: rec.description })}`)}`, text: 'Save as a new recipe', 'data-field': 'save-variant' }),
         ]),
       ]) : null,
       hub.data.installed('assistant') && ingredients.length ? el('a', { class: 'btn btn-small', href: `#/assistant/meal/slot:${encodeURIComponent(ref(monday, slot.id))}`, text: 'Improve with Meal Assistant', 'data-field': 'improve-slot', style: { alignSelf: 'flex-start' } }) : null,
@@ -538,7 +538,7 @@ function slotScreen(hub, monday, slotId) {
           ...Array.from({ length: 10 }, (_, i) => 10 - i).map((v) => el('option', { value: String(v), text: `${v}/10`, selected: slot.feedback.rating === v })),
         ]),
       ]),
-      el('p', { class: 'small muted', text: 'This rating is for this meal only - the family rating of the recipe is set in Meals & Recipes.' }),
+      el('p', { class: 'small muted', text: 'This rating is for this meal only - the family rating of the recipe is set in the Cookbook.' }),
       rec ? el('div', { class: 'row' }, [
         el('a', { class: 'btn btn-small', href: mealHref(rec.id, here), text: 'Rate the recipe and who likes it', 'data-field': 'rate-recipe' }),
         slot.note ? el('a', { class: 'btn btn-small btn-quiet', href: `#/meals/note/${encodeURIComponent(rec.id)}/${encodeURIComponent(JSON.stringify({ text: slot.note, occasion: label(date, slot.meal, today), back: here }))}`, text: 'Add this note to the recipe', 'data-field': 'promote-note' }) : null,
@@ -573,7 +573,7 @@ function mixScreen(hub, monday) {
   return el('section', { class: 'stack', 'aria-label': 'Plan my week' }, [
     el('a', { href: hub.href('week', monday), class: 'small', text: '‹ Back to the week' }),
     el('h1', { text: 'Plan my week' }),
-    el('p', { class: 'muted', text: 'A mix of meals the family already enjoys and new ones to try, from your own Meals & Recipes. Nothing goes into the plan until you say so.' }),
+    el('p', { class: 'muted', text: 'A mix of meals the family already enjoys and new ones to try, from your own the Cookbook. Nothing goes into the plan until you say so.' }),
     el('div', { class: 'panel stack' }, [
       el('label', { class: 'row small', style: { gap: '6px' } }, ['For', el('select', { class: 'select', style: { width: 'auto' }, 'data-field': 'mix-meal', on: { change: (e) => { ui.mix = { ...m, meal: e.target.value }; ui.proposal = null; hub.render(); } } }, MEALS.map((x) => el('option', { value: x, text: MEAL_LABEL[x].toLowerCase(), selected: x === m.meal }))), `- ${empty.length} empty day${empty.length === 1 ? '' : 's'} this week`]),
       ...Object.keys(MIX).map(number),
@@ -593,7 +593,7 @@ function mixScreen(hub, monday) {
       ]))) : el('p', { text: 'No meals could be suggested.' }),
       proposal.shortfall.length ? el('div', { class: 'small' }, [
         el('p', { text: 'Not enough meals for everything you asked:' }),
-        el('ul', {}, proposal.shortfall.map((s) => el('li', { text: `${MIX[s.group]}: ${s.found} of ${s.wanted}. ${{ family: 'Rate meals you have tried in Meals & Recipes so favourites can be found.', individual: 'Mark people’s favourites on a meal’s page.', untried: 'Add some new recipes to try.', other: 'Plan or rate more of the meals you have had.' }[s.group]}` }))),
+        el('ul', {}, proposal.shortfall.map((s) => el('li', { text: `${MIX[s.group]}: ${s.found} of ${s.wanted}. ${{ family: 'Rate meals you have tried in the Cookbook so favourites can be found.', individual: 'Mark people’s favourites on a meal’s page.', untried: 'Add some new recipes to try.', other: 'Plan or rate more of the meals you have had.' }[s.group]}` }))),
         el('p', { class: 'muted', text: 'Nothing is made up to fill the gaps - you can choose meals for the empty days yourself.' }),
       ]) : null,
       proposal.picks.length ? el('button', {

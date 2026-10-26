@@ -1,8 +1,7 @@
 // Calorie Checker (Meals section): look up a food in the shared food database
-// and see what is in the amount you actually eat. Foods can be added up as the
-// family's meal or as one person's plate, and saved as a meal in Meals &
-// Recipes (which owns meals: the plate goes over in the link). Nothing is
-// logged - it is a lookup, not a diary.
+// and see what is in the amount you actually eat. Foods can be added up into an
+// item, for the family or for one person, and saved in the Cookbook (which owns
+// items: the foods go over in the link). Nothing is logged - it is a lookup, not a diary.
 
 import { el } from '../../ui/dom.js';
 import { loading, failure, field } from '../kit.js';
@@ -12,7 +11,7 @@ import { foodWarnings } from '../../guidance.js';
 import { fmtMass, gramsFromOz, sizeLabel } from '../../units.js';
 
 const MAIN = ['kcal', 'protein', 'carbs', 'sugars', 'fat', 'satFat', 'fibre', 'sodium'];
-// One list per target: 'family' for the family meal, or a person's id for their plate.
+// One item being built per target: 'family', or a person's id.
 const ui = { query: '', foodId: null, unit: 'g', count: 100, target: 'family', plates: {}, more: false };
 
 export function render(hub) {
@@ -35,7 +34,7 @@ export function render(hub) {
     ]),
     people.length ? el('div', { class: 'chipset', role: 'group', 'aria-label': 'Building' }, [
       el('span', { class: 'small', text: 'Building:' }),
-      ...[['family', 'The family meal'], ...people.map((p) => [p.id, `${p.name}’s plate`])].map(([id, label]) => el('button', {
+      ...[['family', 'For the family'], ...people.map((p) => [p.id, `For ${p.name}`])].map(([id, label]) => el('button', {
         class: 'chip', type: 'button', 'aria-pressed': String(ui.target === id), 'data-field': `target:${id}`,
         text: `${label}${ui.plates[id]?.length ? ` (${ui.plates[id].length})` : ''}`, on: { click: () => { ui.target = id; hub.render(); } },
       })),
@@ -69,7 +68,7 @@ function defaultPortion(food, sys) {
   return String(Math.max(0, medium));
 }
 
-const targetName = (people) => (ui.target === 'family' ? 'the family meal' : `${people.find((p) => p.id === ui.target)?.name}’s plate`);
+const targetName = (people) => (ui.target === 'family' ? 'the item for the family' : `the item for ${people.find((p) => p.id === ui.target)?.name}`);
 
 function foodPanel(hub, db, food, target) {
   const grams = gramsOf(food);
@@ -98,7 +97,7 @@ function foodPanel(hub, db, food, target) {
     ]),
     el('div', { class: 'row' }, [
       el('button', {
-        class: 'btn btn-primary', type: 'button', text: `Add to ${target}`, 'data-field': 'add-plate', disabled: grams <= 0,
+        class: 'btn btn-primary', type: 'button', text: `Add to ${target}`, 'data-field': 'add-item', disabled: grams <= 0,
         on: { click: () => { (ui.plates[ui.target] ??= []).push({ foodId: food.id, grams, label: describe(food, hub.units()) }); ui.foodId = null; hub.render(); } },
       }),
     ]),
@@ -119,7 +118,7 @@ function platePanel(hub, db, people, plate) {
   const shares = family ? portionShares(people, hub.today()).filter((s) => s.share > 0) : [];
   const sum = shares.reduce((a, s) => a + s.share, 0);
   const kcalKnown = t.kcal && !t.kcal.missing;
-  // Handed to Meals & Recipes, which saves it: names shortened to their first part, grams rounded.
+  // Handed to the Cookbook, which saves it: names shortened to their first part, grams rounded.
   const meal = {
     title: items.slice(0, 3).map((p) => p.food.name.split(',')[0]).join(', '),
     servings: family ? portionPlan(shares).cook : 1,
@@ -127,14 +126,14 @@ function platePanel(hub, db, people, plate) {
   };
   // Age and stage guidance about these foods, for whoever is eating (honey before one, and so on).
   const warnings = (family ? people : [person]).flatMap((p) => foodWarnings(p, hub.today(), items.map((x) => x.food.name)).map((w) => `${p.name}: ${w.rule.text}`));
-  return el('div', { class: 'panel stack', 'aria-label': family ? 'The family meal' : `${person.name}’s plate` }, [
-    el('h2', { text: family ? 'The family meal' : `${person.name}’s plate`, style: { margin: 0 } }),
+  return el('div', { class: 'panel stack', 'aria-label': family ? 'An item for the family' : `An item for ${person.name}` }, [
+    el('h2', { text: family ? 'An item for the family' : `An item for ${person.name}`, style: { margin: 0 } }),
     ...warnings.map((w) => el('div', { class: 'panel caution', role: 'note' }, [el('strong', { text: 'Worth knowing: ' }), w])),
     el('ul', { class: 'list' }, items.map((p, i) => el('li', {}, [
       el('div', { class: 'list__main' }, [el('strong', { text: p.food.name }), el('div', { class: 'small muted', text: `${p.label} · ${fmtAmount(amounts(p.food, p.grams).kcal)} kcal` })]),
       el('button', { class: 'btn btn-small', type: 'button', text: 'Remove', on: { click: () => { plate.splice(i, 1); hub.render(); } } }),
     ]))),
-    el('p', { class: 'stat-big' }, [el('strong', { text: `${line('kcal').replace(' kcal', '')} kcal` }), el('span', { class: 'small muted', text: family ? ' for the whole meal' : ' altogether' })]),
+    el('p', { class: 'stat-big' }, [el('strong', { text: `${line('kcal').replace(' kcal', '')} kcal` }), el('span', { class: 'small muted', text: family ? ' for the whole item' : ' altogether' })]),
     el('p', { class: 'small', text: ['protein', 'carbs', 'fat', 'fibre'].map((k) => `${db.meta[k].label} ${line(k)}`).join(' · ') }),
     t.kcal?.missing ? el('p', { class: 'small muted', text: 'One or more items does not report everything, so some totals are "at least".' }) : null,
     family && shares.length ? el('div', {}, [
@@ -145,9 +144,9 @@ function platePanel(hub, db, people, plate) {
       el('p', { class: 'small muted', text: 'A rough guide from age and gender, and height and weight where recorded on the People page. Appetites vary - let everyone eat to their hunger.' }),
     ]) : null,
     el('div', { class: 'row' }, [
-      el('a', { class: 'btn btn-primary', href: `#/meals/new/${encodeURIComponent(`plate:${JSON.stringify(meal)}`)}`, text: 'Save as a meal', 'data-field': 'save-meal' }),
-      el('button', { class: 'btn btn-small', type: 'button', text: family ? 'Clear the meal' : 'Clear the plate', on: { click: () => { ui.plates[ui.target] = []; hub.render(); } } }),
+      el('a', { class: 'btn btn-primary', href: `#/meals/new/${encodeURIComponent(`item:${JSON.stringify(meal)}`)}`, text: 'Save to the Cookbook', 'data-field': 'save-meal' }),
+      el('button', { class: 'btn btn-small', type: 'button', text: 'Clear the item', on: { click: () => { ui.plates[ui.target] = []; hub.render(); } } }),
     ]),
-    el('p', { class: 'small muted', text: 'Saving opens Meals & Recipes with these foods filled in. Name it and save it as a meal; add the method any time to make it a recipe.' }),
+    el('p', { class: 'small muted', text: 'Saving opens the Cookbook with these foods filled in. Name it, and say whether it is a meal, a recipe or an own ingredient - or leave it as an item.' }),
   ]);
 }

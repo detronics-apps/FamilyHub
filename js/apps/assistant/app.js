@@ -1,7 +1,7 @@
 // Meal Assistant (Meals section): type the meal, choose who is eating, get a
 // few easy ideas. Profiles (ages, allergies, pregnancy, wishes) come from
 // the People page, so nothing is asked again here. A family recipe from the
-// Meals & Recipes can be opened instead of typing (read-only). Nothing is logged.
+// the Cookbook can be opened instead of typing (read-only). Nothing is logged.
 
 import { el } from '../../ui/dom.js';
 import { tabs, loading, failure } from '../kit.js';
@@ -47,7 +47,7 @@ function slotMeal(hub, ref) {
   return mealScreen(hub, null);
 }
 
-/** The family's recipes, if the Meals & Recipes is installed. */
+/** The family's recipes, if the Cookbook is installed. */
 const recipeBook = (hub) => (hub.data.installed('meals') ? hub.data.of('meals', 'recipes') : null);
 
 function mealScreen(hub, recipeId) {
@@ -56,7 +56,7 @@ function mealScreen(hub, recipeId) {
   const book = recipeBook(hub);
   const list = book ? hub.use('recipes', () => book.list({ limit: 1000 })) : null;
   const ask = (text, recipe = null) => { ui.text = text; ui.asked = text; ui.recipe = recipe; ui.notToday = []; ui.hidden = []; hub.render(); };
-  // Arriving from a recipe (the picker below, or "Ideas to improve it" in the Meals & Recipes).
+  // Arriving from a recipe (the picker below, or "Ideas to improve it" in the Cookbook).
   if (recipeId && book && ui.recipe?.id !== recipeId) {
     const r = hub.use(`recipe:${recipeId}`, () => book.get(recipeId));
     if (r.data) { ui.text = recipeMealText(r.data); ui.asked = ui.text; ui.recipe = { id: recipeId, title: r.data.title }; ui.notToday = []; ui.hidden = []; }
@@ -80,7 +80,7 @@ function mealScreen(hub, recipeId) {
       ]),
     ]) : el('p', { class: 'small muted' }, ['Add your family in ', el('a', { href: '#/people', text: 'People' }), ' - with ages, allergies and what each person would like more of - and suggestions will fit them.']),
     el('form', { class: 'stack', on: { submit: (e) => { e.preventDefault(); ask(e.target.elements.meal.value.trim()); if (recipeId) hub.go(null); } } }, [
-      el('label', { class: 'field__label', for: 'meal-text', text: 'What’s on the plate?' }),
+      el('label', { class: 'field__label', for: 'meal-text', text: 'What are you eating?' }),
       el('div', { class: 'row' }, [
         el('input', { class: 'input', id: 'meal-text', name: 'meal', value: ui.text, placeholder: 'e.g. oats with butter and sugar', autocomplete: 'off', 'data-field': 'meal', style: { flex: '1 1 240px' } }),
         el('button', { class: 'btn btn-primary', type: 'submit', text: 'Get ideas', 'data-field': 'get-ideas' }),

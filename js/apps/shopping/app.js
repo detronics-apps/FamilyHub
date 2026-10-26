@@ -1,7 +1,7 @@
-// Shopping (its own section): the family's one list. Meals & Recipes, This
+// Shopping (its own section): the family's one list. the Cookbook, This
 // Week and Chores send items here through a link (`add/<json>`), shown for a
 // yes before anything is added; anyone can also just type things in. A list
-// kept by Meals & Recipes before Shopping was its own mini-app is picked up.
+// kept by the Cookbook before Shopping was its own mini-app is picked up.
 
 import { el } from '../../ui/dom.js';
 import { loading, failure, saveRecord } from '../kit.js';

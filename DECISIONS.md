@@ -292,6 +292,22 @@ picked as an ingredient: one not yet set up is marked so, its weight becoming wh
 first screen, a mini-app to its section, and a section or core page to Home. The breadcrumb's
 mini-app name is a link on inner screens too. It is drawn by the frame, so every mini-app has it.
 
+**D-042 Every entry is a Meal, a Recipe or an Own ingredient (owner, 2026-10-26).** Replaces "a
+method makes it a recipe" and the "use as an ingredient" tick. The type is chosen on the form and
+is only for finding things - anything can go into anything. Meals & Recipes filters by All, Meal,
+Recipe, Own ingredient; adding an ingredient searches All, Meals, Recipes, Own ingredients or
+Ingredients (the food database, which has no type). An own ingredient must say what one batch
+makes (weighed from its ingredients when left empty in g); any other entry picked into another is
+weighed the same way. Entries saved before were placed once: "use as an ingredient" -> Own
+ingredient, a method -> Recipe, else Meal (recipe index version 4).
+
+**D-043 Cookbook, items, and no plates (owner, 2026-10-26).** "Meals & Recipes" is now the
+**Cookbook**. An entry is an **item** until it is called a meal, a recipe or an own ingredient; a
+new one starts as an item, and older entries without a method or the old tick are items too (not
+meals, as D-042 first had it). Calorie Checker builds an item, "for the family" or "for" one
+person, and saves it to the Cookbook - the word "plate" is gone from the app. Recipe index
+version 5.
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).

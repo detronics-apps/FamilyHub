@@ -205,3 +205,14 @@ walkthrough with a screen reader, Safari/Firefox, a real phone.
   its sizes in cm, ½ head shows "= 270 g"; 1 red onion "≈ 197 g"; feta "+ Add our own size" ring
   200 g, picked and shown "= 200 g"; a dressing saved without "use as an ingredient" is offered as
   "our own meal", and picking it marks it (makes 150 g) and adds it to the salad.
+- Types (D-042): automated - a new entry is a meal; older ones become own (the old tick), recipe
+  (a method) or meal; a chosen type stays when a method is added; an old index line still places.
+  Browser - list chips All / Meal / Recipe / Own ingredient each show only their type, with
+  badges; mayo became Own ingredient; ingredient chips search mayo in All (own + database), Own
+  ingredients (mayo only), Recipes (banana bread), Ingredients (database only); "Cucumber 21 cm"
+  saved as an own ingredient of 300 g cucumber reads "Makes 300 g".
+- Cookbook and items (D-043): automated - a new entry is an item ('' / "Item"); a method alone does
+  not change that; old entries are placed (own / recipe / item). Browser - breadcrumb "Home › Meals
+  › Cookbook", "Add an item", egg salad and chicken-and-rice show Item; Calorie Checker chips "For
+  the family", "For Alex"..., "Add to the item for the family", "An item for the family", "Save to
+  the Cookbook" opens "Add an item" with "an item (not decided yet)"; no "plate" on the page.
