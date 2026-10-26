@@ -70,17 +70,20 @@ function personCard(ctx, p) {
         class: 'input', type: 'date', value: p.born, max: ctx.today(), 'aria-label': `Birthday: ${p.name}`, 'data-field': `pborn:${p.id}`, style: { width: 'auto' },
         on: { change: (e) => update({ born: e.target.value }) },
       }),
-      stage ? el('span', { class: 'badge', 'data-field': `pstage:${p.id}`, text: `${STAGES[stage]} · ${ageText(p, ctx.today())}` })
-        : el('select', {
-          class: 'select', 'aria-label': `Adult or child: ${p.name} (until a birthday is added)`, 'data-field': `prole:${p.id}`, style: { width: 'auto' },
-          on: { change: (e) => update({ role: e.target.value }) },
-        }, [el('option', { value: 'adult', text: 'Adult', selected: p.role === 'adult' }), el('option', { value: 'child', text: 'Child', selected: p.role === 'child' })]),
+      stage ? null : el('select', {
+        class: 'select', 'aria-label': `Adult or child: ${p.name} (until a birthday is added)`, 'data-field': `prole:${p.id}`, style: { width: 'auto' },
+        on: { change: (e) => update({ role: e.target.value }) },
+      }, [el('option', { value: 'adult', text: 'Adult', selected: p.role === 'adult' }), el('option', { value: 'child', text: 'Child', selected: p.role === 'child' })]),
       el('select', {
         class: 'select', 'aria-label': `Gender: ${p.name}`, 'data-field': `psex:${p.id}`, style: { width: 'auto' },
         on: { change: (e) => update({ sex: e.target.value }) },
       }, [['', 'Gender'], ['female', 'Female'], ['male', 'Male']].map(([v, t]) => el('option', { value: v, text: t, selected: p.sex === v }))),
-      p.demo ? el('span', { class: 'badge badge--demo', text: 'Example' }) : null,
     ]),
+    // Labels on their own line, under the inputs and above the colours.
+    stage || p.demo ? el('div', { class: 'row', style: { gap: 'var(--space-2)' } }, [
+      stage ? el('span', { class: 'badge', 'data-field': `pstage:${p.id}`, text: `${STAGES[stage]} · ${ageText(p, ctx.today())}` }) : null,
+      p.demo ? el('span', { class: 'badge badge--demo', text: 'Example' }) : null,
+    ]) : null,
     el('div', { class: 'row', role: 'group', 'aria-label': `Colour for ${p.name}` }, PERSON_COLOURS.map((c, i) => el('button', {
       class: 'colour-dot', type: 'button', style: { background: c }, 'aria-pressed': String(p.colour === c), 'aria-label': `Colour ${i + 1}`,
       on: { click: () => update({ colour: c }) },

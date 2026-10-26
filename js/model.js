@@ -47,7 +47,8 @@ export const FOCUS = {
 // for adults who are not pregnant or breastfeeding (energyGoalAllowed).
 export const ENERGY_GOALS = { '-500': 'About 500 kcal a day less', '-250': 'About 250 kcal a day less', 0: 'Keep as I am', 250: 'About 250 kcal a day more', 500: 'About 500 kcal a day more' };
 
-export const PERSON_COLOURS = ['#d9734e', '#d9a441', '#8fae7e', '#c07aa6', '#d77a7a', '#b58a62'];
+// Warm, distinct and readable behind the initials. New colours go at the end so saved choices keep their place.
+export const PERSON_COLOURS = ['#d9734e', '#d9a441', '#8fae7e', '#c07aa6', '#d77a7a', '#b58a62', '#6f9fb8', '#9a86c4', '#e39b5e', '#5f9a8b'];
 
 export function newId(prefix) {
   return `${prefix}_${globalThis.crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
