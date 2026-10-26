@@ -30,6 +30,7 @@ export const defaultDevice = () => ({
   currentPersonId: null,
   prefs: {},                // personId (or 'anyone') -> { order, hidden }
   theme: 'system',
+  units: 'metric',          // 'metric' | 'imperial' - for showing and typing; data is always saved in metric
   onboardedAt: null,
   storageMode: 'device',    // 'device' | 'folder' (the family's Drive folder)
   folderName: null,
@@ -53,6 +54,7 @@ export function normaliseDevice(raw) {
     currentPersonId: typeof d.currentPersonId === 'string' ? d.currentPersonId : null,
     prefs,
     theme: ['system', 'light', 'dark'].includes(d.theme) ? d.theme : 'system',
+    units: d.units === 'imperial' ? 'imperial' : 'metric',
     onboardedAt: typeof d.onboardedAt === 'string' ? d.onboardedAt : null,
     storageMode: d.storageMode === 'folder' ? 'folder' : 'device',
     folderName: typeof d.folderName === 'string' ? d.folderName : null,

@@ -37,7 +37,10 @@ publisher or anyone else.
   - **Meals & Recipes**: meals (a name and ingredients) and recipes (a meal with a method - add it
     any time). Search, allergen filter, scaling, and a portion guide per person with or without
     leftovers. Plan a meal or send its ingredients to Shopping.
-  - **This Week**: the week's meal plan; send everything it needs to Shopping.
+  - **This Week**: the week's meals as planned occasions - browse and filter your meals from the
+    planner, set servings, guests and leftovers (set aside for a later meal, counted once), change
+    one meal without touching the recipe, Plan my week (favourites plus new meals), How the week
+    looks and Optimise My Week, and send everything to Shopping.
   - **Calorie Checker**: calories and nutrients in the amount you actually eat (a cup, a slice,
     grams); build up the family meal or someone's plate and save it as a meal. Nothing is logged.
   - **Meal Assistant**: type a meal in a few words, choose who is eating, get one or two easy

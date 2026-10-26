@@ -213,5 +213,49 @@ date: the card then shows clinic weeks and the due date (conception + 38 weeks) 
 the portion guide adds 0 / 340 / 452 kcal by trimester (340 without a date). Two weeks past the due
 date, the card asks to be updated.
 
+**D-031 Age and stage guidance (owner, 2026-10-26).** One list of rules (`js/guidance.js`), each
+with an age range or a life stage/diet, a level (warn/info), the foods it is about and a source
+(NHS Start for Life, CDC, AAP, DGA 2025-2030, NHS pregnancy). Shown on each person's card, as home
+notices for babies and milestones, and as cautions when a meal or plate holds a food it is about
+(honey before one, water and juice before six months, cow's milk as a drink, salt, added sugar
+under 4, caffeine for children, choking risks under 5, alcohol and food safety in pregnancy).
+Further DGA changes that alter how food is weighed are proposed in docs/DGA_SUGGESTIONS.md.
+
+**D-032 Metric or imperial (owner, 2026-10-26).** A device setting. Everything is saved in metric;
+weights, heights, food amounts, ingredients and the shopping list are converted for display and
+entry (US customary). Nutrients stay in g and mg.
+
+**D-033 Planned meals are occasions, apart from recipes (owner, 2026-10-26).** A plan slot holds
+servings, extra portions, leftovers set aside for later meals, its own ingredient changes, a
+note, feedback, hand-set portions and guests. Leftovers are stored on the meal that is cooked, so
+the food is counted once for preparation and shopping; the later meal is a view of it and adds
+only its own additions. Changing a planned meal never changes the recipe: the person chooses to
+keep it once, replace the saved recipe, or save a new version (`variantOf`), with its own ratings
+and notes. Older plans gain stable slot ids without being rewritten.
+
+**D-034 Feedback on recipes (owner, 2026-10-26).** Tried / not tried, a family rating 1-10 that
+only exists once tried, each person's preference (favourite, likes, neutral, dislikes) kept apart
+from it, and dated notes (cooking notes from a planned meal are added only when the person says
+so). Recipe index version 2 carries facts (protein, carbohydrate, groups, colours, allergens) and
+feedback for filtering; an older index is rebuilt once from the meal files, which are not changed.
+
+**D-035 One nutrition calculation (owner, 2026-10-26).** `js/meal-nutrition.js` matches each
+ingredient to a food (Calorie Checker link, the food guide, or a short list of exact kitchen
+basics - never a loose search), weighs it (grams exactly; volumes and pieces approximately) and
+adds up, counting anything unmatched as missing, never zero. Calories round to 10 and say "at
+least" when incomplete. The six-type spider chart compares one serving with a reference adult
+(National Academies DRIs; EPA+DHA from EFSA): an axis is full at a third of the day's reference;
+phytonutrients by plant colour variety. The same numbers feed recipe pages, planned meals,
+comparisons, per-person calories and the weekly analysis. Optimise My Week proposes the smallest
+change first and applies nothing without a tick.
+
+**D-036 Guests at a meal (owner, 2026-10-26).** Guests are added to a planned meal by kind (adult
+man, adult woman, teenager, child, toddler); their typical shares join the portion guide and the
+servings follow. No names or details are kept.
+
+**Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
+a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
+equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).
+
 **O-7 (W2) Phone live sync.** Only possible through a registered Google app (rejected, D-013).
 Revisit only if browsers gain folder access on phones.

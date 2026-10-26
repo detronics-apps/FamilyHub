@@ -6,7 +6,8 @@
 import { el } from '../../ui/dom.js';
 import { loading, failure, saveRecord } from '../kit.js';
 import { formatIngredient } from '../meals/logic.js';
-import { GROUPS, LIST_ID, normaliseShopping, addFromSource, addShoppingItem, toggleItem, clearBought, removeItem, byGroup, readSend } from './logic.js';
+import { inSystem } from '../../units.js';
+import { GROUPS, LIST_ID, normaliseShopping, addFromSource, addShoppingItem, toggleItem, clearBought, removeItem, byGroup, readSend, listText } from './logic.js';
 
 const ui = { group: 'other' };
 const shopping = (hub) => hub.data.collection('list', { summary: (l) => ({ title: 'Shopping list', count: l.items.filter((i) => !i.checked).length }) });
@@ -36,7 +37,7 @@ function listScreen(hub, list, save) {
     el('label', { class: 'checkline list__main' }, [
       el('input', { type: 'checkbox', checked: i.checked, 'data-field': `shop:${i.id}`, on: { change: () => save(toggleItem(list, i.id)) } }),
       el('span', {}, [
-        el('span', { text: formatIngredient(i), style: i.checked ? { textDecoration: 'line-through', color: 'var(--text-faint)' } : null }),
+        el('span', { text: formatIngredient(inSystem(i, hub.units())), style: i.checked ? { textDecoration: 'line-through', color: 'var(--text-faint)' } : null }),
         i.note ? el('span', { class: 'small muted', text: ` (${i.note})` }) : null,
         i.from ? el('span', { class: 'small muted', text: ` · ${i.from}` }) : null,
       ]),
@@ -45,7 +46,7 @@ function listScreen(hub, list, save) {
   ]);
 
   return el('section', { class: 'stack', 'aria-label': 'Shopping list' }, [
-    el('form', { class: 'row', on: { submit: add } }, [
+    el('form', { class: 'row no-print', on: { submit: add } }, [
       el('label', { class: 'sr-only', for: 'shop-add', text: 'Add to the list' }), input, group,
       el('button', { class: 'btn', type: 'submit', text: 'Add' }),
     ]),
@@ -53,7 +54,13 @@ function listScreen(hub, list, save) {
       el('h2', { text: `${GROUPS[g]} (${items.length})` }),
       el('ul', { class: 'list' }, items.map(item)),
     ])),
-    list.items.some((i) => !i.checked) ? null : el('p', { class: 'panel', text: 'Nothing to buy. Send a meal or the week’s plan from the Meals section, supplies from Chores - or type things in above.' }),
+    list.items.some((i) => !i.checked) ? el('div', { class: 'row no-print' }, [
+      el('button', {
+        class: 'btn btn-small', type: 'button', text: 'Copy the list', 'data-field': 'shop-copy',
+        on: { click: async () => { try { await navigator.clipboard.writeText(listText(list, (i) => formatIngredient(inSystem(i, hub.units())))); hub.ui.notice('Copied - paste it into a message or notes.'); } catch { hub.ui.notice('This browser would not allow copying. Use Print instead.', 'warn'); } } },
+      }),
+      el('button', { class: 'btn btn-small', type: 'button', text: 'Print', 'data-field': 'shop-print', on: { click: () => window.print() } }),
+    ]) : el('p', { class: 'panel', text: 'Nothing to buy. Send a meal or the week’s plan from the Meals section, supplies from Chores - or type things in above.' }),
     bought.length ? el('div', { class: 'panel' }, [
       el('h2', { text: `Bought (${bought.length})` }),
       el('ul', { class: 'list' }, bought.map(item)),
@@ -69,7 +76,7 @@ function addScreen(hub, list, save, param) {
   if (!send) return el('div', { class: 'panel' }, [el('p', { text: 'Nothing to add - the link was incomplete.' }), el('a', { class: 'btn', href: hub.href(), text: 'Open the list' })]);
   const already = list.items.some((i) => i.source === send.source);
   const boxes = send.items.map((i, n) => el('label', { class: 'checkline' }, [
-    el('input', { type: 'checkbox', checked: true, 'data-index': String(n) }), formatIngredient(i), i.note ? el('span', { class: 'small muted', text: ` (${i.note})` }) : null,
+    el('input', { type: 'checkbox', checked: true, 'data-index': String(n) }), formatIngredient(inSystem(i, hub.units())), i.note ? el('span', { class: 'small muted', text: ` (${i.note})` }) : null,
   ]));
   return el('section', { class: 'stack' }, [
     el('h1', { text: `Add to the shopping list${send.from ? `: ${send.from}` : ''}` }),

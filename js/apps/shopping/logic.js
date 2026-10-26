@@ -7,8 +7,27 @@
 // touched by a send.
 
 import { parseIngredient, unitKey } from '../meals/logic.js';
+import { parseMeal } from '../assistant/logic.js';
 
-export const GROUPS = { food: 'Food', cleaning: 'Cleaning', household: 'Household', other: 'Other' };
+// Food sent from meals is sorted into aisles; 'food' stays for anything not recognised (and older lists).
+export const GROUPS = {
+  produce: 'Fruit and vegetables', meat: 'Meat and seafood', dairy: 'Dairy and eggs', grains: 'Bread, grains and pasta', pantry: 'Pantry',
+  food: 'Other food', cleaning: 'Cleaning', household: 'Household', other: 'Other',
+};
+const PANTRY = /\b(salt|pepper|spices?|herbs?|cumin|paprika|chilli|turmeric|cinnamon|oregano|basil|thyme|oil|vinegar|sauce|ketchup|stock|broth|flour|sugar|honey|jam|syrup|tinned|canned|tin|can|baking|yeast|cocoa|tea|coffee|cereal|lentils|beans|chickpeas|peanut butter|nuts?|seeds?)\b/i;
+
+/** Which aisle a food goes in, from the food guide, else a few kitchen words; 'food' when unsure. */
+export function categorise(name) {
+  const f = parseMeal(name).items[0];
+  if (f) {
+    if (f.group === 'veg' || f.group === 'fruit' || f.id === 'avocado') return 'produce';
+    if (f.id === 'egg' || f.group === 'dairy' || f.id === 'butter') return 'dairy';
+    if (f.group === 'protein') return f.id === 'tofu' ? 'produce' : 'meat';
+    if (f.group === 'grain') return f.id === 'potato' || f.id === 'chips' ? 'produce' : 'grains';
+    return 'pantry';
+  }
+  return PANTRY.test(name) ? 'pantry' : 'food';
+}
 export const LIST_ID = 'shopping_list';
 
 const str = (v, max = 200) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
@@ -40,7 +59,9 @@ export function addFromSource(list, { source, from = '', group = 'food' }, neede
   const before = new Map(list.items.filter((i) => i.source === source).map((i) => [`${nameKey(i.name)}|${i.unit}`, i]));
   const added = needed.filter((n) => str(n.name)).map((n, i) => {
     const prev = before.get(`${nameKey(n.name)}|${unitKey(n.unit)}`);
-    return { id: prev?.id ?? newId(i), name: str(n.name, 120), qty: num(n.qty), unit: unitKey(n.unit ?? ''), note: str(n.note, 120), checked: prev?.checked ?? false, source, from: str(from, 80), group: GROUPS[group] ? group : 'food' };
+    // Food is sorted into its aisle; cleaning and household sends keep their own group.
+    const g = group === 'food' ? categorise(n.name) : GROUPS[group] ? group : 'food';
+    return { id: prev?.id ?? newId(i), name: str(n.name, 120), qty: num(n.qty), unit: unitKey(n.unit ?? ''), note: str(n.note, 120), checked: prev?.checked ?? false, source, from: str(from, 80), group: g };
   });
   return { ...list, items: [...keep, ...added] };
 }
@@ -60,6 +81,13 @@ export const removeItem = (list, id) => ({ ...list, items: list.items.filter((i)
 
 /** Items by group, in the order the groups are listed; empty groups left out. */
 export const byGroup = (list) => Object.keys(GROUPS).map((g) => [g, list.items.filter((i) => i.group === g)]).filter(([, items]) => items.length);
+
+/** The list as plain text, by aisle - for copying into a message or printing. */
+export function listText(list, format) {
+  return byGroup({ items: list.items.filter((i) => !i.checked) })
+    .map(([g, items]) => [GROUPS[g], ...items.map((i) => `- ${format(i)}${i.note ? ` (${i.note})` : ''}`)].join('\n'))
+    .join('\n\n');
+}
 
 /** What another app sends in the link (`#/shopping/add/<json>`). Anything odd is dropped. */
 export function readSend(param) {

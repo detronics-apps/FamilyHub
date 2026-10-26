@@ -13,6 +13,7 @@
 import { addDays, dayDiff, weekStart } from '../../dates.js';
 import { split, numOrNull } from '../../importer.js';
 import { ALLERGENS } from '../../model.js';
+import { recipeFacts } from './facts.js';
 
 export { ALLERGENS };
 
@@ -91,22 +92,71 @@ export function normaliseRecipe(r = {}) {
     tags: lines(Array.isArray(r.tags) ? r.tags : String(r.tags ?? '').split(',')).map((t) => t.toLowerCase()).slice(0, 15),
     allergens: (Array.isArray(r.allergens) ? r.allergens : []).filter((a) => ALLERGENS.includes(a)),
     nutrition,                      // per serving, as supplied - never calculated
-    notes: str(r.notes),
+    notes: str(r.notes),           // general notes as typed in the form (older records: the only notes)
     source: str(r.source, 300),
+    // Feedback. A rating only exists for a meal that has been tried; nothing is ever filled in.
+    tried: r.tried === true || rating(r.rating) !== null,
+    rating: rating(r.rating),
+    prefs: prefsOf(r.prefs),
+    noteLog: (Array.isArray(r.noteLog) ? r.noteLog : []).filter((n) => n && str(n.text)).slice(-200).map((n, i) => ({
+      id: str(n.id, 40) || `n${i}`, at: str(n.at, 30), text: str(n.text, 1000),
+      from: n.from === 'occurrence' ? 'occurrence' : 'recipe', occasion: str(n.occasion, 120),
+    })),
+    variantOf: str(r.variantOf, 40),   // set on a copy saved from a changed planned meal
   };
+}
+
+/* ----------------------------------------------------- feedback */
+
+// What a family rating means. Individual preferences are kept apart from it:
+// a 7/10 meal can be one child's favourite.
+export const RATING_BANDS = [[1, 3, 'Strongly disliked'], [4, 5, 'Below average'], [6, 6, 'Acceptable'], [7, 8, 'Liked'], [9, 10, 'Family favourite']];
+export const PREFS = { favourite: 'Favourite', likes: 'Likes', neutral: 'Neutral', dislikes: 'Dislikes' };
+
+const rating = (v) => { const n = Number(v); return v !== null && v !== '' && Number.isInteger(n) && n >= 1 && n <= 10 ? n : null; };
+const prefsOf = (v) => Object.fromEntries(Object.entries(v && typeof v === 'object' ? v : {}).filter(([k, x]) => /^[\w-]{1,40}$/.test(k) && PREFS[x]));
+
+export const ratingMeaning = (n) => RATING_BANDS.find(([a, b]) => n >= a && n <= b)?.[2] ?? '';
+/** 'untried' | 'unrated' (tried, no score yet) | 'rated' */
+export const ratingState = (r) => (!r.tried ? 'untried' : r.rating === null ? 'unrated' : 'rated');
+
+/** Rate (1-10) or clear the rating. Rating a meal marks it tried. */
+export const setRating = (r, n) => ({ ...r, rating: rating(n), tried: r.tried || rating(n) !== null });
+/** Not tried after all: the rating goes too - an untried meal never carries one. */
+export const setTried = (r, tried) => ({ ...r, tried: Boolean(tried), rating: tried ? r.rating : null });
+/** One person's preference; null clears it (back to "not rated"). */
+export function setPref(r, personId, pref) {
+  const prefs = { ...r.prefs };
+  if (PREFS[pref]) prefs[personId] = pref; else delete prefs[personId];
+  return { ...r, prefs };
+}
+/** Add a dated note. `from: 'occurrence'` marks a cooking note promoted from a planned meal. */
+export function addNote(r, text, { from = 'recipe', occasion = '', at = new Date().toISOString().slice(0, 10), id = `n${Date.now().toString(36)}` } = {}) {
+  if (!str(text)) return r;
+  return { ...r, noteLog: [...r.noteLog, { id, at, text: str(text, 1000), from, occasion: str(occasion, 120) }] };
 }
 
 /** A meal becomes a recipe once it has a method. */
 export const isRecipe = (r) => r.instructions.length > 0;
 
+/** Index version: an index written before this lacks the facts and feedback below and is rebuilt once. */
+export const SUMMARY_VERSION = 2;
+
+/** What the index keeps per meal: enough to list, search and filter without opening each one. */
 export function recipeSummary(r) {
+  const facts = recipeFacts(r);
   return {
+    ix: SUMMARY_VERSION,
     title: r.title,
     recipe: isRecipe(r),
     minutes: (r.prepMinutes ?? 0) + (r.cookMinutes ?? 0) || null,
     servings: r.servings,
     tags: r.tags,
-    allergens: r.allergens,
+    allergens: facts.allergens,
+    proteins: facts.proteins, carbs: facts.carbs, fats: facts.fats, groups: facts.groups, colours: facts.colours, plants: facts.plants, animal: facts.animal,
+    ingredientNames: r.ingredients.map((i) => i.name).slice(0, 40),
+    tried: r.tried ?? false, rating: r.rating ?? null, prefs: r.prefs ?? {},
+    variantOf: r.variantOf ?? '',
   };
 }
 
@@ -152,6 +202,21 @@ export function linkedNutrition(recipe, get, amountsOf) {
   return { perServing, linked: usable.length, of: recipe.ingredients.length };
 }
 
+/**
+ * A meal handed over in a link from This Week: a changed planned meal to save as
+ * a new version (`variantOf` the original), or new ingredients for the original.
+ * Anything odd is dropped.
+ */
+export function mealFromLink(param) {
+  let raw;
+  try { raw = JSON.parse(param); } catch { return null; }
+  if (!raw || !Array.isArray(raw.ingredients)) return null;
+  return normaliseRecipe({
+    title: str(raw.title, 200), servings: raw.servings, ingredients: raw.ingredients, variantOf: str(raw.variantOf, 40), notes: str(raw.notes, 2000),
+    instructions: raw.instructions, tags: raw.tags, prepMinutes: raw.prepMinutes, cookMinutes: raw.cookMinutes, allergens: raw.allergens, description: raw.description,
+  });
+}
+
 /** A plate built in Calorie Checker, handed over in the link as a new meal. Anything odd is dropped. */
 export function mealFromPlate(param) {
   let raw;
@@ -169,29 +234,123 @@ export { weekStart };
 
 export const weekDays = (monday) => Array.from({ length: 7 }, (_, i) => addDays(monday, i));
 
+/*
+ * A plan is one week. Each slot is a PLANNED MEAL: one occasion of a meal on a
+ * day, apart from the saved recipe it came from. Changing a slot (servings,
+ * leftovers, its own ingredient changes, notes) never touches the recipe or
+ * any other slot.
+ *
+ *   servings     portions eaten at this meal
+ *   extra        portions cooked on top, not yet given a later meal ("decide later")
+ *   reserve      leftovers set aside for a later meal: [{ id, date, meal, portions, note, additions }]
+ *                - kept HERE, on the meal that is cooked, so the food is counted once:
+ *                the later meal shows it but adds nothing to the shopping list except `additions`
+ *   ingredients  null = the recipe's own; a list = this occasion's own (for `basis` servings)
+ *   note         about this occasion only ("we added mushrooms this time")
+ *   feedback     { rating, text } about this occasion's version
+ *   portions     who eats how much here, if set by hand: { personId: share of a standard portion }
+ *   guests       people joining this meal, by kind: [{ id, who: 'man'|'woman'|'teen'|'child'|'toddler' }]
+ */
+const slotIngredients = (v) => (Array.isArray(v) ? normaliseRecipe({ ingredients: v }).ingredients : null);
+const ratingOrNull = (v) => { const n = Number(v); return v !== null && v !== '' && Number.isInteger(n) && n >= 1 && n <= 10 ? n : null; };
+
+export function normaliseSlot(s) {
+  const reserve = (Array.isArray(s.reserve) ? s.reserve : [])
+    .filter((r) => r && /^\d{4}-\d{2}-\d{2}$/.test(r.date ?? '') && MEALS.includes(r.meal))
+    .map((r, i) => ({
+      id: str(r.id, 40) || `r${i}`, date: r.date, meal: r.meal,
+      portions: Math.max(1, Math.round(num(r.portions) ?? 1)), note: str(r.note, 1000),
+      additions: slotIngredients(r.additions) ?? [],
+    }));
+  const portions = Object.fromEntries(Object.entries(s.portions && typeof s.portions === 'object' ? s.portions : {})
+    .map(([k, v]) => [k, num(v)]).filter(([k, v]) => /^[\w-]{1,40}$/.test(k) && v !== null && v > 0 && v <= 4));
+  return {
+    id: str(s.id, 40) || `s_${s.day}_${s.meal}`,
+    day: s.day, meal: s.meal,
+    recipeId: typeof s.recipeId === 'string' && s.recipeId ? s.recipeId : null,
+    title: str(s.title, 200) || 'Meal',
+    servings: Math.max(1, Math.round(num(s.servings) ?? 4)),
+    extra: Math.max(0, Math.round(num(s.extra) ?? 0)),
+    reserve,
+    ingredients: slotIngredients(s.ingredients),
+    basis: Math.max(1, Math.round(num(s.basis) ?? num(s.servings) ?? 4)),
+    note: str(s.note, 1000),
+    feedback: { rating: ratingOrNull(s.feedback?.rating), text: str(s.feedback?.text, 1000) },
+    portions,
+    // Guests joining this meal, by kind only ('man', 'woman', 'teen', 'child', 'toddler').
+    guests: (Array.isArray(s.guests) ? s.guests : []).filter((g) => g && ['man', 'woman', 'teen', 'child', 'toddler'].includes(g.who)).slice(0, 30)
+      .map((g, i) => ({ id: str(g.id, 40) || `g${i}`, who: g.who })),
+  };
+}
+
 export function normalisePlan(p = {}, monday) {
   const slots = (Array.isArray(p.slots) ? p.slots : [])
     .filter((s) => s && Number.isInteger(s.day) && s.day >= 0 && s.day < 7 && MEALS.includes(s.meal))
-    .map((s) => ({
-      day: s.day, meal: s.meal,
-      recipeId: typeof s.recipeId === 'string' ? s.recipeId : null,
-      title: str(s.title, 200) || 'Meal',
-      servings: Math.max(1, Math.round(num(s.servings) ?? 4)),
-    }));
+    .map(normaliseSlot);
   return { ...p, week: p.week ?? monday, slots };
 }
 
 export const slotAt = (plan, day, meal) => plan.slots.find((s) => s.day === day && s.meal === meal) ?? null;
 
+/** Put a meal in a slot (null empties it). The slot keeps its id and its leftover plan unless they are replaced. */
 export function setSlot(plan, day, meal, slot) {
+  const old = slotAt(plan, day, meal);
   const others = plan.slots.filter((s) => !(s.day === day && s.meal === meal));
-  return { ...plan, slots: slot ? [...others, { ...slot, day, meal }] : others };
+  if (!slot) return { ...plan, slots: others };
+  return { ...plan, slots: [...others, normaliseSlot({ reserve: old?.reserve, extra: old?.extra, ...slot, id: old?.id ?? slot.id, day, meal })] };
 }
 
-/** Reuse a previous week's plan for another week (same days and meals). */
-export const copyPlan = (from, monday) => ({ week: monday, slots: from.slots.map((s) => ({ ...s })) });
+/** Change one planned meal (by id) - nothing else moves. */
+export const updateSlot = (plan, id, patch) => ({ ...plan, slots: plan.slots.map((s) => (s.id === id ? normaliseSlot({ ...s, ...patch, id }) : s)) });
+
+/** Reuse a previous week's plan for another week (same days and meals). Leftovers and notes stay behind. */
+export const copyPlan = (from, monday) => ({ week: monday, slots: from.slots.map((s) => normaliseSlot({ ...s, reserve: [], extra: 0, note: '', feedback: null })) });
 
 export const planId = (monday) => `week_${monday.replace(/-/g, '')}`;
+
+/** Portions cooked for a planned meal: eaten now, extra, and set aside for later. */
+export const prepared = (slot) => slot.servings + slot.extra + slot.reserve.reduce((n, r) => n + r.portions, 0);
+export const reserved = (slot) => slot.reserve.reduce((n, r) => n + r.portions, 0);
+
+/**
+ * Leftover meals that land in a week, from the plans given (this week's and the
+ * week before, so Sunday's leftovers can be Monday's lunch). Each is a view of
+ * a reservation on the meal that was cooked - nothing extra to buy.
+ */
+export function leftoverMeals(plans, monday) {
+  const end = addDays(monday, 6);
+  const out = [];
+  for (const plan of plans) {
+    for (const s of plan.slots) {
+      for (const r of s.reserve) {
+        if (r.date < monday || r.date > end) continue;
+        out.push({ ...r, day: dayDiff(monday, r.date), reservationId: r.id, title: s.title, recipeId: s.recipeId,
+          from: { week: plan.week, slotId: s.id, date: addDays(plan.week, s.day), meal: s.meal } });
+      }
+    }
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date) || MEALS.indexOf(a.meal) - MEALS.indexOf(b.meal));
+}
+
+/** Change or cancel (portions 0) one reservation. */
+export function setReservation(plan, slotId, reservationId, patch) {
+  return {
+    ...plan,
+    slots: plan.slots.map((s) => {
+      if (s.id !== slotId) return s;
+      const reserve = s.reserve.flatMap((r) => {
+        if (r.id !== reservationId) return [r];
+        const next = { ...r, ...patch };
+        return next.portions > 0 ? [next] : [];
+      });
+      return normaliseSlot({ ...s, reserve });
+    }),
+  };
+}
+
+export function addReservation(plan, slotId, { date, meal, portions = 1, note = '' }, id = `r${Date.now().toString(36)}`) {
+  return { ...plan, slots: plan.slots.map((s) => (s.id === slotId ? normaliseSlot({ ...s, reserve: [...s.reserve, { id, date, meal, portions, note, additions: [] }] }) : s)) };
+}
 
 /* ---------------------------------------------------------- shopping */
 
@@ -222,13 +381,39 @@ export function combineIngredients(list) {
   }).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** Everything the week's planned recipes need, scaled to each meal's servings. */
+// Salt, spices and the like are scaled too, but rounded to a quarter and marked
+// "to taste"; things counted whole (eggs, onions) round to the nearest half.
+const SEASONING = /\b(salt|pepper|spices?|herbs?|cumin|paprika|chilli|chili|turmeric|cinnamon|nutmeg|oregano|basil|thyme|parsley|coriander|rosemary|bay|garnish|stock cubes?|vanilla|baking powder|bicarbonate|yeast|curry powder|masala)\b/i;
+
+const WHOLE = /^(tins?|cans?|packs?|bunch(es)?|cloves?|slices?)$/;
+
+/** One ingredient for `factor` times the recipe. Unknown amounts stay unknown. */
+export function scaleCarefully(i, factor) {
+  if (i.qty == null || factor === 1) return { ...i };
+  const raw = i.qty * factor;
+  if (SEASONING.test(i.name)) return { ...i, qty: Math.max(0.25, Math.round(raw * 4) / 4), note: [i.note, 'scaled - adjust to taste'].filter(Boolean).join('; ') };
+  if (!i.unit) return { ...i, qty: Math.max(0.5, Math.round(raw * 2) / 2) };
+  // Bought whole: tins, packs, bunches, cloves and slices round up.
+  if (WHOLE.test(i.unit)) return { ...i, qty: Math.max(1, Math.ceil(raw - 0.01)) };
+  return { ...i, qty: raw };
+}
+
+/** What one planned meal needs bought: its ingredients for every portion cooked, plus leftover additions. */
+export function slotNeeds(slot, recipe) {
+  const list = slot.ingredients ?? recipe?.ingredients ?? null;
+  const basis = slot.ingredients ? slot.basis : recipe?.servings;
+  const out = list ? list.map((i) => scaleCarefully(i, prepared(slot) / basis)) : [];
+  for (const r of slot.reserve) out.push(...r.additions);
+  return out;
+}
+
+/**
+ * Everything the week's planned meals need, added up. Leftovers are counted on
+ * the meal that is cooked, once; a later meal eating them adds only its additions.
+ */
 export function ingredientsForPlan(plan, recipes) {
   const out = [];
-  for (const s of plan.slots) {
-    const r = s.recipeId ? recipes.get(s.recipeId) : null;
-    if (r) out.push(...scaleIngredients(r, s.servings));
-  }
+  for (const s of plan.slots) out.push(...slotNeeds(s, s.recipeId ? recipes.get(s.recipeId) : null));
   return combineIngredients(out);
 }
 

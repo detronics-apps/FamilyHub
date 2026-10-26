@@ -161,3 +161,23 @@ walkthrough with a screen reader, Safari/Firefox, a real phone.
   Cleaning; Alex's −500 kcal goal → ¾ portion; Mia (3) offered no energy goal.
 - Found and fixed while checking: read-only access to another app's undeclared collection was
   refused by the hub.
+
+### Planner, feedback, nutrition and guidance (2026-10-26) - the owner's acceptance tests
+- Automated: `tests/planner.test.js` covers A (leftovers scale 400 g to 600 g, counted once), B
+  (leftovers 2 to 1 to cancelled), G/I (a changed planned meal leaves the recipe and other meals
+  alone), ratings states, D (7/10 meal that is one child's favourite), E/K (combined filters,
+  reset, no guessed times), F (weekly mix from real ratings, shortfall), N/P/Q/R (one calculation,
+  rounded, missing not zero, half portion half calories), L/M (week analysis and proposals);
+  `tests/guidance.test.js`; units, guests and pregnancy in `tests/portions.test.js`.
+- Browser (localhost, example family): Tuna pasta rated 7/10 with Mia's favourite, spider chart
+  (Protein 100%, Phyto 33%), per-person calories; planner filters (Mia's favourites, rated 7+,
+  fish + 7+ + untried = none, with the filters named), chose Tuna pasta for Wednesday with 2
+  portions set aside for Thursday lunch - week shows "cook 6" and the leftovers as already cooked;
+  shopping got 600 g pasta once, 2 tins of tomatoes, sorted by aisle, copy and print; two guests
+  raised servings 4 to 6; a one-time change (mushrooms) with the keep / replace / save-as-new
+  choice, original recipe unchanged; saved a new version linked to the original; How the week
+  looks and Optimise My Week (added spinach to Monday only); Plan my week with an honest
+  shortfall; Meal Assistant from the planned meal sent chickpeas back to that meal only; units
+  switched to imperial (142 lb, 5 ft 6 in, lb input) and back; guidance on cards and home notices
+  for a 6-month-old. 375 px: no sideways scroll. No console errors.
+- Not covered: recurring traditions and pantry (not in the app); a real Drive folder and a phone.

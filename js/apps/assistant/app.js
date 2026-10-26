@@ -8,17 +8,44 @@ import { tabs, loading, failure } from '../kit.js';
 import { suggest, recipeMealText, TYPES } from './logic.js';
 import { INTERACTIONS } from './interactions.js';
 import { FOCUS, LIFE_STAGES, lifeStageAllowed } from '../../model.js';
+import { planId, normalisePlan } from '../meals/logic.js';
 
-const ui = { text: '', asked: '', selected: [], notToday: [], hidden: [], recipe: null };
+const ui = { text: '', asked: '', selected: [], notToday: [], hidden: [], recipe: null, slot: null };
 const EXAMPLES = ['oats with butter and sugar', 'chicken and rice', 'pap and boerewors', 'toast with peanut butter'];
 
 export function render(hub, route) {
   if (route.sub === 'about') return aboutScreen(hub);
   const param = route.rest[0] ?? '';
+  if (route.sub === 'meal' && param.startsWith('slot:')) return slotMeal(hub, param.slice(5));
+  if (ui.slot) ui.slot = null;
   return mealScreen(hub, route.sub === 'meal' && param.startsWith('recipe:') ? param.slice(7) : null);
 }
 
 const nav = (hub, current) => tabs(hub, [{ screen: null, label: 'Improve a meal' }, { screen: 'about', label: 'How it decides' }], current);
+
+/**
+ * Opened from a planned meal in This Week (`slot:<monday>~<slotId>`): read that
+ * meal's own ingredients (read-only) and offer to send an idea back to it.
+ */
+function slotMeal(hub, ref) {
+  const [monday, slotId] = ref.split('~');
+  const r = hub.use(`slot:${ref}`, async () => {
+    if (!hub.data.installed('mealplan')) return null;
+    const raw = await hub.data.of('mealplan', 'plans').get(planId(monday)) ?? (hub.data.installed('meals') ? await hub.data.of('meals', 'plans').get(planId(monday)).catch(() => null) : null);
+    const slot = raw ? normalisePlan(raw, monday).slots.find((s) => s.id === slotId) : null;
+    if (!slot) return null;
+    const rec = !slot.ingredients && slot.recipeId && hub.data.installed('meals') ? await hub.data.of('meals', 'recipes').get(slot.recipeId) : null;
+    return { slot, ingredients: slot.ingredients ?? rec?.ingredients ?? [] };
+  });
+  if (r.loading) return el('section', { class: 'stack' }, [nav(hub, null), loading('Opening the planned meal…')]);
+  if (!r.data) return el('section', { class: 'stack' }, [nav(hub, null), el('p', { class: 'panel', text: 'That planned meal could not be found.' })]);
+  if (ui.slot?.ref !== ref) {
+    ui.slot = { ref, monday, id: slotId, title: r.data.slot.title };
+    ui.text = recipeMealText({ ingredients: r.data.ingredients, title: r.data.slot.title });
+    ui.asked = ui.text; ui.recipe = null; ui.notToday = []; ui.hidden = [];
+  }
+  return mealScreen(hub, null);
+}
 
 /** The family's recipes, if the Meals & Recipes is installed. */
 const recipeBook = (hub) => (hub.data.installed('meals') ? hub.data.of('meals', 'recipes') : null);
@@ -70,6 +97,7 @@ function mealScreen(hub, recipeId) {
         ...[...list.data.items].sort((a, b) => a.title.localeCompare(b.title)).map((x) => el('option', { value: x.id, text: x.title, selected: ui.recipe?.id === x.id })),
       ]),
     ]) : null,
+    ui.slot ? el('p', { class: 'small' }, ['Ideas for the planned meal ', el('a', { href: `#/mealplan/slot/${encodeURIComponent(ui.slot.ref)}`, text: ui.slot.title }), ' - an idea you send back changes that meal only, not the saved recipe.']) : null,
     ui.recipe ? el('p', { class: 'small' }, ['Ideas for the recipe ', el('a', { href: `#/meals/item/${encodeURIComponent(ui.recipe.id)}`, text: ui.recipe.title }), ' (its ingredients are above - change them to try something different).']) : null,
     ui.asked ? (f.loading ? loading('Opening the food database…') : f.error ? failure(f.error) : results(hub, f.data, profiles)) : null,
   ]);
@@ -112,6 +140,9 @@ function card(hub, c) {
     ].flat()),
     c.notes.length ? el('ul', { class: 'small' }, c.notes.map((n) => el('li', { text: n }))) : null,
     el('div', { class: 'row', style: { marginTop: 'var(--space-2)' } }, [
+      ui.slot && (c.type === 'add' || c.type === 'swap')
+        ? el('a', { class: 'btn btn-small btn-primary', href: `#/mealplan/modify/${encodeURIComponent(`${ui.slot.monday}~${ui.slot.id}~${JSON.stringify(c.type === 'add' ? { add: c.foodId } : { swap: [c.fromId, c.foodId] })}`)}`, text: 'Use in this planned meal', 'data-field': `use:${c.id}` })
+        : null,
       c.type === 'add' || c.type === 'swap'
         ? el('button', { class: 'btn btn-small', type: 'button', text: 'Not in the house today', on: { click: () => { ui.notToday.push(c.foodId); hub.render(); } } })
         : null,

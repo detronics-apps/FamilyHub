@@ -150,6 +150,16 @@ export const HOWTOS = [
     'Or open one of your recipes from the list (or press "Ideas to improve it" on a recipe in the Meals & Recipes) to see ideas for it.',
     'Each idea says who it helps and why. Press "Not in the house today" to keep it for next time, or "Not for us" to hide it.',
   ] },
+  { id: 'plan-meal', title: 'Plan a meal with leftovers or guests', steps: [
+    'Open This Week and press Plan next to a day. Search or filter your meals (protein, rating, someone’s favourite, quick ones under 20 minutes) and press Choose.',
+    'Set how many are eating and the leftovers: cook extra to decide later, or set portions aside for a later meal. The later meal shows them as already cooked.',
+    'Open the planned meal to add guests, change its ingredients for this time only, add a note, or send it to Meal Assistant for ideas.',
+  ] },
+  { id: 'rate', title: 'Rate a meal and record favourites', steps: [
+    'Open a meal in Meals & Recipes. Tick "We have tried it", then choose a family rating from 1 to 10.',
+    'Set each person’s preference - favourite, likes, neutral or dislikes. A 7/10 meal can still be one child’s favourite.',
+    'Add notes for next time. A note about one particular meal goes on that day in This Week.',
+  ] },
   { id: 'people', title: 'Add the family', steps: [
     'Open People from the home screen. Type a name and a birthday, and press Add person.',
     'With a birthday, Family Hub shows whether someone is a baby, toddler, child, teen or adult, and keeps it up to date. Without one, choose adult or child.',

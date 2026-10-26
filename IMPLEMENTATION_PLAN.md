@@ -78,10 +78,20 @@ workstreams W1-W3. This file records status only.
 | Portion guide per person, leftovers; energy goals and personal goals on People | Done, tested, checked in browser |
 | Shopping as its own section (send from meals, This Week, chores); This Week as its own mini-app | Done, tested, checked in browser |
 | Birthday on the person card; stage of life and adult/child worked out from it | Done, tested, checked in browser |
+| Pregnancy on the card with a conception date; weeks, due date, trimester portions | Done, tested, checked in browser |
+| Age and stage guidance: People cards, home notices, meal and plate cautions | Done, tested, checked in browser |
+| Metric/imperial setting with conversions | Done, tested, checked in browser |
+| Planned meals as occasions: leftovers set aside, extra portions, own changes, notes, feedback, guests | Done, tested, checked in browser |
+| Recipe feedback: tried, family rating, individual preferences, dated notes; variants | Done, tested, checked in browser |
+| Planner browse with combined filters, compare, choose with servings and leftovers | Done, tested, checked in browser |
+| Plan my week (mix of favourites and new meals, shortfall explained) | Done, tested, checked in browser |
+| Six-type spider charts, detail charts, calories per serving and per person | Done, tested, checked in browser |
+| How the week looks, Optimise My Week, Meal Assistant link to a planned meal | Done, tested, checked in browser |
+| Shopping: aisles, packaged items rounded up, copy and print | Done, tested, checked in browser |
 
 ## Test results
 
-`npm test`: **216 tests, 216 pass** (Node 24). Browser checks: see TEST_PLAN.md.
+`npm test`: **239 tests, 239 pass** (Node 24). Browser checks: see TEST_PLAN.md.
 
 ## Known limitations
 

@@ -96,6 +96,8 @@ export function createHubFactory(ctx) {
       app: { id: manifest.id, name: manifest.name, version: manifest.version },
       manifest,
       today: ctx.today,
+      /** 'metric' or 'imperial', as chosen in Settings on this device. Data is always saved in metric. */
+      units: () => (ctx.app.device.units === 'imperial' ? 'imperial' : 'metric'),
       href: (screen = null, param = null) => `#/${manifest.id}${screen ? `/${screen}` : ''}${param ? `/${encodeURIComponent(param)}` : ''}`,
       go: (screen, param) => ctx.go(hub.href(screen, param)),
       /** Open another mini-app's screen (e.g. Shopping with items to confirm). Navigation only - that app does any writing. */

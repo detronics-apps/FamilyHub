@@ -74,7 +74,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'meals', section: 'meals', name: 'Meals & Recipes', version: '1.2.0',
+      fhManifest: 1, id: 'meals', section: 'meals', name: 'Meals & Recipes', version: '1.3.0',
       description: 'Your family’s meals and recipes, and how much each person might eat.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [
@@ -90,12 +90,16 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'mealplan', section: 'meals', name: 'This Week', version: '1.0.0',
+      fhManifest: 1, id: 'mealplan', section: 'meals', name: 'This Week', version: '1.1.0',
       description: 'Plan the week’s meals - as much or as little as helps - and send what they need to the shopping list.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
-      screens: [{ id: 'week', title: 'This week' }, { id: 'add', title: 'Plan a meal', nav: false }],
+      screens: [
+        { id: 'week', title: 'This week' }, { id: 'add', title: 'Plan a meal', nav: false }, { id: 'choose', title: 'Choose a meal', nav: false },
+        { id: 'slot', title: 'Planned meal', nav: false }, { id: 'mix', title: 'Plan my week', nav: false }, { id: 'review', title: 'How the week looks', nav: false },
+        { id: 'modify', title: 'Change a planned meal', nav: false },
+      ],
       data: { collections: [{ name: 'plans', schema: 1 }] },
-      permissions: ['data:own', 'notify', 'data:meals:read'],
+      permissions: ['data:own', 'notify', 'data:meals:read', 'food:read', 'people:food'],
     },
     load: () => import('./mealplan/app.js'),
   },
@@ -123,12 +127,12 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'assistant', section: 'meals', name: 'Meal Assistant', version: '1.1.0',
+      fhManifest: 1, id: 'assistant', section: 'meals', name: 'Meal Assistant', version: '1.2.0',
       description: 'Type what you are eating and get one or two easy ways to make it a little better for the people at the table.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [{ id: 'meal', title: 'Improve a meal' }, { id: 'about', title: 'How it decides' }],
       data: { collections: [] },
-      permissions: ['data:own', 'food:read', 'people:food', 'data:meals:read'],
+      permissions: ['data:own', 'food:read', 'people:food', 'data:meals:read', 'data:mealplan:read'],
     },
     load: () => import('./assistant/app.js'),
   },

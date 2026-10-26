@@ -83,3 +83,35 @@ test('pregnancy from the conception date: clinic weeks, trimester, due date; por
   assert.equal(energyGuide(mum('2026-03-01'), TODAY).kcal, base + 452, 'third trimester');
   assert.equal(energyGuide(mum(''), TODAY).kcal, base + 340, 'no date: the middle figure');
 });
+
+test('units: saved in metric, shown and typed in either system', async () => {
+  const { fmtWeight, fmtHeight, kgFrom, cmFrom, fmtMass, gramsFromOz, inSystem } = await import('../js/units.js');
+  assert.equal(fmtWeight(64.5, 'metric'), '64.5 kg');
+  assert.equal(fmtWeight(64.5, 'imperial'), '142 lb');
+  assert.equal(fmtWeight(6, 'imperial'), '13 lb 4 oz', 'a baby in pounds and ounces');
+  assert.equal(fmtHeight(168, 'imperial'), '5 ft 6 in');
+  assert.equal(fmtHeight(60, 'imperial'), '2 ft 0 in');
+  assert.equal(kgFrom('142', 'imperial'), 64.4);
+  assert.equal(cmFrom('5', '6', 'imperial'), 167.6);
+  assert.equal(cmFrom('168', '', 'metric'), 168);
+  assert.equal(kgFrom('', 'imperial'), '');
+  assert.equal(fmtMass(100, 'imperial'), '3.5 oz');
+  assert.equal(fmtMass(1300, 'metric'), '1.3 kg');
+  assert.equal(Math.round(gramsFromOz(4)), 113);
+  assert.deepEqual(inSystem({ name: 'flour', qty: 500, unit: 'g' }, 'imperial'), { name: 'flour', qty: 1.1, unit: 'lb' });
+  assert.deepEqual(inSystem({ name: 'milk', qty: 250, unit: 'ml' }, 'imperial'), { name: 'milk', qty: 8.5, unit: 'fl oz' });
+  assert.deepEqual(inSystem({ name: 'eggs', qty: 2, unit: '' }, 'imperial'), { name: 'eggs', qty: 2, unit: '' });
+  assert.deepEqual(inSystem({ name: 'flour', qty: 500, unit: 'g' }, 'metric'), { name: 'flour', qty: 500, unit: 'g' });
+});
+
+test('guests at a meal: portions by kind, and the servings to cook follow', async () => {
+  const { guestShares, servingsFor } = await import('../js/portions.js');
+  const { normaliseSlot } = await import('../js/apps/meals/logic.js');
+  const slot = normaliseSlot({ day: 0, meal: 'dinner', title: 'Braai', guests: [{ who: 'man' }, { who: 'woman' }, { who: 'alien' }] });
+  assert.deepEqual(slot.guests.map((g) => g.who), ['man', 'woman'], 'only the offered kinds');
+  const g = guestShares(slot.guests, TODAY);
+  assert.deepEqual(g.map((x) => x.share), [1.25, 1]);
+  const family = portionShares([{ id: 'a', name: 'A', born: '1990-01-01', sex: 'female' }, { id: 'c', name: 'C', born: '2020-01-01', sex: 'male' }], TODAY);
+  assert.equal(servingsFor(family), 2);
+  assert.equal(servingsFor([...family, ...g]), 4, 'two guests: cook for four');
+});

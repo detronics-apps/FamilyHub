@@ -388,3 +388,23 @@ body:has(.player:not([hidden])) .app-footer { padding-bottom: 72px; }
 .idea dt { color: var(--text-dim); }
 .idea dd { margin: 0; }
 .caution { border-left: 4px solid var(--danger); }
+
+/* Age and stage guidance on the People page */
+.guidance { margin: var(--space-2) 0 0; padding-left: 0; list-style: none; display: grid; gap: var(--space-2); font-size: 14px; }
+.guidance li { padding-left: var(--space-3); border-left: 3px solid var(--border); }
+.guidance li.guidance--warn { border-left-color: var(--warn); }
+
+/* Spider charts (js/ui/nutrition-view.js) */
+.radar-wrap { display: flex; justify-content: center; }
+.radar { width: 100%; max-width: 320px; height: auto; overflow: visible; }
+.radar__ring { fill: none; stroke: var(--border); stroke-width: 1; }
+.radar__spoke { stroke: var(--border); stroke-width: 1; }
+.radar__shape { fill-opacity: .18; stroke-width: 2; stroke-linejoin: round; }
+.radar__unknown { fill: var(--panel); stroke-width: 2; stroke-dasharray: 2 2; }
+.radar__label { font-size: 11px; fill: var(--text-dim); }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: middle; }
+.nutrition .facts td { white-space: normal; }
+@media print {
+  .app-header, .app-footer, .slot-crumbs, .notices-host, .no-print, .tabs { display: none !important; }
+  .panel { box-shadow: none; border: 0; }
+}

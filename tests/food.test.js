@@ -171,3 +171,11 @@ test('a family recipe is read as a meal from its ingredients; seasonings are not
   assert.deepEqual(r.unknown, []);
   assert.equal(recipeMealText({ title: 'Bobotie', ingredients: [] }), 'Bobotie');
 });
+
+test('age guidance reaches the plate: honey for a baby, tea for a child, wine in pregnancy', () => {
+  const baby = run('oats with honey', ['d']);
+  assert.equal(baby.cards.length, 0, 'still no ideas for a baby');
+  assert.ok(baby.cautions.some((c) => /Baby: No honey before their first birthday/.test(c)));
+  assert.ok(run('toast and tea', ['c']).cautions.some((c) => /Lily: Avoid caffeinated drinks/.test(c)));
+  assert.ok(!run('toast and tea', ['a']).cautions.some((c) => /caffeinated/.test(c)), 'adults are not told off for tea');
+});

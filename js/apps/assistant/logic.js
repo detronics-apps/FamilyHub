@@ -18,6 +18,7 @@ import { needsFor, NUTRIENTS } from './reference.js';
 import { interaction } from './interactions.js';
 import { amounts } from '../../food.js';
 import { ageOn, lifeStageAllowed, FOCUS } from '../../model.js';
+import { foodWarnings } from '../../guidance.js';
 
 export const TYPES = { add: 'Add', swap: 'Swap', time: 'Time', next: 'Try next time' };
 
@@ -250,6 +251,16 @@ export function suggest({ text, profiles, selected = [], db, today, notToday = [
   if (babies.length) notes.push(`Family Hub does not make suggestions for babies under one (${list(babies.map((b) => b.name))}) - follow your clinic’s feeding guidance.`);
   const result = { items, unknown, cards: [], cautions: [], notes };
   if (!items.length) return result;
+  // Age and stage guidance about what is on the plate (honey before one, caffeine for children,
+  // alcohol in pregnancy...) - for babies too, who get no ideas but do get the warnings. Choking and
+  // pregnancy food safety come from the guide's own, more specific notes for everyone past one.
+  const names = items.map((f) => [f.name, ...f.also].join(', '));
+  for (const p of chosen) {
+    const baby = everyone.find((c) => c.id === p.id)?.baby;
+    for (const { rule } of foodWarnings(p, today, names, { skip: baby ? [] : ['choking', 'preg-food'] })) {
+      result.cautions.push(`${p.name}: ${rule.text}`);
+    }
+  }
   if (!people.length) {
     if (!babies.length) people.push(personContext({ id: '_', name: 'You', role: 'adult' }, today));
     else return result;
@@ -304,7 +315,7 @@ export function suggest({ text, profiles, selected = [], db, today, notToday = [
     if (!from || items.includes(to)) continue;
     const s = scoreFood(db, to, { ...ctx, fits: new Set(to.fits) });
     if (!s || s.score <= 0.1) continue;
-    const c = card('swap', s, { title: `Try ${to.name} instead of ${from.name}`, why: [sw.why, ...s.why.slice(-1)] });
+    const c = card('swap', s, { title: `Try ${to.name} instead of ${from.name}`, why: [sw.why, ...s.why.slice(-1)], fromId: from.id });
     result.cards.push(notToday.includes(to.id) ? toNext(c, s) : c);
     break;
   }

@@ -4,28 +4,49 @@
 // Each meal shows how it might be shared out among the family (js/portions.js).
 // Recipes live in a collection with an index, so a library of thousands is
 // searched from one file and a recipe is read only when it is opened.
+//
+// Feedback lives on the recipe: tried or not, the family rating (1-10, only
+// once tried), each person's preference kept apart from it, and dated notes.
+// This Week links here to record them, and to save a changed planned meal as a
+// new version or into the original - only this app writes recipes.
 
 import { el } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
 import { loading, failure, recordForm, saveRecord } from '../kit.js';
 import {
   ALLERGENS, NUTRIENTS, normaliseRecipe, recipeSummary, recipeText, scaleIngredients, nutritionRows,
-  formatIngredient, isRecipe, keepFoodLinks, linkedNutrition, mealFromPlate,
+  formatIngredient, isRecipe, keepFoodLinks, mealFromPlate, mealFromLink,
+  PREFS, ratingMeaning, ratingState, setRating, setTried, setPref, addNote, SUMMARY_VERSION,
 } from './logic.js';
+import { mealNutrition } from '../../meal-nutrition.js';
+import { nutritionPanel } from '../../ui/nutrition-view.js';
 import { portionShares, portionPlan, fmtShare, LEFTOVERS } from '../../portions.js';
 import { sendHref } from '../shopping/logic.js';
-import { amounts, fmtAmount } from '../../food.js';
 
-const ui = { query: '', avoid: [], kind: 'all', servings: {}, limit: 50, who: {}, leftovers: {} };
+import { inSystem } from '../../units.js';
+
+const ui = { query: '', avoid: [], kind: 'all', maxMinutes: null, servings: {}, limit: 50, who: {}, leftovers: {} };
+const TIMES = [[null, 'Any time'], [20, 'Under 20 min'], [30, 'Under 30 min'], [60, 'Under 1 hour']];
 const KINDS = { all: 'All', recipe: 'Recipes', meal: 'Meals without a method' };
 
 const recipes = (hub) => hub.data.collection('recipes', { summary: recipeSummary, text: recipeText, prefix: 'rec' });
 
+/** Back to where the person came from (This Week), when a link said so. */
+const backLink = (hash) => (hash && /^#\/mealplan\b/.test(hash) ? el('a', { href: hash, class: 'small', text: '‹ Back to This Week', 'data-field': 'back-planner' }) : null);
+
+/** An index written before ratings and facts were kept is rebuilt once from the meal files (they are not changed). */
+const ensureIndex = (hub) => hub.use('index-version', async () => {
+  const all = await recipes(hub).list({ limit: 100000 });
+  if (all.items.some((s) => s.ix !== SUMMARY_VERSION)) { await recipes(hub).rebuildIndex(); hub.invalidate('search:'); }
+  return true;
+});
+
 export function render(hub, route) {
   const screen = route.sub ?? 'recipes';
-  if (screen === 'item') return recipeScreen(hub, route.rest[0]);
+  if (screen === 'item') return recipeScreen(hub, route.rest[0], route.rest[1] ?? null);
   if (screen === 'new') return editScreen(hub, null, route.rest[0] ?? null);
-  if (screen === 'edit') return editScreen(hub, route.rest[0]);
+  if (screen === 'edit') return editScreen(hub, route.rest[0], route.rest[1] ?? null);
+  if (screen === 'note') return noteScreen(hub, route.rest[0], route.rest[1] ?? '');
   // The week and the shopping list moved to their own mini-apps (This Week, Shopping).
   if (screen === 'week' || screen === 'shopping') {
     return el('p', { class: 'panel' }, [`That has moved: `, el('a', { href: screen === 'week' ? '#/mealplan' : '#/shopping', text: screen === 'week' ? 'This Week' : 'Shopping' }), '.']);
@@ -36,12 +57,16 @@ export function render(hub, route) {
 /* ------------------------------------------------------------ recipes */
 
 function recipesScreen(hub) {
-  const key = `search:${ui.query}:${ui.avoid.join(',')}:${ui.kind}:${ui.limit}`;
+  const ix = ensureIndex(hub);
+  if (ix.loading) return loading('Bringing the list up to date…');
+  const people = hub.foodProfiles();
+  const key = `search:${ui.query}:${ui.avoid.join(',')}:${ui.kind}:${ui.maxMinutes}:${ui.limit}`;
   // Entries saved before meals and recipes were told apart have no `recipe` flag: shown under All only.
   const kindOk = (s) => ui.kind === 'all' || (ui.kind === 'recipe' ? s.recipe === true : s.recipe === false);
   const r = hub.use(key, () => recipes(hub).search(ui.query, {
     limit: ui.limit,
-    filter: (s) => kindOk(s) && !s.allergens.some((a) => ui.avoid.includes(a)),
+    // A meal with no time recorded is not counted as quick.
+    filter: (s) => kindOk(s) && !s.allergens.some((a) => ui.avoid.includes(a)) && (ui.maxMinutes === null || (s.minutes && s.minutes < ui.maxMinutes)),
   }));
   return el('section', { class: 'stack', 'aria-label': 'Meals and recipes' }, [
     el('div', { class: 'row' }, [
@@ -55,6 +80,11 @@ function recipesScreen(hub) {
       class: 'chip', type: 'button', 'aria-pressed': String(ui.kind === k), text: label, 'data-field': `kind:${k}`,
       on: { click: () => { ui.kind = k; ui.limit = 50; hub.render(); } },
     }))),
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Time' }, TIMES.map(([v, t]) => el('button', {
+      class: 'chip', type: 'button', 'aria-pressed': String(ui.maxMinutes === v), text: t, 'data-field': `time:${v ?? 'any'}`,
+      on: { click: () => { ui.maxMinutes = v; ui.limit = 50; hub.render(); } },
+    }))),
+    ui.maxMinutes !== null ? el('p', { class: 'small muted', text: 'Preparation plus cooking time. Meals with no time recorded are left out - add it with Edit.' }) : null,
     el('fieldset', {}, [
       el('legend', { class: 'small', text: 'Leave out anything containing' }),
       el('div', { class: 'chipset' }, ALLERGENS.map((a) => el('button', {
@@ -68,7 +98,7 @@ function recipesScreen(hub) {
       el('ul', { class: 'list panel' }, r.data.items.map((s) => el('li', {}, [
         el('a', { class: 'list__main', href: hub.href('item', s.id), style: { color: 'inherit', textDecoration: 'none' } }, [
           el('strong', { text: s.title }), s.recipe === undefined ? null : el('span', { class: `badge${s.recipe ? ' badge--ok' : ''}`, text: s.recipe ? 'Recipe' : 'Meal', style: { marginLeft: 'var(--space-2)' } }),
-          el('div', { class: 'small muted', text: [s.minutes ? `${s.minutes} min` : null, `serves ${s.servings}`, s.tags.length ? s.tags.join(', ') : null, s.allergens.length ? `contains ${s.allergens.join(', ')}` : null].filter(Boolean).join(' · ') }),
+          el('div', { class: 'small muted', text: [feedbackLine(s, people), s.minutes ? `${s.minutes} min` : null, `serves ${s.servings}`, s.tags.length ? s.tags.join(', ') : null, s.allergens.length ? `contains ${s.allergens.join(', ')}` : null].filter(Boolean).join(' · ') }),
         ]),
       ]))),
       r.data.total > r.data.items.length ? el('button', { class: 'btn', type: 'button', text: 'Show more', on: { click: () => { ui.limit += 50; hub.render(); } } }) : null,
@@ -76,23 +106,26 @@ function recipesScreen(hub) {
   ]);
 }
 
-function recipeScreen(hub, id) {
+function recipeScreen(hub, id, back) {
   const r = hub.use(`recipe:${id}`, () => recipes(hub).get(id));
+  const f = hub.use('food', () => hub.food.load());
   if (r.loading) return loading();
   if (r.error) return failure(r.error);
   if (!r.data) return el('div', { class: 'panel empty' }, [el('p', { text: 'This meal no longer exists.' }), el('a', { class: 'btn', href: hub.href('recipes'), text: 'Meals & recipes' })]);
   const rec = normaliseRecipe(r.data);
   const serves = ui.servings[id] ?? rec.servings;
   const setServes = (n) => { ui.servings[id] = Math.max(1, n); hub.render(); };
-  const rows = nutritionRows(rec);
-  const linked = rec.ingredients.some((i) => i.fdcId) ? hub.use('food', () => hub.food.load()) : null;
-  const fromFoods = linked?.data ? linkedNutrition(rec, linked.data.get, amounts) : null;
-  const kcal = fromFoods?.linked && fromFoods.linked === fromFoods.of && !fromFoods.perServing.kcal?.missing ? fromFoods.perServing.kcal.value : null;
+  const rows = nutritionRows(rec).filter((x) => x.known);
+  // One calculation for this page's calories, chart and per-person figures (js/meal-nutrition.js).
+  const n = f.data && rec.ingredients.length ? mealNutrition(rec.ingredients, rec.servings, f.data) : null;
+  const kcal = n?.kcal.known && n.kcal.complete ? n.kcal.serving : null;
+  const original = rec.variantOf ? hub.use(`recipe:${rec.variantOf}`, () => recipes(hub).get(rec.variantOf)) : null;
 
   return el('section', { class: 'stack' }, [
-    el('a', { href: hub.href('recipes'), class: 'small', text: '‹ Meals & recipes' }),
+    backLink(back) ?? el('a', { href: hub.href('recipes'), class: 'small', text: '‹ Meals & recipes' }),
     el('article', { class: 'panel stack' }, [
       el('div', { class: 'row' }, [el('h1', { text: rec.title, style: { margin: 0 } }), el('span', { class: `badge${isRecipe(rec) ? ' badge--ok' : ''}`, text: isRecipe(rec) ? 'Recipe' : 'Meal' })]),
+      rec.variantOf ? el('p', { class: 'small' }, ['A version of ', el('a', { href: hub.href('item', rec.variantOf), text: original?.data?.title ?? 'another meal' }), ' - its notes and ratings are its own.']) : null,
       rec.description ? el('p', { text: rec.description }) : null,
       el('p', { class: 'small muted', text: [rec.prepMinutes != null ? `prep ${rec.prepMinutes} min` : null, rec.cookMinutes != null ? `cook ${rec.cookMinutes} min` : null, rec.tags.join(', ') || null, rec.allergens.length ? `contains ${rec.allergens.join(', ')}` : null].filter(Boolean).join(' · ') }),
       el('div', { class: 'row' }, [
@@ -102,17 +135,21 @@ function recipeScreen(hub, id) {
         el('button', { class: 'btn btn-small btn-icon', type: 'button', text: '+', 'aria-label': 'More servings', on: { click: () => setServes(serves + 1) } }),
       ]),
       el('h2', { text: 'Ingredients' }),
-      rec.ingredients.length ? el('ul', {}, scaleIngredients(rec, serves).map((i) => el('li', { text: formatIngredient(i) + (i.note ? ` (${i.note})` : '') }))) : el('p', { class: 'small muted', text: 'No ingredients listed.' }),
+      rec.ingredients.length ? el('ul', {}, scaleIngredients(rec, serves).map((i) => el('li', { text: formatIngredient(inSystem(i, hub.units())) + (i.note ? ` (${i.note})` : '') }))) : el('p', { class: 'small muted', text: 'No ingredients listed.' }),
       rec.instructions.length ? el('div', {}, [el('h2', { text: 'Method' }), el('ol', { class: 'howto-steps' }, rec.instructions.map((s) => el('li', { text: s })))])
         : el('p', { class: 'small' }, ['A meal without a method. ', el('a', { href: hub.href('edit', rec.id), text: 'Add the method', 'data-field': 'add-method' }), ' to make it a recipe.']),
-      el('details', { class: 'more' }, [
-        el('summary', { text: 'Nutrition per serving' }),
-        fromFoods?.linked ? linkedTable(linked.data, fromFoods) : null,
-        el('table', { class: 'plain' }, [el('tbody', {}, rows.map((x) => el('tr', {}, [el('td', { text: x.key }), el('td', { text: x.known ? `${x.value} ${x.unit}` : 'not known' })])))]),
-        el('p', { class: 'small muted', text: 'Figures typed in by hand are shown as given; figures from the food database come from ingredients added in Calorie Checker. Nothing else is estimated.' }),
-      ]),
-      rec.notes ? el('p', { class: 'small', text: `Notes: ${rec.notes}` }) : null,
       rec.source ? el('p', { class: 'small muted', text: `Source: ${rec.source}` }) : null,
+    ]),
+    feedbackPanel(hub, rec),
+    el('div', { class: 'panel stack', 'aria-label': 'Nutrition' }, [
+      el('h2', { text: 'What is in it', style: { margin: 0 } }),
+      f.loading ? loading('Opening the food database…') : f.error ? failure(f.error)
+        : n ? nutritionPanel(n, f.data, { shares: portionShares(hub.foodProfiles(), hub.today()), servingsLabel: `serving (the recipe serves ${rec.servings})` })
+          : el('p', { class: 'small muted', text: 'Add ingredients to see what is in it.' }),
+      rows.length ? el('details', { class: 'measures' }, [
+        el('summary', { text: 'Figures typed in by hand' }),
+        el('table', { class: 'facts' }, [el('tbody', {}, rows.map((x) => el('tr', {}, [el('th', { scope: 'row', text: x.key }), el('td', { text: `${x.value} ${x.unit}` })])))]),
+      ]) : null,
     ]),
     portionsPanel(hub, rec, serves, setServes, kcal),
     el('div', { class: 'row' }, [
@@ -122,23 +159,27 @@ function recipeScreen(hub, id) {
       hub.data.installed('assistant') ? el('a', { class: 'btn', href: `#/assistant/meal/recipe:${encodeURIComponent(rec.id)}`, text: 'Ideas to improve it', 'data-field': 'improve-recipe' }) : null,
       el('button', {
         class: 'btn btn-quiet', type: 'button', text: 'Delete',
-        on: { click: async () => { if (!await confirmAction({ title: `Delete ${rec.title}?`, text: 'Meals already planned keep their name.', confirmLabel: 'Delete', danger: true })) return; await recipes(hub).remove(rec.id); hub.invalidate(); hub.go('recipes'); } },
+        on: { click: async () => { if (!await confirmAction({ title: `Delete ${rec.title}?`, text: 'Meals already planned keep their name. Its notes and ratings go with it.', confirmLabel: 'Delete', danger: true })) return; await recipes(hub).remove(rec.id); hub.invalidate(); hub.go('recipes'); } },
       }),
     ]),
   ]);
 }
 
 function editScreen(hub, id, param = null) {
+  // From This Week: `variant:<json>` saves a changed planned meal as a new version;
+  // on an existing meal, `update:<json>` brings that planned meal's ingredients in for review.
+  const handed = param?.startsWith('variant:') || param?.startsWith('update:') ? mealFromLink(param.slice(param.indexOf(':') + 1)) : null;
   const r = id ? hub.use(`recipe:${id}`, () => recipes(hub).get(id)) : { data: null };
   if (r.loading) return loading();
   if (r.error) return failure(r.error);
   const existing = r.data ? normaliseRecipe(r.data) : null;
   // Built in Calorie Checker and handed over in the link (`plate:<json>`).
   const fromPlate = !existing && param?.startsWith('plate:') ? mealFromPlate(param.slice(6)) : null;
-  const rec = existing ?? fromPlate ?? normaliseRecipe({ title: '' });
+  const base = existing ?? fromPlate ?? (handed && !id ? handed : null) ?? normaliseRecipe({ title: '' });
+  const rec = existing && handed ? { ...existing, ingredients: handed.ingredients, servings: handed.servings } : base;
   const flat = {
     ...rec,
-    title: existing || (fromPlate && rec.title !== 'Untitled meal') ? rec.title : '',
+    title: existing || ((fromPlate || handed) && rec.title !== 'Untitled meal') ? rec.title : '',
     ingredients: rec.ingredients.map(formatIngredient),
     tags: rec.tags.join(', '),
     ...Object.fromEntries(NUTRIENTS.map(([k]) => [`n_${k}`, rec.nutrition[k] ?? null])),
@@ -146,16 +187,18 @@ function editScreen(hub, id, param = null) {
   return el('section', { class: 'stack' }, [
     el('h1', { text: existing ? `Edit ${existing.title}` : 'Add a meal' }),
     fromPlate ? el('p', { class: 'small muted', text: 'From Calorie Checker. Give it a name and save it as a meal - add the method now or later to make it a recipe.' }) : null,
+    handed && !id ? el('p', { class: 'small muted', text: 'A new version from a planned meal you changed. It gets its own notes and ratings; the original stays as it is.' }) : null,
+    handed && id ? el('p', { class: 'small', text: 'These are the ingredients from the planned meal you changed. Saving updates the saved recipe for every future time - its ratings and notes stay.' }) : null,
     recordForm({
       record: flat,
       fields: [
         { key: 'title', label: 'Name', required: true },
         { key: 'servings', label: 'Serves', type: 'number' },
+        { key: 'prepMinutes', label: 'Preparation (minutes)', type: 'number', hint: 'Prep plus cooking time lets you find quick meals when time is short.' },
+        { key: 'cookMinutes', label: 'Cooking (minutes)', type: 'number' },
         { key: 'ingredients', label: 'Ingredients', type: 'lines', rows: 6, hint: 'One per line, e.g. "200 g flour", "2 eggs", "1/2 cup milk".' },
         { key: 'instructions', label: 'Method', type: 'lines', rows: 6, hint: 'One step per line. Leave it empty for a meal; adding steps makes it a recipe.' },
         { key: 'description', label: 'Description', type: 'textarea', more: true },
-        { key: 'prepMinutes', label: 'Preparation (minutes)', type: 'number', more: true },
-        { key: 'cookMinutes', label: 'Cooking (minutes)', type: 'number', more: true },
         { key: 'tags', label: 'Tags', more: true, hint: 'Separated by commas, e.g. quick, vegetarian, kids like it.' },
         { key: 'allergens', label: 'Contains', type: 'choices', options: ALLERGENS.map((a) => [a, a]), more: true },
         ...NUTRIENTS.map(([k, unit]) => ({ key: `n_${k}`, label: `${k[0].toUpperCase() + k.slice(1)} per serving (${unit})`, type: 'number', more: true, placeholder: 'only if known' })),
@@ -174,16 +217,77 @@ function editScreen(hub, id, param = null) {
   ]);
 }
 
-/** Amounts per serving worked out from ingredients linked to the food database. */
-function linkedTable(db, n) {
-  const row = (k) => {
-    const t = n.perServing[k];
-    if (!t || t.missing === n.linked) return 'not known';
-    return `${t.missing ? 'at least ' : ''}${fmtAmount(t.value)} ${db.meta[k].unit}`;
-  };
-  return el('div', {}, [
-    el('table', { class: 'facts' }, [el('tbody', {}, ['kcal', 'protein', 'carbs', 'fat', 'fibre', 'sugars', 'sodium'].map((k) => el('tr', {}, [el('th', { scope: 'row', text: db.meta[k].label }), el('td', { text: row(k) })])))]),
-    el('p', { class: 'small muted', text: n.linked === n.of ? 'Worked out from the food database for every ingredient.' : `Worked out for ${n.linked} of ${n.of} ingredients only (those added in Calorie Checker) - the whole meal holds more.` }),
+/** "★ 7/10 · Mia's favourite", "Not tried yet", "Tried, not rated". */
+function feedbackLine(s, people) {
+  const state = !s.tried ? 'Not tried yet' : s.rating == null ? 'Tried, not rated' : `★ ${s.rating}/10`;
+  const favs = Object.entries(s.prefs ?? {}).filter(([, v]) => v === 'favourite').map(([pid]) => people.find((p) => p.id === pid)?.name).filter(Boolean);
+  return [s.tried === undefined ? null : state, favs.length ? `${favs.join(' and ')}’s favourite` : null].filter(Boolean).join(' · ');
+}
+
+/** Tried, family rating, each person's preference, and dated notes - saved as soon as they change. */
+function feedbackPanel(hub, rec) {
+  const save = async (next) => { await saveRecord(hub, recipes(hub), next); };
+  const people = hub.foodProfiles();
+  const state = ratingState(rec);
+  const note = el('textarea', { class: 'input', id: 'note-new', rows: '2', placeholder: 'e.g. Use less salt; roast the broccoli instead', 'data-field': 'note-new' });
+  return el('div', { class: 'panel stack', 'aria-label': 'Feedback' }, [
+    el('h2', { text: 'How the family finds it', style: { margin: 0 } }),
+    el('div', { class: 'row' }, [
+      el('label', { class: 'checkline' }, [
+        el('input', { type: 'checkbox', checked: rec.tried, 'data-field': 'tried', on: { change: (e) => save(setTried(rec, e.target.checked)) } }), 'We have tried it',
+      ]),
+      el('label', { class: 'small', for: 'rating', text: 'Family rating' }),
+      el('select', { class: 'select', id: 'rating', style: { width: 'auto' }, disabled: !rec.tried, 'data-field': 'rating', on: { change: (e) => save(setRating(rec, e.target.value ? Number(e.target.value) : null)) } }, [
+        el('option', { value: '', text: rec.tried ? 'Not rated yet' : 'Try it first', selected: rec.rating === null }),
+        ...Array.from({ length: 10 }, (_, i) => 10 - i).map((v) => el('option', { value: String(v), text: `${v} - ${ratingMeaning(v)}`, selected: rec.rating === v })),
+      ]),
+      el('span', { class: 'badge', text: { untried: 'Not tried yet', unrated: 'Tried, not rated', rated: `${rec.rating}/10 · ${ratingMeaning(rec.rating)}` }[state] }),
+    ]),
+    people.length ? el('div', {}, [
+      el('p', { class: 'small', style: { margin: '0 0 var(--space-1)' }, text: 'Each person, apart from the family rating:' }),
+      el('table', { class: 'facts' }, [el('tbody', {}, people.map((p) => el('tr', {}, [
+        el('th', { scope: 'row', text: p.name }),
+        el('td', {}, el('select', { class: 'select', style: { width: 'auto' }, 'aria-label': `${p.name}'s preference`, 'data-field': `pref:${p.id}`, on: { change: (e) => save(setPref(rec, p.id, e.target.value || null)) } }, [
+          el('option', { value: '', text: 'Not rated', selected: !rec.prefs[p.id] }),
+          ...Object.entries(PREFS).map(([k, label]) => el('option', { value: k, text: label, selected: rec.prefs[p.id] === k })),
+        ])),
+      ])))]),
+    ]) : null,
+    el('div', {}, [
+      el('h3', { text: 'Notes for next time', style: { margin: 'var(--space-2) 0 var(--space-1)' } }),
+      rec.notes ? el('p', { class: 'small', text: rec.notes }) : null,
+      rec.noteLog.length ? el('ul', { class: 'guidance' }, [...rec.noteLog].reverse().map((x) => el('li', {}, [
+        el('span', { class: 'small muted', text: `${x.at}${x.from === 'occurrence' ? ` · from ${x.occasion || 'a planned meal'}` : ''}: ` }), x.text,
+      ]))) : null,
+      el('div', { class: 'row', style: { marginTop: 'var(--space-2)' } }, [
+        el('label', { class: 'sr-only', for: 'note-new', text: 'New note' }), note,
+        el('button', { class: 'btn btn-small', type: 'button', text: 'Add note', 'data-field': 'note-add', on: { click: () => { if (note.value.trim()) save(addNote(rec, note.value, { at: hub.today() })); } } }),
+      ]),
+      el('p', { class: 'small muted', text: 'Notes here are about the recipe for every time. A note about one particular meal goes on that day in This Week.' }),
+    ]),
+  ]);
+}
+
+/** A cooking note from This Week, added to the recipe's notes only when the person says yes. */
+function noteScreen(hub, id, param) {
+  let note = null;
+  try { note = JSON.parse(param); } catch { note = null; }
+  const r = hub.use(`recipe:${id}`, () => recipes(hub).get(id));
+  if (r.loading) return loading();
+  if (r.error) return failure(r.error);
+  if (!r.data || !note?.text) return el('p', { class: 'panel', text: 'Nothing to add.' });
+  const rec = normaliseRecipe(r.data);
+  return el('section', { class: 'stack' }, [
+    el('h1', { text: `Add a note to ${rec.title}?` }),
+    el('blockquote', { class: 'panel', text: note.text }),
+    el('p', { class: 'small muted', text: `From ${note.occasion || 'a planned meal'}. It will show with the recipe for every future time; the planned meal keeps its own note too.` }),
+    el('div', { class: 'row' }, [
+      el('button', {
+        class: 'btn btn-primary', type: 'button', text: 'Add to the recipe’s notes', 'data-field': 'note-promote',
+        on: { click: async () => { if (await saveRecord(hub, recipes(hub), addNote(rec, note.text, { from: 'occurrence', occasion: note.occasion, at: hub.today() }))) { hub.ui.notice('Added to the recipe’s notes.'); hub.open(note.back || hub.href('item', id)); } } },
+      }),
+      el('a', { class: 'btn', href: note.back || hub.href('item', id), text: 'Cancel' }),
+    ]),
   ]);
 }
 

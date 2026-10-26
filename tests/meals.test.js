@@ -108,7 +108,7 @@ test('shopping: anything can send; sending again replaces, bought stays bought, 
   assert.deepEqual(list.items.filter((i) => i.source === 'chore:c1').map((i) => i.name), ['bleach', 'gloves'], 'replaced, not doubled');
   assert.equal(list.items.find((i) => i.name === 'bleach').checked, true);
   assert.ok(list.items.find((i) => i.id === 'mine'));
-  assert.deepEqual(byGroup(list).map(([g]) => g), ['food', 'cleaning', 'household']);
+  assert.deepEqual(byGroup(list).map(([g]) => g), ['grains', 'cleaning', 'household'], 'pasta is sorted into its aisle');
   assert.ok(Object.keys(GROUPS).includes('other'));
   const href = sendHref({ source: 'meal:r1', from: 'Soup', items: [{ name: 'carrot', qty: 2 }] });
   assert.equal(readSend(decodeURIComponent(href.split('/').at(-1))).items[0].name, 'carrot');

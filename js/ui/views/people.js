@@ -3,6 +3,8 @@
 // she weigh in March?"). Its own page on the home screen, not inside Settings.
 
 import { el } from '../dom.js';
+import { guidanceFor } from '../../guidance.js';
+import { fmtWeight, fmtHeight, kgFrom, cmFrom } from '../../units.js';
 import { avatar, confirmAction, modal } from '../common.js';
 import {
   addPerson, updatePerson, removePerson, PERSON_COLOURS, ALLERGENS, DIETS, FOCUS, ageOn, lifeStageAllowed,
@@ -100,6 +102,7 @@ function personCard(ctx, p) {
       el('span', { class: 'small', style: { flex: '1 1 200px' }, text: food ? `Food: ${food}` : 'No food details yet - allergies, diet and wishes help the Meals section.' }),
       el('button', { class: 'btn btn-small', type: 'button', text: 'Food details', 'aria-label': `Food details for ${p.name}`, 'data-field': `pfood:${p.id}`, on: { click: () => editFood(ctx, p) } }),
     ]),
+    guidanceBlock(ctx, p),
     goalsBlock(ctx, p, update),
     measuresBlock(ctx, p),
     el('div', { class: 'row', style: { justifyContent: 'flex-end' } }, [
@@ -114,6 +117,24 @@ function personCard(ctx, p) {
         },
       }),
     ]),
+  ]);
+}
+
+/** Things worth knowing for this person's age, stage and diet - open while there is something to watch out for. */
+function guidanceBlock(ctx, p) {
+  const list = guidanceFor(p, ctx.today());
+  if (!list.length) return null;
+  const warns = list.filter((r) => r.level === 'warn').length;
+  const tips = list.length - warns;
+  const closed = (ctx.app.ui.guidanceClosed ??= new Set());
+  return el('details', {
+    class: 'measures', open: warns > 0 && !closed.has(p.id), 'data-field': `pguide:${p.id}`,
+    on: { toggle: (e) => { if (e.target.open) closed.delete(p.id); else closed.add(p.id); } },
+  }, [
+    el('summary', {}, [el('strong', { text: `Good to know for ${p.name}` }), ` - ${[warns ? `${warns} to watch out for` : null, tips ? `${tips} tip${tips === 1 ? '' : 's'}` : null].filter(Boolean).join(', ')}`]),
+    el('ul', { class: 'guidance' }, list.map((r) => el('li', { class: r.level === 'warn' ? 'guidance--warn' : '' }, [
+      r.level === 'warn' ? el('strong', { text: 'Watch out: ' }) : null, r.text, ' ', el('span', { class: 'small muted', text: `(${r.source})` }),
+    ]))),
   ]);
 }
 
@@ -156,7 +177,7 @@ function goalsBlock(ctx, p, update) {
       el('label', { class: 'field__label small', for: `egoal-${p.id}`, text: 'Energy goal' }),
       el('select', { class: 'select', id: `egoal-${p.id}`, 'data-field': `pegoal:${p.id}`, on: { change: (e) => update({ energyGoal: Number(e.target.value) }) } },
         Object.entries(ENERGY_GOALS).sort((a, b) => a[0] - b[0]).map(([v, t]) => el('option', { value: v, text: t, selected: Number(v) === p.energyGoal }))),
-      el('div', { class: 'field__hint', text: 'Their portions follow it. About 500 kcal a day less is roughly half a kilo a week; for anything more, or a health condition, talk to a doctor or dietitian.' }),
+      el('div', { class: 'field__hint', text: `Their portions follow it. About 500 kcal a day less is roughly ${ctx.app.device.units === 'imperial' ? 'a pound' : 'half a kilo'} a week; for anything more, or a health condition, talk to a doctor or dietitian.` }),
     ]) : el('p', { class: 'small muted', style: { flex: '0 1 260px' }, text: 'Energy goals are for adults who are not pregnant or breastfeeding.' }),
   ]);
 }
@@ -170,23 +191,26 @@ function measuresBlock(ctx, p) {
   const list = measurementsFor(h, p.id);
   const last = latestMeasure(h, p.id);
   const open = (ctx.app.ui.openMeasures ??= new Set());
+  const sys = ctx.app.device.units;
+  const imperial = sys === 'imperial';
   const glance = [
-    last.weightKg !== null ? `${fmt(last.weightKg)} kg (${fmtDay(last.weightDay, today)})` : null,
-    last.heightCm !== null ? `${fmt(last.heightCm)} cm (${fmtDay(last.heightDay, today)})` : null,
+    last.weightKg !== null ? `${fmtWeight(last.weightKg, sys)} (${fmtDay(last.weightDay, today)})` : null,
+    last.heightCm !== null ? `${fmtHeight(last.heightCm, sys)} (${fmtDay(last.heightDay, today)})` : null,
   ].filter(Boolean).join(' · ');
   const id = (k) => `m-${k}-${p.id}`;
   // What is typed survives a redraw (a save from another laptop arriving mid-entry).
   const drafts = (ctx.app.ui.measureDrafts ??= {});
-  const draft = drafts[p.id] ?? { day: today, w: '', h: '', note: '' };
+  const draft = drafts[p.id] ?? { day: today, w: '', h: '', hi: '', note: '' };
   const form = el('form', {
     class: 'row', 'aria-label': `Add a height or weight for ${p.name}`,
     on: {
-      input: () => { drafts[p.id] = { day: v('day'), w: v('w'), h: v('h'), note: v('note') }; },
+      input: () => { drafts[p.id] = { day: v('day'), w: v('w'), h: v('h'), hi: v('hi'), note: v('note') }; },
       submit: (e) => {
         e.preventDefault();
         try {
           const { household } = addMeasurement(ctx.app.household, {
-            personId: p.id, day: v('day'), weightKg: v('w'), heightCm: v('h'), note: v('note'), by: ctx.currentPerson()?.id ?? null,
+            // Typed in the chosen units, saved in metric.
+            personId: p.id, day: v('day'), weightKg: kgFrom(v('w'), sys), heightCm: cmFrom(v('h'), v('hi'), sys), note: v('note'), by: ctx.currentPerson()?.id ?? null,
           });
           delete drafts[p.id];
           ctx.flash({ id: `m:${p.id}`, level: 'ok', text: `Saved for ${p.name}.` });
@@ -199,12 +223,17 @@ function measuresBlock(ctx, p) {
     },
   }, [
     small(id('day'), 'Date', el('input', { class: 'input', id: id('day'), type: 'date', value: draft.day, max: today, required: true, 'data-field': `md:${p.id}` })),
-    small(id('w'), 'Weight (kg)', el('input', { class: 'input', id: id('w'), type: 'number', min: '0.5', max: '400', step: '0.1', inputmode: 'decimal', value: draft.w, style: { width: '7em' }, 'data-field': `mw:${p.id}` })),
-    small(id('h'), 'Height (cm)', el('input', { class: 'input', id: id('h'), type: 'number', min: '20', max: '250', step: '0.1', inputmode: 'decimal', value: draft.h, style: { width: '7em' }, 'data-field': `mh:${p.id}` })),
+    small(id('w'), imperial ? 'Weight (lb)' : 'Weight (kg)', el('input', { class: 'input', id: id('w'), type: 'number', min: '1', max: imperial ? '880' : '400', step: '0.1', inputmode: 'decimal', value: draft.w, style: { width: '7em' }, 'data-field': `mw:${p.id}` })),
+    imperial
+      ? small(id('h'), 'Height (ft, in)', el('span', { class: 'row', style: { gap: '4px', flexWrap: 'nowrap' } }, [
+        el('input', { class: 'input', id: id('h'), type: 'number', min: '0', max: '8', step: '1', inputmode: 'numeric', value: draft.h, placeholder: 'ft', 'aria-label': 'Feet', style: { width: '4.5em' }, 'data-field': `mh:${p.id}` }),
+        el('input', { class: 'input', id: id('hi'), type: 'number', min: '0', max: '11.9', step: '0.5', inputmode: 'decimal', value: draft.hi, placeholder: 'in', 'aria-label': 'Inches', style: { width: '4.5em' }, 'data-field': `mhi:${p.id}` }),
+      ]))
+      : small(id('h'), 'Height (cm)', el('input', { class: 'input', id: id('h'), type: 'number', min: '20', max: '250', step: '0.1', inputmode: 'decimal', value: draft.h, style: { width: '7em' }, 'data-field': `mh:${p.id}` })),
     small(id('note'), 'Note', el('input', { class: 'input', id: id('note'), placeholder: 'e.g. clinic visit', maxlength: '200', value: draft.note, 'data-field': `mn:${p.id}` })),
     el('button', { class: 'btn btn-small', type: 'submit', text: 'Add', 'data-field': `madd:${p.id}`, style: { alignSelf: 'flex-end' } }),
   ]);
-  function v(k) { return form.querySelector(`#${id(k)}`).value; }
+  function v(k) { return form.querySelector(`#${id(k)}`)?.value ?? ''; }
   return el('details', {
     class: 'measures', open: open.has(p.id),
     on: { toggle: (e) => { if (e.target.open) open.add(p.id); else open.delete(p.id); } },
@@ -213,14 +242,14 @@ function measuresBlock(ctx, p) {
     el('div', { class: 'stack', style: { marginTop: 'var(--space-2)' } }, [
       form,
       p.weightKg !== null && !list.some((m) => m.weightKg !== null)
-        ? el('p', { class: 'small muted', text: `A weight of ${fmt(p.weightKg)} kg was entered earlier without a date. Add it above with a date to keep it in the record.` })
+        ? el('p', { class: 'small muted', text: `A weight of ${fmtWeight(p.weightKg, sys)} was entered earlier without a date. Add it above with a date to keep it in the record.` })
         : null,
       list.length ? el('table', { class: 'facts measures__table' }, [
         el('thead', {}, el('tr', {}, ['Date', 'Weight', 'Height', 'Note', ''].map((t) => el('th', { scope: 'col', text: t })))),
         el('tbody', {}, list.map((m) => el('tr', {}, [
           el('td', { text: fmtDay(m.day, today) }),
-          el('td', { text: m.weightKg !== null ? `${fmt(m.weightKg)} kg` : '-' }),
-          el('td', { text: m.heightCm !== null ? `${fmt(m.heightCm)} cm` : '-' }),
+          el('td', { text: m.weightKg !== null ? fmtWeight(m.weightKg, sys) : '-' }),
+          el('td', { text: m.heightCm !== null ? fmtHeight(m.heightCm, sys) : '-' }),
           el('td', { text: [m.note, m.by && m.by !== p.id ? `by ${personName(h, m.by)}` : ''].filter(Boolean).join(' · ') }),
           el('td', {}, el('button', {
             class: 'btn btn-quiet btn-small', type: 'button', text: '×', 'aria-label': `Delete the ${fmtDay(m.day, today)} entry`,

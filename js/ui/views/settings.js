@@ -9,10 +9,11 @@ import { prefsKey } from './dashboard.js';
 import { driveSection } from './drive.js';
 import { availableImporters, importFromDevice, downloadTemplate } from '../imports.js';
 import { OFFER, END_ACTIONS, END_ACTION_LABEL } from '../../music.js';
+import { SYSTEMS } from '../../units.js';
 
 export function settingsView(ctx, route) {
-  const sections = [householdSection(ctx), driveSection(ctx), importSection(ctx), dashboardSection(ctx), musicSection(ctx), dataSection(ctx)];
-  const target = { dashboard: 'set-dashboard', drive: 'set-drive', music: 'set-music', import: 'set-import' }[route.sub];
+  const sections = [householdSection(ctx), unitsSection(ctx), driveSection(ctx), importSection(ctx), dashboardSection(ctx), musicSection(ctx), dataSection(ctx)];
+  const target = { units: 'set-units', dashboard: 'set-dashboard', drive: 'set-drive', music: 'set-music', import: 'set-import' }[route.sub];
   if (target && ctx.app.ui.scrolledTo !== location.hash) {
     // Arriving from a link to one section: bring it into view, once.
     ctx.app.ui.scrolledTo = location.hash;
@@ -21,6 +22,19 @@ export function settingsView(ctx, route) {
   return el('section', { class: 'stack', 'aria-labelledby': 'settings-title' }, [
     el('h1', { id: 'settings-title', text: 'Settings' }),
     ...sections,
+  ]);
+}
+
+/** How amounts are shown and typed on this device. Everything is saved in metric either way. */
+function unitsSection(ctx) {
+  const current = ctx.app.device.units;
+  return el('div', { class: 'panel stack', id: 'set-units' }, [
+    el('h2', { text: 'Units' }),
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Units' }, Object.entries(SYSTEMS).map(([k, label]) => el('button', {
+      class: 'chip', type: 'button', 'aria-pressed': String(current === k), text: label, 'data-field': `units:${k}`,
+      on: { click: () => { ctx.setDevice({ units: k }); ctx.render(); } },
+    }))),
+    el('p', { class: 'small muted', text: 'For weights and heights, food amounts, ingredients and the shopping list on this device. Family Hub keeps everything in metric underneath, so devices set differently always agree. Nutrients stay in grams and milligrams, as on food labels.' }),
   ]);
 }
 

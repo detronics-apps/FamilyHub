@@ -69,6 +69,25 @@ export function portionShares(profiles, today) {
   });
 }
 
+// Guests at a meal: only a rough kind of person is asked for, never names or details.
+export const GUESTS = {
+  man: { label: 'Adult man', age: 35, sex: 'male' }, woman: { label: 'Adult woman', age: 35, sex: 'female' },
+  teen: { label: 'Teenager', age: 15, sex: '' }, child: { label: 'Child (4-12)', age: 8, sex: '' }, toddler: { label: 'Toddler (1-3)', age: 2, sex: '' },
+};
+
+/** Portion shares for guests, from typical needs for their kind (no height or weight is known). */
+export function guestShares(guests, today) {
+  const year = Number(today.slice(0, 4));
+  return guests.map((g, i) => {
+    const t = GUESTS[g.who];
+    const e = energyGuide({ born: `${year - t.age}${today.slice(4)}`, sex: t.sex, role: t.age >= 18 ? 'adult' : 'child' }, today);
+    return { id: g.id, name: `Guest: ${t.label.toLowerCase()}${guests.filter((x) => x.who === g.who).length > 1 ? ` ${guests.filter((x, j) => x.who === g.who && j <= i).length}` : ''}`, share: Math.max(0.25, Math.round((e.kcal / STANDARD_KCAL) * 4) / 4), kcal: e.kcal, basis: 'guest' };
+  });
+}
+
+/** Servings to cook for the family plus guests at one meal: their shares added up, rounded up. */
+export const servingsFor = (shares) => Math.max(1, Math.ceil(shares.reduce((n, s) => n + s.share, 0)));
+
 export const LEFTOVERS = { none: 'No leftovers', one: 'Leftovers for one', two: 'Leftovers for two', meal: 'Enough for another family meal' };
 
 /** How many standard portions to cook for these people, with or without leftovers. */

@@ -5,6 +5,7 @@ import { resolveDashboard } from '../../dashboard.js';
 import { findTasks } from '../../matching.js';
 import { hasDemo } from '../../model.js';
 import { demoNotice } from '../common.js';
+import { homeNotices } from '../../guidance.js';
 
 export const prefsKey = (ctx) => ctx.currentPerson()?.id ?? 'anyone';
 
@@ -12,6 +13,7 @@ export function dashboardView(ctx, route, notices) {
   const h = ctx.app.household;
   const person = ctx.currentPerson();
   if (hasDemo(h)) notices.push(demoNotice(ctx));
+  notices.push(...homeNotices(h.people, ctx.today()));
   const { visible } = resolveDashboard(ctx.app.device.prefs[prefsKey(ctx)], ctx.dashboardModules());
   const ready = findTasks(h, { personId: person?.id ?? null }, ctx.today()).filter((t) => t.occ.category !== 'optional').length;
 

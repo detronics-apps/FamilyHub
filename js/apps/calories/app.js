@@ -8,6 +8,8 @@ import { el } from '../../ui/dom.js';
 import { loading, failure, field } from '../kit.js';
 import { amounts, total, fmtAmount } from '../../food.js';
 import { portionShares, portionPlan, fmtShare } from '../../portions.js';
+import { foodWarnings } from '../../guidance.js';
+import { fmtMass, gramsFromOz } from '../../units.js';
 
 const MAIN = ['kcal', 'protein', 'carbs', 'sugars', 'fat', 'satFat', 'fibre', 'sodium'];
 // One list per target: 'family' for the family meal, or a person's id for their plate.
@@ -51,17 +53,19 @@ function results(hub, db) {
   return el('ul', { class: 'list panel', 'aria-label': 'Foods found' }, hits.map((h) => el('li', {}, [
     el('button', {
       class: 'linkish list__main', type: 'button', style: { textAlign: 'left', textDecoration: 'none' }, 'data-field': `food:${h.id}`,
-      on: { click: () => { ui.foodId = h.id; ui.unit = defaultPortion(h); ui.count = ui.unit === 'g' ? 100 : 1; hub.render(); } },
+      on: { click: () => { ui.foodId = h.id; ui.unit = defaultPortion(h, hub.units()); ui.count = ui.unit === 'g' ? 100 : ui.unit === 'oz' ? 4 : 1; hub.render(); } },
     }, [el('strong', { text: h.name }), el('div', { class: 'small muted', text: `${fmtAmount(h.per100.kcal)} kcal per 100 g · ${h.category || db.types[h.type]}` })]),
   ])));
 }
 
-const gramsOf = (food) => (ui.unit === 'g' ? Number(ui.count) || 0 : (food.portions[Number(ui.unit)]?.grams ?? 0) * (Number(ui.count) || 0));
-const describe = (food) => (ui.unit === 'g' ? `${ui.count} g` : `${Number(ui.count) === 1 ? '' : `${ui.count} × `}${food.portions[Number(ui.unit)].label}`);
+// The amount: a portion the source lists (by its index), or a weight - grams, or ounces when Settings says imperial.
+const gramsOf = (food) => (ui.unit === 'g' ? Number(ui.count) || 0 : ui.unit === 'oz' ? gramsFromOz(ui.count) : (food.portions[Number(ui.unit)]?.grams ?? 0) * (Number(ui.count) || 0));
+const byWeight = () => ui.unit === 'g' || ui.unit === 'oz';
+const describe = (food) => (byWeight() ? `${ui.count} ${ui.unit}` : `${Number(ui.count) === 1 ? '' : `${ui.count} × `}${food.portions[Number(ui.unit)].label}`);
 /** A medium one where the source lists sizes, else its first portion, else grams. */
-function defaultPortion(food) {
-  if (!food.portions.length) return 'g';
-  const medium = food.portions.findIndex((p) => /medium/i.test(p.label));
+function defaultPortion(food, sys) {
+  if (!food.portions.length) return sys === 'imperial' ? 'oz' : 'g';
+  const medium = food.portions.findIndex((p) => /\bmedium\b/i.test(p.label));
   return String(Math.max(0, medium));
 }
 
@@ -75,9 +79,9 @@ function foodPanel(hub, db, food, target) {
     el('td', { text: a[k] === null ? 'not known' : `${fmtAmount(a[k])} ${db.meta[k].unit}` }),
   ]));
   const count = el('input', { class: 'input', id: 'cal-amount', type: 'number', min: '0', step: 'any', value: ui.count, style: { maxWidth: '110px' }, 'data-field': 'amount', on: { change: (e) => { ui.count = Math.max(0, Number(e.target.value) || 0); hub.render(); } } });
-  const unit = el('select', { class: 'input', id: 'cal-unit', 'data-field': 'unit', on: { change: (e) => { ui.unit = e.target.value; if (ui.unit === 'g') ui.count = 100; else ui.count = 1; hub.render(); } } }, [
+  const unit = el('select', { class: 'input', id: 'cal-unit', 'data-field': 'unit', on: { change: (e) => { ui.unit = e.target.value; ui.count = ui.unit === 'g' ? 100 : ui.unit === 'oz' ? 4 : 1; hub.render(); } } }, [
     ...food.portions.map((p, i) => el('option', { value: String(i), selected: ui.unit === String(i), text: `${p.label} (${fmtAmount(p.grams)} g)` })),
-    el('option', { value: 'g', selected: ui.unit === 'g', text: 'grams' }),
+    hub.units() === 'imperial' ? el('option', { value: 'oz', selected: ui.unit === 'oz', text: 'ounces' }) : el('option', { value: 'g', selected: ui.unit === 'g', text: 'grams' }),
   ]);
   return el('div', { class: 'panel stack' }, [
     el('button', { class: 'linkish small', type: 'button', text: '‹ Back to the list', style: { alignSelf: 'flex-start' }, on: { click: () => { ui.foodId = null; hub.render(); } } }),
@@ -85,7 +89,7 @@ function foodPanel(hub, db, food, target) {
     el('div', { class: 'row' }, [field('How much', count), field('Of', unit)]),
     el('p', { class: 'stat-big', 'aria-live': 'polite' }, [
       el('strong', { text: a.kcal === null ? 'Calories not known' : `${fmtAmount(a.kcal)} kcal` }),
-      el('span', { class: 'small muted', text: ` in ${describe(food)}${ui.unit === 'g' ? '' : ` (${fmtAmount(grams)} g)`}` }),
+      el('span', { class: 'small muted', text: ` in ${describe(food)}${byWeight() ? '' : ` (${fmtMass(grams, hub.units())})`}` }),
     ]),
     el('table', { class: 'facts' }, [el('tbody', {}, rows(MAIN.slice(1)))]),
     el('details', { open: ui.more, on: { toggle: (e) => { ui.more = e.target.open; } } }, [
@@ -121,8 +125,11 @@ function platePanel(hub, db, people, plate) {
     servings: family ? portionPlan(shares).cook : 1,
     ingredients: items.map((p) => ({ name: p.food.name, qty: Math.round(p.grams), fdcId: p.food.id })),
   };
+  // Age and stage guidance about these foods, for whoever is eating (honey before one, and so on).
+  const warnings = (family ? people : [person]).flatMap((p) => foodWarnings(p, hub.today(), items.map((x) => x.food.name)).map((w) => `${p.name}: ${w.rule.text}`));
   return el('div', { class: 'panel stack', 'aria-label': family ? 'The family meal' : `${person.name}’s plate` }, [
     el('h2', { text: family ? 'The family meal' : `${person.name}’s plate`, style: { margin: 0 } }),
+    ...warnings.map((w) => el('div', { class: 'panel caution', role: 'note' }, [el('strong', { text: 'Worth knowing: ' }), w])),
     el('ul', { class: 'list' }, items.map((p, i) => el('li', {}, [
       el('div', { class: 'list__main' }, [el('strong', { text: p.food.name }), el('div', { class: 'small muted', text: `${p.label} · ${fmtAmount(amounts(p.food, p.grams).kcal)} kcal` })]),
       el('button', { class: 'btn btn-small', type: 'button', text: 'Remove', on: { click: () => { plate.splice(i, 1); hub.render(); } } }),
