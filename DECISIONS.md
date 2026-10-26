@@ -263,6 +263,20 @@ A meal can be marked "use as an ingredient" (home-made mayo); other recipes add 
 and nutrition and shopping open it into its own ingredients (loops and depth are guarded).
 Ingredient suggestions can be limited to our own items. Recipe index version 3.
 
+**D-038 "We already have the mayo" (owner, 2026-10-26).** A shopping send from a meal or a week
+carries our own items apart from the rest. The Shopping confirmation lists each under "Made at
+home" with what it would add; ticking "We already have it" leaves its ingredients off (6 eggs, not
+7). The same item from several meals is one line. Only the list changes, never the recipe, the
+planned meal or the nutrition.
+
+**D-039 Nothing the app works with depends on spelling (owner, 2026-10-26).** "One batch makes" is
+an amount and a unit picked from the same list as ingredients (pieces, g, ml...), with "other..."
+for a typed unit. Weighed in g or kg with no amount, an item used as an ingredient takes the
+weight of its ingredients (165 + 60 + 8 + 6 g = 239 g), worked out again on every save. A meal's
+breakfast / lunch / supper / snack are tick boxes, not typed tags. Every form keeps what was
+typed when the page redraws (a list finishing loading, a warning), until you leave the screen.
+Names, notes and searches stay free text: nothing is worked out from them.
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).

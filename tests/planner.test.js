@@ -228,3 +228,23 @@ test('our own items as ingredients: home-made mayo opens into its ingredients fo
   const loop = normaliseRecipe({ id: 'loop', title: 'Loop', yield: { qty: 1, unit: 'jar' }, ingredients: [{ name: 'Loop', qty: 1, unit: 'jar', recipeId: 'loop' }] });
   assert.equal(expandIngredients(loop.ingredients, 1, () => loop).length, 1, 'a loop stops instead of running forever');
 });
+
+test('home-made items stay apart for shopping, so "already made" can leave them out', async () => {
+  const { splitOwn, planShopping, ingredientsForPlan } = await import('../js/apps/meals/logic.js');
+  const { readSend } = await import('../js/apps/shopping/logic.js');
+  const mayo = normaliseRecipe({ id: 'mayo', title: 'Home-made mayo', asIngredient: true, yield: { qty: 300, unit: 'ml' }, ingredients: [{ name: 'eggs', qty: 2, unit: '' }, { name: 'olive oil', qty: 250, unit: 'ml' }] });
+  const salad = normaliseRecipe({ id: 'salad', title: 'Egg salad', servings: 4, ingredients: [{ name: 'eggs', qty: 6, unit: '' }, { name: 'Home-made mayo', qty: 150, unit: 'ml', recipeId: 'mayo' }] });
+  const recipes = new Map([['mayo', mayo], ['salad', salad]]);
+  const s = splitOwn(salad.ingredients, 1, (id) => recipes.get(id));
+  assert.deepEqual(s.base.map((i) => [i.name, i.qty]), [['eggs', 6]]);
+  assert.deepEqual(s.own.map((g) => [g.name, g.qty, g.unit, g.items.map((i) => `${i.qty} ${i.name}`)]), [['Home-made mayo', 150, 'ml', ['1 eggs', '125 olive oil']]]);
+  let plan = setSlot(normalisePlan({}, MONDAY), 0, 'lunch', { recipeId: 'salad', title: 'Egg salad', servings: 4 });
+  plan = setSlot(plan, 2, 'lunch', { recipeId: 'salad', title: 'Egg salad', servings: 4 });
+  const week = planShopping(plan, recipes);
+  assert.equal(week.own.length, 1, 'the same mayo from two meals is one group');
+  assert.equal(week.own[0].qty, 300);
+  assert.equal(week.items.find((i) => i.name === 'eggs').qty, 12);
+  assert.equal(ingredientsForPlan(plan, recipes).find((i) => i.name === 'eggs').qty, 14, 'all together: 12 + 2 from the mayo');
+  const sent = readSend(JSON.stringify({ source: 'week:x', items: week.items, own: week.own }));
+  assert.equal(sent.own[0].items.length, 2);
+});

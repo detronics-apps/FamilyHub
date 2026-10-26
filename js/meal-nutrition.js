@@ -94,6 +94,21 @@ export function resolveIngredient(i, db) {
   return { ingredient: i, food, grams: each ? each * i.qty : null, how, approx: each !== null };
 }
 
+/**
+ * What one batch weighs, from its ingredients: grams and kilos as written, the
+ * rest through the food database when it is loaded. `complete` is false when a
+ * line could not be weighed, so the total is then "at least".
+ */
+export function batchGrams(lines, db = null) {
+  let grams = 0;
+  let complete = true;
+  for (const i of lines) {
+    const g = i.qty == null ? null : G[i.unit] ? i.qty * G[i.unit] : db ? resolveIngredient(i, db).grams : null;
+    if (g == null) complete = false; else grams += g;
+  }
+  return { grams: Math.round(grams), complete };
+}
+
 /* ------------------------------------------------------------ adding up */
 
 /**

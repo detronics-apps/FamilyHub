@@ -190,3 +190,12 @@ walkthrough with a screen reader, Safari/Firefox, a real phone.
   and lemon juice from the list with units; an "Egg salad" with "only our own items" suggesting
   just the mayo; salad nutrition counts half the mayo (about 1,650 kcal a batch); shopping send
   combined to 7 eggs, 125 ml oil, ½ tbsp lemon juice; a planned meal shows "Make the recipe x2".
+- Already made (D-038): automated - the salad splits into 6 eggs plus mayo 150 ml (1 egg, 125 ml
+  oil); two salads in a week give one mayo group of 300 ml and 12 eggs apart; the send validates.
+  Browser - "We already have the Home-made mayo (150 ml needed)" ticked: 6 eggs, no oil; unticked:
+  7 eggs and 125 ml olive oil.
+- No spelling (D-039): automated - 165 + 60 + 8 + 6 g weigh 239 g; a spoon without the food
+  database makes it "at least"; "grams" is kept as g. Browser - a new "Home made salad dressing"
+  with four gram rows: the hint says 239 g; saving with "pieces" and no amount warns and keeps the
+  name, the ticks and the rows; choosing g saves "Makes 239 g" and the edit screen shows it empty
+  again (worked out); Lunch ticked shows as lunch.

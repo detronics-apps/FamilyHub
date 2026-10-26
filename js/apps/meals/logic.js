@@ -109,7 +109,8 @@ export function normaliseRecipe(r = {}) {
     })),
     variantOf: str(r.variantOf, 40),   // set on a copy saved from a changed planned meal
     // What one batch makes ("12 pancakes", "300 ml"), and whether other recipes can use it as an ingredient.
-    yield: { qty: num(r.yield?.qty), unit: str(r.yield?.unit, 30) },
+    // auto: the amount was worked out from the ingredients' weight, so it is worked out again on every save.
+    yield: { qty: num(r.yield?.qty), unit: unitKey(str(r.yield?.unit, 30)), ...(r.yield?.auto === true ? { auto: true } : {}) },
     asIngredient: r.asIngredient === true,
   };
 }
@@ -432,6 +433,54 @@ export function expandIngredients(lines, factor, getRecipe = () => null, depth =
     } else out.push(scaleCarefully(i, factor));
   }
   return out;
+}
+
+/**
+ * Like expandIngredients, but our own items used directly (home-made mayo) are
+ * kept as their own groups, so the shopping list can ask "already made?".
+ * @returns {{ base: [lines], own: [{ id, name, qty, unit, items: [lines] }] }}
+ */
+export function splitOwn(lines, factor, getRecipe = () => null) {
+  const base = [];
+  const own = [];
+  for (const i of lines) {
+    const sub = i.recipeId ? getRecipe(i.recipeId) : null;
+    if (sub && sub.yield?.qty && i.qty != null) {
+      own.push({ id: i.recipeId, name: i.name, qty: i.qty * factor, unit: i.unit, items: expandIngredients([i], factor, getRecipe) });
+    } else base.push(...expandIngredients([i], factor, getRecipe));
+  }
+  return { base, own };
+}
+
+/** The same home-made item from several meals, added up into one group. */
+export function mergeOwn(groups) {
+  const byId = new Map();
+  for (const g of groups) {
+    const cur = byId.get(g.id);
+    if (cur && cur.unit === g.unit) { cur.qty += g.qty; cur.items.push(...g.items); } else byId.set(cur ? `${g.id}:${g.unit}` : g.id, { ...g, items: [...g.items] });
+  }
+  return [...byId.values()].map((g) => ({ ...g, qty: Math.round(g.qty * 10) / 10, items: combineIngredients(g.items) }));
+}
+
+/**
+ * What a week's plan needs bought, with home-made items apart: `items` are
+ * bought as they are; each of `own` is bought as its ingredients unless it is
+ * already made. Together they are exactly ingredientsForPlan.
+ */
+export function planShopping(plan, recipes) {
+  const base = [];
+  const own = [];
+  for (const s of plan.slots) {
+    const recipe = s.recipeId ? recipes.get(s.recipeId) : null;
+    const list = s.ingredients ?? recipe?.ingredients ?? null;
+    if (list) {
+      const split = splitOwn(list, slotBatch(s, recipe).m, (id) => recipes.get(id));
+      base.push(...split.base);
+      own.push(...split.own);
+    }
+    for (const r of s.reserve) base.push(...r.additions);
+  }
+  return { items: combineIngredients(base), own: mergeOwn(own) };
 }
 
 /** Every meal our own ingredients point to, however deep (for loading them before working anything out). */

@@ -94,9 +94,14 @@ export function readSend(param) {
   let raw;
   try { raw = JSON.parse(param); } catch { return null; }
   if (!raw || !str(raw.source) || !Array.isArray(raw.items)) return null;
+  const item = (i) => ({ name: str(i.name, 120), qty: num(i.qty), unit: unitKey(str(i.unit, 20)), note: str(i.note, 120) });
   return {
     source: str(raw.source, 80), from: str(raw.from, 80), group: GROUPS[raw.group] ? raw.group : 'food',
-    items: raw.items.slice(0, 120).filter((i) => i && str(i.name)).map((i) => ({ name: str(i.name, 120), qty: num(i.qty), unit: unitKey(str(i.unit, 20)), note: str(i.note, 120) })),
+    items: raw.items.slice(0, 120).filter((i) => i && str(i.name)).map(item),
+    // Home-made items (mayo): bought as their ingredients unless the family already has some made.
+    own: (Array.isArray(raw.own) ? raw.own : []).slice(0, 30).filter((g) => g && str(g.name) && Array.isArray(g.items)).map((g) => ({
+      id: str(g.id, 40), name: str(g.name, 120), qty: num(g.qty), unit: unitKey(str(g.unit, 20)), items: g.items.slice(0, 60).filter((i) => i && str(i.name)).map(item),
+    })),
   };
 }
 

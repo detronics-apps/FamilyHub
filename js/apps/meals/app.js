@@ -17,10 +17,11 @@ import {
   ALLERGENS, NUTRIENTS, normaliseRecipe, recipeSummary, recipeText, nutritionRows,
   formatIngredient, isRecipe, keepFoodLinks, mealFromPlate, mealFromLink,
   PREFS, ratingMeaning, ratingState, setRating, setTried, setPref, addNote, SUMMARY_VERSION,
-  batchMultiplier, expandIngredients, collectRecipes, scaleCarefully, combineIngredients,
+  batchMultiplier, splitOwn, mergeOwn, collectRecipes, scaleCarefully, combineIngredients,
 } from './logic.js';
-import { ingredientEditor } from '../../ui/ingredient-editor.js';
-import { mealNutrition } from '../../meal-nutrition.js';
+import { ingredientEditor, UNIT_OPTIONS } from '../../ui/ingredient-editor.js';
+import { mealNutrition, batchGrams } from '../../meal-nutrition.js';
+import { MEAL_TAGS } from './facts.js';
 import { nutritionPanel } from '../../ui/nutrition-view.js';
 import { portionShares, portionPlan, fmtShare, LEFTOVERS } from '../../portions.js';
 import { sendHref } from '../shopping/logic.js';
@@ -169,7 +170,7 @@ function recipeScreen(hub, id, back) {
     portionsPanel(hub, rec, serves, setServes, kcal),
     el('div', { class: 'row' }, [
       hub.data.installed('mealplan') ? el('a', { class: 'btn btn-primary', href: `#/mealplan/add/${encodeURIComponent(`${rec.id}~${serves}`)}`, text: 'Plan it', 'data-field': 'plan-meal' }) : null,
-      hub.data.installed('shopping') && rec.ingredients.length ? el('a', { class: 'btn', href: sendHref({ source: `meal:${rec.id}`, from: rec.title, group: 'food', items: combineIngredients(expandIngredients(rec.ingredients, serves / rec.servings, getSub)) }), text: 'Send to the shopping list', 'data-field': 'send-shopping' }) : null,
+      hub.data.installed('shopping') && rec.ingredients.length ? el('a', { class: 'btn', href: sendHref({ source: `meal:${rec.id}`, from: rec.title, group: 'food', ...shopSplit(rec.ingredients, serves / rec.servings, getSub) }), text: 'Send to the shopping list', 'data-field': 'send-shopping' }) : null,
       el('a', { class: 'btn', href: hub.href('edit', rec.id), text: 'Edit' }),
       hub.data.installed('assistant') ? el('a', { class: 'btn', href: `#/assistant/meal/recipe:${encodeURIComponent(rec.id)}`, text: 'Ideas to improve it', 'data-field': 'improve-recipe' }) : null,
       el('button', {
@@ -194,7 +195,14 @@ function editScreen(hub, id, param = null) {
   const rec = existing && handed ? { ...existing, ingredients: handed.ingredients, servings: handed.servings } : base;
   // The ingredient rows being edited live here, so a redraw of the page never loses them.
   const draftKey = `${id ?? 'new'}:${param ?? ''}`;
-  if (ui.draft?.key !== draftKey) ui.draft = { key: draftKey, rows: rec.ingredients.map((i) => ({ ...i })) };
+  if (ui.draft?.key !== draftKey) {
+    const known = UNIT_OPTIONS.some(([u]) => u === rec.yield.unit);
+    ui.draft = {
+      key: draftKey, rows: rec.ingredients.map((i) => ({ ...i })),
+      // A new meal is weighed in grams; a worked-out amount is left empty so it is worked out again.
+      yield: { qty: rec.yield.auto ? null : rec.yield.qty, unit: !existing && !rec.yield.unit ? 'g' : known ? rec.yield.unit : 'other', other: known ? '' : rec.yield.unit },
+    };
+  }
   const f = hub.use('food', () => hub.food.load());
   const ix = ensureIndex(hub);
   if (ix.loading) return loading('Bringing the list up to date…');
@@ -202,8 +210,8 @@ function editScreen(hub, id, param = null) {
   const flat = {
     ...rec,
     title: existing || ((fromPlate || handed) && rec.title !== 'Untitled meal') ? rec.title : '',
-    yieldQty: rec.yield.qty, yieldUnit: rec.yield.unit,
-    tags: rec.tags.join(', '),
+    mealTypes: Object.keys(MEAL_TAGS).filter((t) => rec.tags.includes(t) || (t === 'dinner' && rec.tags.includes('supper'))),
+    tags: rec.tags.filter((t) => !MEAL_TAGS[t] && t !== 'supper').join(', '),
     ...Object.fromEntries(NUTRIENTS.map(([k]) => [`n_${k}`, rec.nutrition[k] ?? null])),
   };
   return el('section', { class: 'stack' }, [
@@ -216,14 +224,14 @@ function editScreen(hub, id, param = null) {
       fields: [
         { key: 'title', label: 'Name', required: true },
         { key: 'servings', label: 'Serves', type: 'number' },
+        { key: 'mealTypes', label: 'Good for', type: 'choices', options: Object.entries(MEAL_TAGS), hint: 'Used by This Week when looking for a breakfast, lunch, supper or snack.' },
         { key: 'prepMinutes', label: 'Preparation (minutes)', type: 'number', hint: 'Prep plus cooking time lets you find quick meals when time is short.' },
         { key: 'cookMinutes', label: 'Cooking (minutes)', type: 'number' },
-        { key: 'yieldQty', label: 'Makes (optional)', type: 'number', placeholder: 'e.g. 12', hint: 'What one batch makes, e.g. 12 pancakes or 300 ml.' },
-        { key: 'yieldUnit', label: 'of', placeholder: 'e.g. pancakes, ml, jars' },
+        { key: 'yield', label: 'One batch makes', type: 'custom', control: () => yieldControl(f.data ?? null) },
         {
           key: 'ingredients', label: 'Ingredients', type: 'custom',
           control: () => ({
-            node: ingredientEditor({ rows: ui.draft.rows, db: f.data ?? null, own: own.data ?? [], selfId: existing?.id ?? null }),
+            node: ingredientEditor({ rows: ui.draft.rows, db: f.data ?? null, own: own.data ?? [], selfId: existing?.id ?? null, onChange: () => ui.yieldHint?.() }),
             get: () => ui.draft.rows.filter((x) => x.name.trim()),
           }),
         },
@@ -240,9 +248,14 @@ function editScreen(hub, id, param = null) {
       onSave: async (values) => {
         const nutrition = Object.fromEntries(NUTRIENTS.map(([k]) => [k, values[`n_${k}`]]));
         for (const [k] of NUTRIENTS) delete values[`n_${k}`];
-        if (values.asIngredient && !values.yieldQty) { hub.ui.notice('To use it as an ingredient, say what one batch makes (for example 300 ml).', 'warn'); return; }
-        values.yield = { qty: values.yieldQty, unit: values.yieldUnit };
-        delete values.yieldQty; delete values.yieldUnit;
+        // Weighed in grams with no amount given: the ingredients' total (165 + 60 + 8 + 6 g = 239 g).
+        if (values.yield.qty == null && WEIGHT[values.yield.unit] && values.asIngredient) {
+          const w = batchGrams(values.ingredients, f.data ?? await hub.food.load());
+          if (w.grams) values.yield = { qty: Math.round((w.grams / WEIGHT[values.yield.unit]) * 100) / 100, unit: values.yield.unit, auto: true };
+        }
+        if (values.asIngredient && !values.yield.qty) { hub.ui.notice('To use it as an ingredient, say what one batch makes - or choose g and it is worked out from the ingredients.', 'warn'); return; }
+        values.tags = [...values.mealTypes, ...String(values.tags).split(',')];
+        delete values.mealTypes;
         const next = normaliseRecipe({ ...rec, ...values, nutrition });
         const saved = await saveRecord(hub, recipes(hub), { ...next, ingredients: keepFoodLinks(next.ingredients, rec.ingredients) });
         if (saved) { ui.draft = null; hub.invalidate('own-items'); hub.ui.notice(isRecipe(saved) ? 'Saved as a recipe.' : 'Saved as a meal.'); hub.go('item', saved.id); }
@@ -323,6 +336,37 @@ function noteScreen(hub, id, param) {
       el('a', { class: 'btn', href: note.back || hub.href('item', id), text: 'Cancel' }),
     ]),
   ]);
+}
+
+/** For the shopping list: bought as is, and home-made items apart so "already made" can leave them off. */
+function shopSplit(lines, factor, getSub) {
+  const s = splitOwn(lines, factor, getSub);
+  return { items: combineIngredients(s.base), own: mergeOwn(s.own) };
+}
+const WEIGHT = { g: 1, kg: 1000 };
+
+/** "One batch makes": an amount and a unit from the list (or another, typed), with the ingredients' weight as a guide. */
+function yieldControl(db) {
+  const y = ui.draft.yield;
+  const hint = el('div', { class: 'field__hint', 'data-field': 'yield-hint' });
+  ui.yieldHint = () => {
+    const w = batchGrams(ui.draft.rows.filter((x) => x.name.trim()), db);
+    hint.textContent = WEIGHT[y.unit] && w.grams
+      ? `The ingredients weigh ${w.complete ? '' : 'at least '}${fmtQtyText(w.grams / WEIGHT[y.unit])} ${y.unit}. Leave the amount empty to use that when it is an ingredient.`
+      : 'What one batch makes, e.g. 12 pieces (pancakes) or 300 g.';
+  };
+  const other = el('input', { class: 'input', value: y.other, placeholder: 'e.g. jars', maxlength: '30', 'aria-label': 'Other unit', style: { maxWidth: '160px' }, hidden: y.unit !== 'other', on: { input: (e) => { y.other = e.target.value; } } });
+  const node = el('div', { class: 'stack', style: { gap: '0.25rem' } }, [
+    el('div', { class: 'row' }, [
+      el('input', { class: 'input', type: 'number', min: '0', step: 'any', value: y.qty ?? '', placeholder: 'amount', 'aria-label': 'Amount one batch makes', style: { maxWidth: '120px' }, 'data-field': 'yield-qty', on: { input: (e) => { y.qty = e.target.value === '' ? null : Math.max(0, Number(e.target.value)); } } }),
+      el('select', { class: 'select', style: { width: 'auto' }, 'aria-label': 'Unit one batch makes', 'data-field': 'yield-unit', on: { change: (e) => { y.unit = e.target.value; other.hidden = y.unit !== 'other'; ui.yieldHint(); } } },
+        [...UNIT_OPTIONS.map(([u, t]) => [u, u ? t : 'pieces']), ['other', 'other…']].map(([u, t]) => el('option', { value: u, text: t, selected: y.unit === u }))),
+      other,
+    ]),
+    hint,
+  ]);
+  ui.yieldHint();
+  return { node, get: () => ({ qty: y.qty, unit: y.unit === 'other' ? y.other.trim().toLowerCase() : y.unit }) };
 }
 
 const fmtQtyText = (n) => String(Math.round(n * 10) / 10);

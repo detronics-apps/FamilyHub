@@ -5,7 +5,7 @@
 
 import { el } from '../../ui/dom.js';
 import { loading, failure, saveRecord } from '../kit.js';
-import { formatIngredient } from '../meals/logic.js';
+import { formatIngredient, combineIngredients } from '../meals/logic.js';
 import { inSystem } from '../../units.js';
 import { GROUPS, LIST_ID, normaliseShopping, addFromSource, addShoppingItem, toggleItem, clearBought, removeItem, byGroup, readSend, listText } from './logic.js';
 
@@ -78,19 +78,33 @@ function addScreen(hub, list, save, param) {
   const boxes = send.items.map((i, n) => el('label', { class: 'checkline' }, [
     el('input', { type: 'checkbox', checked: true, 'data-index': String(n) }), formatIngredient(inSystem(i, hub.units())), i.note ? el('span', { class: 'small muted', text: ` (${i.note})` }) : null,
   ]));
+  // Home-made items (mayo): bought as their ingredients, unless some is already made.
+  const fmt = (i) => formatIngredient(inSystem(i, hub.units()));
+  const made = send.own.map((g, n) => el('div', { class: 'stack', style: { gap: '0.25rem' } }, [
+    el('label', { class: 'checkline' }, [
+      el('input', { type: 'checkbox', 'data-own': String(n), 'data-field': `own-have:${g.id}` }),
+      el('span', {}, [el('strong', { text: `We already have the ${g.name}` }), g.qty != null ? ` (${fmt({ ...g, name: '' }).trim()} needed)` : '']),
+    ]),
+    el('p', { class: 'small muted', style: { margin: '0 0 0 1.8rem' }, text: `Otherwise the list gets: ${g.items.map(fmt).join(', ')}.` }),
+  ]));
+  const anything = send.items.length || send.own.length;
   return el('section', { class: 'stack' }, [
     el('h1', { text: `Add to the shopping list${send.from ? `: ${send.from}` : ''}` }),
     already ? el('p', { class: 'small', text: 'These are already on the list from before - adding replaces them with the amounts below. Anything already bought stays bought.' }) : null,
     send.items.length ? el('div', { class: 'panel stack' }, [
       el('p', { class: 'small muted', text: 'Untick anything you already have.' }),
       ...boxes,
-    ]) : el('p', { class: 'panel', text: 'There is nothing to buy for this.' }),
+    ]) : null,
+    send.own.length ? el('div', { class: 'panel stack' }, [el('h2', { text: 'Made at home', style: { margin: 0 } }), ...made]) : null,
+    anything ? null : el('p', { class: 'panel', text: 'There is nothing to buy for this.' }),
     el('div', { class: 'row' }, [
       el('button', {
-        class: 'btn btn-primary', type: 'button', text: 'Add to the list', 'data-field': 'shop-confirm', disabled: !send.items.length,
+        class: 'btn btn-primary', type: 'button', text: 'Add to the list', 'data-field': 'shop-confirm', disabled: !anything,
         on: {
           click: async () => {
-            const chosen = boxes.map((b) => b.querySelector('input')).filter((b) => b.checked).map((b) => send.items[Number(b.dataset.index)]);
+            const picked = boxes.map((b) => b.querySelector('input')).filter((b) => b.checked).map((b) => send.items[Number(b.dataset.index)]);
+            const toMake = made.map((m) => m.querySelector('input')).filter((b) => !b.checked).flatMap((b) => send.own[Number(b.dataset.own)].items);
+            const chosen = combineIngredients([...picked, ...toMake]);
             await save(addFromSource(list, send, chosen));
             hub.invalidate('list');
             hub.ui.notice(`${chosen.length} item${chosen.length === 1 ? '' : 's'} on the list.`);

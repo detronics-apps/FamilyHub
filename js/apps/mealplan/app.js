@@ -16,7 +16,7 @@ import { fmtDay, addDays } from '../../dates.js';
 import { loading, failure, saveRecord } from '../kit.js';
 import {
   MEALS, MEAL_LABEL, WEEKDAYS, normaliseRecipe, recipeSummary, formatIngredient, parseIngredient,
-  weekStart, weekDays, normalisePlan, slotAt, setSlot, updateSlot, copyPlan, planId, ingredientsForPlan, slotNeeds,
+  weekStart, weekDays, normalisePlan, slotAt, setSlot, updateSlot, copyPlan, planId, planShopping, slotNeeds,
   prepared, reserved, leftoverMeals, setReservation, addReservation, SUMMARY_VERSION, slotBatch, collectRecipes,
 } from '../meals/logic.js';
 import { ingredientEditor } from '../../ui/ingredient-editor.js';
@@ -149,7 +149,7 @@ async function sendWeek(hub, plan, monday) {
   }
   // Our own items inside them (home-made mayo) are bought as their own ingredients.
   if (b) for (const s of plan.slots) await collectRecipes(s.ingredients ?? byId.get(s.recipeId)?.ingredients ?? [], (id) => b.get(id), byId);
-  hub.open(sendHref({ source: `week:${monday}`, from: `Week of ${new Date(`${monday}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`, group: 'food', items: ingredientsForPlan(plan, byId) }));
+  hub.open(sendHref({ source: `week:${monday}`, from: `Week of ${new Date(`${monday}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`, group: 'food', ...planShopping(plan, byId) }));
 }
 
 /* ------------------------------------------------------------- servings and leftovers */

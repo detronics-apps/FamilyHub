@@ -115,3 +115,13 @@ test('shopping: anything can send; sending again replaces, bought stays bought, 
   assert.equal(readSend('{"items": []}'), null, 'a send needs a source');
   assert.equal(normaliseShopping({ items: [{ name: 'x', fromWeek: '2026-10-19' }] }).items[0].source, 'week:2026-10-19', 'older lists still read');
 });
+
+test('a batch weighs what its ingredients add up to (salad dressing: 239 g)', async () => {
+  const { batchGrams } = await import('../js/meal-nutrition.js');
+  const { normaliseRecipe } = await import('../js/apps/meals/logic.js');
+  const lines = [{ name: 'Mayonnaise', qty: 165, unit: 'g' }, { name: 'Greek yoghurt', qty: 60, unit: 'g' }, { name: 'Sugar', qty: 8, unit: 'g' }, { name: 'Salt', qty: 6, unit: 'g' }];
+  assert.deepEqual(batchGrams(lines), { grams: 239, complete: true });
+  assert.deepEqual(batchGrams([...lines, { name: 'lemon juice', qty: 1, unit: 'tbsp' }]), { grams: 239, complete: false }, 'without the food database, a spoon cannot be weighed');
+  assert.deepEqual(normaliseRecipe({ title: 'x', yield: { qty: 239, unit: 'grams', auto: true } }).yield, { qty: 239, unit: 'g', auto: true });
+  assert.deepEqual(normaliseRecipe({ title: 'x', yield: { qty: 12, unit: '' } }).yield, { qty: 12, unit: '' });
+});

@@ -30,6 +30,11 @@ export function field(label, control, hint = null) {
 let uid = 0;
 const nextId = (key) => `f-${key}-${(uid += 1)}`;
 
+// What has been typed into a form, per screen, so a redraw of the page (a list
+// finishing loading, a warning) never puts back the old values. Forgotten on leaving the screen.
+const drafts = new Map();
+globalThis.addEventListener?.('hashchange', () => drafts.clear());
+
 /**
  * A form built from a field list. Fields marked `more` go under "More details".
  * Field types: text, textarea, select, day, number, lines (one item per line),
@@ -37,11 +42,13 @@ const nextId = (key) => `f-${key}-${(uid += 1)}`;
  */
 export function recordForm({ fields, record = {}, people = [], onSave, onCancel = null, saveLabel = 'Save', extra = [] }) {
   const getters = {};
+  const draftKey = `${globalThis.location?.hash ?? ''}|${fields.map((f) => f.key).join()}`;
+  const draft = drafts.get(draftKey);
   const errors = el('div', { class: 'field__hint', role: 'alert', style: { color: 'var(--danger)' } });
 
   const build = (f) => {
     const id = nextId(f.key);
-    const v = record[f.key];
+    const v = draft && f.key in draft ? draft[f.key] : record[f.key];
     let control;
     switch (f.type) {
       case 'textarea':
@@ -116,7 +123,8 @@ export function recordForm({ fields, record = {}, people = [], onSave, onCancel 
     onSave(values);
   };
 
-  return el('form', { class: 'panel stack', on: { submit } }, [
+  const remember = () => drafts.set(draftKey, Object.fromEntries(fields.filter((f) => f.type !== 'custom' && getters[f.key]).map((f) => [f.key, getters[f.key]()])));
+  return el('form', { class: 'panel stack', on: { submit, input: remember, change: remember } }, [
     ...main,
     more.length ? el('details', { class: 'more' }, [el('summary', { text: 'More details' }), el('div', { class: 'stack' }, more)]) : null,
     errors,
