@@ -165,3 +165,38 @@ test('chores follow the birthday: a child named on nothing sees no grown-up chor
   assert.ok(findTasks(h, { personId: ann }, TODAY).length > 0);
   assert.deepEqual(findTasks(asTeen, { personId: ann }, TODAY).map((t) => t.chore.name), ['Empty bin'], 'only the chore that names them');
 });
+
+test('D-065 sample chores: added once per room, spread out, into the room chosen', async () => {
+  const { SAMPLE_ROOMS, addSamples, alreadyIn, defaultInto } = await import('../js/apps/chores/samples.js');
+  const { emptyHousehold, addRoom } = await import('../js/model.js');
+  const kitchen = SAMPLE_ROOMS.find((s) => s.id === 'kitchen');
+  const all = kitchen.chores.map((c) => c.name);
+  let h = emptyHousehold();
+  assert.equal(defaultInto(h, kitchen), 'new');
+  const first = addSamples(h, kitchen, all, 'new', TODAY);
+  h = first.household;
+  assert.equal(first.added, all.length);
+  assert.deepEqual(h.rooms.map((r) => r.name), ['Kitchen']);
+  assert.ok(h.chores.every((c) => c.roomId === first.roomId && !c.demo));
+  // Daily ones are ready today; the weekly ones do not all start on the same day.
+  assert.ok(h.chores.filter((c) => c.frequency.unit === 'day' && c.frequency.every === 1).every((c) => c.startDay === TODAY));
+  assert.ok(new Set(h.chores.filter((c) => c.frequency.unit === 'week').map((c) => c.startDay)).size > 1);
+  // Again: nothing new, and the existing Kitchen is reused.
+  assert.equal(defaultInto(h, kitchen), first.roomId);
+  assert.equal(alreadyIn(h, kitchen, first.roomId).size, all.length);
+  const again = addSamples(h, kitchen, all, 'new', TODAY);
+  assert.equal(again.added, 0);
+  assert.equal(again.household.rooms.length, 1);
+  // Laundry into a bathroom the family already has; the same toilet chore can live in two rooms.
+  const bath = addRoom(h, 'Bathroom');
+  h = bath.household;
+  const laundry = SAMPLE_ROOMS.find((s) => s.id === 'laundry');
+  h = addSamples(h, laundry, ['Wash the clothes'], bath.room.id, TODAY).household;
+  assert.equal(h.chores.find((c) => c.name === 'Wash the clothes').roomId, bath.room.id);
+  h = addSamples(h, SAMPLE_ROOMS.find((s) => s.id === 'shower'), ['Scrub the toilet'], 'new', TODAY).household;
+  h = addSamples(h, SAMPLE_ROOMS.find((s) => s.id === 'bathroom'), ['Scrub the toilet'], bath.room.id, TODAY).household;
+  assert.equal(h.chores.filter((c) => c.name === 'Scrub the toilet').length, 2);
+  // Whole house goes in no particular room, and every sample is a sensible chore.
+  assert.equal(defaultInto(h, SAMPLE_ROOMS.find((s) => s.id === 'house')), 'none');
+  for (const s of SAMPLE_ROOMS) for (const c of s.chores) assert.ok(c.name && c.minutes > 0 && ['low', 'medium', 'high'].includes(c.effort), c.name);
+});

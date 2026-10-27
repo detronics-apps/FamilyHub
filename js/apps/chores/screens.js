@@ -7,7 +7,7 @@ import { hasDemo, roomName } from '../../model.js';
 import { householdProgress, activity } from '../../progress.js';
 import { fmtDay } from '../../dates.js';
 import { choreCard, demoNotice } from '../../ui/common.js';
-import { planView } from './plan.js';
+import { planView, openSamples } from './plan.js';
 
 const TABS = [
   { sub: null, label: 'Do something now', hash: '#/chores' },
@@ -56,6 +56,7 @@ function executeView(ctx) {
       el('p', { text: 'Chores are the regular jobs that keep a home going. Add a few, and this screen will suggest one that fits your time and energy.' }),
       el('div', { class: 'row', style: { justifyContent: 'center' } }, [
         el('a', { class: 'btn btn-primary', href: '#/chores/plan', text: 'Plan chore' }),
+        el('button', { class: 'btn', type: 'button', text: 'Samples', title: 'Sample chores for each room, to start from', 'data-field': 'samples-empty', on: { click: () => openSamples(ctx) } }),
         el('button', { class: 'btn', type: 'button', text: 'Try example', title: 'Load an example family to look around', on: { click: () => { ctx.seedDemo(); ctx.render(); } } }),
       ]),
     ]);
@@ -185,6 +186,7 @@ function roomsView(ctx) {
     return el('div', { class: 'panel empty' }, [
       el('p', { text: 'No rooms or chores yet.' }),
       el('a', { class: 'btn btn-primary', href: '#/chores/plan', text: 'Plan chore' }),
+      el('button', { class: 'btn', type: 'button', text: 'Samples', title: 'Sample chores for each room, to start from', on: { click: () => openSamples(ctx) } }),
     ]);
   }
 

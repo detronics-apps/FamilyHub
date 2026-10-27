@@ -483,6 +483,17 @@ after the last Get offers "Get latest". Found on the way: the time of the last G
 every restart (normaliseDevice did not keep `fileOpenedAt`), so its reminder never worked - fixed
 and tested.
 
+**D-065 Sample chores per room (owner, 2026-10-27).** The owner asked for sample chores per room,
+to show a new family how the app is meant to be used. Chores › Plan › Samples (also on the empty
+Chores screens) offers eight groups - Kitchen, Living room, Bathroom (with a bath), Shower room,
+Main bedroom, Baby room, Laundry, Whole house - each with daily, weekly, monthly and longer jobs.
+Tick what fits, choose the room under "Into" (a new room, one the family has, or none - so the
+laundry can go in the bathroom with the washing machine) and Add. They are the family's own chores,
+not examples: nothing marks them, and removing the example family leaves them. A chore already in
+that room is not added twice; the same chore may live in two rooms (two toilets). Daily chores
+start today; the rest are spread over the coming days so a fresh list does not all come up at once.
+How often follows common advice (bedding every two weeks, towels weekly); the family changes it.
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).

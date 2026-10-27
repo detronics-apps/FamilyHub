@@ -8,7 +8,7 @@ import { validateManifest } from '../miniapps.js';
 const RAW = [
   {
     manifest: {
-      fhManifest: 1, id: 'chores', section: 'chores', name: 'Chores', version: '1.0.0',
+      fhManifest: 1, id: 'chores', section: 'chores', name: 'Chores', version: '1.1.0',
       description: 'Recurring household work: plan it, then find something that fits right now.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [

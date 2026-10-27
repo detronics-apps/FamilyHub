@@ -5,6 +5,8 @@ import { modal, confirmAction, choreMeta, statusLine } from '../../ui/common.js'
 import { occurrences, occurrence } from '../../recurrence.js';
 import { addChore, updateChore, deleteChore, addRoom, renameRoom, removeRoom, normaliseChore, roleOf } from '../../model.js';
 import { sendHref } from '../shopping/logic.js';
+import { fmtFrequency } from '../../dates.js';
+import { SAMPLE_ROOMS, defaultInto, alreadyIn, addSamples } from './samples.js';
 
 /** Shopping owns the list; chores send supplies over in a link, confirmed there. */
 const shoppingOn = (ctx) => Boolean(ctx.app.registry.apps.shopping?.enabled);
@@ -35,12 +37,13 @@ export function planView(ctx, notices) {
     el('div', { class: 'row' }, [
       el('p', { class: 'muted', style: { margin: 0, flex: '1 1 240px' }, text: 'Decide what needs doing and roughly how often. Only a name is needed - the rest can come later.' }),
       el('button', { class: 'btn btn-primary', type: 'button', text: 'New chore', 'data-field': 'add-chore', on: { click: () => openEditor(ctx, null) } }),
+      el('button', { class: 'btn', type: 'button', text: 'Samples', title: 'Sample chores for each room, to start from', 'data-field': 'samples', on: { click: () => openSamples(ctx) } }),
       shoppingOn(ctx) && h.chores.some((c) => c.supplies.length) ? el('a', {
         class: 'btn', 'data-field': 'send-supplies',
         href: suppliesHref('chores:supplies', 'Cleaning supplies', [...new Set(h.chores.flatMap((c) => c.supplies))]), text: 'To Shopping', title: 'Send the cleaning supplies to the shopping list',
       }) : null,
     ]),
-    groups.length ? null : el('div', { class: 'panel empty' }, [el('p', { text: 'No chores yet. Add the first one - "Wipe counters, daily, 5 minutes" is a good start.' })]),
+    groups.length ? null : el('div', { class: 'panel empty' }, [el('p', { text: 'No chores yet. Add the first one - "Wipe counters, daily, 5 minutes" is a good start - or press Samples for ideas per room.' })]),
     ...groups.map((g) => el('div', { class: 'panel' }, [
       el('h2', { text: g.name }),
       el('ul', { class: 'list' }, g.chores.map((c) => el('li', {}, [
@@ -55,6 +58,79 @@ export function planView(ctx, notices) {
     ])),
     roomsPanel(ctx),
   ]);
+}
+
+/* ------------------------------------------------------------ samples */
+
+/** Pick a room, tick what fits, Add. The chores become the family's own (D-065). */
+export function openSamples(ctx, first = 'kitchen') {
+  let sample = SAMPLE_ROOMS.find((x) => x.id === first) ?? SAMPLE_ROOMS[0];
+  const chips = el('div', { class: 'chipset' });
+  const pane = el('div', { class: 'stack' });
+  const addBtn = el('button', { class: 'btn btn-primary', type: 'button', 'data-field': 'samples-add' });
+  let boxes = [];
+  let into = null;
+
+  const draw = () => {
+    const h = ctx.app.household;
+    chips.replaceChildren(...SAMPLE_ROOMS.map((x) => el('button', {
+      class: 'chip', type: 'button', 'aria-pressed': String(x === sample), 'data-field': `sample:${x.id}`, text: x.name,
+      on: { click: () => { sample = x; into = null; draw(); } },
+    })));
+    into ??= defaultInto(h, sample);
+    const named = h.rooms.some((r) => r.name.trim().toLowerCase() === sample.name.toLowerCase());
+    const pick = el('select', { class: 'input', id: 'samples-into', 'data-field': 'samples-into', style: { maxWidth: '280px' }, on: { change: (e) => { into = e.target.value; draw(); } } }, [
+      named ? null : el('option', { value: 'new', text: `New room: ${sample.name}`, selected: into === 'new' }),
+      ...h.rooms.map((r) => el('option', { value: r.id, text: r.name, selected: into === r.id })),
+      el('option', { value: 'none', text: 'No particular room', selected: into === 'none' }),
+    ]);
+    const have = alreadyIn(h, sample, into);
+    boxes = sample.chores.map((s) => {
+      const box = el('input', { type: 'checkbox', value: s.name, checked: !have.has(s.name), disabled: have.has(s.name), on: { change: count } });
+      return { box, node: el('label', { class: 'checkline' }, [box, el('span', {}, [
+        s.name, el('span', { class: 'small muted', text: have.has(s.name) ? ' · already there' : ` · ${fmtFrequency(s.frequency)} · about ${s.minutes} min` }),
+      ])]) };
+    });
+    pane.replaceChildren(...[
+      sample.hint ? el('p', { class: 'small muted', style: { margin: 0 }, text: sample.hint }) : null,
+      el('div', { class: 'field' }, [el('label', { class: 'field__label', for: 'samples-into', text: 'Into' }), pick]),
+      el('div', {}, boxes.map((b) => b.node)),
+    ].filter(Boolean));
+    count();
+  };
+  function count() {
+    const n = boxes.filter((b) => b.box.checked && !b.box.disabled).length;
+    addBtn.textContent = n ? `Add ${n}` : 'Add';
+    addBtn.disabled = !n;
+  }
+  addBtn.addEventListener('click', () => {
+    const before = ctx.app.household;
+    const names = boxes.filter((b) => b.box.checked && !b.box.disabled).map((b) => b.box.value);
+    const res = addSamples(before, sample, names, into, ctx.today());
+    const newIds = new Set(res.household.chores.map((x) => x.id).filter((id) => !before.chores.some((x) => x.id === id)));
+    const newRoom = before.rooms.some((r) => r.id === res.roomId) ? null : res.roomId;
+    if (res.roomId) into = res.roomId;
+    ctx.flash({
+      id: `samples:${Date.now()}`, level: 'ok',
+      text: `Added ${res.added} chore${res.added === 1 ? '' : 's'} to ${res.roomId ? res.household.rooms.find((r) => r.id === res.roomId).name : 'no particular room'}.`,
+      action: { label: 'Undo', onClick: () => {
+        const h = ctx.app.household;
+        ctx.commit({ ...h, chores: h.chores.filter((x) => !newIds.has(x.id)), rooms: h.rooms.filter((r) => r.id !== newRoom) });
+      } },
+    });
+    ctx.commit(res.household);
+    draw();
+  });
+
+  modal({
+    title: 'Sample chores', wide: true,
+    body: [
+      el('p', { style: { marginTop: 0 }, text: 'Ideas to start from. Pick a room, tick what fits your home, and add them. They become your own chores - change how often, or remove any, later. Weekly and monthly ones are spread out so they do not all come up today.' }),
+      chips, pane,
+    ],
+    foot: [addBtn],
+  });
+  draw();
 }
 
 /* -------------------------------------------------------------- rooms */

@@ -288,7 +288,7 @@ dialog.modal::backdrop { background: rgb(40 25 15 / 45%); }
 .modal__head { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-4) var(--space-4) 0; }
 .modal__head h2 { margin: 0; flex: 1 1 auto; }
 .modal__body { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
-.modal__foot { padding: 0 var(--space-4) var(--space-4); display: flex; gap: var(--space-2); justify-content: flex-end; flex-wrap: wrap; }
+.modal__foot { position: sticky; bottom: 0; background: var(--panel); border-top: 1px solid var(--border); padding: var(--space-3) var(--space-4); display: flex; gap: var(--space-2); justify-content: flex-end; flex-wrap: wrap; }
 .x-btn { font-size: 22px; line-height: 1; }
 
 .welcome-steps { counter-reset: step; list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-3); }

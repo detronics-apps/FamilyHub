@@ -5,7 +5,7 @@
 export const SEARCH_ALIASES = {
   'do something now': ['five minutes', 'spare time', 'what should i do', 'quick job', 'suggest', 'find a task', 'execute'],
   chore: ['housework', 'cleaning', 'job', 'tidy'],
-  plan: ['add a chore', 'create', 'new chore', 'set up', 'schedule', 'how often'],
+  plan: ['add a chore', 'create', 'new chore', 'set up', 'schedule', 'how often', 'sample', 'examples', 'ideas', 'which chores', 'starter'],
   later: ['postpone', 'not now', 'tomorrow', 'defer', 'put off', 'snooze'],
   skip: ['miss', 'missed', 'not this time', 'skip it'],
   'drive folder': ['google drive', 'sync', 'cloud', 'save to drive', 'lost', 'safe', 'other laptop', 'another computer', 'backup', 'back up'],
@@ -92,6 +92,7 @@ export const HOWTOS = [
   { id: 'add', title: 'Plan a new chore', steps: [
     'Open Chores, then the Plan tab.',
     'Press "New chore". Only the name is needed.',
+    'Not sure what to add? Press Samples: pick a room (Kitchen, Bathroom, Baby room...), tick what fits your home, choose which room it goes into, and press Add.',
     'Choose how often, roughly how long, and how much effort it takes, if you know.',
     'Open "More details" for instructions, who can do it, and what it depends on.',
   ] },
@@ -370,6 +371,7 @@ export const FEATURES = [
   { name: 'One shopping list', where: 'Home › Shopping', what: 'Meals, the week’s plan and chore supplies can all be sent to it; anything else can be typed in.' },
   { name: 'Portions and leftovers', where: 'Meals › Cookbook › an item', what: 'How much each person might eat, and how many servings to make with or without leftovers.' },
   { name: 'Projections with their assumptions', where: 'Finance › Goals', what: 'When a goal could be reached, or a debt paid off - and plainly when it never would at the current payment.' },
+  { name: 'Sample chores', where: 'Chores › Plan › Samples', what: 'Ready-made chores for each room - kitchen, bathrooms, bedroom, baby room, laundry - to tick and add. They become your own to change or remove.' },
   { name: 'Avoid a room', where: 'Chores › Do something now', what: 'With "Anywhere" chosen, tap rooms under "Not today" to leave them out.' },
   { name: 'Phone and laptop', where: 'Bottom of every page', what: 'Every step to put the family in your Google Drive, onto a phone and its home screen - and what to do when something goes wrong.' },
   { name: 'Fold filters away', where: 'Cookbook, Meal Planner, Shopping, Faith, Places, Calorie Checker', what: 'Tap Filters (or Kinds, Browse) to fold them into one line that still says what is on. On a phone they start folded; this device remembers your choice. Long forms fold by part too, and Save stays at the bottom.' },
