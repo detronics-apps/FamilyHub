@@ -7,6 +7,7 @@ import {
   normaliseRecipe, recipeSummary, ratingState, setRating, setTried, setPref, addNote, ratingMeaning,
   normalisePlan, setSlot, updateSlot, prepared, leftoverMeals, setReservation, addReservation, slotNeeds, ingredientsForPlan, scaleCarefully,
   batchMultiplier, slotBatch, expandIngredients, collectRecipes, wholeOnly,
+  POOL, normalisePool, addToPool, moveMeal, slotAt,
 } from '../js/apps/meals/logic.js';
 import { recipeFacts, passes, emptyFilters, describeFilters } from '../js/apps/meals/facts.js';
 import { proposeWeek, analyseWeek, optimiseWeek, additionFor, mixGroup } from '../js/apps/mealplan/logic.js';
@@ -20,6 +21,45 @@ const MONDAY = '2026-10-26';
 
 const chickenRice = normaliseRecipe({ id: 'r1', title: 'Chicken and rice', servings: 4, ingredients: ['400 g chicken breast', '300 g rice', '1 tsp salt', '2 carrots'] });
 const recipes = new Map([['r1', chickenRice]]);
+
+test('planned meals: plan them first, then drag them onto days - and between days and weeks', () => {
+  const NEXT = '2026-11-02';
+  const store = { [POOL]: normalisePool({}), [MONDAY]: normalisePlan({}, MONDAY), [NEXT]: normalisePlan({}, NEXT) };
+  const get = (k) => store[k];
+  const apply = (changed) => Object.assign(store, changed);
+  store[POOL] = addToPool(addToPool(store[POOL], { recipeId: 'r1', title: 'Chicken and rice' }, 'a'), { title: 'Takeaway' }, 'b');
+  assert.deepEqual(store[POOL].slots.map((s) => [s.id, s.day, s.meal]), [['a', null, 'dinner'], ['b', null, 'dinner']]);
+
+  apply(moveMeal(get, { from: { key: POOL, id: 'a' }, to: { key: MONDAY, day: 2, meal: 'dinner' } }));
+  assert.equal(slotAt(store[MONDAY], 2, 'dinner').title, 'Chicken and rice', 'onto Wednesday');
+  assert.deepEqual(store[POOL].slots.map((s) => s.id), ['b'], 'and out of the list');
+
+  // Leftovers set aside for Thursday lunch move with it, the same day after.
+  store[MONDAY] = addReservation(store[MONDAY], 'a', { date: '2026-10-29', meal: 'lunch', portions: 2 }, 'r');
+  apply(moveMeal(get, { from: { key: MONDAY, id: 'a' }, to: { key: MONDAY, day: 0, meal: 'dinner' } }));
+  assert.equal(slotAt(store[MONDAY], 0, 'dinner').id, 'a', 'Wednesday to Monday');
+  assert.equal(slotAt(store[MONDAY], 0, 'dinner').reserve[0].date, '2026-10-27');
+
+  // Dropped on a planned meal from the list: the one there goes back to the list.
+  apply(moveMeal(get, { from: { key: POOL, id: 'b' }, to: { key: MONDAY, day: 0, meal: 'dinner' } }));
+  assert.equal(slotAt(store[MONDAY], 0, 'dinner').title, 'Takeaway');
+  assert.deepEqual(store[POOL].slots.map((s) => [s.id, s.reserve.length]), [['a', 0]], 'back in the list, leftovers let go');
+
+  // Two days swap; across weeks too.
+  apply(moveMeal(get, { from: { key: POOL, id: 'a' }, to: { key: NEXT, day: 4, meal: 'dinner' } }));
+  apply(moveMeal(get, { from: { key: MONDAY, id: 'b' }, to: { key: NEXT, day: 4, meal: 'dinner' } }));
+  assert.equal(slotAt(store[NEXT], 4, 'dinner').id, 'b');
+  assert.equal(slotAt(store[MONDAY], 0, 'dinner').id, 'a', 'the two swapped across weeks');
+  assert.deepEqual(moveMeal(get, { from: { key: NEXT, id: 'b' }, to: { key: NEXT, day: 4, meal: 'dinner' } }), {}, 'dropped where it was');
+  assert.deepEqual(moveMeal(get, { from: { key: NEXT, id: 'nope' }, to: { key: POOL } }), {});
+
+  // Snacks pile up: carrots and an apple on the same day.
+  store[POOL] = addToPool(addToPool(store[POOL], { title: 'Carrots', meal: 'snack' }, 'c'), { title: 'Apple', meal: 'snack' }, 'd');
+  apply(moveMeal(get, { from: { key: POOL, id: 'c' }, to: { key: MONDAY, day: 1, meal: 'snack' } }));
+  apply(moveMeal(get, { from: { key: POOL, id: 'd' }, to: { key: MONDAY, day: 1, meal: 'snack' } }));
+  assert.deepEqual(store[MONDAY].slots.filter((s) => s.day === 1 && s.meal === 'snack').map((s) => s.title), ['Carrots', 'Apple']);
+  assert.equal(store[POOL].slots.length, 0);
+});
 
 test('A: leftovers scale what is cooked, and the list counts them once', () => {
   let plan = normalisePlan({}, MONDAY);

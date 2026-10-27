@@ -41,7 +41,7 @@ const sizes = (hub) => hub.data.collection('sizes', { summary: (s) => ({ fdcId: 
 export const loadSizes = (list) => list.reduce((m, s) => m.set(s.fdcId, [...(m.get(s.fdcId) ?? []), s]), new Map());
 
 /** Back to where the person came from (This Week), when a link said so. */
-const backLink = (hash) => (hash && /^#\/mealplan\b/.test(hash) ? el('a', { href: hash, class: 'small', text: '‹ Back to This Week', 'data-field': 'back-planner' }) : null);
+const backLink = (hash) => (hash && /^#\/mealplan\b/.test(hash) ? el('a', { href: hash, class: 'small', text: '‹ Back', title: 'Back to Meal Planner', 'data-field': 'back-planner' }) : null);
 
 /** An index written before ratings and facts were kept is rebuilt once from the meal files (they are not changed). */
 const ensureIndex = (hub) => hub.use('index-version', async () => {
@@ -58,7 +58,7 @@ export function render(hub, route) {
   if (screen === 'note') return noteScreen(hub, route.rest[0], route.rest[1] ?? '');
   // The week and the shopping list moved to their own mini-apps (This Week, Shopping).
   if (screen === 'week' || screen === 'shopping') {
-    return el('p', { class: 'panel' }, [`That has moved: `, el('a', { href: screen === 'week' ? '#/mealplan' : '#/shopping', text: screen === 'week' ? 'This Week' : 'Shopping' }), '.']);
+    return el('p', { class: 'panel' }, [`That has moved: `, el('a', { href: screen === 'week' ? '#/mealplan' : '#/shopping', text: screen === 'week' ? 'Meal Planner' : 'Shopping' }), '.']);
   }
   return recipesScreen(hub);
 }
@@ -234,7 +234,7 @@ function editScreen(hub, id, param = null) {
         { key: 'title', label: 'Name', required: true },
         { key: 'type', label: 'This is', type: 'select', options: [['', 'an item (not decided yet)'], ...Object.keys(TYPES).map((k) => [k, aType(k)])], hint: 'Meal: what the family eats at one sitting. Recipe: making one thing, like a cake or a salad. Own ingredient: something you make to use in others, like mayo. Any of them can be used in another.' },
         { key: 'servings', label: 'Serves', type: 'number' },
-        { key: 'mealTypes', label: 'Good for', type: 'choices', options: Object.entries(MEAL_TAGS), hint: 'Used by This Week when looking for a breakfast, lunch, supper or snack.' },
+        { key: 'mealTypes', label: 'Good for', type: 'choices', options: Object.entries(MEAL_TAGS), hint: 'Used by Meal Planner when looking for a breakfast, lunch, supper or snack.' },
         { key: 'prepMinutes', label: 'Preparation (minutes)', type: 'number', hint: 'Prep plus cooking time lets you find quick meals when time is short.' },
         { key: 'cookMinutes', label: 'Cooking (minutes)', type: 'number' },
         { key: 'yield', label: 'One batch makes', type: 'custom', control: () => yieldControl(f.data ?? null) },
@@ -325,7 +325,7 @@ function feedbackPanel(hub, rec) {
         el('label', { class: 'sr-only', for: 'note-new', text: 'New note' }), note,
         el('button', { class: 'btn btn-small', type: 'button', text: 'Add note', 'data-field': 'note-add', on: { click: () => { if (note.value.trim()) save(addNote(rec, note.value, { at: hub.today() })); } } }),
       ]),
-      el('p', { class: 'small muted', text: 'Notes here are about the recipe for every time. A note about one particular meal goes on that day in This Week.' }),
+      el('p', { class: 'small muted', text: 'Notes here are about the recipe for every time. A note about one particular meal goes on that day in Meal Planner.' }),
     ]),
   ]);
 }

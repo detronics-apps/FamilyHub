@@ -374,6 +374,22 @@ next laptop that has Family Hub open, then moved to `Phone/Brought in` (another 
 to `Phone/Not brought in`). A phone's file carries the copy it started from (`base`), so a chore
 deleted on the phone stays deleted instead of coming back. First run on a phone offers "Get family".
 
+**D-053 Plan the meals, then put them on days (owner, 2026-10-27).** This Week becomes Meal
+Planner, with three views. **Plan**: the planned meals only, by Breakfasts, Lunches, Dinners and
+Snacks, not yet on days (one record, `pool`, shaped like a week without days); "Suggest meals" fills
+it. **Assign**: those beside a calendar, to drag onto days. **Calendar**: the calendar alone, a week
+(a row per meal) or a month (a box per day; a dropped meal keeps its own meal). Dragging onto a day
+moves a meal out of the list; dropped on a planned meal, the two swap (from the list, the other goes
+back to it). Snacks can be plain items ("Carrots") and a day can have several. Leftovers set aside
+move with their meal by the same number of days; a meal in the list has none (they need a day).
+Tapping a meal opens it - to change it, remove it, or say how it went and rate it. "To Shopping"
+sends what the week or month on screen needs. Drag works by mouse and, after a press and hold, by
+finger (`js/ui/drag.js` - native drag and drop does nothing on phones).
+
+**D-054 Drag to reorder the dashboard (owner, 2026-10-27).** Settings > Your dashboard: drag a row
+onto another and it takes that place (after it when moving down, before it when moving up), so two
+apps go to the top in two drags. The arrows stay for keyboards.
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).

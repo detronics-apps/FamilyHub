@@ -6,18 +6,21 @@
 // links, and the week's ingredients go to Shopping the same way. Weeks planned
 // before This Week was its own mini-app are read from where they were kept.
 //
-// Screens: week (default) · choose a meal for a slot · a planned meal · plan my
-// week · how the week looks (with Optimise My Week) · add (from a recipe) ·
-// modify (from Meal Assistant).
+// Screens: plan (default: the planned meals, not yet on days) · assign (those
+// beside a calendar, to drag onto days) · week (the calendar alone, a week or a
+// month) · choose a meal · a planned meal · suggest meals · how the week looks
+// (with Optimise My Week) · add (from a recipe) · modify (from Meal Assistant).
 
 import { el } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
-import { fmtDay, addDays } from '../../dates.js';
-import { loading, failure, saveRecord } from '../kit.js';
+import { fmtDay, addDays, dayDiff } from '../../dates.js';
+import { draggable, dropTarget } from '../../ui/drag.js';
+import { loading, failure, saveRecord, tabs } from '../kit.js';
 import {
   MEALS, MEAL_LABEL, WEEKDAYS, normaliseRecipe, recipeSummary, formatIngredient, parseIngredient,
   weekStart, weekDays, normalisePlan, slotAt, setSlot, updateSlot, copyPlan, planId, planShopping, slotNeeds,
   prepared, reserved, leftoverMeals, setReservation, addReservation, SUMMARY_VERSION, slotBatch, collectRecipes,
+  POOL, normalisePool, addToPool, moveMeal, addSlot,
 } from '../meals/logic.js';
 import { ingredientEditor } from '../../ui/ingredient-editor.js';
 import { recipeFacts, passes, emptyFilters, describeFilters, PROTEIN, CARB, GROUP, TRIAL, MEAL_TAGS } from '../meals/facts.js';
@@ -35,9 +38,10 @@ const plans = (hub) => hub.data.collection('plans', { summary: (p) => ({ title: 
 const book = (hub) => (hub.data.installed('meals') ? hub.data.of('meals', 'recipes') : null);
 const legacyPlans = (hub) => (hub.data.installed('meals') ? hub.data.of('meals', 'plans') : null);
 
-/** A week's plan: our own, else one kept by the Cookbook from before, else empty. */
+/** A week's plan: our own, else one kept by the Cookbook from before, else empty. 'pool' is the planned meals not on a day yet. */
 const loadPlan = (hub, monday) => hub.use(`plan:${monday}`, async () => {
   const own = await plans(hub).get(planId(monday));
+  if (monday === POOL) return normalisePool(own ?? {});
   const old = own ? null : await legacyPlans(hub)?.get(planId(monday)).catch(() => null);
   return normalisePlan(own ?? old ?? { id: planId(monday) }, monday);
 });
@@ -58,8 +62,9 @@ const loadSummaries = (hub) => hub.use('summaries', async () => {
 });
 
 const mealHref = (id, back) => `#/meals/item/${encodeURIComponent(id)}${back ? `/${encodeURIComponent(back)}` : ''}`;
-const dateOf = (monday, day) => addDays(monday, day);
-const label = (date, meal, today) => `${fmtDay(date, today)} ${MEAL_LABEL[meal].toLowerCase()}`;
+const dateOf = (monday, day) => (monday === POOL ? null : addDays(monday, day));
+const label = (date, meal, today) => (date ? `${fmtDay(date, today)} ${MEAL_LABEL[meal].toLowerCase()}` : `${MEAL_LABEL[meal].toLowerCase()} - not on a day yet`);
+const isDate = (x) => /^\d{4}-\d{2}-\d{2}$/.test(x ?? '');
 const ref = (monday, x) => `${monday}~${x}`;
 
 export function render(hub, route) {
@@ -67,12 +72,14 @@ export function render(hub, route) {
   switch (route.sub) {
     case 'choose': return chooseScreen(hub, a, Number(b), c);
     case 'slot': return slotScreen(hub, a, b);
-    case 'mix': return mixScreen(hub, a);
+    case 'mix': return mixScreen(hub);
     case 'review': return reviewScreen(hub, a);
     case 'add': return addScreen(hub, a, b);
     case 'modify': return modifyScreen(hub, a, b, c);
     case 'today': return todayScreen(hub);
-    default: return weekScreen(hub, route.sub === 'week' ? route.rest[0] ?? null : null);
+    case 'assign': return assignScreen(hub, route.rest[0] ?? null);
+    case 'week': return weekScreen(hub, route.rest[0] ?? null);
+    default: return planScreen(hub);
   }
 }
 
@@ -91,13 +98,13 @@ function todayScreen(hub) {
   if (p.loading) return loading();
   if (p.error) return failure(p.error);
   const day = weekDays(monday).indexOf(today);
-  const slots = MEALS.map((m) => slotAt(p.data, day, m)).filter(Boolean);
+  const slots = p.data.slots.filter((s) => s.day === day).sort((x, y) => MEALS.indexOf(x.meal) - MEALS.indexOf(y.meal));
   const recs = slots.map((s) => (s.recipeId ? loadRecipe(hub, s.recipeId) : { data: null }));
   if (recs.some((r) => r.loading)) return loading();
   const sys = hub.units();
   return el('section', { class: 'stack', 'aria-label': 'Cook today' }, [
     el('h1', { text: `Cooking today${slots.length ? '' : ' - nothing planned'}` }),
-    slots.length ? null : el('p', { class: 'panel' }, ['Nothing is planned for today. ', el('a', { href: hub.href('week'), text: 'Plan a meal' }), ' first.']),
+    slots.length ? null : el('p', { class: 'panel' }, ['Nothing is planned for today. ', el('a', { href: hub.href(), text: 'Plan a meal' }), ' first.']),
     ...slots.map((s, i) => {
       const rec = recs[i].data;
       const batch = slotBatch(s, rec);
@@ -121,77 +128,206 @@ function todayScreen(hub) {
   ]);
 }
 
-function weekScreen(hub, param) {
-  const monday = weekOf(param, hub);
-  const p = loadPlan(hub, monday);
-  const prev = loadPlan(hub, addDays(monday, -7));
-  if (p.loading || prev.loading) return loading();
-  if (p.error) return failure(p.error);
-  const plan = p.data;
-  const today = hub.today();
-  const later = leftoverMeals([prev.data, plan], monday);
-  const meals = ui.showAllMeals ? MEALS : ['dinner'];
-  const shownMeals = [...new Set([...meals, ...plan.slots.map((s) => s.meal), ...later.map((l) => l.meal)])].sort((x, y) => MEALS.indexOf(x) - MEALS.indexOf(y));
+/* ---------------------------------------------------------------- planning (D-053) */
 
-  return el('section', { class: 'stack', 'aria-label': 'This week’s meals' }, [
+// Plan: the planned meals only, by meal. Assign: those beside a calendar, to drag onto
+// days. Calendar: the calendar alone, a week or a month at a time.
+const VIEWS = [{ screen: null, label: 'Plan' }, { screen: 'assign', label: 'Assign' }, { screen: 'week', label: 'Calendar' }];
+const GROUP_LABEL = { breakfast: 'Breakfasts', lunch: 'Lunches', dinner: 'Dinners', snack: 'Snacks' };
+
+const loadPool = (hub) => loadPlan(hub, POOL);
+
+/** A plan read straight from storage (not the screen cache) - for a move that changes two at once. */
+async function fetchPlan(hub, key) {
+  const own = await plans(hub).get(planId(key)).catch(() => null);
+  if (key === POOL) return normalisePool(own ?? {});
+  const old = own ? null : await legacyPlans(hub)?.get(planId(key)).catch(() => null);
+  return normalisePlan(own ?? old ?? {}, key);
+}
+
+/** Drag a planned meal somewhere: save every plan the move changed. */
+async function applyMove(hub, from, to) {
+  const keys = [...new Set([from.key, to.key])];
+  const loaded = Object.fromEntries(await Promise.all(keys.map(async (k) => [k, await fetchPlan(hub, k)])));
+  const changed = moveMeal((k) => loaded[k], { from, to });
+  for (const [k, plan] of Object.entries(changed)) await saveRecord(hub, plans(hub), { ...plan, id: planId(k), week: k });
+  hub.invalidate('plan:');
+}
+
+/** A planned meal as something to drag: a link to open it, or drag it to another place. */
+function mealChip(hub, key, s, { short = false } = {}) {
+  return draggable(el('a', {
+    class: `meal-chip meal-chip--${s.meal}`, href: hub.href('slot', ref(key, s.id)), 'data-field': `chip:${s.id}`,
+    title: `${MEAL_LABEL[s.meal]}: ${s.title} - drag to move, or open it`,
+  }, [short ? el('span', { class: 'meal-chip__kind', text: MEAL_LABEL[s.meal][0] }) : null, el('span', { class: 'meal-chip__title', text: s.title })]), { key, id: s.id, meal: s.meal });
+}
+
+/** The planned meals by meal - full rows on Plan, compact chips beside the calendar. */
+function poolPanel(hub, pool, { compact = false } = {}) {
+  const groups = MEALS.map((meal) => el('div', { class: 'stack pool-group', style: { gap: '6px' }, 'data-field': `pool:${meal}` }, [
+    el('div', { class: 'row', style: { justifyContent: 'space-between' } }, [
+      el('h3', { text: `${GROUP_LABEL[meal]} (${pool.slots.filter((s) => s.meal === meal).length})`, style: { margin: 0 } }),
+      el('a', { class: 'btn btn-small', href: hub.href('choose', `${POOL}~0~${meal}`), text: '+ Add', title: meal === 'snack' ? 'A snack from the Cookbook, or just type one - carrots, an apple' : `Add a ${MEAL_LABEL[meal].toLowerCase()} to plan`, 'data-field': `pool-add:${meal}` }),
+    ]),
+    compact
+      ? el('div', { class: 'chipset' }, pool.slots.filter((s) => s.meal === meal).map((s) => mealChip(hub, POOL, s)))
+      : el('ul', { class: 'list' }, pool.slots.filter((s) => s.meal === meal).map((s) => el('li', {}, [
+        el('a', { class: 'list__main', href: hub.href('slot', ref(POOL, s.id)), style: { color: 'inherit', textDecoration: 'none' } }, [
+          el('strong', { text: s.title }),
+          el('div', { class: 'small muted', text: `${s.servings} eating${s.recipeId ? '' : ' · typed in'}` }),
+        ]),
+        el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': `Remove ${s.title}`, on: { click: async () => { await savePlan(hub, POOL, { ...pool, slots: pool.slots.filter((x) => x.id !== s.id) }); } } }),
+      ]))),
+  ]));
+  return dropTarget(el('div', { class: `panel stack pool${compact ? ' pool--compact' : ''}`, 'aria-label': 'Planned meals' }, [
+    el('h2', { text: 'Planned meals', style: { margin: 0 } }),
+    compact ? el('p', { class: 'small muted', style: { margin: 0 }, text: 'Drag a meal onto a day (on a phone, press and hold first). Drag one back here to take it off its day.' }) : null,
+    ...groups,
+  ]), (d) => { if (d.key !== POOL) applyMove(hub, d, { key: POOL }); }, { accepts: (d) => d.key !== POOL });
+}
+
+/** Plan: the list of planned meals, nothing else. */
+function planScreen(hub) {
+  const pool = loadPool(hub);
+  if (pool.loading) return loading();
+  if (pool.error) return failure(pool.error);
+  const n = pool.data.slots.length;
+  return el('section', { class: 'stack', 'aria-label': 'Planned meals' }, [
+    tabs(hub, VIEWS, null),
+    el('p', { class: 'muted', text: 'First choose the meals - seven dinners, a few lunches, snacks - without deciding the days. Then Assign puts them on the calendar.' }),
     el('div', { class: 'row' }, [
-      el('a', { class: 'btn btn-small', href: hub.href('week', addDays(monday, -7)), 'aria-label': 'Previous week', text: '‹' }),
-      el('strong', { text: `Week of ${new Date(`${monday}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}`, style: { flex: '1 1 auto', textAlign: 'center' } }),
-      el('a', { class: 'btn btn-small', href: hub.href('week', addDays(monday, 7)), 'aria-label': 'Next week', text: '›' }),
+      el('a', { class: 'btn', href: hub.href('mix'), text: 'Suggest meals', title: 'A mix of family favourites and new ones to try, from the Cookbook', 'data-field': 'plan-my-week' }),
+      n ? el('a', { class: 'btn btn-primary', href: hub.href('assign'), text: 'Assign', title: 'Put the planned meals on days', 'data-field': 'go-assign' }) : null,
     ]),
-    el('label', { class: 'checkline small' }, [
-      el('input', { type: 'checkbox', checked: ui.showAllMeals, on: { change: (e) => { ui.showAllMeals = e.target.checked; hub.render(); } } }),
-      'Show breakfast, lunch and snacks too',
-    ]),
-    el('div', { class: 'panel' }, [el('ul', { class: 'list' }, weekDays(monday).map((d, i) => el('li', { style: { alignItems: 'flex-start' } }, [
-      el('div', { style: { minWidth: '72px' } }, [el('strong', { text: WEEKDAYS[i] }), el('div', { class: 'small muted', text: d === today ? 'today' : d.slice(5).replace('-', '/') })]),
-      // The chosen meals every day; another meal only on a day that has something planned for it.
-      el('div', { class: 'list__main stack', style: { gap: '6px' } }, shownMeals.filter((meal) => meals.includes(meal) || slotAt(plan, i, meal) || later.some((l) => l.day === i && l.meal === meal)).map((meal) => {
-        const s = slotAt(plan, i, meal);
-        const lo = later.filter((l) => l.day === i && l.meal === meal);
-        return el('div', { class: 'stack', style: { gap: '2px' } }, [
-          el('div', { class: 'row', style: { justifyContent: 'space-between' } }, [
-            el('span', {}, [
-              ui.showAllMeals || meal !== 'dinner' ? el('span', { class: 'small muted', text: `${MEAL_LABEL[meal]}: ` }) : null,
-              s ? el('a', { href: hub.href('slot', ref(monday, s.id)), text: s.title, 'data-field': `open:${i}:${meal}` }) : lo.length ? null : el('span', { class: 'muted', text: 'Nothing planned' }),
-              s ? el('span', { class: 'small muted', text: ` · ${s.servings} eating${s.guests.length ? ` (with ${s.guests.length} guest${s.guests.length === 1 ? '' : 's'})` : ''}${prepared(s) > s.servings ? ` · cook ${prepared(s)}` : ''}${s.ingredients ? ' · changed this time' : ''}` }) : null,
-            ]),
-            el('a', { class: 'btn btn-small', href: hub.href('choose', `${monday}~${i}~${meal}`), text: s ? 'Change' : 'Plan', 'data-field': `slot:${i}:${meal}` }),
-          ]),
-          ...lo.map((l) => el('div', { class: 'small', 'data-field': `leftover:${i}:${meal}` }, [
-            el('span', { class: 'badge', text: 'Leftovers' }), ' ',
-            el('a', { href: hub.href('slot', ref(l.from.week, l.from.slotId)), text: l.title }),
-            ` from ${label(l.from.date, l.from.meal, today)} · ${l.portions} portion${l.portions === 1 ? '' : 's'}, already cooked${l.additions.length ? ` · plus ${l.additions.map((x) => x.name).join(', ')}` : ''}`,
-          ])),
-        ]);
-      })),
-    ])))]),
-    el('div', { class: 'row' }, [
-      el('a', { class: 'btn', href: hub.href('mix', monday), text: 'Plan week', 'data-field': 'plan-my-week' }),
-      plan.slots.length ? el('a', { class: 'btn', href: hub.href('review', monday), text: 'Overview', title: 'How the week looks', 'data-field': 'review-week' }) : null,
-      !plan.slots.length && prev.data?.slots.length ? el('button', { class: 'btn', type: 'button', text: 'Repeat week', title: 'Copy last week’s plan', on: { click: () => savePlan(hub, monday, copyPlan(prev.data, monday)) } }) : null,
-      plan.slots.length && hub.data.installed('shopping') ? el('button', {
-        class: 'btn btn-primary', type: 'button', text: 'To Shopping', title: 'Send the week’s ingredients to the shopping list', 'data-field': 'make-list',
-        on: { click: () => sendWeek(hub, plan, monday) },
-      }) : null,
-    ]),
-    el('p', { class: 'small muted', text: 'Plan as much or as little as helps - empty days are fine. Leftovers are cooked with the meal they come from, so they are only bought once.' }),
+    poolPanel(hub, pool.data),
   ]);
 }
 
-/** Shopping owns the list: what the week needs (leftovers counted once, with each meal's own changes) goes over in the link. */
-async function sendWeek(hub, plan, monday) {
+/** The weeks a calendar view shows, and how to step it. */
+function calRange(view, anchor) {
+  if (view === 'month') {
+    const first = `${anchor.slice(0, 7)}-01`;
+    const last = addDays(`${addDays(first, 32).slice(0, 7)}-01`, -1);
+    const mondays = [];
+    for (let m = weekStart(first); m <= last; m = addDays(m, 7)) mondays.push(m);
+    return { mondays, first, last, title: new Date(`${first}T12:00:00`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }), prev: addDays(first, -1).slice(0, 7) + '-01', next: addDays(last, 1) };
+  }
+  const monday = weekStart(anchor);
+  return { mondays: [monday], first: monday, last: addDays(monday, 6), title: `Week of ${new Date(`${monday}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}`, prev: addDays(monday, -7), next: addDays(monday, 7) };
+}
+
+/** The calendar: a week (a row per meal) or a month (a box per day). Meals can be dragged between days, and onto it from the list. */
+function calendar(hub, param) {
+  const today = hub.today();
+  if (param && /^\d{4}-\d{2}-\d{2}$/.test(param)) ui.calAnchor = param;
+  const anchor = ui.calAnchor ?? today;
+  const view = ui.calView ?? 'week';
+  const r = calRange(view, anchor);
+  const loaded = [addDays(r.mondays[0], -7), ...r.mondays].map((m) => [m, loadPlan(hub, m)]);
+  if (loaded.some(([, x]) => x.loading)) return loading();
+  const err = loaded.find(([, x]) => x.error);
+  if (err) return failure(err[1].error);
+  const plan = Object.fromEntries(loaded.map(([m, x]) => [m, x.data]));
+  const go = (a, v = view) => { ui.calAnchor = a; ui.calView = v; hub.render(); };
+  const all = r.mondays.flatMap((m) => plan[m].slots.map((s) => ({ m, s })));
+  const later = leftoverMeals(loaded.map(([, x]) => x.data), r.mondays[0]);
+
+  const head = el('div', { class: 'row cal-head' }, [
+    el('button', { class: 'btn btn-small', type: 'button', 'aria-label': view === 'month' ? 'Previous month' : 'Previous week', text: '‹', 'data-field': 'cal-prev', on: { click: () => go(r.prev) } }),
+    el('strong', { text: r.title, style: { flex: '1 1 auto', textAlign: 'center' } }),
+    el('button', { class: 'btn btn-small', type: 'button', 'aria-label': view === 'month' ? 'Next month' : 'Next week', text: '›', 'data-field': 'cal-next', on: { click: () => go(r.next) } }),
+  ]);
+  const switcher = el('div', { class: 'row', style: { justifyContent: 'space-between' } }, [
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Show' }, [['week', 'Week'], ['month', 'Month']].map(([v, t]) => el('button', { class: 'chip', type: 'button', 'aria-pressed': String(view === v), text: t, 'data-field': `cal-view:${v}`, on: { click: () => go(anchor, v) } }))),
+    view === 'week' ? el('label', { class: 'checkline small' }, [
+      el('input', { type: 'checkbox', checked: ui.showAllMeals, on: { change: (e) => { ui.showAllMeals = e.target.checked; hub.render(); } } }), 'Breakfast, lunch, snacks',
+    ]) : el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Today', on: { click: () => go(today) } }),
+  ]);
+
+  let body;
+  if (view === 'week') {
+    const monday = r.mondays[0];
+    const p = plan[monday];
+    const meals = ui.showAllMeals ? MEALS : ['dinner'];
+    const shown = MEALS.filter((meal) => meals.includes(meal) || p.slots.some((s) => s.meal === meal) || later.some((l) => l.meal === meal));
+    body = el('div', { class: 'panel' }, [el('ul', { class: 'list cal-week' }, weekDays(monday).map((d, i) => el('li', { style: { alignItems: 'flex-start' }, class: d === today ? 'cal-today' : null }, [
+      el('div', { style: { minWidth: '64px' } }, [el('strong', { text: WEEKDAYS[i] }), el('div', { class: 'small muted', text: d === today ? 'today' : d.slice(5).replace('-', '/') })]),
+      el('div', { class: 'list__main stack', style: { gap: '4px' } }, shown.map((meal) => {
+        const here = p.slots.filter((s) => s.day === i && s.meal === meal);
+        const lo = later.filter((l) => l.day === i && l.meal === meal);
+        return dropTarget(el('div', { class: 'cal-cell', 'data-field': `cell:${i}:${meal}` }, [
+          shown.length > 1 ? el('span', { class: 'small muted cal-cell__kind', text: MEAL_LABEL[meal] }) : null,
+          ...here.map((s) => mealChip(hub, monday, s)),
+          ...lo.map((l) => el('a', { class: 'small', href: hub.href('slot', ref(l.from.week, l.from.slotId)), 'data-field': `leftover:${i}:${meal}` }, [el('span', { class: 'badge', text: 'Leftovers' }), ` ${l.title}`])),
+          !here.length || meal === 'snack' ? el('a', { class: 'cal-add', href: hub.href('choose', `${monday}~${i}~${meal}`), text: '+', title: `Plan ${MEAL_LABEL[meal].toLowerCase()} for ${WEEKDAYS[i]}`, 'aria-label': `Plan ${MEAL_LABEL[meal].toLowerCase()} for ${WEEKDAYS[i]}`, 'data-field': `slot:${i}:${meal}` }) : null,
+        ]), (dd) => applyMove(hub, dd, { key: monday, day: i, meal }));
+      })),
+    ])))]);
+  } else {
+    // A box per day; a meal dropped on a day keeps its own meal (a dinner stays dinner).
+    const days = [];
+    for (let d = r.mondays[0]; d <= addDays(r.mondays.at(-1), 6); d = addDays(d, 1)) days.push(d);
+    body = el('div', { class: 'panel cal-month', role: 'grid' }, [
+      ...WEEKDAYS.map((w) => el('div', { class: 'cal-month__head small muted', text: w })),
+      ...days.map((d) => {
+        const m = weekStart(d);
+        const i = dayDiff(m, d);
+        const here = plan[m].slots.filter((s) => s.day === i).sort((a, b) => MEALS.indexOf(a.meal) - MEALS.indexOf(b.meal));
+        return dropTarget(el('div', { class: `cal-day${d.slice(0, 7) === r.first.slice(0, 7) ? '' : ' cal-day--other'}${d === today ? ' cal-today' : ''}`, 'data-field': `day:${d}` }, [
+          el('div', { class: 'small cal-day__num', text: String(Number(d.slice(8))) }),
+          ...here.map((s) => mealChip(hub, m, s, { short: true })),
+        ]), (dd) => applyMove(hub, dd, { key: m, day: i, meal: dd.meal }));
+      }),
+    ]);
+  }
+
+  const monday = r.mondays[0];
+  return el('div', { class: 'stack' }, [
+    head, switcher, body,
+    el('div', { class: 'row' }, [
+      view === 'week' && plan[monday].slots.length ? el('a', { class: 'btn', href: hub.href('review', monday), text: 'Overview', title: 'How the week looks', 'data-field': 'review-week' }) : null,
+      view === 'week' && !plan[monday].slots.length && plan[addDays(monday, -7)].slots.length ? el('button', { class: 'btn', type: 'button', text: 'Repeat week', title: 'Copy last week’s plan', on: { click: () => savePlan(hub, monday, copyPlan(plan[addDays(monday, -7)], monday)) } }) : null,
+      all.length && hub.data.installed('shopping') ? el('button', {
+        class: 'btn btn-primary', type: 'button', text: 'To Shopping', title: `Send the ingredients for ${view === 'month' ? 'the month' : 'the week'} to the shopping list`, 'data-field': 'make-list',
+        on: { click: () => sendPlanned(hub, all.map((x) => x.s), view === 'month' ? r.title : r.title, `${view}:${r.first}`) },
+      }) : null,
+    ]),
+  ]);
+}
+
+/** Assign: the planned meals on the left, the calendar on the right - drag them onto days. */
+function assignScreen(hub, param) {
+  const pool = loadPool(hub);
+  if (pool.loading) return loading();
+  if (pool.error) return failure(pool.error);
+  return el('section', { class: 'stack', 'aria-label': 'Assign planned meals' }, [
+    tabs(hub, VIEWS, 'assign'),
+    el('div', { class: 'planner-split' }, [poolPanel(hub, pool.data, { compact: true }), calendar(hub, param)]),
+  ]);
+}
+
+/** Calendar: everything planned, a week or a month at a time. Open a meal to see it, change it or rate it. */
+function weekScreen(hub, param) {
+  return el('section', { class: 'stack', 'aria-label': 'Meal calendar' }, [
+    tabs(hub, VIEWS, 'week'),
+    calendar(hub, param),
+    el('p', { class: 'small muted', text: 'Drag a meal to another day to swap them. Open a meal to change it, or say how it went and rate it. Leftovers are cooked with the meal they come from, so they are only bought once.' }),
+  ]);
+}
+
+/** Shopping owns the list: what these meals need (leftovers counted once, with each meal's own changes) goes over in the link. */
+async function sendPlanned(hub, slots, from, source) {
   const b = book(hub);
   const byId = new Map();
-  for (const s of plan.slots) {
+  for (const s of slots) {
     if (b && s.recipeId && !byId.has(s.recipeId)) {
       const r = await b.get(s.recipeId);
       if (r) byId.set(s.recipeId, normaliseRecipe(r));
     }
   }
   // Our own items inside them (home-made mayo) are bought as their own ingredients.
-  if (b) for (const s of plan.slots) await collectRecipes(s.ingredients ?? byId.get(s.recipeId)?.ingredients ?? [], (id) => b.get(id), byId);
-  hub.open(sendHref({ source: `week:${monday}`, from: `Week of ${new Date(`${monday}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`, group: 'food', ...planShopping(plan, byId) }));
+  if (b) for (const s of slots) await collectRecipes(s.ingredients ?? byId.get(s.recipeId)?.ingredients ?? [], (id) => b.get(id), byId);
+  hub.open(sendHref({ source, from, group: 'food', ...planShopping({ slots }, byId) }));
 }
 
 /* ------------------------------------------------------------- servings and leftovers */
@@ -238,7 +374,8 @@ function slotFromState(state) {
 /* ---------------------------------------------------------------- choosing a meal */
 
 function chooseScreen(hub, monday, day, meal) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(monday ?? '') || !(day >= 0 && day <= 6) || !MEALS.includes(meal)) return el('p', { class: 'panel', text: 'That planner link is incomplete.' });
+  const pool = monday === POOL;
+  if ((!pool && !isDate(monday)) || !(day >= 0 && day <= 6) || !MEALS.includes(meal)) return el('p', { class: 'panel', text: 'That planner link is incomplete.' });
   const p = loadPlan(hub, monday);
   const list = loadSummaries(hub);
   const f = loadFood(hub);
@@ -246,9 +383,9 @@ function chooseScreen(hub, monday, day, meal) {
   if (p.error || list.error) return failure(p.error ?? list.error);
   const today = hub.today();
   const date = dateOf(monday, day);
-  const current = slotAt(p.data, day, meal);
+  const current = pool || meal === 'snack' ? null : slotAt(p.data, day, meal);
   const people = hub.foodProfiles();
-  const back = hub.href('week', monday);
+  const back = pool ? hub.href() : hub.href('week', monday);
   const set = (patch) => { ui.filters = { ...ui.filters, ...patch }; hub.render(); };
   const q = ui.q.trim().toLowerCase();
   const results = list.data.filter((s) => (!q || `${s.title} ${(s.ingredientNames ?? []).join(' ')}`.toLowerCase().includes(q)) && passes(s, ui.filters, { people }));
@@ -258,8 +395,8 @@ function chooseScreen(hub, monday, day, meal) {
   if (pickState) return configureScreen(hub, { monday, day, meal, date, summary: pickState.summary, current, back });
 
   return el('section', { class: 'stack', 'aria-label': 'Choose a meal' }, [
-    el('a', { href: back, class: 'small', text: '‹ Back to the week' }),
-    el('h1', { text: `${label(date, meal, today)}${current ? ` - instead of ${current.title}` : ''}` }),
+    el('a', { href: back, class: 'small', text: '‹ Back' }),
+    el('h1', { text: pool ? `Plan a ${MEAL_LABEL[meal].toLowerCase()}` : `${label(date, meal, today)}${current ? ` - instead of ${current.title}` : ''}` }),
     el('div', { class: 'row' }, [
       el('input', { class: 'input', type: 'search', value: ui.q, placeholder: 'Search by name or ingredient', 'aria-label': 'Search meals', 'data-field': 'choose-search', style: { flex: '1 1 220px' }, on: { change: (e) => { ui.q = e.target.value; hub.render(); } } }),
       current ? el('button', { class: 'btn btn-quiet', type: 'button', text: 'Remove', 'data-field': 'remove-slot', on: { click: async () => { if (await confirmAction({ title: `Remove ${current.title} from ${label(date, meal, today)}?`, text: 'The saved meal stays in the Cookbook. Leftovers set aside from it are cancelled.', confirmLabel: 'Remove' })) { await savePlan(hub, monday, setSlot(p.data, day, meal, null)); hub.open(back); } } } }) : null,
@@ -281,12 +418,13 @@ function chooseScreen(hub, monday, day, meal) {
           e.preventDefault();
           const title = e.target.elements.free.value.trim();
           if (!title) return;
-          await savePlan(hub, monday, setSlot(p.data, day, meal, { recipeId: null, title, servings: current?.servings ?? 4 }));
+          const slot = { recipeId: null, title, servings: current?.servings ?? (meal === 'snack' ? 1 : 4) };
+          await savePlan(hub, monday, pool ? addToPool(p.data, { ...slot, meal }) : meal === 'snack' ? addSlot(p.data, day, meal, slot) : setSlot(p.data, day, meal, slot));
           hub.open(back);
         },
       },
     }, [
-      el('input', { class: 'input', name: 'free', placeholder: 'Or just type a meal, e.g. "Takeaway" or "Leftover soup"', 'aria-label': 'A meal not in the Cookbook', style: { flex: '1 1 220px' } }),
+      el('input', { class: 'input', name: 'free', placeholder: meal === 'snack' ? 'Or just type a snack, e.g. "Carrots" or "An apple"' : 'Or just type a meal, e.g. "Takeaway" or "Leftover soup"', 'aria-label': 'A meal not in the Cookbook', style: { flex: '1 1 220px' } }),
       el('button', { class: 'btn', type: 'submit', text: 'Use this' }),
     ]),
   ]);
@@ -354,23 +492,29 @@ function compareLoaded(hub, db) {
 /** After choosing: servings and leftovers, then into the plan. The saved meal is not changed. */
 function configureScreen(hub, { monday, day, meal, date, summary, current, back }) {
   const key = `${monday}~${day}~${meal}`;
-  const st = (ui.config?.for === key ? ui.config : (ui.config = { for: key, servings: current?.servings ?? summary.servings ?? 4, mode: 'none', portions: 2, target: defaultTarget(date), meal }));
+  const pool = monday === POOL;
+  const st = (ui.config?.for === key ? ui.config : (ui.config = { for: key, servings: current?.servings ?? summary.servings ?? 4, mode: 'none', portions: 2, target: date ? defaultTarget(date) : '', meal }));
   const today = hub.today();
   return el('section', { class: 'stack' }, [
     el('button', { class: 'linkish small', type: 'button', text: '‹ Back', title: 'Back to the list', style: { alignSelf: 'flex-start' }, on: { click: () => { ui.pick = null; hub.render(); } } }),
-    el('h1', { text: `${summary.title} for ${label(date, meal, today)}` }),
-    el('div', { class: 'panel' }, [leftoverControls(st, date, (patch) => { Object.assign(ui.config, patch); hub.render(); }, today)]),
+    el('h1', { text: pool ? `Plan ${summary.title}` : `${summary.title} for ${label(date, meal, today)}` }),
+    el('div', { class: 'panel' }, [pool
+      ? el('div', { class: 'row' }, [
+        el('label', { class: 'small', for: 'lo-serv', text: 'Eating at this meal' }),
+        el('input', { class: 'input', id: 'lo-serv', type: 'number', min: '1', max: '40', value: String(st.servings), style: { width: '5em' }, 'data-field': 'servings', on: { change: (e) => { ui.config.servings = Math.max(1, Number(e.target.value) || 1); } } }),
+        el('span', { class: 'small muted', text: 'Leftovers can be set aside once it is on a day.' }),
+      ])
+      : leftoverControls(st, date, (patch) => { Object.assign(ui.config, patch); hub.render(); }, today)]),
     el('div', { class: 'row' }, [
       el('button', {
         class: 'btn btn-primary', type: 'button', text: 'Plan it', 'data-field': 'plan-save',
         on: {
           click: async () => {
-            const p = await plans(hub).get(planId(monday)).catch(() => null);
-            const plan = normalisePlan(p ?? (await legacyPlans(hub)?.get(planId(monday)).catch(() => null)) ?? {}, monday);
-            const fields = slotFromState(st);
-            await savePlan(hub, monday, setSlot(plan, day, meal, { recipeId: summary.id, title: summary.title, ...fields, ingredients: null, note: '', feedback: null }));
+            const plan = await fetchPlan(hub, monday);
+            const slot = { recipeId: summary.id, title: summary.title, ...(pool ? { servings: st.servings } : slotFromState(st)), ingredients: null, note: '', feedback: null };
+            await savePlan(hub, monday, pool ? addToPool(plan, { ...slot, meal }) : meal === 'snack' ? addSlot(plan, day, meal, slot) : setSlot(plan, day, meal, slot));
             ui.pick = null; ui.config = null;
-            hub.ui.notice(`${summary.title} is planned for ${label(date, meal, today)}.`);
+            hub.ui.notice(pool ? `${summary.title} is in the planned meals.` : `${summary.title} is planned for ${label(date, meal, today)}.`);
             hub.open(back);
           },
         },
@@ -388,7 +532,7 @@ function addScreen(hub, id, serves) {
   if (!r.data) return el('p', { class: 'panel', text: 'That meal was not found in the Cookbook.' });
   const rec = r.data;
   const today = hub.today();
-  const st = (ui.adding?.for === id ? ui.adding : (ui.adding = { for: id, date: today, meal: 'dinner', servings: Number(serves) || rec.servings, mode: 'none', portions: 2, target: defaultTarget(today) }));
+  const st = (ui.adding?.for === id ? ui.adding : (ui.adding = { for: id, date: '', meal: 'dinner', servings: Number(serves) || rec.servings, mode: 'none', portions: 2, target: defaultTarget(today) }));
   const set = (patch) => { Object.assign(ui.adding, patch); hub.render(); };
   const days = Array.from({ length: 14 }, (_, i) => addDays(today, i));
   return el('section', { class: 'stack' }, [
@@ -396,22 +540,28 @@ function addScreen(hub, id, serves) {
     el('div', { class: 'panel stack' }, [
       el('div', { class: 'row' }, [
         el('label', { class: 'small', for: 'plan-day', text: 'Day' }),
-        el('select', { class: 'select', id: 'plan-day', 'data-field': 'plan-day', style: { width: 'auto' }, on: { change: (e) => set({ date: e.target.value, target: defaultTarget(e.target.value) }) } }, days.map((d) => el('option', { value: d, text: fmtDay(d, today), selected: d === st.date }))),
+        el('select', { class: 'select', id: 'plan-day', 'data-field': 'plan-day', style: { width: 'auto' }, on: { change: (e) => set({ date: e.target.value, target: e.target.value ? defaultTarget(e.target.value) : '' }) } },
+          [el('option', { value: '', text: 'No day yet - the planned meals', selected: !st.date }), ...days.map((d) => el('option', { value: d, text: fmtDay(d, today), selected: d === st.date }))]),
         el('label', { class: 'small', for: 'plan-meal', text: 'Meal' }),
         el('select', { class: 'select', id: 'plan-meal', 'data-field': 'plan-meal', style: { width: 'auto' }, on: { change: (e) => set({ meal: e.target.value }) } }, MEALS.map((m) => el('option', { value: m, text: MEAL_LABEL[m], selected: m === st.meal }))),
       ]),
-      leftoverControls(st, st.date, set, today),
+      st.date ? leftoverControls(st, st.date, set, today) : null,
     ]),
     el('div', { class: 'row' }, [
       el('button', {
         class: 'btn btn-primary', type: 'button', text: 'Plan it', 'data-field': 'plan-save',
         on: {
           click: async () => {
+            const slot = { recipeId: rec.id, title: rec.title, ingredients: null, note: '', feedback: null };
+            if (!st.date) {
+              if (await savePlan(hub, POOL, addToPool(await fetchPlan(hub, POOL), { ...slot, servings: st.servings, meal: st.meal }))) { ui.adding = null; hub.ui.notice(`${rec.title} is in the planned meals.`); hub.go(); }
+              return;
+            }
             const monday = weekStart(st.date);
-            const p = await plans(hub).get(planId(monday)).catch(() => null);
-            const plan = normalisePlan(p ?? (await legacyPlans(hub)?.get(planId(monday)).catch(() => null)) ?? {}, monday);
-            const day = Math.round((new Date(`${st.date}T12:00:00`) - new Date(`${monday}T12:00:00`)) / 864e5);
-            if (await savePlan(hub, monday, setSlot(plan, day, st.meal, { recipeId: rec.id, title: rec.title, ...slotFromState(st), ingredients: null, note: '', feedback: null }))) {
+            const plan = await fetchPlan(hub, monday);
+            const day = dayDiff(monday, st.date);
+            const fields = { ...slot, ...slotFromState(st) };
+            if (await savePlan(hub, monday, st.meal === 'snack' ? addSlot(plan, day, st.meal, fields) : setSlot(plan, day, st.meal, fields))) {
               ui.adding = null;
               hub.ui.notice(`${rec.title} is planned for ${label(st.date, st.meal, today)}.`);
               hub.go('week', monday);
@@ -431,8 +581,8 @@ function slotScreen(hub, monday, slotId) {
   if (p.loading) return loading();
   if (p.error) return failure(p.error);
   const slot = p.data.slots.find((s) => s.id === slotId);
-  const back = hub.href('week', monday);
-  if (!slot) return el('div', { class: 'panel' }, [el('p', { text: 'That planned meal is no longer in the plan.' }), el('a', { class: 'btn', href: back, text: 'Back', title: 'Back to the week' })]);
+  const back = monday === POOL ? hub.href() : hub.href('week', monday);
+  if (!slot) return el('div', { class: 'panel' }, [el('p', { text: 'That planned meal is no longer in the plan.' }), el('a', { class: 'btn', href: back, text: 'Back' })]);
   const r = slot.recipeId ? loadRecipe(hub, slot.recipeId) : { data: null };
   const f = loadFood(hub);
   const list = loadSummaries(hub);
@@ -463,7 +613,7 @@ function slotScreen(hub, monday, slotId) {
   const sys = hub.units();
 
   return el('section', { class: 'stack' }, [
-    el('a', { href: back, class: 'small', text: '‹ Back to the week' }),
+    el('a', { href: back, class: 'small', text: '‹ Back' }),
     el('div', { class: 'row' }, [
       el('h1', { text: slot.title, style: { margin: 0 } }),
       el('span', { class: 'badge', text: label(date, slot.meal, today) }),
@@ -501,7 +651,7 @@ function slotScreen(hub, monday, slotId) {
         ]),
         el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Cancel leftovers', on: { click: async () => { await savePlan(hub, monday, setReservation(p.data, slot.id, res.id, { portions: 0 })); } } }),
       ]))) : null,
-      el('div', { class: 'row' }, [
+      !date ? el('p', { class: 'small muted', text: 'Leftovers can be set aside once this meal is on a day.' }) : el('div', { class: 'row' }, [
         el('label', { class: 'small', for: 'res-new', text: 'Set aside leftovers for' }),
         el('select', { class: 'select', id: 'res-new', style: { width: 'auto' }, 'data-field': 'res-new' }, [
           el('option', { value: '', text: 'choose a later meal…' }),
@@ -587,70 +737,76 @@ function slotScreen(hub, monday, slotId) {
       ]) : null,
     ]),
     el('div', { class: 'row' }, [
-      el('a', { class: 'btn', href: hub.href('choose', `${monday}~${slot.day}~${slot.meal}`), text: 'Swap meal', title: 'Replace with another meal' }),
+      monday === POOL || slot.meal === 'snack' ? null : el('a', { class: 'btn', href: hub.href('choose', `${monday}~${slot.day}~${slot.meal}`), text: 'Swap meal', title: 'Replace with another meal' }),
+      el('button', { class: 'btn btn-quiet', type: 'button', text: 'Remove', title: monday === POOL ? 'Take it off the planned meals' : 'Take it off this day - the saved meal stays in the Cookbook', 'data-field': 'slot-remove', on: { click: async () => {
+        if (!await confirmAction({ title: `Remove ${slot.title}?`, text: monday === POOL ? 'It comes off the planned meals. The saved meal stays in the Cookbook.' : 'It comes off this day. The saved meal stays in the Cookbook, and leftovers set aside from it are cancelled.', confirmLabel: 'Remove' })) return;
+        await savePlan(hub, monday, { ...p.data, slots: p.data.slots.filter((x) => x.id !== slot.id) });
+        hub.open(back);
+      } } }),
     ]),
   ]);
 }
 
 /* ---------------------------------------------------------------- Plan my week */
 
-function mixScreen(hub, monday) {
-  monday = weekOf(monday, hub);
-  const p = loadPlan(hub, monday);
+/** Suggest meals: a mix of favourites and new ones into the planned meals - days come later, on Assign. */
+function mixScreen(hub) {
+  const today = hub.today();
+  const monday = weekStart(today);
+  const pool = loadPool(hub);
   const list = loadSummaries(hub);
+  const w0 = loadPlan(hub, monday);
   const w1 = loadPlan(hub, addDays(monday, -7));
   const w2 = loadPlan(hub, addDays(monday, -14));
-  if ([p, list, w1, w2].some((x) => x.loading)) return loading('Looking through your meals…');
-  if (p.error || list.error) return failure(p.error ?? list.error);
+  if ([pool, list, w0, w1, w2].some((x) => x.loading)) return loading('Looking through your meals…');
+  if (pool.error || list.error) return failure(pool.error ?? list.error);
   const people = hub.foodProfiles();
   const m = ui.mix;
-  const today = hub.today();
-  const empty = [0, 1, 2, 3, 4, 5, 6].filter((d) => !slotAt(p.data, d, m.meal)).map((day) => ({ day, meal: m.meal }));
-  const recent = new Set([...w1.data.slots, ...w2.data.slots].map((s) => s.recipeId).filter(Boolean));
-  const meals = list.data.filter((s) => !ui.rejected.includes(s.id) && !p.data.slots.some((x) => x.recipeId === s.id));
-  const proposal = ui.proposal?.week === monday ? ui.proposal : null;
+  const total = Object.keys(MIX).reduce((n, k) => n + (m[k] ?? 0), 0);
+  const slots = Array.from({ length: total }, () => ({ day: null, meal: m.meal }));
+  const recent = new Set([...w0.data.slots, ...w1.data.slots, ...w2.data.slots].map((s) => s.recipeId).filter(Boolean));
+  const meals = list.data.filter((s) => !ui.rejected.includes(s.id) && !pool.data.slots.some((x) => x.recipeId === s.id && x.meal === m.meal));
+  const proposal = ui.proposal?.meal === m.meal ? ui.proposal : null;
+  const suggest = (from) => { ui.proposal = { meal: m.meal, ...proposeWeek({ meals: from, counts: m, slots, recent, people, seed: `${today}${m.meal}${ui.rejected.length}` }), accept: {} }; hub.render(); };
   const number = (key) => el('label', { class: 'row small', style: { gap: '6px' } }, [
-    el('input', { class: 'input', type: 'number', min: '0', max: '7', value: String(m[key]), style: { width: '4.5em' }, 'data-field': `mix-${key}`, on: { change: (e) => { ui.mix = { ...m, [key]: Math.max(0, Number(e.target.value) || 0) }; ui.proposal = null; hub.render(); } } }), MIX[key],
+    el('input', { class: 'input', type: 'number', min: '0', max: '14', value: String(m[key]), style: { width: '4.5em' }, 'data-field': `mix-${key}`, on: { change: (e) => { ui.mix = { ...m, [key]: Math.max(0, Math.min(14, Number(e.target.value) || 0)) }; ui.proposal = null; hub.render(); } } }), MIX[key],
   ]);
-  return el('section', { class: 'stack', 'aria-label': 'Plan my week' }, [
-    el('a', { href: hub.href('week', monday), class: 'small', text: '‹ Back to the week' }),
-    el('h1', { text: 'Plan my week' }),
-    el('p', { class: 'muted', text: 'A mix of meals the family already enjoys and new ones to try, from your own the Cookbook. Nothing goes into the plan until you say so.' }),
+  return el('section', { class: 'stack', 'aria-label': 'Suggest meals' }, [
+    el('a', { href: hub.href(), class: 'small', text: '‹ Back' }),
+    el('h1', { text: 'Suggest meals' }),
+    el('p', { class: 'muted', text: 'A mix of meals the family already enjoys and new ones to try, from your own Cookbook. They go into the planned meals; the days come later.' }),
     el('div', { class: 'panel stack' }, [
-      el('label', { class: 'row small', style: { gap: '6px' } }, ['For', el('select', { class: 'select', style: { width: 'auto' }, 'data-field': 'mix-meal', on: { change: (e) => { ui.mix = { ...m, meal: e.target.value }; ui.proposal = null; hub.render(); } } }, MEALS.map((x) => el('option', { value: x, text: MEAL_LABEL[x].toLowerCase(), selected: x === m.meal }))), `- ${empty.length} empty day${empty.length === 1 ? '' : 's'} this week`]),
+      el('label', { class: 'row small', style: { gap: '6px' } }, ['For', el('select', { class: 'select', style: { width: 'auto' }, 'data-field': 'mix-meal', on: { change: (e) => { ui.mix = { ...m, meal: e.target.value }; ui.proposal = null; hub.render(); } } }, MEALS.map((x) => el('option', { value: x, text: MEAL_LABEL[x].toLowerCase(), selected: x === m.meal }))), `- ${total} meal${total === 1 ? '' : 's'}`]),
       ...Object.keys(MIX).map(number),
-      el('button', {
-        class: 'btn btn-primary', type: 'button', text: 'Suggest week', 'data-field': 'mix-go', disabled: !empty.length, style: { alignSelf: 'flex-start' },
-        on: { click: () => { ui.proposal = { week: monday, ...proposeWeek({ meals, counts: m, slots: empty, recent, people, seed: `${monday}${ui.rejected.length}` }), accept: {} }; hub.render(); } },
-      }),
+      el('button', { class: 'btn btn-primary', type: 'button', text: 'Suggest', 'data-field': 'mix-go', disabled: !total, style: { alignSelf: 'flex-start' }, on: { click: () => suggest(meals) } }),
     ]),
     proposal ? el('div', { class: 'panel stack' }, [
       el('h2', { text: 'Suggested', style: { margin: 0 } }),
       proposal.picks.length ? el('ul', { class: 'list' }, proposal.picks.map((x) => el('li', {}, [
         el('label', { class: 'checkline list__main' }, [
           el('input', { type: 'checkbox', checked: proposal.accept[x.id] !== false, 'data-field': `mix-accept:${x.id}`, on: { change: (e) => { proposal.accept[x.id] = e.target.checked; } } }),
-          el('span', {}, [el('strong', { text: `${label(dateOf(monday, x.day), x.meal, today)}: ${x.title}` }), el('div', { class: 'small muted', text: [MIX[x.group], x.reason].filter(Boolean).join(' - ') })]),
+          el('span', {}, [el('strong', { text: x.title }), el('div', { class: 'small muted', text: [MIX[x.group], x.reason].filter(Boolean).join(' - ') })]),
         ]),
-        el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Something else', on: { click: () => { ui.rejected.push(x.id); ui.proposal = { week: monday, ...proposeWeek({ meals: meals.filter((s) => s.id !== x.id), counts: m, slots: empty, recent, people, seed: `${monday}${ui.rejected.length}` }), accept: {} }; hub.render(); } } }),
+        el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Something else', on: { click: () => { ui.rejected.push(x.id); suggest(meals.filter((y) => y.id !== x.id)); } } }),
       ]))) : el('p', { text: 'No meals could be suggested.' }),
       proposal.shortfall.length ? el('div', { class: 'small' }, [
         el('p', { text: 'Not enough meals for everything you asked:' }),
-        el('ul', {}, proposal.shortfall.map((s) => el('li', { text: `${MIX[s.group]}: ${s.found} of ${s.wanted}. ${{ family: 'Rate meals you have tried in the Cookbook so favourites can be found.', individual: 'Mark people’s favourites on a meal’s page.', untried: 'Add some new recipes to try.', other: 'Plan or rate more of the meals you have had.' }[s.group]}` }))),
-        el('p', { class: 'muted', text: 'Nothing is made up to fill the gaps - you can choose meals for the empty days yourself.' }),
+        el('ul', {}, proposal.shortfall.map((x) => el('li', { text: `${MIX[x.group]}: ${x.found} of ${x.wanted}. ${{ family: 'Rate meals you have tried in the Cookbook so favourites can be found.', individual: 'Mark people’s favourites on a meal’s page.', untried: 'Add some new recipes to try.', other: 'Plan or rate more of the meals you have had.' }[x.group]}` }))),
+        el('p', { class: 'muted', text: 'Nothing is made up to fill the gaps - add the rest yourself with "+ Add".' }),
       ]) : null,
       proposal.picks.length ? el('button', {
-        class: 'btn btn-primary', type: 'button', text: 'Plan ticked', title: 'Put the ticked meals in the plan', 'data-field': 'mix-apply', style: { alignSelf: 'flex-start' },
+        class: 'btn btn-primary', type: 'button', text: 'Add ticked', title: 'Put the ticked meals in the planned meals', 'data-field': 'mix-apply', style: { alignSelf: 'flex-start' },
         on: {
           click: async () => {
-            let plan = p.data;
+            let next = await fetchPlan(hub, POOL);
             for (const x of proposal.picks.filter((y) => proposal.accept[y.id] !== false)) {
-              const s = list.data.find((y) => y.id === x.id);
-              plan = setSlot(plan, x.day, x.meal, { recipeId: x.id, title: x.title, servings: s?.servings ?? 4 });
+              const sum = list.data.find((y) => y.id === x.id);
+              next = addToPool(next, { recipeId: x.id, title: x.title, servings: sum?.servings ?? 4, meal: m.meal });
             }
-            await savePlan(hub, monday, plan);
+            await savePlan(hub, POOL, next);
             ui.proposal = null; ui.rejected = [];
-            hub.ui.notice('The week is planned. Change anything on the week screen.');
-            hub.go('week', monday);
+            hub.ui.notice('Added to the planned meals. Press Assign to put them on days.');
+            hub.go();
           },
         },
       }) : null,

@@ -329,12 +329,67 @@ export function setSlot(plan, day, meal, slot) {
 }
 
 /** Change one planned meal (by id) - nothing else moves. */
+/** Add another meal at a day and meal without replacing what is there - snacks, mostly. */
+export const addSlot = (plan, day, meal, slot, id = `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`) =>
+  ({ ...plan, slots: [...plan.slots, normaliseSlot({ ...slot, id, day, meal })] });
+
 export const updateSlot = (plan, id, patch) => ({ ...plan, slots: plan.slots.map((s) => (s.id === id ? normaliseSlot({ ...s, ...patch, id }) : s)) });
 
 /** Reuse a previous week's plan for another week (same days and meals). Leftovers and notes stay behind. */
 export const copyPlan = (from, monday) => ({ week: monday, slots: from.slots.map((s) => normaliseSlot({ ...s, reserve: [], extra: 0, note: '', feedback: null })) });
 
-export const planId = (monday) => `week_${monday.replace(/-/g, '')}`;
+export const planId = (monday) => (monday === POOL ? POOL : `week_${monday.replace(/-/g, '')}`);
+
+/*
+ * The planned meals not on a day yet (D-053): planned like any other meal, then
+ * dragged onto the calendar. Kept as one record shaped like a week, without days.
+ * A meal in the list has no leftovers set aside - those need a day to count from.
+ */
+export const POOL = 'pool';
+export function normalisePool(p = {}) {
+  const slots = (Array.isArray(p.slots) ? p.slots : []).filter((s) => s && typeof s === 'object')
+    .map((s, i) => normaliseSlot({ ...s, id: s.id || `p${i}`, day: null, meal: MEALS.includes(s.meal) ? s.meal : 'dinner', reserve: [] }));
+  return { ...p, id: POOL, week: POOL, slots };
+}
+
+/** Add a meal to the planned-meals list. */
+export const addToPool = (pool, slot, id = `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`) =>
+  ({ ...pool, slots: [...pool.slots, normaliseSlot({ meal: 'dinner', ...slot, id, day: null, reserve: [] })] });
+
+/**
+ * Move a planned meal by dragging it: from the list or a day, onto the list or a day.
+ * Dropped on a meal that is already planned, the two swap places (the other one goes
+ * to the list when this one came from it) - except snacks, where a day can have several. Leftovers set aside move with their meal,
+ * the same number of days on; going into the list lets them go.
+ * @param get   key -> plan ('pool' or a week's Monday)
+ * @param from  { key, id }
+ * @param to    { key: 'pool' } | { key: monday, day, meal }
+ * @returns { [key]: plan } - only the plans that changed
+ */
+export function moveMeal(get, { from, to }) {
+  const out = {};
+  const cur = (k) => out[k] ?? get(k);
+  const slot = cur(from.key).slots.find((s) => s.id === from.id);
+  if (!slot) return out;
+  const fromDate = from.key === POOL ? null : addDays(from.key, slot.day);
+  const toDate = to.key === POOL ? null : addDays(to.key, to.day);
+  if (to.key === from.key && (to.key === POOL || (slot.day === to.day && slot.meal === to.meal))) return out;   // dropped where it was
+  const shift = (s, days) => s.reserve.map((r) => ({ ...r, date: addDays(r.date, days) }));
+  const place = (k, s, day, meal, reserve) => { out[k] = { ...cur(k), slots: [...cur(k).slots, normaliseSlot({ ...s, day, meal, reserve })] }; };
+  const take = (k, id) => { out[k] = { ...cur(k), slots: cur(k).slots.filter((s) => s.id !== id) }; };
+
+  take(from.key, slot.id);
+  if (to.key === POOL) { place(POOL, slot, null, slot.meal, []); return out; }
+  // Snacks are not one-per-day: a day can have several, so nothing is pushed aside.
+  const occupant = to.meal === 'snack' ? null : slotAt(cur(to.key), to.day, to.meal);
+  if (occupant) {
+    take(to.key, occupant.id);
+    if (from.key === POOL) place(POOL, occupant, null, occupant.meal, []);
+    else place(from.key, occupant, slot.day, slot.meal, shift(occupant, dayDiff(toDate, fromDate)));
+  }
+  place(to.key, slot, to.day, to.meal, fromDate ? shift(slot, dayDiff(fromDate, toDate)) : []);
+  return out;
+}
 
 /** Portions cooked for a planned meal: eaten now, extra, and set aside for later. */
 export const prepared = (slot) => slot.servings + slot.extra + slot.reserve.reduce((n, r) => n + r.portions, 0);

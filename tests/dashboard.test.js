@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CORE_TILES, defaultPrefs, resolveDashboard, moveModule, hideModule, showModule, normalisePrefs } from '../js/dashboard.js';
+import { CORE_TILES, defaultPrefs, resolveDashboard, moveModule, placeModule, hideModule, showModule, normalisePrefs } from '../js/dashboard.js';
 import { STARTERS } from '../js/apps/catalogue.js';
 
 const ids = (list) => list.map((m) => m.id);
@@ -30,6 +30,16 @@ test('reorder, hide and restore', () => {
   p = showModule(p, 'finance', MODS);
   assert.equal(ids(resolveDashboard(p, MODS).visible).at(-1), 'finance', 'comes back at the end');
   assert.deepEqual(resolveDashboard(p, MODS).hidden, []);
+});
+
+test('dragging a tile onto another puts it in that place, up or down', () => {
+  let p = placeModule(defaultPrefs(), 'finance', 'chores', MODS);
+  assert.deepEqual(ids(resolveDashboard(p, MODS).visible).slice(0, 4), ['finance', 'chores', 'tasks', 'tickets'], 'up: before the one it was dropped on');
+  p = placeModule(p, 'tickets', 'finance', MODS);
+  assert.deepEqual(ids(resolveDashboard(p, MODS).visible).slice(0, 4), ['tickets', 'finance', 'chores', 'tasks'], 'two to the top, one drag each');
+  p = placeModule(p, 'tickets', 'chores', MODS);
+  assert.deepEqual(ids(resolveDashboard(p, MODS).visible).slice(0, 4), ['finance', 'chores', 'tickets', 'tasks'], 'down: after the one it was dropped on');
+  assert.deepEqual(placeModule(p, 'tickets', 'nope', MODS), p, 'an unknown target changes nothing');
 });
 
 test('moving skips over hidden tiles', () => {

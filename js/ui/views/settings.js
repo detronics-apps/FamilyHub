@@ -3,7 +3,8 @@
 import { el, download } from '../dom.js';
 import { confirmAction, removeExamples } from '../common.js';
 import { setHouseholdName, hasDemo } from '../../model.js';
-import { resolveDashboard, moveModule, hideModule, showModule } from '../../dashboard.js';
+import { resolveDashboard, moveModule, placeModule, hideModule, showModule } from '../../dashboard.js';
+import { draggable, dropTarget } from '../drag.js';
 import { exportData, exportFilename, parseImport } from '../../storage.js';
 import { prefsKey } from './dashboard.js';
 import { driveSection } from './drive.js';
@@ -63,14 +64,17 @@ function dashboardSection(ctx) {
     el('p', { class: 'small muted', text: person
       ? `The order and hidden buttons for ${person.name}, on this device. Everyone can arrange their own. Hiding only takes a button off the home screen - to turn a mini-app off or remove it, use Mini-apps.`
       : 'You have not said who you are, so this arranges the shared "just looking" dashboard on this device.' }),
-    el('ol', { class: 'list' }, visible.map((m, i) => el('li', {}, [
+    el('p', { class: 'small', text: 'Drag a row to where you want it (on a phone, press and hold first), or use the arrows.' }),
+    // Each row can be dragged onto another: it takes that row's place.
+    el('ol', { class: 'list reorder' }, visible.map((m, i) => dropTarget(draggable(el('li', { 'data-field': `row:${m.id}` }, [
+      el('span', { class: 'grip', 'aria-hidden': 'true', text: '⠿' }),
       el('span', { class: 'list__main' }, [el('strong', { text: m.name }), null]),
       el('button', { class: 'btn btn-small btn-icon', type: 'button', text: '↑', 'aria-label': `Move ${m.name} up`, disabled: i === 0, 'data-field': `up:${m.id}`, on: { click: () => save(moveModule(prefs, m.id, -1, mods)) } }),
       el('button', { class: 'btn btn-small btn-icon', type: 'button', text: '↓', 'aria-label': `Move ${m.name} down`, disabled: i === visible.length - 1, 'data-field': `down:${m.id}`, on: { click: () => save(moveModule(prefs, m.id, 1, mods)) } }),
       m.id === 'settings' || m.id === 'library'
         ? el('span', { class: 'small muted', style: { minWidth: '64px' }, text: 'always shown' })
         : el('button', { class: 'btn btn-small', type: 'button', text: 'Hide', 'data-field': `hide:${m.id}`, 'aria-label': `Hide ${m.name}`, on: { click: () => save(hideModule(prefs, m.id, mods)) } }),
-    ]))),
+    ]), m.id), (id) => save(placeModule(prefs, id, m.id, mods))))),
     hidden.length ? el('div', {}, [
       el('h3', { text: 'Hidden' }),
       el('ul', { class: 'list' }, hidden.map((m) => el('li', {}, [

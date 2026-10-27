@@ -117,16 +117,18 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'mealplan', section: 'meals', name: 'This Week', version: '1.1.0',
-      description: 'Plan the week’s meals - as much or as little as helps - and send what they need to the shopping list.',
+      fhManifest: 1, id: 'mealplan', section: 'meals', name: 'Meal Planner', version: '1.2.0',
+      description: 'Choose the meals, then drag them onto days - a week or a month ahead - and send what they need to the shopping list.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [
-        { id: 'week', title: 'This week' }, { id: 'add', title: 'Plan a meal', nav: false }, { id: 'choose', title: 'Choose a meal', nav: false },
-        { id: 'slot', title: 'Planned meal', nav: false }, { id: 'mix', title: 'Plan my week', nav: false }, { id: 'review', title: 'How the week looks', nav: false },
+        { id: 'plan', title: 'Planned meals' }, { id: 'assign', title: 'Assign' }, { id: 'week', title: 'Calendar' },
+        { id: 'add', title: 'Plan a meal', nav: false }, { id: 'choose', title: 'Choose a meal', nav: false },
+        { id: 'slot', title: 'Planned meal', nav: false }, { id: 'mix', title: 'Suggest meals', nav: false }, { id: 'review', title: 'How the week looks', nav: false },
         { id: 'modify', title: 'Change a planned meal', nav: false }, { id: 'today', title: 'Cook today' },
       ],
       modes: [
-        { mode: 'plan', screen: 'week', label: 'Plan the next meals', hint: 'The week ahead, leftovers and the shopping it needs' },
+        { mode: 'plan', screen: 'plan', label: 'Plan the next meals', hint: 'Choose the meals, then drag them onto days' },
+        { mode: 'note', screen: 'week', label: 'See what is planned', hint: 'The calendar, a week or a month at a time' },
         { mode: 'do', screen: 'today', label: 'Cook today’s meals', hint: 'Ingredients and method, one meal at a time' },
       ],
       data: { collections: [{ name: 'plans', schema: 1 }] },

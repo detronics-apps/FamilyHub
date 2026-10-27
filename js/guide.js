@@ -125,16 +125,18 @@ export const HOWTOS = [
     'Save it as CSV. Then either press "Import" in Settings, or put the file in the Import folder inside your Family Hub Drive folder.',
     'Things whose name already exists are left alone, so nothing is doubled. Lines with a problem are listed by line number.',
   ] },
-  { id: 'meals', title: 'Plan the week’s meals and make the shopping list', steps: [
-    'Open Meals, then This Week. Press Plan next to a day and choose a meal - or just type one. (Or press "Plan it" on any meal in the Cookbook.)',
-    'Press "To Shopping". Amounts from all the week’s meals are added up, scaled to the servings you chose; untick what you already have.',
+  { id: 'meals', title: 'Plan the meals and make the shopping list', steps: [
+    'Open Meals, then Meal Planner. On Plan, press "+ Add" under Breakfasts, Lunches, Dinners or Snacks and choose a meal - or just type one, like "Carrots". "Suggest meals" picks a mix of favourites and new ones. No days yet.',
+    'Press Assign: the planned meals sit beside a calendar. Drag each one onto a day (on a phone, press and hold first) - a week at a time, or a whole month. Drag one back to the list to take it off its day.',
+    'Calendar shows just the calendar. Drag a meal to another day to swap them; tap a meal to open it, change it, or rate it.',
+    'Press "To Shopping". Amounts from all the meals on the calendar you are looking at (the week or the month) are added up, scaled to the servings you chose; untick what you already have.',
     'Tick things off in Shopping as you buy them. Sending the week again updates its items; your own additions and ticked items stay.',
   ] },
   { id: 'shopping', title: 'Keep one shopping list', steps: [
     'Open Shopping from the home screen. Type what you need, or choose a kind - Food, Cleaning, Hygiene, Medical, Stationery... - to see the things you buy and add them with "+ Add".',
     '"Ours" shows what the family has bought before or added; "Everything" also shows common things of each kind, for something you are buying for the first time. Anything not there: "+ Add ...".',
     'At the shop, press "Start shopping": just the list, big, by aisle. "Done" clears what you bought.',
-    'Send things to it from elsewhere: "To Shopping" on a meal, "To Shopping" in This Week, or a chore’s supplies in Chores.',
+    'Send things to it from elsewhere: "To Shopping" on a meal, "To Shopping" in Meal Planner, or a chore’s supplies in Chores.',
     'You see what is being sent and untick what you already have before it is added.',
   ] },
   { id: 'portions', title: 'See how much each person might eat', steps: [
@@ -155,7 +157,7 @@ export const HOWTOS = [
     'Each idea says who it helps and why. Press "Not today" to keep it for next time, or "No thanks" to hide it.',
   ] },
   { id: 'plan-meal', title: 'Plan a meal with leftovers or guests', steps: [
-    'Open This Week and press Plan next to a day. Search or filter your meals (protein, rating, someone’s favourite, quick ones under 20 minutes) and press Choose.',
+    'In Meal Planner, open Calendar and press + on a day (or drag a planned meal onto it). Search or filter your meals (protein, rating, someone’s favourite, quick ones under 20 minutes) and press Choose.',
     'Set how many are eating and the leftovers: cook extra to decide later, or set portions aside for a later meal. The later meal shows them as already cooked.',
     'Open the planned meal to add guests, change its ingredients for this time only, add a note, or send it to Meal Assistant for ideas.',
   ] },
@@ -171,7 +173,7 @@ export const HOWTOS = [
   { id: 'rate', title: 'Rate a meal and record favourites', steps: [
     'Open a meal in the Cookbook. Tick "We have tried it", then choose a family rating from 1 to 10.',
     'Set each person’s preference - favourite, likes, neutral or dislikes. A 7/10 meal can still be one child’s favourite.',
-    'Add notes for next time. A note about one particular meal goes on that day in This Week.',
+    'Add notes for next time. A note about one particular meal goes on that day in Meal Planner.',
   ] },
   { id: 'people', title: 'Add the family', steps: [
     'Open People from the home screen. Type a name and a birthday, and press Add person.',
@@ -235,7 +237,7 @@ export const HOWTOS = [
   ] },
   { id: 'dash', title: 'Rearrange or hide dashboard buttons', steps: [
     'Open Settings, then "Your dashboard".',
-    'Use the up and down arrows to reorder, and Hide to tuck a button away. Hidden ones can be shown again.',
+    'Drag a row to where you want it (on a phone, press and hold first), or use the arrows. Hide tucks a button away; hidden ones can be shown again.',
   ] },
   { id: 'demo', title: 'Remove the example family', steps: [
     'Press "Remove examples" on the notice, or in Settings under "Your data".',

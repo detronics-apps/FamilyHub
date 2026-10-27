@@ -52,6 +52,17 @@ export function moveModule(prefs, id, delta, modules = CORE_TILES) {
   return { ...p, order: [...visible, ...p.order.filter((x) => p.hidden.includes(x))] };
 }
 
+/** Drag a tile onto another: it takes that tile's place (after it when moving down, before it when moving up). */
+export function placeModule(prefs, id, onto, modules = CORE_TILES) {
+  const p = normalisePrefs(prefs, modules);
+  const visible = p.order.filter((x) => !p.hidden.includes(x));
+  const to = visible.indexOf(onto);
+  if (!visible.includes(id) || to < 0 || id === onto) return p;
+  const rest = visible.filter((x) => x !== id);
+  rest.splice(to, 0, id);
+  return { ...p, order: [...rest, ...p.order.filter((x) => p.hidden.includes(x))] };
+}
+
 export function hideModule(prefs, id, modules = CORE_TILES) {
   const p = normalisePrefs(prefs, modules);
   return normalisePrefs({ ...p, hidden: [...p.hidden, id] }, modules);

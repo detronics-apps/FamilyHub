@@ -41,10 +41,11 @@ publisher or anyone else.
     left as an item until you decide. Anything can go into anything. Search, type and allergen
     filters, scaling, and a portion guide per person with or without leftovers. Plan it or send
     its ingredients to Shopping.
-  - **This Week**: the week's meals as planned occasions - browse and filter your meals from the
-    planner, set servings, guests and leftovers (set aside for a later meal, counted once), change
-    one meal without touching the recipe, Plan my week (favourites plus new meals), How the week
-    looks and Optimise My Week, and send everything to Shopping.
+  - **Meal Planner**: choose the meals first (breakfasts, lunches, dinners and snacks - snacks can
+    be plain items like carrots), then drag them onto a week or month calendar; drag between days to
+    swap. Set servings, guests and leftovers (set aside for a later meal, counted once), change one
+    meal without touching the recipe, Suggest meals (favourites plus new ones), How the week looks
+    and Optimise My Week, and send a week or a month to Shopping.
   - **Calorie Checker**: calories and nutrients in the amount you actually eat (a cup, a slice,
     grams); build up the family meal or someone's plate and save it as a meal. Nothing is logged.
   - **Meal Assistant**: type a meal in a few words, choose who is eating, get one or two easy
