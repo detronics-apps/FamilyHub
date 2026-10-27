@@ -5,7 +5,7 @@
 import { el } from '../../ui/dom.js';
 import { loading, failure } from '../kit.js';
 import { growth, todaysMoney, effectiveYearly, REFERENCE } from '../finance/maths.js';
-import { levelBar, shows, draft, loadDraft, input, assumed, stat, sums, step, lineChart, savedPanel, compareTable, rand, pct } from '../finance/pod.js';
+import { levelBar, shows, draft, loadDraft, input, assumed, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, savedPanel, compareTable, rand, pct } from '../finance/pod.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => r.title, prefix: 'clc' });
 
@@ -78,16 +78,21 @@ function compoundResults(d) {
       el('p', { style: { margin: 0 }, text: `If prices rise ${pct(v.inflationPct)} a year, ${rand(g.balance)} in ${v.years} years buys about what ${rand(real)} buys today.` }),
       el('p', { class: 'small muted', style: { margin: 0 }, text: 'A projection, not a promise: real growth goes up and down, and tax on interest or gains is not included.' }),
     ]),
+    (() => {
+      const bal = [[0, v.start ?? 0], ...g.rows.map((r) => [r.month, r.balance])];
+      const put = [[0, v.start ?? 0], ...g.rows.map((r) => [r.month, r.paidIn])];
+      const turn = crossing(g.rows.map((r) => [r.month, r.growth]), g.rows.map((r) => [r.month, r.paidIn]));
+      return chartPanel('Year by year', lineChart([{ name: 'Savings', points: bal }, { name: 'Put in', points: put, dashed: true }], {
+        label: 'Savings against what was put in, year by year',
+        marks: [turn != null ? { x: turn, label: `Growth bigger than all put in, ${whenLabel(turn)}` } : null],
+        story: 'The gap between the lines is growth. It widens faster every year - that is compounding.' }));
+    })(),
     assumed(COMPOUND, d),
     compoundLevers(v, g),
   ];
   if (shows('advanced')) {
     out.push(el('div', { class: 'panel stack' }, [
       el('h2', { text: 'Year by year', style: { margin: 0 } }),
-      lineChart([
-        { name: 'Savings', points: [[0, v.start ?? 0], ...g.rows.map((r) => [r.month, r.balance])] },
-        { name: 'Put in', points: [[0, v.start ?? 0], ...g.rows.map((r) => [r.month, r.paidIn])], dashed: true },
-      ], { label: 'Savings against what was put in, year by year' }),
       el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums' }, [
         el('thead', {}, [el('tr', {}, ['Year', 'Put in', 'Growth', 'Savings'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
         el('tbody', {}, g.rows.map((r) => el('tr', {}, [el('td', { text: String(Math.ceil(r.month / 12)) }), ...[r.paidIn, r.growth, r.balance].map((x) => el('td', { class: 'num', text: rand(x) }))]))),

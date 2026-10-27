@@ -110,7 +110,7 @@ export function ownOrRent(input) {
       const home = valueAt * (1 - sell) - owedAt(m) - t.tax;
       const owner = home + invOwner;
       const renter = invRenter + num(v.rentDeposit);
-      series.push({ year: m / 12, value: valueAt, home, invOwner, owner, renter, ahead: owner - renter, tax: t.tax, own, rent, ownerPaid, renterPaid });
+      series.push({ year: m / 12, value: valueAt, owed: owedAt(m), home, invOwner, owner, renter, ahead: owner - renter, tax: t.tax, own, rent, ownerPaid, renterPaid, spentOwn: ownerUp + ownerPaid, spentRent: rentUp + renterPaid });
       if (breakeven == null && owner > renter) breakeven = m / 12;
     }
   }

@@ -5,7 +5,7 @@
 import { el } from '../../ui/dom.js';
 import { loading, failure } from '../kit.js';
 import { REFERENCE } from '../finance/maths.js';
-import { levelBar, shows, draft, loadDraft, inputsPanel, assumed, stat, sums, step, lineChart, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
+import { levelBar, shows, draft, loadDraft, inputsPanel, assumed, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
 import { OFFER_DEFAULTS, SARS, estimatePay, project, moveCash, versus, bandTax } from './logic.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => `${r.title} ${r.values?.notes ?? ''}`, prefix: 'job' });
@@ -213,6 +213,13 @@ function compareScreen(hub, param) {
         vs.upfront > 0 ? el('p', { style: { margin: 0 }, text: vs.payback == null ? `The move is not earned back: ${vs.monthlyNow <= 0 ? 'this job leaves no more each month than staying' : 'the extra each month never covers it'} under these assumptions.` : `The move pays for itself ${when(vs.payback)} - earning it back is not the same as having the cash before you go.` }) : null,
       ])),
     ]),
+    chartPanel(`Ahead of ${base.title}, over time`, lineChart(others.map(({ title, vs }) => ({ name: title, points: [[0, -vs.upfront], ...vs.diff.filter((x) => x.month % 3 === 0).map((x) => [x.month, x.ahead])] })), {
+      label: 'How far ahead or behind each job is, month by month, after moving costs',
+      marks: others.length === 1 ? [
+        others[0].vs.totalAhead ? { x: others[0].vs.totalAhead, label: `Ahead from ${whenLabel(others[0].vs.totalAhead)}` } : null,
+        others[0].vs.salaryAhead > 1 ? { x: others[0].vs.salaryAhead, label: `Salary higher from ${whenLabel(others[0].vs.salaryAhead)}` } : null,
+      ] : [],
+      story: 'Below the line, the household is behind where it would be - a move starts below it and has to climb out. Where a line crosses it, that job has caught up.' })),
     compareTable(items, [
       { label: 'Take-home a month', get: (o) => o.p.first.takeHome, lower: false },
       { label: 'Total package a month', get: (o) => o.p.first.package, lower: false },
@@ -226,8 +233,7 @@ function compareScreen(hub, param) {
       { label: 'Move earned back', get: (o) => (o.vs ? (o.vs.upfront ? when(o.vs.payback) : 'no move') : '-') },
     ]),
     shows('advanced') ? el('div', { class: 'panel stack' }, [
-      el('h2', { text: `Ahead of ${base.title}, over time`, style: { margin: 0 } }),
-      lineChart(others.map(({ title, vs }) => ({ name: title, points: [[0, -vs.upfront], ...vs.diff.filter((x) => x.month % 3 === 0).map((x) => [x.month, x.ahead])] })), { label: 'How far ahead or behind each job is, month by month' }),
+      el('h2', { text: 'At 1, 3, 5 and 10 years', style: { margin: 0 } }),
       el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums' }, [
         el('thead', {}, [el('tr', {}, ['', ...[1, 3, 5, 10].map((y) => `${y} year${y === 1 ? '' : 's'}`)].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
         el('tbody', {}, others.map(({ title, rec }) => el('tr', {}, [el('td', { text: title }), ...versus(vals(rec), vals(base), 120).milestones.map((x) => el('td', { class: `num ${x.ahead >= 0 ? 'fin-better' : 'fin-worse'}`, text: rand(x.ahead) }))]))),

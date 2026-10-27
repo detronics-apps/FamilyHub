@@ -5,7 +5,7 @@
 import { el } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
 import { loading, failure, saveRecord } from '../kit.js';
-import { levelBar, shows, stat, step, lineChart, rand, pct, months } from '../finance/pod.js';
+import { levelBar, shows, stat, step, lineChart, chartPanel, crossing, whenLabel, rand, pct, months } from '../finance/pod.js';
 import { carCost, homeCost, bond, CAR_DEFAULTS, HOME_DEFAULTS } from '../finance/maths.js';
 import { normaliseMonth, monthSummary, monthId, normaliseGoal as financeGoal } from '../finance/logic.js';
 import { normaliseTrip, budgetSummary } from '../holidays/logic.js';
@@ -130,6 +130,7 @@ function planScreen(hub, plan, found) {
     levelBar(() => hub.render()),
     moneyPanel(hub, plan, set, found),
     ready ? results(plan, s, today, opts, vs, without, offer) : el('p', { class: 'panel muted', text: 'Fill in the money coming in and the monthly commitments to see whether the plan fits.' }),
+    ready ? planStory(s, today) : null,
     goalsPanel(hub, plan, s, set, setGoal, today),
     found ? bringIn(plan, found, set) : el('p', { class: 'small muted', text: 'Looking for goals in the other apps…' }),
     offers.length > 1 ? jobPanel(hub, offers, base) : null,
@@ -303,6 +304,19 @@ function jobPanel(hub, offers, base) {
   ]);
 }
 
+/** Money free each month against what the goals need - and where it first falls short. */
+function planStory(s, today) {
+  const pts = s.months.filter((x) => x.m % 3 === 1 || x.m === 1);
+  const firstShort = s.short.length ? Math.min(...s.short.map((g) => g.firstShort)) : null;
+  return chartPanel('Free against needed, month by month', lineChart([
+    { name: 'Free each month', points: pts.map((x) => [x.m, x.avail]) },
+    { name: 'Needed each month', points: pts.map((x) => [x.m, x.needed]), dashed: true },
+  ], { label: 'Money free each month against what the goals need',
+    marks: [firstShort != null ? { x: firstShort, label: `First goal short: ${monthName(monthAt(today, firstShort))}` } : null,
+      s.deficitFrom != null ? { x: s.deficitFrom, label: 'Commitments outgrow income' } : null],
+    story: 'Where the dashed line is above, the goals need more than is free that month - money put aside earlier, a goal moving, or a goal shrinking has to cover it.' }));
+}
+
 function advanced(s, today) {
   const pts = s.months.filter((x) => x.m % 3 === 1 || x.m === 1);
   const years = new Map();
@@ -314,11 +328,6 @@ function advanced(s, today) {
   }
   return el('div', { class: 'panel stack' }, [
     el('h2', { text: 'Over time', style: { margin: 0 } }),
-    lineChart([
-      { name: 'Free each month', points: pts.map((x) => [x.m, x.avail]) },
-      { name: 'Needed each month', points: pts.map((x) => [x.m, x.needed]), dashed: true },
-    ], { label: 'Money free each month against what the goals need' }),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: 'Where the dashed line is above, the goals need more than is free that month - money put aside earlier, or a goal moving, has to cover it.' }),
     el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums' }, [
       el('thead', {}, [el('tr', {}, ['Year', 'Goals due', 'Short', 'Free a month'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
       el('tbody', {}, [...years.values()].filter((r) => r.due || r.short).map((r) => el('tr', { class: r.short >= 1 ? 'fin-overlap' : null }, [

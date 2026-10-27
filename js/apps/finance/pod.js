@@ -151,38 +151,76 @@ export const step = (title, rule, worked, why) => el('div', { class: 'fin-step' 
 /* -------------------------------------------------------------- chart */
 
 /**
- * Lines over time. series: [{ name, points: [[x, y]], dashed }]. x is months.
- * Colours come from the theme, so it reads in light and dark.
+ * Where a line crosses zero, or where one line crosses another (a - b), first time:
+ * the x between two points, found by straight-line interpolation. Null if it never does.
  */
-export function lineChart(series, { label }) {
-  const W = 640; const H = 220; const L = 64; const B = 26; const T = 10; const R = 10;
+export function crossing(points, other = null) {
+  const d = other ? points.map(([x, y], i) => [x, y - (other[i]?.[1] ?? 0)]) : points;
+  for (let i = 1; i < d.length; i += 1) {
+    const [xa, ya] = d[i - 1]; const [xb, yb] = d[i];
+    if (ya === 0) return xa;
+    if (Math.sign(ya) !== Math.sign(yb) && yb !== 0) return xa + ((xb - xa) * ya) / (ya - yb);
+  }
+  return null;
+}
+
+/** Short amounts for a chart's axis: R24.5m, R850k, −R216k, R900. */
+export const short = (n) => { const a = Math.abs(n); const s = n < 0 ? '−' : ''; return a >= 1e6 ? `${s}R${Number((a / 1e6).toFixed(a >= 1e7 ? 0 : 1))}m` : a >= 1e3 ? `${s}R${Math.round(a / 1e3)}k` : `${s}R${Math.round(a)}`; };
+
+/** "in year 7" / "after 8 months" for a month count on a chart. */
+export const whenLabel = (m) => (m >= 12 ? `year ${Math.ceil(m / 12)}` : `month ${Math.max(1, Math.ceil(m))}`);
+
+/**
+ * Lines over time, telling one story. series: [{ name, points: [[x, y]], dashed }], x in
+ * months. marks: [{ x, label }] - break-even points and other moments, drawn as labelled
+ * upright lines. A zero line is drawn whenever the lines go below zero. `story` is one
+ * sentence under the chart saying what to look at. Colours come from the theme.
+ */
+export function lineChart(series, { label, marks = [], story = null }) {
+  const W = 640; const H = 240; const L = 64; const B = 26; const T = 14; const R = 12;
   const xs = series.flatMap((s) => s.points.map((p) => p[0]));
   const ys = series.flatMap((s) => s.points.map((p) => p[1]));
   const x0 = Math.min(...xs); const x1 = Math.max(...xs) || 1;
-  const y0 = Math.min(0, ...ys); const y1 = Math.max(...ys) || 1;
+  const y0 = Math.min(0, ...ys); const y1 = Math.max(0, ...ys) || 1;
   const X = (x) => L + ((x - x0) / (x1 - x0 || 1)) * (W - L - R);
   const Y = (y) => T + (1 - (y - y0) / (y1 - y0 || 1)) * (H - T - B);
   const colours = ['var(--accent-strong)', 'var(--text-dim)', 'var(--warn)', 'var(--ok)'];
-  const ticks = [y0, (y0 + y1) / 2, y1];
+  // Axis amounts short (R2.4m, R850k); a tick too close to zero is left out so labels never overlap.
+  const ticks = (y0 < 0 && y1 > 0 ? [y0, 0, y1] : [y0, (y0 + y1) / 2, y1]).filter((t) => t === 0 || !(y0 < 0 && y1 > 0) || Math.abs(Y(t) - Y(0)) >= 16);
   const whole = [...new Set(xs.filter((x) => x % 12 === 0))];
   const years = whole.length > 1 ? whole : [x0, x1];
+  const shown = marks.filter((m) => m && Number.isFinite(m.x) && m.x >= x0 && m.x <= x1);
   return el('figure', { class: 'fin-chart', style: { margin: 0 } }, [
-    svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': label, width: '100%' }, [
+    svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': [label, ...shown.map((m) => m.label)].join('. '), width: '100%' }, [
       ...ticks.map((t) => svg('g', {}, [
-        svg('line', { x1: L, x2: W - R, y1: Y(t), y2: Y(t), stroke: 'var(--border)', 'stroke-width': 1 }),
-        svg('text', { x: L - 6, y: Y(t) + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--text-dim)' }, [rand(t)]),
+        svg('line', { x1: L, x2: W - R, y1: Y(t), y2: Y(t), stroke: t === 0 && y0 < 0 ? 'var(--text-dim)' : 'var(--border)', 'stroke-width': t === 0 && y0 < 0 ? 1.5 : 1 }),
+        svg('text', { x: L - 6, y: Y(t) + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--text-dim)' }, [short(t)]),
       ])),
       ...years.filter((x, i) => years.length < 14 || i % Math.ceil(years.length / 10) === 0).map((x) => svg('text', { x: X(x), y: H - 8, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--text-dim)' }, [x % 12 === 0 ? `${x / 12}y` : `${x}m`])),
       ...series.map((s, i) => svg('polyline', {
         points: s.points.map(([x, y]) => `${X(x).toFixed(1)},${Y(y).toFixed(1)}`).join(' '),
         fill: 'none', stroke: colours[i % colours.length], 'stroke-width': 2.5, 'stroke-dasharray': s.dashed ? '6 4' : null,
       })),
+      // Marks last, on top; labels step down so two close together do not overlap.
+      ...shown.map((m, i) => {
+        const x = X(m.x); const right = x > W * 0.62;
+        return svg('g', {}, [
+          svg('line', { x1: x, x2: x, y1: T, y2: H - B, stroke: 'var(--text)', 'stroke-width': 1, 'stroke-dasharray': '3 3' }),
+          svg('text', { x: right ? x - 5 : x + 5, y: T + 10 + (i % 3) * 14, 'text-anchor': right ? 'end' : 'start', 'font-size': 12, 'font-weight': 700, fill: 'var(--text)' }, [m.label]),
+        ]);
+      }),
     ]),
-    el('figcaption', { class: 'row small', style: { gap: 'var(--space-3)' } }, series.map((s, i) => el('span', {}, [
-      el('span', { class: 'fin-key', style: { background: colours[i % colours.length] } }), s.name,
-    ]))),
+    el('figcaption', { class: 'stack', style: { gap: 'var(--space-1)' } }, [
+      el('div', { class: 'row small', style: { gap: 'var(--space-3)' } }, series.map((s, i) => el('span', {}, [
+        el('span', { class: 'fin-key', style: { background: colours[i % colours.length] } }), s.name,
+      ]))),
+      story ? el('p', { class: 'small', style: { margin: 0 }, text: story }) : null,
+    ]),
   ]);
 }
+
+/** A chart with its own heading, as a panel - the graphs that tell the story. */
+export const chartPanel = (title, chart) => el('div', { class: 'panel stack' }, [el('h2', { text: title, style: { margin: 0 } }), chart]);
 
 /* ------------------------------------------------ saving and comparing */
 

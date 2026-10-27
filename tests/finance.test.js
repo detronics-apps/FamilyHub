@@ -195,3 +195,18 @@ test('D-067 rent or buy: same money each month, and when buying gets ahead', () 
   // A house that never grows in value and costs far more each month never gets ahead.
   assert.equal(rentOrBuy({ ...v, growthPct: 0, rent: 3000 }).breakeven, null);
 });
+
+test('D-067 a bond can run any number of years, not only 20, 25 or 30', () => {
+  const b = bond({ price: 1500000, deposit: 600000, ratePct: 10.75, termYears: 14 });
+  assert.equal(b.termMonths, 168);
+  near(b.instalment, payment(900000, 0.1075 / 12, 168));
+  assert.equal(bond({ price: 1500000, deposit: 600000, ratePct: 10.75, termYears: 14.5 }).termMonths, 174);
+});
+
+test('D-073 break-even points: where a line crosses zero, or crosses another', async () => {
+  const { crossing, whenLabel } = await import('../js/apps/finance/pod.js');
+  near(crossing([[0, -10], [12, 10]]), 6);
+  assert.equal(crossing([[0, 5], [12, 10]]), null);
+  near(crossing([[0, 0], [12, 10]], [[0, 5], [12, 5]]), 6);
+  assert.equal(whenLabel(30), 'year 3');
+});

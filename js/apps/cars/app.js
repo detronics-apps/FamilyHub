@@ -5,7 +5,7 @@
 import { el } from '../../ui/dom.js';
 import { loading, failure } from '../kit.js';
 import { carCost, CAR_DEFAULTS, REFERENCE, sensitivity, CAR_NUDGES, monthlyRate } from '../finance/maths.js';
-import { levelBar, shows, draft, loadDraft, inputsPanel, assumed, stat, sums, step, lineChart, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
+import { levelBar, shows, draft, loadDraft, inputsPanel, assumed, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => r.title, prefix: 'car' });
 const KIND = 'car';
@@ -91,6 +91,7 @@ function results(d) {
         { label: 'Total', value: c.total, total: true, note: 'The same total, counted the other way - repaying the loan is paying for the car, not a cost on top of it.' },
       ]),
     ]),
+    carStory(c),
     assumed(FIELDS, d),
     levers(c, v),
   ];
@@ -108,6 +109,20 @@ function meaning(c, v) {
   if (c.resale > c.price) lines.push(`Selling for more than you paid is not a profit here: interest, fees and running costs still make owning it cost ${rand(c.total)}.`);
   if (c.runningFirstMonth === 0) lines.push('Running costs are not counted yet. Add insurance, fuel and upkeep for the full picture.');
   return lines;
+}
+
+/** What the car is worth against what is still owed on it - and when that turns. */
+function carStory(c) {
+  if (!c.financed) return null;
+  const value = c.timeline.map((t) => [t.month, t.value]); const owed = c.timeline.map((t) => [t.month, t.owed]);
+  const turn = crossing(value, owed);
+  return chartPanel('What it is worth against what you owe', lineChart([
+    { name: 'What it is worth', points: value },
+    { name: 'Still owed on the loan', points: owed, dashed: true },
+  ], { label: 'The car’s value against the loan still owed, month by month',
+    marks: [turn != null && owed[1]?.[1] > value[1]?.[1] ? { x: turn, label: `Worth more than owed from ${whenLabel(turn)}` } : null,
+      c.termMonths <= c.months ? { x: c.termMonths, label: 'Loan paid off' } : { x: c.months, label: 'Sold' }],
+    story: 'While the line for what is owed is above the value, selling the car would not settle the loan.' }));
 }
 
 /** What would change the answer, worked out rather than guessed. */

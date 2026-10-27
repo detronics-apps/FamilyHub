@@ -631,6 +631,23 @@ purpose (saved): show people what they have not thought of, and let them put the
   marked not counted), what moves the answer most, and year by year.
 - Tested: a home growing exactly as fast as after-tax investments, with no costs, comes out level.
 
+**D-073 Graphs that tell the story (owner, 2026-10-27).** "Graphs that tell a story, that make
+sense": every Finance tool now has one graph in plain view (Simple included), with the moments that
+matter marked as labelled upright lines and a one-line story under it. Own or rent: ahead or behind
+by how long you stay ("Owning ahead from year 5", and the stay chosen) - drawn only as many years as
+the story needs - plus the home over time (its value, the bond still owed, and what owning has cost,
+marked where it becomes worth more than spent, and when the bond is paid off) and, in Advanced, each
+month's cost of owning against renting (rent dearer from…, bond paid off). A home: cost a month by
+how long you stay. Bond: each instalment's interest against capital, and when more pays off the bond.
+Cars: worth against owed. Compound interest: when growth is bigger than all put in. Job offers: ahead
+of the job you have, after moving costs, with when it gets ahead. Children: what falls due each year,
+the biggest marked. Money plan: free against needed, with the first goal short and when commitments
+outgrow income. Axis amounts are short (R2.4m, R850k); the turning points are found by crossing().
+
+**D-067, a bond of any length (owner, 2026-10-27).** The bond term was three chips (20, 25, 30
+years); the owner's own bond was 14 years. It is now any number of years (halves too), in Bond,
+A home and Own or rent; the Bond tool's "what would change it" shows 5 years shorter and longer.
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).

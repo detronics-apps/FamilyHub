@@ -423,6 +423,7 @@ export const FEATURES = [
   { name: 'Calorie Checker', where: 'Meals › Calorie Checker', what: 'Calories and nutrients in the amount you actually eat, from 13,000 foods.' },
   { name: 'One shopping list', where: 'Home › Shopping', what: 'Meals, the week’s plan and chore supplies can all be sent to it; anything else can be typed in.' },
   { name: 'Portions and leftovers', where: 'Meals › Cookbook › an item', what: 'How much each person might eat, and how many servings to make with or without leftovers.' },
+  { name: 'Graphs with the turning points', where: 'Every Finance tool', what: 'Each tool has a graph that tells its story, with the moments that matter marked: when owning gets ahead of renting, when a car is worth more than is owed, when more of the bond pays it off than interest.' },
   { name: 'Own or rent', where: 'Finance › Homes › Own or rent', what: 'Buy or rent, or keep or sell - with your own maintenance, upgrades that add value, your home’s own growth, investments after tax, and what each side quietly assumes.' },
   { name: 'Variations', where: 'Cookbook › a meal › Variations', what: 'One meal made several ways - cheese, pepper or mushroom sauce from one white sauce - with one set of ratings, and shopping that follows the way chosen.' },
   { name: 'Money plan', where: 'Finance › Money plan', what: 'Every goal on one timeline, brought in from Holidays, Cars, Homes, Children’s future and savings goals - what to put aside each month, and where it does not fit.' },
