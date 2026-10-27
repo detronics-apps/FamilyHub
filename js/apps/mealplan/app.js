@@ -20,7 +20,7 @@ import {
   MEALS, MEAL_LABEL, WEEKDAYS, normaliseRecipe, recipeSummary, formatIngredient, parseIngredient,
   weekStart, weekDays, normalisePlan, slotAt, setSlot, updateSlot, copyPlan, planId, planShopping, slotNeeds,
   prepared, reserved, leftoverMeals, setReservation, addReservation, SUMMARY_VERSION, slotBatch, collectRecipes,
-  POOL, normalisePool, addToPool, moveMeal, addSlot, mealsBetween, mondaysBetween,
+  POOL, normalisePool, addToPool, moveMeal, addSlot, mealsBetween, mondaysBetween, goodFor,
 } from '../meals/logic.js';
 import { ingredientEditor } from '../../ui/ingredient-editor.js';
 import { recipeFacts, passes, emptyFilters, describeFilters, PROTEIN, CARB, GROUP, TRIAL, MEAL_TAGS } from '../meals/facts.js';
@@ -225,13 +225,24 @@ async function applyMove(hub, from, to) {
   hub.invalidate('plan:');
 }
 
-/** A planned meal as something to drag: a link to open it, or drag it to another place. */
+/** What each Cookbook item is good for (its B, L, D, S flags), by id - empty until the Cookbook is read. */
+const goodForOf = (hub) => {
+  const l = loadSummaries(hub);
+  return l.data ? new Map(l.data.map((x) => [x.id, goodFor(x.tags ?? [])])) : new Map();
+};
+
+/** The little B, L, D, S circles: which meals the item is good for, as set in the Cookbook. */
+const flags = (meals) => (meals.length ? el('span', { class: 'flags', 'aria-label': `Good for ${meals.map((m) => MEAL_LABEL[m].toLowerCase()).join(', ')}` },
+  meals.map((m) => el('span', { class: `flag flag--${m}`, text: MEAL_LABEL[m][0], title: `Good for ${MEAL_LABEL[m].toLowerCase()}` }))) : null);
+
+/** A planned meal as something to drag: a link to open it, or drag it to another place. Its flags go with it. */
 function mealChip(hub, key, s, { short = false } = {}) {
   const kind = MEAL_LABEL[s.meal] ?? 'Not sorted yet';
+  const good = s.recipeId ? goodForOf(hub).get(s.recipeId) ?? [] : [];
   return draggable(el('a', {
     class: `meal-chip meal-chip--${s.meal || 'unsorted'}`, href: hub.href('slot', ref(key, s.id)), 'data-field': `chip:${s.id}`,
-    title: `${kind}: ${s.title} - drag to move, or open it`,
-  }, [short ? el('span', { class: 'meal-chip__kind', text: kind[0] }) : null, el('span', { class: 'meal-chip__title', text: s.title })]), { key, id: s.id, meal: s.meal });
+    title: `${kind}: ${s.title}${good.length ? ` (good for ${good.map((m) => MEAL_LABEL[m].toLowerCase()).join(', ')})` : ''} - drag to move, or open it`,
+  }, [short ? el('span', { class: 'meal-chip__kind', text: kind[0] }) : null, el('span', { class: 'meal-chip__title', text: s.title }), short ? null : flags(good)]), { key, id: s.id, meal: s.meal });
 }
 
 /** One group of planned meals - gathered (not sorted) or a meal - that meals can be dragged into. */
@@ -343,7 +354,9 @@ function calendar(hub, param) {
           ...here.map((s) => mealChip(hub, monday, s)),
           ...lo.map((l) => el('a', { class: 'small', href: hub.href('slot', ref(l.from.week, l.from.slotId)), 'data-field': `leftover:${i}:${meal}` }, [el('span', { class: 'badge', text: 'Leftovers' }), ` ${l.title}`])),
           !here.length || meal === 'snack' ? el('a', { class: 'cal-add', href: hub.href('choose', `${monday}~${i}~${meal}`), text: '+', title: `Plan ${MEAL_LABEL[meal].toLowerCase()} for ${WEEKDAYS[i]}`, 'aria-label': `Plan ${MEAL_LABEL[meal].toLowerCase()} for ${WEEKDAYS[i]}`, 'data-field': `slot:${i}:${meal}` }) : null,
-        ]), (dd) => applyMove(hub, dd, { key: monday, day: i, meal }));
+        // A meal keeps its own (a lunch stays lunch) when its row is not showing - with only
+        // dinners showing, the day is the target. When its row is there, the row dropped on decides.
+        ]), (dd) => applyMove(hub, dd, { key: monday, day: i, meal: dd.meal && !shown.includes(dd.meal) ? dd.meal : meal }));
       })),
     ])))]);
   } else {
@@ -711,6 +724,12 @@ function slotScreen(hub, monday, slotId) {
     ]) : null,
     rec ? el('p', { class: 'small' }, ['From ', el('a', { href: mealHref(rec.id, here), text: rec.title }), ` · ${!rec.tried ? 'not tried yet' : rec.rating == null ? 'tried, not rated' : `family rating ${rec.rating}/10`}. Changes here are for this meal only.`])
       : el('p', { class: 'small muted', text: 'A meal typed into the plan - not saved in the Cookbook.' }),
+    // Good for: the flags it carries around the planner - set in the Cookbook, often after cooking it.
+    rec ? el('div', { class: 'row', 'data-field': 'slot-goodfor' }, [
+      el('span', { class: 'small', text: 'Good for' }),
+      flags(goodFor(rec.tags)) ?? el('span', { class: 'small muted', text: 'not said yet' }),
+      el('a', { class: 'btn btn-small', href: `#/meals/goodfor/${encodeURIComponent(rec.id)}/${encodeURIComponent(JSON.stringify({ back: here, had: slot.meal || null }))}`, text: 'Change', title: 'Say which meals it is good for - breakfast, lunch, dinner, snack', 'data-field': 'goodfor-change' }),
+    ]) : null,
 
     el('div', { class: 'panel stack', 'aria-label': 'Servings and leftovers' }, [
       el('h2', { text: 'Servings and leftovers', style: { margin: 0 } }),

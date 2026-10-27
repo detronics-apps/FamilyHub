@@ -394,7 +394,10 @@ apps go to the top in two drags. The arrows stay for keyboards.
 starts with gathering meals with no meal and no day ("what are we in the mood for?" - added, or
 suggested); a gathered meal is stored with meal ''. Step two drags each into Breakfasts, Lunches,
 Dinners or Snacks (or a planned meal's page has a Meal choice, for anyone who cannot drag). Step
-three is Assign. Dropped on a month day without a meal, a meal becomes dinner. Drag fix: meal chips
+three is Assign. A meal dropped on a day keeps the meal it was sorted into (a lunch stays lunch)
+when that meal's row is not showing - with only dinners showing, the day is the target; when its
+row is showing, the row it is dropped on decides. Dropped on a month day without a meal, it becomes
+dinner. Drag fix: meal chips
 are links, and a link has the browser's own drag, which cancelled ours on a real mouse - draggable
 items now switch it off.
 
@@ -405,6 +408,14 @@ them (`shop-trip`). Cook today shows today's meals and, in a bar at the bottom, 
 shop (or the next 7 days when today is not in one). Dragging a meal onto today's swaps the two;
 dragging today's onto another day does the same. While dragging, every place a thing can be dropped
 is outlined and the one under the pointer lights up.
+
+**D-057 Good-for flags travel with a meal (owner, 2026-10-27).** Every meal chip in Meal Planner
+carries small B, L, D, S circles for what the Cookbook says it is good for (its "Good for" tags; an
+older "supper" counts as dinner), so sorting and assigning is easier and the flags stay on as it is
+moved. A planned meal's page shows them with "Change", which opens a Cookbook screen to set them -
+often after cooking it ("this was a nice dinner"). The Cookbook writes it; the planner only links.
+Alongside: a save in one mini-app now also forgets what other mini-apps had loaded, so a change made
+in the Cookbook shows in Meal Planner straight away instead of after a reload.
 
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,

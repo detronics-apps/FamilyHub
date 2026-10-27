@@ -17,7 +17,7 @@ import {
   ALLERGENS, NUTRIENTS, normaliseRecipe, recipeSummary, recipeText, nutritionRows,
   formatIngredient, TYPES, typeOf, typeName, keepFoodLinks, mealFromPlate, mealFromLink,
   PREFS, ratingMeaning, ratingState, setRating, setTried, setPref, addNote, SUMMARY_VERSION,
-  batchMultiplier, splitOwn, mergeOwn, collectRecipes, scaleCarefully, combineIngredients,
+  batchMultiplier, splitOwn, mergeOwn, collectRecipes, scaleCarefully, combineIngredients, goodFor, setGoodFor,
 } from './logic.js';
 import { ingredientEditor, UNIT_OPTIONS } from '../../ui/ingredient-editor.js';
 import { mealNutrition, batchGrams } from '../../meal-nutrition.js';
@@ -56,6 +56,7 @@ export function render(hub, route) {
   if (screen === 'new') return editScreen(hub, null, route.rest[0] ?? null);
   if (screen === 'edit') return editScreen(hub, route.rest[0], route.rest[1] ?? null);
   if (screen === 'note') return noteScreen(hub, route.rest[0], route.rest[1] ?? '');
+  if (screen === 'goodfor') return goodForScreen(hub, route.rest[0], route.rest[1] ?? '');
   // The week and the shopping list moved to their own mini-apps (This Week, Shopping).
   if (screen === 'week' || screen === 'shopping') {
     return el('p', { class: 'panel' }, [`That has moved: `, el('a', { href: screen === 'week' ? '#/mealplan' : '#/shopping', text: screen === 'week' ? 'Meal Planner' : 'Shopping' }), '.']);
@@ -349,6 +350,36 @@ function noteScreen(hub, id, param) {
         on: { click: async () => { if (await saveRecord(hub, recipes(hub), addNote(rec, note.text, { from: 'occurrence', occasion: note.occasion, at: hub.today() }))) { hub.ui.notice('Added to the recipe’s notes.'); hub.open(note.back || hub.href('item', id)); } } },
       }),
       el('a', { class: 'btn', href: note.back || hub.href('item', id), text: 'Cancel' }),
+    ]),
+  ]);
+}
+
+/** After cooking it (from Meal Planner): say which meals it is good for - the B, L, D and S flags on the planner. */
+function goodForScreen(hub, id, param) {
+  let link = null;
+  try { link = JSON.parse(param); } catch { link = null; }
+  const r = hub.use(`recipe:${id}`, () => recipes(hub).get(id));
+  if (r.loading) return loading();
+  if (r.error) return failure(r.error);
+  if (!r.data) return el('p', { class: 'panel', text: 'That meal is not in the Cookbook.' });
+  const rec = normaliseRecipe(r.data);
+  const back = link?.back || hub.href('item', id);
+  if (ui.goodFor?.id !== id) ui.goodFor = { id, meals: goodFor(rec.tags) };
+  const st = ui.goodFor;
+  return el('section', { class: 'stack' }, [
+    el('h1', { text: `What is ${rec.title} good for?` }),
+    link?.had ? el('p', { class: 'small muted', text: `You had it for ${MEAL_TAGS[link.had]?.toLowerCase() ?? link.had}.` }) : null,
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Good for' }, Object.entries(MEAL_TAGS).map(([k, t]) => el('button', {
+      class: 'chip', type: 'button', 'aria-pressed': String(st.meals.includes(k)), text: t, 'data-field': `goodfor:${k}`,
+      on: { click: () => { st.meals = st.meals.includes(k) ? st.meals.filter((x) => x !== k) : [...st.meals, k]; hub.render(); } },
+    }))),
+    el('p', { class: 'small muted', text: 'Shown as little B, L, D and S flags on the meal in Meal Planner, and used when looking for a breakfast, lunch, supper or snack.' }),
+    el('div', { class: 'row' }, [
+      el('button', {
+        class: 'btn btn-primary', type: 'button', text: 'Save', 'data-field': 'goodfor-save',
+        on: { click: async () => { if (await saveRecord(hub, recipes(hub), setGoodFor(rec, st.meals))) { ui.goodFor = null; hub.ui.notice(`Saved what ${rec.title} is good for.`); hub.open(back); } } },
+      }),
+      el('a', { class: 'btn', href: back, text: 'Cancel', on: { click: () => { ui.goodFor = null; } } }),
     ]),
   ]);
 }

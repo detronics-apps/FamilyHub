@@ -127,8 +127,8 @@ export const HOWTOS = [
   ] },
   { id: 'meals', title: 'Plan the meals and make the shopping list', steps: [
     'Open Meals, then Meal Planner. Step 1, gather: press "+ Add" and choose a meal - or just type one, like "Carrots" - or press "Suggest meals" for a mix of favourites and new ones. No need to decide which meal or which day yet.',
-    'Step 2, sort: drag each gathered meal into Breakfasts, Lunches, Dinners or Snacks (on a phone, press and hold first). Or open a meal and choose its meal there.',
-    'Press Assign: the planned meals sit beside a calendar. Drag each one onto a day (on a phone, press and hold first) - a week at a time, or a whole month. Drag one back to the list to take it off its day.',
+    'Step 2, sort: drag each gathered meal into Breakfasts, Lunches, Dinners or Snacks (on a phone, press and hold first). Or open a meal and choose its meal there. The little B, L, D and S circles on a meal say what it is good for - open the meal and press Change next to "Good for" to set them, for example after cooking it.',
+    'Press Assign: the planned meals sit beside a calendar. Drag each one onto a day (on a phone, press and hold first) - a week at a time, or a whole month. It keeps the meal it was sorted into (a lunch stays lunch) unless you drop it on another meal’s row. Drag one back to the list to take it off its day.',
     'Calendar shows just the calendar. Drag a meal to another day to swap them; tap a meal to open it, change it, or rate it.',
     'Press "To Shopping" and say which days you are shopping for - from the day you shop, say Wednesday, for 7 days. Their meals’ amounts are added up, scaled to the servings you chose; untick what you already have.',
     'On the day, open Cook today: today’s meals, and at the bottom every meal of that shop. In the mood for another one? Drag it onto today’s and the two swap days. Where you can drop is outlined, and the place under your finger lights up.',

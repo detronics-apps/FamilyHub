@@ -7,7 +7,7 @@ import {
   normaliseRecipe, recipeSummary, ratingState, setRating, setTried, setPref, addNote, ratingMeaning,
   normalisePlan, setSlot, updateSlot, prepared, leftoverMeals, setReservation, addReservation, slotNeeds, ingredientsForPlan, scaleCarefully,
   batchMultiplier, slotBatch, expandIngredients, collectRecipes, wholeOnly,
-  POOL, normalisePool, addToPool, moveMeal, slotAt, mealsBetween, mondaysBetween,
+  POOL, normalisePool, addToPool, moveMeal, slotAt, mealsBetween, mondaysBetween, goodFor, setGoodFor,
 } from '../js/apps/meals/logic.js';
 import { recipeFacts, passes, emptyFilters, describeFilters } from '../js/apps/meals/facts.js';
 import { proposeWeek, analyseWeek, optimiseWeek, additionFor, mixGroup } from '../js/apps/mealplan/logic.js';
@@ -70,6 +70,13 @@ test('planned meals: plan them first, then drag them onto days - and between day
   // Off a day, straight into another group.
   apply(moveMeal(get, { from: { key: MONDAY, id: 'c' }, to: { key: POOL, meal: '' } }));
   assert.equal(store[POOL].slots.find((s) => s.id === 'c').meal, '');
+});
+
+test('what a meal is good for: shown as flags, and set after it was cooked', () => {
+  assert.deepEqual(goodFor(['quick', 'supper', 'lunch']), ['lunch', 'dinner'], 'meal order; supper is dinner');
+  assert.deepEqual(goodFor([]), []);
+  const r = setGoodFor(normaliseRecipe({ title: 'Wraps', tags: ['quick', 'supper', 'lunch'] }), ['dinner']);
+  assert.deepEqual(r.tags, ['dinner', 'quick'], 'lunch taken off, supper written as dinner, other tags kept');
 });
 
 test('a shopping trip from Wednesday to Tuesday takes the meals of two weeks', () => {

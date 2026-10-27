@@ -104,8 +104,16 @@ export function createHubFactory(ctx) {
       open: (hash) => { if (/^#\/[a-z][a-z0-9.-]*(\/|$)/.test(hash)) ctx.go(hash); },
       render: () => ctx.render(),
       use: res.use,
-      /** Forget loaded data (after a change) and redraw, so the screen shows the new state. */
-      invalidate: (prefix) => { res.invalidate(prefix); ctx.render(); },
+      /**
+       * Forget loaded data (after a change) and redraw, so the screen shows the new state.
+       * Other mini-apps may show this app's records too (Meal Planner shows the Cookbook's),
+       * so what they loaded is forgotten as well - they read it again when next opened.
+       */
+      invalidate: (prefix) => {
+        res.invalidate(prefix);
+        for (const [id, r] of resources) if (id !== manifest.id) r.invalidate();
+        ctx.render();
+      },
       ui: {
         notice(text, level = 'ok', action = null) {
           if (!has('notify')) throw new Error(`${manifest.name} may not show notices.`);

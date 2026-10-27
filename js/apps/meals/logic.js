@@ -166,6 +166,11 @@ export function addNote(r, text, { from = 'recipe', occasion = '', at = new Date
 
 export const isRecipe = (r) => typeOf(r) === 'recipe';
 
+/** Which meals an item is good for (its "Good for" tags; an older "supper" counts as dinner), in meal order. */
+export const goodFor = (tags = []) => MEALS.filter((m) => tags.includes(m) || (m === 'dinner' && tags.includes('supper')));
+/** Set what an item is good for, keeping its other tags. */
+export const setGoodFor = (r, meals) => ({ ...r, tags: [...MEALS.filter((m) => meals.includes(m)), ...r.tags.filter((t) => !MEALS.includes(t) && t !== 'supper')] });
+
 /** Index version: an index written before this lacks the facts and feedback below and is rebuilt once. */
 export const SUMMARY_VERSION = 5;
 
