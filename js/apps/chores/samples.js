@@ -79,6 +79,28 @@ export const SAMPLE_ROOMS = [
     c('Check the cot and furniture are safe', f('month'), 5, 'low', { importance: 'high', instructions: 'Screws tight, nothing loose, tall furniture fixed to the wall, cords out of reach.' }),
     c('Sort out clothes that no longer fit', f('month', 3), 30, 'medium'),
   ] },
+  { id: 'kids', name: 'Kids’ room', hint: 'A playroom, or a room without beds.', chores: [
+    c('Pick up the toys', DAILY, 10, 'low'),
+    c('Put the toys back in their boxes', WEEKLY, 15, 'low'),
+    c('Vacuum or sweep the floor', WEEKLY, 10, 'medium'),
+    c('Mop the floor', f('week', 2), 10, 'medium'),
+    c('Wipe the table and chairs', WEEKLY, 5, 'low'),
+    c('Sort out broken toys and missing pieces', f('month', 3), 30, 'medium', { kind: 'improvement', optional: true }),
+  ] },
+  { id: 'steps', name: 'Steps', hint: 'Stairs inside, or the steps outside.', chores: [
+    c('Sweep the steps', WEEKLY, 10, 'low'),
+    c('Mop or scrub the steps', f('week', 2), 15, 'medium'),
+    c('Wipe the handrail', WEEKLY, 3, 'low'),
+    c('Clear what is left on the steps', DAILY, 2, 'low'),
+  ] },
+  { id: 'workshop', name: 'Workshop', hint: 'A work or company room: parts, tools and stock.', chores: [
+    c('Put the tools away', DAILY, 10, 'low'),
+    c('Sweep the floor', WEEKLY, 15, 'medium'),
+    c('Sort and pack away the parts', WEEKLY, 20, 'medium'),
+    c('Wipe down the workbench', WEEKLY, 10, 'low'),
+    c('Take out the rubbish and offcuts', WEEKLY, 5, 'low'),
+    c('Check the stock that is running low', f('month'), 15, 'low'),
+  ] },
   { id: 'laundry', name: 'Laundry', hint: 'Washing machine in a bathroom? Choose that room under Into.', chores: [
     c('Wash the clothes', f('day', 2), 5, 'low', { supplies: ['Washing powder'] }),
     c('Hang up the washing', f('day', 2), 10, 'low'),

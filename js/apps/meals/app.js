@@ -16,6 +16,7 @@ import { loading, failure, recordForm, saveRecord } from '../kit.js';
 import {
   ALLERGENS, NUTRIENTS, normaliseRecipe, recipeSummary, recipeText, nutritionRows,
   formatIngredient, TYPES, typeOf, typeName, keepFoodLinks, mealFromPlate, mealFromLink,
+  variationOf, asVariation, variationSays,
   PREFS, ratingMeaning, ratingState, setRating, setTried, setPref, addNote, SUMMARY_VERSION,
   batchMultiplier, splitOwn, mergeOwn, collectRecipes, scaleCarefully, combineIngredients, goodFor, setGoodFor,
 } from './logic.js';
@@ -28,7 +29,7 @@ import { sendHref } from '../shopping/logic.js';
 
 import { inSystem } from '../../units.js';
 
-const ui = { query: '', avoid: [], kind: 'all', maxMinutes: null, servings: {}, limit: 50, who: {}, leftovers: {} };
+const ui = { query: '', avoid: [], kind: 'all', maxMinutes: null, servings: {}, limit: 50, who: {}, leftovers: {}, variation: {} };
 const TIMES = [[null, 'Any time'], [20, '≤ 20 min'], [30, '≤ 30 min'], [60, '≤ 1 hour']];
 const KINDS = { all: 'All', ...TYPES };
 // "an item", "a meal", "a recipe", "an own ingredient"
@@ -56,6 +57,7 @@ export function render(hub, route) {
   if (screen === 'new') return editScreen(hub, null, route.rest[0] ?? null);
   if (screen === 'edit') return editScreen(hub, route.rest[0], route.rest[1] ?? null);
   if (screen === 'note') return noteScreen(hub, route.rest[0], route.rest[1] ?? '');
+  if (screen === 'variations') return variationsScreen(hub, route.rest[0]);
   if (screen === 'goodfor') return goodForScreen(hub, route.rest[0], route.rest[1] ?? '');
   // The week and the shopping list moved to their own mini-apps (This Week, Shopping).
   if (screen === 'week' || screen === 'shopping') {
@@ -124,15 +126,18 @@ function recipeScreen(hub, id, back) {
   if (r.error) return failure(r.error);
   if (!r.data) return el('div', { class: 'panel empty' }, [el('p', { text: 'This item no longer exists.' }), el('a', { class: 'btn', href: hub.href('recipes'), text: 'The Cookbook' })]);
   const rec = normaliseRecipe(r.data);
+  // The variation being looked at (D-071): its ingredients, method and title; ratings stay the recipe's.
+  const vid = variationOf(rec, ui.variation[id])?.id ?? null;
+  const shown = asVariation(rec, vid);
   const serves = ui.servings[id] ?? rec.servings;
   const setServes = (n) => { ui.servings[id] = Math.max(1, n); hub.render(); };
   const rows = nutritionRows(rec).filter((x) => x.known);
   // Our own items used in it (home-made mayo), however deep - loaded before anything is worked out.
-  const subs = hub.use(`subs:${id}:${r.data.rev ?? 0}`, () => collectRecipes(rec.ingredients, (x) => recipes(hub).get(x)));
+  const subs = hub.use(`subs:${id}:${r.data.rev ?? 0}:${vid}`, () => collectRecipes(shown.ingredients, (x) => recipes(hub).get(x)));
   if (subs.loading) return loading();
   const getSub = (x) => subs.data?.get(x) ?? null;
   // One calculation for this page's calories, chart and per-person figures (js/meal-nutrition.js).
-  const n = f.data && rec.ingredients.length ? mealNutrition(rec.ingredients, rec.servings, f.data, { recipes: subs.data }) : null;
+  const n = f.data && shown.ingredients.length ? mealNutrition(shown.ingredients, rec.servings, f.data, { recipes: subs.data }) : null;
   const kcal = n?.kcal.known && n.kcal.complete ? n.kcal.serving : null;
   const original = rec.variantOf ? hub.use(`recipe:${rec.variantOf}`, () => recipes(hub).get(rec.variantOf)) : null;
 
@@ -140,13 +145,20 @@ function recipeScreen(hub, id, back) {
     backLink(back) ?? el('a', { href: hub.href('recipes'), class: 'small', text: '‹ Cookbook' }),
     el('article', { class: 'panel stack' }, [
       el('div', { class: 'row' }, [
-        el('h1', { text: rec.title, style: { margin: 0 } }), typeBadge(rec.type),
+        el('h1', { text: shown.title, style: { margin: 0 } }), typeBadge(rec.type),
       ]),
+      rec.variations.length ? el('div', { class: 'stack', style: { gap: 'var(--space-1)' } }, [
+        el('div', { class: 'chipset', role: 'group', 'aria-label': 'Variations' }, [{ id: null, name: 'As is' }, ...rec.variations].map((v) => el('button', {
+          class: 'chip', type: 'button', 'aria-pressed': String(v.id === vid), 'data-field': `variation:${v.id ?? 'none'}`, text: v.name,
+          on: { click: () => { ui.variation[id] = v.id; hub.render(); } },
+        }))),
+        shown.variation ? el('p', { class: 'small muted', style: { margin: 0 }, text: `${shown.variation.name}: ${variationSays(shown.variation)}.` }) : null,
+      ]) : null,
       rec.yield.qty ? el('p', { class: 'small', style: { margin: 0 }, text: `Makes ${fmtQtyText(rec.yield.qty * (serves / rec.servings))} ${rec.yield.unit}${serves !== rec.servings ? ` (for ${serves} servings)` : ''}.` }) : null,
       rec.type === 'own' && !rec.yield.qty ? el('p', { class: 'small', text: 'Edit it and say what one batch makes (e.g. 300 ml), so other entries can use part of it.' }) : null,
       rec.variantOf ? el('p', { class: 'small' }, ['A version of ', el('a', { href: hub.href('item', rec.variantOf), text: original?.data?.title ?? 'another item' }), ' - its notes and ratings are its own.']) : null,
       rec.description ? el('p', { text: rec.description }) : null,
-      el('p', { class: 'small muted', text: [rec.prepMinutes != null ? `prep ${rec.prepMinutes} min` : null, rec.cookMinutes != null ? `cook ${rec.cookMinutes} min` : null, rec.tags.join(', ') || null, rec.allergens.length ? `contains ${rec.allergens.join(', ')}` : null].filter(Boolean).join(' · ') }),
+      el('p', { class: 'small muted', text: [rec.prepMinutes != null ? `prep ${rec.prepMinutes} min` : null, rec.cookMinutes != null ? `cook ${rec.cookMinutes} min` : null, rec.tags.join(', ') || null, rec.allergens.length ? `contains ${rec.allergens.join(', ')}${shown.variation ? ' (as the recipe stands - check this variation)' : ''}` : null].filter(Boolean).join(' · ') }),
       el('div', { class: 'row' }, [
         el('span', { text: 'Servings' }),
         el('button', { class: 'btn btn-small btn-icon', type: 'button', text: '−', 'aria-label': 'Fewer servings', on: { click: () => setServes(serves - 1) } }),
@@ -155,11 +167,11 @@ function recipeScreen(hub, id, back) {
       ]),
       el('h2', { text: 'Ingredients' }),
       // Whole-only items (eggs) stay whole when the servings change.
-      rec.ingredients.length ? el('ul', {}, rec.ingredients.map((i) => scaleCarefully(i, serves / rec.servings)).map((i) => el('li', {}, [
+      shown.ingredients.length ? el('ul', {}, shown.ingredients.map((i) => scaleCarefully(i, serves / rec.servings)).map((i) => el('li', {}, [
         i.recipeId && getSub(i.recipeId) ? el('a', { href: hub.href('item', i.recipeId), text: formatIngredient(inSystem(i, hub.units())) }) : formatIngredient(inSystem(i, hub.units())),
         i.note ? ` (${i.note})` : '', i.recipeId ? el('span', { class: 'small muted', text: ' - our own' }) : null,
       ]))) : el('p', { class: 'small muted', text: 'No ingredients listed.' }),
-      rec.instructions.length ? el('div', {}, [el('h2', { text: 'Method' }), el('ol', { class: 'howto-steps' }, rec.instructions.map((s) => el('li', { text: s })))])
+      shown.instructions.length ? el('div', {}, [el('h2', { text: 'Method' }), el('ol', { class: 'howto-steps' }, shown.instructions.map((s) => el('li', { text: s })))])
         : el('p', { class: 'small' }, ['No method yet. ', el('a', { href: hub.href('edit', rec.id), text: 'Add the method', 'data-field': 'add-method' }), ' when you have it.']),
       rec.source ? el('p', { class: 'small muted', text: `Source: ${rec.source}` }) : null,
     ]),
@@ -176,9 +188,10 @@ function recipeScreen(hub, id, back) {
     ]),
     portionsPanel(hub, rec, serves, setServes, kcal),
     el('div', { class: 'row' }, [
-      hub.data.installed('mealplan') ? el('a', { class: 'btn btn-primary', href: `#/mealplan/add/${encodeURIComponent(`${rec.id}~${serves}`)}`, text: 'Plan it', 'data-field': 'plan-meal' }) : null,
-      hub.data.installed('shopping') && rec.ingredients.length ? el('a', { class: 'btn', href: sendHref({ source: `meal:${rec.id}`, from: rec.title, group: 'food', ...shopSplit(rec.ingredients, serves / rec.servings, getSub) }), text: 'To Shopping', title: 'Send the ingredients to the shopping list', 'data-field': 'send-shopping' }) : null,
+      hub.data.installed('mealplan') ? el('a', { class: 'btn btn-primary', href: `#/mealplan/add/${encodeURIComponent(`${rec.id}~${serves}${vid ? `~${vid}` : ''}`)}`, text: 'Plan it', 'data-field': 'plan-meal' }) : null,
+      hub.data.installed('shopping') && shown.ingredients.length ? el('a', { class: 'btn', href: sendHref({ source: `meal:${rec.id}${vid ? `:${vid}` : ''}`, from: shown.title, group: 'food', ...shopSplit(shown.ingredients, serves / rec.servings, getSub) }), text: 'To Shopping', title: 'Send the ingredients to the shopping list', 'data-field': 'send-shopping' }) : null,
       el('a', { class: 'btn', href: hub.href('edit', rec.id), text: 'Edit' }),
+      rec.type !== 'own' ? el('a', { class: 'btn', href: hub.href('variations', rec.id), text: 'Variations', title: 'Other ways of making this same meal - a cheese sauce, a pepper sauce', 'data-field': 'variations' }) : null,
       hub.data.installed('assistant') ? el('a', { class: 'btn', href: `#/assistant/meal/recipe:${encodeURIComponent(rec.id)}`, text: 'Improve', title: 'Ideas from the Meal Assistant', 'data-field': 'improve-recipe' }) : null,
       el('button', {
         class: 'btn btn-quiet', type: 'button', text: 'Delete',
@@ -476,5 +489,78 @@ function portionsPanel(hub, rec, serves, setServes, kcalPerServing) {
       on: { click: () => setServes(batch(rec, plan).makes) },
     }) : null,
     el('p', { class: 'small muted', text: 'A rough guide from each person’s age and gender, and height and weight where recorded on the People page. One portion is one serving of this meal, sized for an adult. Appetites vary from day to day - let everyone eat to their hunger.' }),
+  ]);
+}
+
+/* --------------------------------------------------------- variations */
+
+// Other ways of making the same meal (D-071): from one white sauce, a cheese sauce, a pepper
+// sauce, a mushroom sauce. Each leaves out some ingredients (tapped, never typed), adds others
+// with the usual ingredient picker - a swap is both - and may add steps to the method.
+function variationsScreen(hub, id) {
+  const r = hub.use(`recipe:${id}`, () => recipes(hub).get(id));
+  const f = hub.use('food', () => hub.food.load());
+  const own = hub.use('own-items', async () => (await recipes(hub).list({ limit: 100000 })).items);
+  const ourSizes = hub.use('sizes', async () => loadSizes((await sizes(hub).list({ limit: 100000 })).items));
+  if (r.loading) return loading();
+  if (r.error) return failure(r.error);
+  if (!r.data) return el('p', { class: 'panel', text: 'This item no longer exists.' });
+  const rec = normaliseRecipe(r.data);
+  // Being edited, kept while the page redraws; forgotten on leaving.
+  if (ui.vars?.id !== id) ui.vars = { id, list: rec.variations.map((v) => ({ ...v, add: v.add.map((i) => ({ ...i })), steps: v.steps.join('\n') })) };
+  const list = ui.vars.list;
+  const names = [...new Set(rec.ingredients.map((i) => i.name))];
+  const save = async () => {
+    const variations = list.filter((v) => v.name.trim()).map((v) => ({ ...v, name: v.name.trim(), add: v.add.filter((i) => i.name.trim()), steps: String(v.steps) }));
+    await saveRecord(hub, recipes(hub), { ...r.data, variations });
+    ui.vars = null;
+    hub.ui.notice(`Saved ${variations.length} variation${variations.length === 1 ? '' : 's'} of ${rec.title}.`);
+    hub.go('item', id);
+  };
+  const newName = el('input', { class: 'input', id: 'var-new', placeholder: 'e.g. Cheese sauce', 'data-field': 'var-new', style: { flex: '1 1 200px' } });
+
+  return el('section', { class: 'stack', 'aria-labelledby': 'var-title' }, [
+    el('h1', { id: 'var-title', text: `Variations of ${rec.title}`, style: { margin: 0 } }),
+    el('p', { class: 'muted', style: { margin: 0 }, text: 'Other ways of making this same meal. Each one starts from the recipe: leave out what it does not use, add what it needs - to swap, do both - and add any steps. Ratings and notes stay with the one recipe.' }),
+    ...list.map((v, ix) => el('div', { class: 'panel stack', 'data-field': `var:${ix}` }, [
+      el('div', { class: 'field' }, [
+        el('label', { class: 'field__label', for: `var-name-${ix}`, text: 'Name' }),
+        el('input', { class: 'input', id: `var-name-${ix}`, value: v.name, 'data-field': `var-name:${ix}`, on: { input: (e) => { v.name = e.target.value; } } }),
+      ]),
+      names.length ? el('fieldset', { class: 'stack fin-group' }, [
+        el('legend', { text: 'Leave out' }),
+        el('div', { class: 'chipset' }, names.map((n) => el('button', {
+          class: 'chip', type: 'button', 'aria-pressed': String(v.leaveOut.includes(n.toLowerCase())), 'data-field': `var-out:${ix}:${n}`, text: n,
+          on: { click: (e) => {
+            const k = n.toLowerCase();
+            v.leaveOut = v.leaveOut.includes(k) ? v.leaveOut.filter((x) => x !== k) : [...v.leaveOut, k];
+            e.currentTarget.setAttribute('aria-pressed', String(v.leaveOut.includes(k)));
+          } },
+        }))),
+      ]) : null,
+      el('fieldset', { class: 'stack fin-group' }, [
+        el('legend', { text: 'Add' }),
+        el('p', { class: 'small muted', style: { margin: 0 }, text: `Amounts for ${rec.servings} servings, like the recipe.` }),
+        ingredientEditor({ rows: v.add, db: f.data ?? null, own: own.data ?? [], selfId: rec.id, sizes: ourSizes.data ?? new Map(), system: hub.units(),
+          onAddSize: async ({ fdcId, label, grams }) => { await sizes(hub).put({ fdcId, label, grams, at: Date.now() }); } }),
+      ]),
+      el('div', { class: 'field' }, [
+        el('label', { class: 'field__label', for: `var-steps-${ix}`, text: 'Extra steps, after the method' }),
+        el('textarea', { class: 'input', id: `var-steps-${ix}`, rows: 2, text: v.steps, placeholder: 'One per line, e.g. Stir in the cheese off the heat', on: { input: (e) => { v.steps = e.target.value; } } }),
+      ]),
+      el('div', {}, [el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': `Remove ${v.name || 'this variation'}`, on: { click: () => { list.splice(ix, 1); hub.render(); } } })]),
+    ])),
+    el('div', { class: 'panel stack' }, [
+      el('label', { class: 'field__label', for: 'var-new', text: list.length ? 'Another variation' : 'First variation' }),
+      el('div', { class: 'row' }, [newName, el('button', { class: 'btn', type: 'button', text: 'Add', 'data-field': 'var-add', on: { click: () => {
+        if (!newName.value.trim()) { newName.focus(); return; }
+        list.push({ id: `v${Date.now().toString(36)}`, name: newName.value.trim(), leaveOut: [], add: [], steps: '' });
+        hub.render();
+      } } })]),
+    ]),
+    el('div', { class: 'row form-actions' }, [
+      el('button', { class: 'btn btn-primary', type: 'button', text: 'Save', 'data-field': 'var-save', on: { click: save } }),
+      el('a', { class: 'btn', href: hub.href('item', id), text: 'Cancel', on: { click: () => { ui.vars = null; } } }),
+    ]),
   ]);
 }

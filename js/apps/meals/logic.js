@@ -89,6 +89,9 @@ export const typeOf = (r) => (TYPES[r.type] ? r.type
 /** "Meal", "Recipe", "Own ingredient" - or "Item" until one is chosen. */
 export const typeName = (t) => TYPES[t] ?? 'Item';
 
+/** Ingredients a variation adds: the same shape as a recipe's own. */
+const normaliseAdded = (list) => (Array.isArray(list) && list.length ? normaliseRecipe({ ingredients: list }).ingredients : []);
+
 export function normaliseRecipe(r = {}) {
   const ingredients = (Array.isArray(r.ingredients) ? r.ingredients : lines(r.ingredients).map(parseIngredient))
     .map((i) => (typeof i === 'string' ? parseIngredient(i) : i))
@@ -127,11 +130,51 @@ export function normaliseRecipe(r = {}) {
       from: n.from === 'occurrence' ? 'occurrence' : 'recipe', occasion: str(n.occasion, 120),
     })),
     variantOf: str(r.variantOf, 40),   // set on a copy saved from a changed planned meal
+    // Variations of this same meal (D-071): cheese sauce, pepper sauce, mushroom sauce from one
+    // white sauce. Each leaves out some of the ingredients, adds others (a swap is both), and may
+    // add steps. One recipe, one set of ratings - not a separate item each.
+    variations: (Array.isArray(r.variations) ? r.variations : []).filter((v) => v && str(v.name)).slice(0, 20).map((v, i) => ({
+      id: str(v.id, 40) || `v${i}`,
+      name: str(v.name, 80),
+      leaveOut: (Array.isArray(v.leaveOut) ? v.leaveOut : []).map((x) => str(x, 120).toLowerCase()).filter(Boolean),
+      add: normaliseAdded(v.add),
+      steps: lines(v.steps).slice(0, 20),
+    })),
     // What one batch makes ("12 pancakes", "300 ml") - what another entry uses a part of.
     // auto: the amount was worked out from the ingredients' weight, so it is worked out again on every save.
     yield: { qty: num(r.yield?.qty), unit: unitKey(str(r.yield?.unit, 30)), ...(r.yield?.auto === true ? { auto: true } : {}) },
     asIngredient: undefined,   // replaced by type 'own'
   };
+}
+
+/* ---------------------------------------------------- variations */
+
+export const variationOf = (recipe, id) => (id ? recipe?.variations?.find((v) => v.id === id) ?? null : null);
+
+/** A variation's ingredients: the recipe's, less what it leaves out, plus what it adds. */
+export function variationIngredients(recipe, variation) {
+  if (!variation) return recipe.ingredients;
+  const out = new Set(variation.leaveOut);
+  return [...recipe.ingredients.filter((i) => !out.has(i.name.toLowerCase())), ...variation.add];
+}
+
+/** The recipe as this variation: its ingredients, its title, and its extra steps after the method. */
+export function asVariation(recipe, id) {
+  const v = variationOf(recipe, id);
+  if (!v) return recipe;
+  return { ...recipe, title: `${recipe.title} (${v.name})`, ingredients: variationIngredients(recipe, v), instructions: [...recipe.instructions, ...v.steps], variation: v };
+}
+
+/** What a planned meal becomes when a variation is chosen for it (or none: back to the recipe). */
+export function slotAsVariation(recipe, id) {
+  const v = variationOf(recipe, id);
+  return v ? { variationId: v.id, title: `${recipe.title} (${v.name})`, ingredients: variationIngredients(recipe, v), basis: recipe.servings }
+    : { variationId: null, title: recipe.title, ingredients: null };
+}
+
+/** In words: "leaves out milk; adds cheddar 100 g". */
+export function variationSays(v) {
+  return [v.leaveOut.length ? `leaves out ${v.leaveOut.join(', ')}` : null, v.add.length ? `adds ${v.add.map((i) => formatIngredient(i)).join(', ')}` : null, v.steps.length ? `${v.steps.length} more step${v.steps.length === 1 ? '' : 's'}` : null].filter(Boolean).join('; ');
 }
 
 /* ----------------------------------------------------- feedback */
@@ -172,7 +215,7 @@ export const goodFor = (tags = []) => MEALS.filter((m) => tags.includes(m) || (m
 export const setGoodFor = (r, meals) => ({ ...r, tags: [...MEALS.filter((m) => meals.includes(m)), ...r.tags.filter((t) => !MEALS.includes(t) && t !== 'supper')] });
 
 /** Index version: an index written before this lacks the facts and feedback below and is rebuilt once. */
-export const SUMMARY_VERSION = 5;
+export const SUMMARY_VERSION = 6;
 
 /** What the index keeps per meal: enough to list, search and filter without opening each one. */
 export function recipeSummary(r) {
@@ -193,7 +236,7 @@ export function recipeSummary(r) {
   };
 }
 
-export const recipeText = (r) => [r.title, r.description, ...r.tags, ...r.ingredients.map((i) => i.name)].join(' ');
+export const recipeText = (r) => [r.title, r.description, ...r.tags, ...r.ingredients.map((i) => i.name), ...(r.variations ?? []).map((v) => v.name)].join(' ');
 
 /** Ingredients for a different number of servings. Unknown quantities stay unknown. */
 export function scaleIngredients(recipe, servings) {
@@ -301,6 +344,7 @@ export function normaliseSlot(s) {
     id: str(s.id, 40) || `s_${s.day}_${s.meal}`,
     day: s.day, meal: s.meal,
     recipeId: typeof s.recipeId === 'string' && s.recipeId ? s.recipeId : null,
+    variationId: str(s.variationId, 40) || null,   // the recipe's variation chosen for this meal (D-071)
     title: str(s.title, 200) || 'Meal',
     servings: Math.max(1, Math.round(num(s.servings) ?? 4)),
     extra: Math.max(0, Math.round(num(s.extra) ?? 0)),

@@ -21,6 +21,7 @@ import {
   weekStart, weekDays, normalisePlan, slotAt, setSlot, updateSlot, copyPlan, planId, planShopping, slotNeeds,
   prepared, reserved, leftoverMeals, setReservation, addReservation, SUMMARY_VERSION, slotBatch, collectRecipes,
   POOL, normalisePool, addToPool, moveMeal, addSlot, mealsBetween, mondaysBetween, goodFor, stillToBuy, sentAs,
+  slotAsVariation, variationOf,
 } from '../meals/logic.js';
 import { ingredientEditor } from '../../ui/ingredient-editor.js';
 import { recipeFacts, passes, emptyFilters, describeFilters, PROTEIN, CARB, GROUP, TRIAL, MEAL_TAGS } from '../meals/facts.js';
@@ -74,7 +75,7 @@ export function render(hub, route) {
     case 'slot': return slotScreen(hub, a, b);
     case 'mix': return mixScreen(hub);
     case 'review': return reviewScreen(hub, a);
-    case 'add': return addScreen(hub, a, b);
+    case 'add': return addScreen(hub, a, b, c);
     case 'modify': return modifyScreen(hub, a, b, c);
     case 'today': return todayScreen(hub);
     case 'sent': return sentScreen(hub, route.rest[0] ?? '');
@@ -126,7 +127,7 @@ function todayScreen(hub) {
       const rec = recs[i].data;
       const batch = slotBatch(s, rec);
       const ings = slotNeeds({ ...s, reserve: s.reserve.map((x) => ({ ...x, additions: [] })) }, rec);
-      const steps = rec?.instructions ?? [];
+      const steps = [...(rec?.instructions ?? []), ...(variationOf(rec, s.variationId)?.steps ?? [])];
       // Dropping another day's meal here swaps the two: it is cooked today, this one moves to its day.
       return dropTarget(el('article', { class: 'panel stack', 'data-field': `cook:${s.id}` }, [
         el('div', { class: 'card__label', text: MEAL_LABEL[s.meal] }),
@@ -706,7 +707,7 @@ function configureScreen(hub, { monday, day, meal, date, summary, current, back 
 }
 
 /** Planning arrives from the Cookbook ("Plan it"): pick the day and meal, servings and leftovers. */
-function addScreen(hub, id, serves) {
+function addScreen(hub, id, serves, variationId = null) {
   const r = id ? loadRecipe(hub, id) : { data: null };
   if (r.loading) return loading();
   if (r.error) return failure(r.error);
@@ -717,7 +718,7 @@ function addScreen(hub, id, serves) {
   const set = (patch) => { Object.assign(ui.adding, patch); hub.render(); };
   const days = Array.from({ length: 14 }, (_, i) => addDays(today, i));
   return el('section', { class: 'stack' }, [
-    el('h1', { text: `Plan ${rec.title}` }),
+    el('h1', { text: `Plan ${slotAsVariation(rec, variationId).title}` }),
     el('div', { class: 'panel stack' }, [
       el('div', { class: 'row' }, [
         el('label', { class: 'small', for: 'plan-day', text: 'Day' }),
@@ -733,9 +734,9 @@ function addScreen(hub, id, serves) {
         class: 'btn btn-primary', type: 'button', text: 'Plan it', 'data-field': 'plan-save',
         on: {
           click: async () => {
-            const slot = { recipeId: rec.id, title: rec.title, ingredients: null, note: '', feedback: null };
+            const slot = { recipeId: rec.id, title: rec.title, ingredients: null, note: '', feedback: null, ...slotAsVariation(rec, variationId) };
             if (!st.date) {
-              if (await savePlan(hub, POOL, addToPool(await fetchPlan(hub, POOL), { ...slot, servings: st.servings, meal: st.meal }))) { ui.adding = null; hub.ui.notice(`${rec.title} is in the planned meals.`); hub.go(); }
+              if (await savePlan(hub, POOL, addToPool(await fetchPlan(hub, POOL), { ...slot, servings: st.servings, meal: st.meal }))) { ui.adding = null; hub.ui.notice(`${slot.title} is in the planned meals.`); hub.go(); }
               return;
             }
             const monday = weekStart(st.date);
@@ -790,7 +791,8 @@ function slotScreen(hub, monday, slotId) {
   const shares = [...family, ...guestShares(slot.guests, today).map((g) => (slot.portions[g.id] ? { ...g, share: slot.portions[g.id], basis: 'set' } : g))];
   // Guests change how many eat: the servings follow the portion guide for everyone at the table.
   const setGuests = (guests) => update({ guests, servings: servingsFor([...family, ...guestShares(guests, today)]) });
-  const changed = Boolean(slot.ingredients);
+  // A chosen variation is not a hand change: its ingredients come from the recipe (D-071).
+  const changed = Boolean(slot.ingredients) && !slot.variationId;
   const sys = hub.units();
 
   return el('section', { class: 'stack' }, [
@@ -860,6 +862,14 @@ function slotScreen(hub, monday, slotId) {
       el('p', { class: 'small muted', text: 'Cooked leftovers keep about 3 days in the fridge (cool within 2 hours, reheat until steaming hot), or a few months frozen.' }),
     ]),
 
+    rec?.variations?.length ? el('div', { class: 'panel stack', 'aria-label': 'Variation' }, [
+      el('h2', { text: 'Which way', style: { margin: 0 } }),
+      el('div', { class: 'chipset', role: 'group', 'aria-label': 'Variation' }, [{ id: null, name: 'As is' }, ...rec.variations].map((v) => el('button', {
+        class: 'chip', type: 'button', 'aria-pressed': String((slot.variationId ?? null) === v.id), 'data-field': `slot-variation:${v.id ?? 'none'}`, text: v.name,
+        on: { click: async () => { await update(slotAsVariation(rec, v.id)); ui.slotDraft = null; } },
+      }))),
+      slot.ingredients && !slot.variationId ? el('p', { class: 'small muted', style: { margin: 0 }, text: 'Choosing one replaces the changes made to this meal’s ingredients.' }) : null,
+    ]) : null,
     el('div', { class: 'panel stack', 'aria-label': 'Ingredients' }, [
       el('h2', { text: `Ingredients (recipe x${batch.m}, ${batch.makes} servings)`, style: { margin: 0 } }),
       // Everything cooked (leftovers included), our own items opened into theirs; a leftover meal's additions are listed with it.
@@ -870,8 +880,8 @@ function slotScreen(hub, monday, slotId) {
           el('p', { class: 'small', text: `Amounts for ${basis} servings (the recipe's own) - the batch is worked out from what you cook.` }),
           ingredientEditor({ rows: ui.slotDraft.rows, db: f.data ?? null, own: list.data ?? [], selfId: rec?.id ?? null, sizes: ourSizes.data ?? new Map(), system: sys }),
           el('div', { class: 'row' }, [
-            el('button', { class: 'btn btn-small', type: 'button', text: 'This meal', title: 'Save the changes for this planned meal only', 'data-field': 'slot-ing-save', on: { click: async () => { await update({ ingredients: ui.slotDraft.rows.filter((x) => x.name.trim()), basis }); ui.slotDraft = null; } } }),
-            changed && rec ? el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Reset', title: 'Go back to the recipe’s ingredients', on: { click: async () => { await update({ ingredients: null }); ui.slotDraft = null; } } }) : null,
+            el('button', { class: 'btn btn-small', type: 'button', text: 'This meal', title: 'Save the changes for this planned meal only', 'data-field': 'slot-ing-save', on: { click: async () => { await update({ ingredients: ui.slotDraft.rows.filter((x) => x.name.trim()), basis, variationId: null }); ui.slotDraft = null; } } }),
+            changed && rec ? el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Reset', title: 'Go back to the recipe’s ingredients', on: { click: async () => { await update({ ingredients: null, variationId: null, title: rec.title }); ui.slotDraft = null; } } }) : null,
           ]),
         ]),
       ]),

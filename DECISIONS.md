@@ -575,6 +575,41 @@ child or under 25 with a birthday; one without a birthday is named, with a link 
 - The family view adds every child: what to put aside now, the budget now and at its highest, the
   biggest year, the years with more than one child's costs (shaded), and starting a year later.
 
+**D-070 The money plan (owner, 2026-10-27).** The fifth Finance mini-app, and the one that joins
+them: "if we want all of this, can we afford it, and what do we do now?"
+- **Each month**: money coming in after tax, commitments, and a buffer kept back - or taken from
+  this month's budget in one tap. Income and commitments rise once a year by their own rate
+  (inflation, as an assumption): found while testing, a frozen income against twenty years of
+  rising school fees reported a family over a million rand short.
+- **Goals** are allocations, never costs counted twice: one or more payments by a month, and
+  optionally a change to the monthly commitments from a month (a bond, school fees starting or
+  ending). Must or want to. An emergency fund (months of commitments) is a must-have goal.
+- **Brought in** (read-only permissions, shown by name): trips with a budget (left to pay + 10%),
+  saving goals, saved cars (cash up front, then instalment and running costs), saved homes and
+  bonds (cash to move in, then the monthly cost), and each child's save-ahead costs as payments
+  with school-type costs as year-by-year changes to the commitments. Copies, with Update.
+- **The engine**: each month the free money goes to the goal due soonest; a goal not funded by
+  its month is short. Then: the least extra a month that makes everything fit, how many months
+  later each short goal would fit, the amount that would fit, whether the must-haves alone fit,
+  and when commitments outgrow income.
+- **Job what-if**: a saved offer against the job saved first - the change each month (from Job
+  offers' projection) and the cash to move go into the plan, and the difference is said in words.
+
+**D-071 Variations of one meal (owner, 2026-10-27).** The owner wanted different versions of the
+same meal - a cheese sauce, a pepper sauce, a mushroom sauce from one home-made sauce - "instead
+of each one being different". Named **Variations**. A recipe keeps a list: each has a name, the
+ingredients it leaves out (tapped from the recipe's own, never typed), the ones it adds (the usual
+ingredient search), and steps added after the method; a swap is leave out + add. Ratings, notes and
+preferences stay with the one recipe (the older "(our version)" copy, variantOf, remains for a
+truly separate recipe). The recipe page shows "As is" and each variation as chips; ingredients,
+method, nutrition, "Plan it" and "To Shopping" follow the one shown. A planned meal keeps the
+variation's id and its ingredients (the existing per-meal ingredients path, so shopping, leftovers,
+cooking and nutrition need no change) and can be switched under "Which way"; it is not shown as a
+hand-changed meal. Allergens stay the recipe's, and say so when a variation is shown.
+
+**D-065, more sample rooms (owner, 2026-10-27).** Kids' room (no beds: toys and floors), Steps,
+and Workshop (a work or company room: tools, parts, the floor and the bench).
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).

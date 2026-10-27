@@ -544,3 +544,4 @@ table.plain .num { text-align: right; white-space: nowrap; font-variant-numeric:
 .fin-step { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius); }
 .fin-formula { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; padding: var(--space-1) var(--space-2); border-radius: 6px; background: color-mix(in srgb, var(--text) 6%, transparent); }
 .fin-formula--worked { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.fin-overlap td { background: color-mix(in srgb, var(--warn) 10%, transparent); }

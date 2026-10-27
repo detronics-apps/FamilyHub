@@ -8,7 +8,7 @@ import { validateManifest } from '../miniapps.js';
 const RAW = [
   {
     manifest: {
-      fhManifest: 1, id: 'chores', section: 'chores', name: 'Chores', version: '1.1.0',
+      fhManifest: 1, id: 'chores', section: 'chores', name: 'Chores', version: '1.1.1',
       description: 'Recurring household work: plan it, then find something that fits right now.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [
@@ -97,7 +97,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'meals', section: 'meals', name: 'Cookbook', version: '1.5.0',
+      fhManifest: 1, id: 'meals', section: 'meals', name: 'Cookbook', version: '1.6.0',
       description: 'Your family’s meals, recipes and own ingredients, and how much each person might eat.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [
@@ -117,7 +117,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'mealplan', section: 'meals', name: 'Meal Planner', version: '1.2.1',
+      fhManifest: 1, id: 'mealplan', section: 'meals', name: 'Meal Planner', version: '1.3.0',
       description: 'Choose the meals, then drag them onto days - a week or a month ahead - and send what they need to the shopping list.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [
@@ -292,6 +292,18 @@ const RAW = [
   },
   {
     manifest: {
+      fhManifest: 1, id: 'moneyplan', section: 'finance', name: 'Money plan', version: '1.0.0',
+      description: 'Every goal on one timeline - trips, cars, homes, the children - with what to put aside each month and where it does not fit.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
+      screens: [{ id: 'plan', title: 'Money plan' }],
+      modes: [{ mode: 'plan', screen: 'plan', label: 'Check that the plan still fits' }],
+      data: { collections: [{ name: 'plan', schema: 1 }] },
+      permissions: ['data:own', 'notify', 'people:read', 'people:ages', 'data:finance:read', 'data:holidays:read', 'data:cars:read', 'data:homes:read', 'data:children:read', 'data:jobs:read'],
+    },
+    load: () => import('./moneyplan/app.js'),
+  },
+  {
+    manifest: {
       fhManifest: 1, id: 'exercise', section: 'exercise', name: 'Exercise', version: '1.0.0',
       description: 'Log activity, keep flexible weekly plans, and see what the family did together.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
@@ -343,6 +355,5 @@ export const starter = (id) => STARTERS.find((s) => s.manifest.id === id) ?? nul
 /** On the roadmap, not built. Shown in the library so nobody mistakes them for working apps. */
 export const COMING_LATER = [
   { id: 'planner', name: 'Planner', purpose: 'A family calendar: the week at a glance, with chores, tasks, meals, trips and review dates from the other mini-apps in one place.' },
-  { id: 'money-plan', name: 'Money plan', purpose: 'Every goal on one timeline - holidays, cars, school, a house - with what to put aside each month and where it does not fit.' },
   { id: 'medical', name: 'Medical', purpose: 'Emergency summary and medical records - only once private records and access rules exist.' },
 ];

@@ -149,3 +149,33 @@ test('shopping remembers what we buy, finds it by kind, and shows everything the
   const again = normaliseShopping(JSON.parse(JSON.stringify(list)));
   assert.equal(again.known.length, 2, 'kept with the list');
 });
+
+/* ---------------------------------------------- D-071 variations */
+
+import { variationIngredients, asVariation, slotAsVariation, variationSays } from '../js/apps/meals/logic.js';
+
+test('D-071 variations: one sauce, three ways - leave out, add, swap and extra steps', () => {
+  const sauce = normaliseRecipe({
+    title: 'White sauce', servings: 4, ingredients: ['30 g butter', '30 g flour', '500 ml milk'], instructions: ['Melt the butter', 'Stir in the flour', 'Whisk in the milk'],
+    variations: [
+      { id: 'cheese', name: 'Cheese sauce', add: ['100 g cheddar'], steps: ['Stir in the cheese off the heat'] },
+      { id: 'pepper', name: 'Pepper sauce', leaveOut: ['Milk'], add: ['250 ml cream', '1 tbsp black pepper'] },
+      { name: '' },
+    ],
+  });
+  assert.equal(sauce.variations.length, 2);                                     // nameless ones are dropped
+  assert.deepEqual(variationIngredients(sauce, sauce.variations[0]).map((i) => i.name), ['butter', 'flour', 'milk', 'cheddar']);
+  // A swap: milk out (any case), cream in.
+  assert.deepEqual(variationIngredients(sauce, sauce.variations[1]).map((i) => i.name), ['butter', 'flour', 'cream', 'black pepper']);
+  const cheese = asVariation(sauce, 'cheese');
+  assert.equal(cheese.title, 'White sauce (Cheese sauce)');
+  assert.equal(cheese.instructions.at(-1), 'Stir in the cheese off the heat');
+  assert.equal(asVariation(sauce, 'nope'), sauce);
+  // A planned meal takes the variation's ingredients, so shopping and nutrition follow it.
+  const slot = slotAsVariation(sauce, 'pepper');
+  assert.equal(slot.variationId, 'pepper');
+  assert.equal(slot.basis, 4);
+  assert.ok(slot.ingredients.some((i) => i.name === 'cream'));
+  assert.deepEqual(slotAsVariation(sauce, null), { variationId: null, title: 'White sauce', ingredients: null });
+  assert.equal(variationSays(sauce.variations[1]), 'leaves out milk; adds 250 ml cream, 1 tbsp black pepper');
+});
