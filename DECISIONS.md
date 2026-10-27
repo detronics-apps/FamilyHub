@@ -610,6 +610,27 @@ hand-changed meal. Allergens stay the recipe's, and say so when a variation is s
 **D-065, more sample rooms (owner, 2026-10-27).** Kids' room (no beds: toys and floors), Steps,
 and Workshop (a work or company room: tools, parts, the floor and the bench).
 
+**D-072 Own or rent, as like for like as it gets (owner, 2026-10-27).** Replaces D-067's Rent or
+buy. The owner: it is situational; colleagues swear by renting while rents climb; calculators assume
+2 to 5% of the value on maintenance a year when the real figure has been small; upgrades (a R30 000
+bathroom) add more to the price (R50-60 000) than they cost, and only an owner can do them. The app's
+purpose (saved): show people what they have not thought of, and let them put their own values in.
+- **Two starting points**: buying against renting (different places, each its own rent or price
+  and travel), and keeping the home we own against selling it and renting (value now, bond owed,
+  years left; the sale now after costs, bond and tax is what the renter invests).
+- **Their own figures first**: maintenance as a rand amount (a % only if chosen), upgrades with
+  cost, year and value added, house growth from their own home's history (bought for, when, worth
+  now - "Use it"), the renter's investments before tax with the share lost to tax, and how much of
+  the monthly difference really gets invested.
+- **SARS**: the primary residence exclusion is **R3 million** of gain (not R2 million, as first said
+  in conversation - corrected from sars.gov.za), plus the R50 000 annual exclusion, 40% included,
+  at the person's rate. Transfer duty as D-067.
+- **Shown**: who is ahead after the chosen years, when owning gets ahead, where it changes sides,
+  "What it hangs on" (the house growth and investment growth at which they come out level - what
+  each side is assuming), "Did you think of…" (each forgotten factor ticked with its value or
+  marked not counted), what moves the answer most, and year by year.
+- Tested: a home growing exactly as fast as after-tax investments, with no costs, comes out level.
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).

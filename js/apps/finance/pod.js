@@ -82,6 +82,8 @@ export function input(f, d, onInput) {
       class: 'chip', type: 'button', 'aria-pressed': String(d.values[f.key] === c.value), 'data-field': `${f.key}:${c.value}`, text: c.label,
       on: { click: (e) => { for (const b of e.currentTarget.parentNode.children) b.setAttribute('aria-pressed', String(b === e.currentTarget)); set(c.value); } },
     })));
+  } else if (f.type === 'month') {
+    control = el('input', { class: 'input', id, type: 'month', value: d.values[f.key] ?? '', 'data-field': `in:${f.key}`, style: { maxWidth: '200px' }, on: { change: (e) => set(e.target.value || null) } });
   } else if (f.type === 'text') {
     control = el('textarea', { class: 'input', id, rows: 3, text: d.values[f.key] ?? '', placeholder: f.placeholder ?? '', 'data-field': `in:${f.key}`, on: { input: (e) => set(e.target.value) } });
   } else if (f.type === 'check') {

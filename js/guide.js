@@ -34,6 +34,7 @@ export const SEARCH_ALIASES = {
   'money plan': ['plan', 'goals', 'afford', 'can we afford', 'timeline', 'save each month', 'forecast', 'emergency fund', 'all our goals'],
   'children’s future': ['children', 'kids', 'school fees', 'university', 'studies', 'education', 'tuition', 'first car', 'wedding', 'save for school', 'baby'],
   job: ['job offer', 'offer', 'salary', 'career', 'new job', 'take-home', 'take home', 'payslip', 'tax', 'paye', 'increase', 'raise', 'relocate', 'relocation', 'moving for work', 'payback'],
+  'own or rent': ['rent or buy', 'buy or rent', 'renting', 'is renting better', 'sell and rent', 'keep our house', 'invest the difference', 'maintenance', 'upgrade', 'capital gains'],
   home: ['house', 'bond', 'mortgage', 'home loan', 'rent', 'renting', 'buy a house', 'transfer duty', 'commute', 'travel to work', 'closer to work', 'move', 'moving'],
   'true cost': ['car', 'vehicle', 'car finance', 'loan', 'instalment', 'balloon', 'resale', 'total cost of ownership', 'compare cars'],
   'compound interest': ['interest', 'grow', 'growth', 'investment', 'savings growth', 'calculator', 'inflation'],
@@ -218,6 +219,12 @@ export const HOWTOS = [
     'When you spend something, add it under "Spent something?". The table shows what is left in each category.',
     'Next month, press "Reuse" with last month’s name.',
   ] },
+  { id: 'ownrent', title: 'Own or rent - with your own numbers', steps: [
+    'Open Finance, then Homes, then "Own or rent". Choose Buying, or Owners already if you have a home now.',
+    'Put in the price (or what your home would sell for and what is still owed), the rent of the place you would rent, and how fast that rent has been rising.',
+    'Put in what you really spend on maintenance, and any upgrades with what they would add to the selling price. Under "Our own home", what you paid and when - then "Use it" to grow prices at your home’s own rate.',
+    'Read "What it hangs on" and "Did you think of…": the numbers each side is quietly assuming, and the things people forget.',
+  ] },
   { id: 'variations', title: 'Make one meal several ways (variations)', steps: [
     'Open the meal in the Cookbook and press Variations.',
     'Type a name - "Cheese sauce" - and press Add. Tap what it leaves out, add what it needs with the ingredient search (to swap, do both), and add any extra steps. Save.',
@@ -247,7 +254,7 @@ export const HOWTOS = [
     'Under "Getting to work", add the distance and the time, one way. The answer counts the trip each month, and the hours on the road.',
     'Give it a name, like "Closer to work", and press Save. Change it for the next home, give it a new name, and Save again.',
     'Tick two or more saved homes and press Compare. Saved with the same "live here for", their totals compare like for like.',
-    '"Bond" shows the instalment, the interest and the cash needed first. "Rent or buy" shows, for one home, which leaves you better off and after how many years.',
+    '"Bond" shows the instalment, the interest and the cash needed first. "Own or rent" compares buying with renting - or keeping the home you own with selling it and renting.',
   ] },
   { id: 'car', title: 'Work out the true cost of a car - and compare', steps: [
     'Open Finance, then Cars. Fill in the price, the rate on your quote, how long the loan runs and how long you will keep the car.',
@@ -416,6 +423,7 @@ export const FEATURES = [
   { name: 'Calorie Checker', where: 'Meals › Calorie Checker', what: 'Calories and nutrients in the amount you actually eat, from 13,000 foods.' },
   { name: 'One shopping list', where: 'Home › Shopping', what: 'Meals, the week’s plan and chore supplies can all be sent to it; anything else can be typed in.' },
   { name: 'Portions and leftovers', where: 'Meals › Cookbook › an item', what: 'How much each person might eat, and how many servings to make with or without leftovers.' },
+  { name: 'Own or rent', where: 'Finance › Homes › Own or rent', what: 'Buy or rent, or keep or sell - with your own maintenance, upgrades that add value, your home’s own growth, investments after tax, and what each side quietly assumes.' },
   { name: 'Variations', where: 'Cookbook › a meal › Variations', what: 'One meal made several ways - cheese, pepper or mushroom sauce from one white sauce - with one set of ratings, and shopping that follows the way chosen.' },
   { name: 'Money plan', where: 'Finance › Money plan', what: 'Every goal on one timeline, brought in from Holidays, Cars, Homes, Children’s future and savings goals - what to put aside each month, and where it does not fit.' },
   { name: 'Children’s future', where: 'Finance › Children’s future', what: 'School, studies and starting out for each child from their birthdays - what to save each month, when the budget steps up, and the years that crowd together.' },

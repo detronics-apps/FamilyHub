@@ -4,11 +4,13 @@
 
 import { el } from '../../ui/dom.js';
 import { loading, failure } from '../kit.js';
-import { homeCost, bond, rentOrBuy, transferDuty, feesEstimate, HOME_DEFAULTS, REFERENCE, sensitivity, monthlyRate } from '../finance/maths.js';
+import { homeCost, bond, transferDuty, feesEstimate, HOME_DEFAULTS, REFERENCE, sensitivity, monthlyRate } from '../finance/maths.js';
+import { ownOrRent, evenAt, historyGrowth, OWN_RENT_DEFAULTS, CGT } from './ownrent.js';
 import { levelBar, shows, draft, loadDraft, inputsPanel, assumed, stat, sums, step, lineChart, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => r.title, prefix: 'hom' });
-const DEFAULTS = { ...HOME_DEFAULTS, extra: null, income: null };
+// Own or rent adds its own fields; where both have one (price, rent...) the home's default is kept, so they share it.
+const DEFAULTS = { ...OWN_RENT_DEFAULTS, ...HOME_DEFAULTS, extra: null, income: null };
 const D = () => draft('homes', DEFAULTS);
 const buying = (v) => v.mode !== 'rent';
 const renting = (v) => v.mode === 'rent';
@@ -56,7 +58,7 @@ export function render(hub, route) {
     el('ul', { class: 'list panel' }, [
       ['home', 'A home', 'What will living here really cost - the trip to work included? Save each one and compare.'],
       ['bond', 'Bond', 'What will the bond cost each month, and in total - and what is needed up front?'],
-      ['rentbuy', 'Rent or buy', 'For the same home, which leaves us better off - and after how long?'],
+      ['rentbuy', 'Own or rent', 'Buying against renting, or keeping our home against selling and renting - with what people forget.'],
     ].map(([id, title, q]) => el('li', {}, [
       el('a', { class: 'list__main', href: hub.href(id), 'data-field': `tool:${id}`, style: { color: 'inherit', textDecoration: 'none' } }, [el('strong', { text: title }), el('div', { class: 'small muted', text: q })]),
       el('a', { class: 'btn btn-small', href: hub.href(id), text: 'Open' }),
@@ -294,80 +296,207 @@ function bondResults(d) {
 
 /* ---------------------------------------------------------- rent or buy */
 
-const RB_FIELDS = pick(['price', 'deposit', 'ratePct', 'termYears', 'rent', 'stayYears', 'ratesTaxes', 'levies', 'insurance', 'growthPct', 'rentRisePct', 'otherRatePct', 'sellPct', 'upkeepPct', 'fees', 'rentDeposit', 'escalatePct'],
-  { stayYears: { label: 'Compare after', hint: 'Who is ahead depends a great deal on how long you stay.' }, rent: { label: 'Rent for the same home, a month' }, rentDeposit: { level: 'advanced' } })
-  .map((f) => ({ ...f, group: ['ratesTaxes', 'levies', 'insurance'].includes(f.key) ? 'own' : ['growthPct', 'rentRisePct', 'otherRatePct', 'sellPct', 'upkeepPct', 'fees', 'rentDeposit', 'escalatePct'].includes(f.key) ? 'more' : undefined }));
-const rbHeadline = (v) => { const r = rentOrBuy(v); return r.ahead == null ? '' : `After ${r.year} years ${r.ahead >= 0 ? 'buying' : 'renting'} ahead by ${rand(Math.abs(r.ahead))}`; };
+// Own or rent (D-072): buying against renting, or keeping the home we own against
+// selling it and renting - with the family's own figures and what people forget.
+const buyingRB = (v) => v.rbMode !== 'keep';
+const keepingRB = (v) => v.rbMode === 'keep';
+const RB_FIELDS = [
+  { key: 'rbMode', label: 'We are', type: 'choice', level: 'simple', redraw: true, choices: [{ value: 'buy', label: 'Buying' }, { value: 'keep', label: 'Owners already' }] },
+  { ...F.price, label: 'Price of the home', when: buyingRB },
+  { ...F.deposit, when: buyingRB },
+  { key: 'worthNow', label: 'What our home would sell for now', type: 'money', level: 'simple', when: keepingRB, hint: 'Ask an agent, or look at what similar homes nearby sold for.' },
+  { key: 'owedNow', label: 'Still owed on the bond', type: 'money', level: 'simple', when: keepingRB, source: { kind: 'assumption' } },
+  { key: 'yearsLeft', label: 'Years left on the bond', type: 'years', level: 'simple', when: keepingRB, source: { kind: 'assumption' } },
+  { ...F.ratePct, label: 'Bond interest rate' },
+  { ...F.termYears, when: buyingRB },
+  { ...F.rent, label: 'Rent for the place we would rent, a month' },
+  { key: 'rentRisePct', label: 'Rent rises by', type: 'percent', level: 'simple', source: { kind: 'illustrative' }, hint: 'Look at what the rent did over the last few years - many rents rise faster than inflation.' },
+  { ...F.stayYears, label: 'Compare after', hint: 'How long you expect to live there. Who comes out ahead often changes with time.' },
+  { key: 'growthPct', label: 'House prices grow by', type: 'percent', level: 'simple', group: 'own', source: { kind: 'illustrative' }, hint: 'Not a promise: prices can stall or fall, and differ by area and street. Fill in "Our own home" below to see what yours has done.' },
+  { key: 'maintYearly', label: 'Maintenance and repairs a year - what you really spend', type: 'money', level: 'simple', optional: true, group: 'own', when: (v) => v.maintMode !== 'percent', hint: 'Not upgrades - those are below. Many calculators assume 1 to 2% of the value a year; your own figure is better.' },
+  { key: 'maintMode', label: 'Maintenance as', type: 'choice', level: 'advanced', redraw: true, group: 'own', choices: [{ value: 'amount', label: 'Our figure' }, { value: 'percent', label: 'Percentage' }] },
+  { ...F.upkeepPct, group: 'own', when: (v) => v.maintMode === 'percent' },
+  { ...F.ratesTaxes, group: 'own' }, { ...F.levies, group: 'own' }, { ...F.insurance, group: 'own' },
+  { ...F.sellPct, group: 'own' },
+  { ...F.fees, group: 'own', when: buyingRB },
+  { ...F.moveCost, label: 'Moving in', group: 'own', when: buyingRB },
+  { key: 'improvedSoFar', label: 'Spent on improvements so far', type: 'money', level: 'advanced', optional: true, group: 'own', when: keepingRB, hint: 'Upgrades already done (not repairs). They count against the gain when you sell.' },
+  { key: 'marginalPct', label: 'Your income tax rate on the last rand', type: 'percent', level: 'advanced', group: 'own', source: { kind: 'illustrative' }, hint: 'Only used if the gain on the home is above R3 million.' },
+  { key: 'boughtFor', label: 'We bought our home for', type: 'money', level: 'simple', optional: true, group: 'history' },
+  { key: 'boughtWhen', label: 'In', type: 'month', level: 'simple', optional: true, group: 'history' },
+  { key: 'worthNow', label: 'It would sell for now', type: 'money', level: 'simple', optional: true, group: 'history', when: buyingRB },
+  { ...F.rentDeposit, group: 'rentside' },
+  { key: 'rentMove', label: 'Moving into the rented place', type: 'money', level: 'advanced', optional: true, group: 'rentside' },
+  { key: 'travelOwn', label: 'Getting to work from the home we own or buy, a month', type: 'money', level: 'advanced', optional: true, group: 'travel', hint: 'Homes › A home works this out from the distance.' },
+  { key: 'travelRent', label: 'Getting to work from the rented place, a month', type: 'money', level: 'advanced', optional: true, group: 'travel' },
+  { key: 'investPct', label: 'Investments grow by, before tax', type: 'percent', level: 'simple', group: 'money', source: { kind: 'illustrative' }, hint: 'After fees. A money-market account pays less; shares have averaged more, with bad years in between.' },
+  { key: 'investShare', label: 'Of the money saved each month, really invested', type: 'percent', level: 'simple', group: 'money', source: { kind: 'assumption' }, hint: 'Renting only builds wealth if the difference is invested, every month. Be honest: 100% is rare.' },
+  { key: 'investTaxPct', label: 'Share of investment growth lost to tax', type: 'percent', level: 'advanced', group: 'money', source: { kind: 'illustrative' }, hint: 'Interest is taxed as income; gains and dividends less. A tax-free savings account loses none, up to its limits.' },
+  { ...F.escalatePct, group: 'money' },
+];
+const RB_GROUPS = { own: 'Owning', history: 'Our own home - what has it done?', rentside: 'Renting', travel: 'Getting to work', money: 'Investing the difference' };
+const rbHeadline = (v) => { const r = ownOrRent(v); return r.ahead == null ? '' : `After ${r.year} years ${r.ahead >= 0 ? 'owning' : 'renting'} ahead by ${rand(Math.abs(r.ahead))}`; };
 
 function rentBuyScreen(hub) {
-  return page(hub, {
-    id: 'rb-title', title: 'Rent or buy?', kind: 'rentbuy', headline: rbHeadline,
-    intro: 'The same home, rented or bought, with the same money each month. Whoever spends less in a month saves the difference.',
-    fields: RB_FIELDS, groups: { own: 'Owning costs (optional)', more: 'Growth, selling and fees' }, results: rbResults,
-  });
+  const d = D();
+  const answer = el('div', { class: 'stack', 'aria-live': 'polite' });
+  const refresh = () => answer.replaceChildren(...rbResults(hub, d).filter(Boolean));
+  const changed = (key) => (RB_FIELDS.find((f) => f.key === key)?.redraw ? hub.render() : refresh());
+  refresh();
+  return el('section', { class: 'stack', 'aria-labelledby': 'rb-title' }, [
+    el('h1', { id: 'rb-title', text: 'Own or rent?', style: { margin: 0 } }),
+    el('p', { class: 'muted', style: { margin: 0 }, text: 'It depends on the situation - so put in yours. Buying a home against renting one, or keeping the home you own against selling it and renting. Both sides have the same money each month; whoever pays less invests the difference.' }),
+    levelBar(() => hub.render()),
+    inputsPanel(RB_FIELDS, d, RB_GROUPS, changed),
+    upgradesPanel(d, refresh),
+    answer,
+    savedPanel(hub, {
+      col: col(hub), kind: 'rentbuy', d, compareScreen: 'compare',
+      summary: () => ({ headline: rbHeadline(d.values) }),
+      onOpen: (rec) => { loadDraft('homes', DEFAULTS, rec); hub.go('rentbuy'); },
+    }),
+  ]);
 }
 
-function rbResults(d) {
+/** Upgrades the owner plans: what each costs, when, and what it adds to the selling price. */
+function upgradesPanel(d, refresh) {
+  const list = Array.isArray(d.values.upgrades) ? d.values.upgrades : (d.values.upgrades = []);
+  const box = el('div', { class: 'stack' });
+  const save = () => { d.values.upgrades = list.filter((u) => u.name || u.cost); d.mine.add('upgrades'); refresh(); };
+  const numIn = (u, k, label, w = '130px') => el('input', { class: 'input', type: 'number', min: '0', step: 'any', value: u[k] ?? '', 'aria-label': label, style: { maxWidth: w }, on: { change: (e) => { u[k] = e.target.value === '' ? null : Number(e.target.value); save(); } } });
+  const draw = () => box.replaceChildren(...list.map((u, i) => el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' }, 'data-field': `upgrade:${i}` }, [
+    el('input', { class: 'input', value: u.name ?? '', placeholder: 'e.g. New bathroom', 'aria-label': 'Upgrade', style: { flex: '1 1 160px' }, on: { change: (e) => { u.name = e.target.value; save(); } } }),
+    el('span', { class: 'small muted', text: 'in' }), numIn(u, 'inYears', 'In how many years', '70px'), el('span', { class: 'small muted', text: 'years · costs R' }),
+    numIn(u, 'cost', 'What it costs'), el('span', { class: 'small muted', text: '· adds R' }), numIn(u, 'adds', 'What it adds to the selling price'),
+    el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': `Remove ${u.name || 'upgrade'}`, on: { click: () => { list.splice(i, 1); draw(); save(); } } }),
+  ])));
+  draw();
+  return el('div', { class: 'panel stack' }, [
+    el('h2', { text: 'Upgrades (owning only)', style: { margin: 0 } }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'A new bathroom or kitchen can add more to the selling price than it costs - something a renter cannot do. Put in what an agent says it would add; if unsure, the same as it costs.' }),
+    box,
+    el('div', {}, [el('button', { class: 'btn btn-small', type: 'button', text: 'Add upgrade', 'data-field': 'upgrade-add', on: { click: () => { list.push({ name: '', inYears: 1, cost: null, adds: null }); draw(); } } })]),
+  ]);
+}
+
+function rbResults(hub, d) {
   const v = d.values;
-  const r = rentOrBuy(v);
-  const stop = nothing(r);
-  if (stop) return stop;
-  const ahead = r.ahead >= 0 ? 'Buying' : 'Renting';
-  const nudges = [
-    { key: 'growthPct', what: 'house prices growing 2 points slower', to: (x) => (Number(x) || 0) - 2 },
-    { key: 'growthPct', what: 'house prices growing 2 points faster', to: (x) => (Number(x) || 0) + 2 },
-    { key: 'otherRatePct', what: 'savings earning 2 points more', to: (x) => (Number(x) || 0) + 2 },
-    { key: 'rentRisePct', what: 'rent rising 2 points faster', to: (x) => (Number(x) || 0) + 2 },
-    { key: 'ratePct', what: 'the interest rate 1 point higher', to: (x) => (Number(x) || 0) + 1 },
+  const today = hub.today();
+  const r = ownOrRent(v);
+  const hist = historyGrowth(v.boughtFor, v.boughtWhen, v.worthNow, today);
+  const histLine = hist ? el('div', { class: 'panel panel--soft row', 'data-field': 'history' }, [
+    el('p', { style: { margin: 0, flex: '1 1 260px' }, text: `Our own home: ${rand(Number(v.boughtFor))} in ${v.boughtWhen.slice(0, 4)} to ${rand(Number(v.worthNow))} now is about ${pct(hist.pct, 1)} a year over ${hist.years.toFixed(1)} years${Math.abs(hist.pct - Number(v.growthPct)) > 0.05 ? ` - the calculation is using ${pct(Number(v.growthPct), 1)}.` : ' - and the calculation is using it.'} The past is not a promise.` }),
+    Math.abs(hist.pct - Number(v.growthPct)) > 0.05 ? el('button', { class: 'btn btn-small', type: 'button', text: 'Use it', title: 'Use our own home’s growth for house prices', 'data-field': 'use-history', on: { click: () => { v.growthPct = Math.round(hist.pct * 10) / 10; d.mine.add('growthPct'); hub.render(); } } }) : null,
+  ]) : null;
+  if (r.missing) return [histLine, el('p', { class: 'panel muted', text: `Fill in ${r.missing.join(' and ')} to see the answer.` })];
+  if (r.error) return [histLine, el('p', { class: 'panel', role: 'alert', text: r.error })];
+  const who = r.ahead >= 0 ? 'Owning' : 'Renting';
+  const yrs = (n) => `${n} year${n === 1 ? '' : 's'}`;
+  const ownSide = r.keep ? 'keeping it' : 'buying';
+  const lines = [
+    r.keep
+      ? `Selling now would bring about ${rand(r.saleNow.cash)}: ${rand(r.saleNow.price)} less ${rand(r.saleNow.costs)} selling costs${r.saleNow.owed ? `, the ${rand(r.saleNow.owed)} still owed` : ''}${r.saleNow.tax ? ` and ${rand(r.saleNow.tax)} tax` : ''}. ${Number(v.boughtFor) ? `The gain of about ${rand(r.saleNow.gain)} is ${r.saleNow.gain > 3000000 ? 'more than' : 'under'} the R3 million SARS does not tax on the home you live in.` : 'Add what you paid for it to check the tax on the gain.'} Renting, that money is invested.`
+      : `Buying takes ${rand(r.ownerUp)} up front: the deposit, ${rand(r.duty)} transfer duty and about ${rand(r.fees)} in fees${Number(v.moveCost) ? ' and moving' : ''}. Renting, it stays invested.`,
+    `Each month now, owning costs about ${rand(r.monthOwn)}${r.pmt ? ` (the bond is ${rand(r.pmt)})` : ''} and renting ${rand(r.monthRent)}. Whoever pays less invests ${Number(v.investShare) >= 100 ? 'the difference' : `${pct(Number(v.investShare), 0)} of the difference`}, growing ${pct(r.afterTaxPct, 1)} a year after tax.`,
+    r.bondEnds ? `The bond ends in ${today.slice(0, 4) * 1 + Math.ceil(r.bondEnds)}; from then owning costs only the running costs, and the owner invests the rent they are not paying.` : null,
+    `After ${yrs(r.year)}: ${ownSide}, the home would bring about ${rand(r.home)} once sold (after selling costs${r.tax ? `, ${rand(r.tax)} tax` : ''} and any bond)${r.invOwner > 1 ? `, plus ${rand(r.invOwner)} invested` : ''} - ${rand(r.owner)}. Renting: ${rand(r.renter)}.`,
+    r.flips.length ? `Who is ahead changes in year ${r.flips.join(' and ')} - so how long you stay matters.` : null,
   ];
+  const evens = [
+    ['growthPct', 'house prices grow', -10, 30, '% a year'],
+    ['rentRisePct', 'rent rises', -5, 30, '% a year'],
+    ['investPct', 'investments grow (before tax)', -5, 40, '% a year'],
+  ].map(([k, what, lo, hi]) => ({ k, what, at: evenAt(v, k, lo, hi), now: Number(v[k]) || 0 })).filter((x) => x.at != null);
   const out = [
+    histLine,
     el('div', { class: 'stats' }, [
-      stat(rand(Math.abs(r.ahead)), `${ahead.toLowerCase()} ahead after ${r.year} year${r.year === 1 ? '' : 's'}`, 'r-ahead'),
-      stat(r.breakeven ? `${r.breakeven} year${r.breakeven === 1 ? '' : 's'}` : 'Not in 30 years', 'until buying gets ahead', 'r-breakeven'),
-      stat(rand(r.upBuy), 'cash needed to buy', 'r-upfront'),
+      stat(rand(Math.abs(r.ahead)), `${who.toLowerCase()} ahead after ${yrs(r.year)}`, 'r-ahead'),
+      stat(r.breakeven == null ? 'Not in 30 years' : r.breakeven === 1 && r.series[0].ahead > 0 ? 'From the start' : yrs(r.breakeven), 'until owning is ahead', 'r-breakeven'),
+      stat(`${rand(r.monthOwn)} · ${rand(r.monthRent)}`, 'a month now: owning · renting', 'r-monthly'),
     ]),
-    said('What it means', [
-      `Owning costs ${rand(r.firstOwn)} a month at first (bond, rates, levies, insurance, upkeep), renting ${rand(r.firstRent)}. Whoever pays less in a month saves the difference - at first, ${r.firstOwn > r.firstRent ? 'the renter' : 'the owner'}; as rent rises, it can swap. The renter also saves the ${rand(r.upBuy)} the buyer pays up front.`,
-      `After ${r.year} year${r.year === 1 ? '' : 's'}: the buyer’s home would bring about ${rand(r.home)} once sold and the bond settled${r.invBuyer > 1 ? `, plus ${rand(r.invBuyer)} saved` : ''} - ${rand(r.buyer)}. The renter would have ${rand(r.renter)}.`,
-      r.breakeven ? `Buying gets ahead after about ${r.breakeven} year${r.breakeven === 1 ? '' : 's'} with these assumptions. Before that, the duty, fees and selling costs have not been earned back.` : 'With these assumptions buying does not get ahead within 30 years.',
-      el('p', { class: 'small muted', style: { margin: 0 }, text: 'This depends on house prices and savings growth, which nobody knows in advance - see what moves it below. It also assumes the difference really is saved each month.' }),
+    el('div', { class: 'panel stack' }, [
+      el('h2', { text: 'What it means', style: { margin: 0 } }),
+      ...lines.filter(Boolean).map((t) => el('p', { style: { margin: 0 }, text: t })),
+      el('p', { class: 'small muted', style: { margin: 0 }, text: 'A projection from the figures above, not a prediction. The parts that matter most are below.' }),
     ]),
-    assumed(RB_FIELDS, d),
-    list('What moves the answer most', sensitivity(v, (x) => rentOrBuy(x).ahead, nudges).filter((x) => Math.abs(x.change) >= 1)
-      .map((x) => `${x.what[0].toUpperCase()}${x.what.slice(1)}: buying ${x.change > 0 ? 'better' : 'worse'} off by ${rand(Math.abs(x.change))}.`)),
+    evens.length ? el('div', { class: 'panel stack' }, [
+      el('h2', { text: 'What it hangs on', style: { margin: 0 } }),
+      el('ul', { style: { margin: 0 } }, evens.map((x) => el('li', { text: `They come out level if ${x.what} ${pct(x.at, 1)} a year - you have ${pct(x.now, 1)}.` }))),
+      el('p', { class: 'small muted', style: { margin: 0 }, text: 'If someone swears renting (or owning) is better, these are the numbers they are assuming without saying.' }),
+    ]) : null,
+    forgotten(v, r),
   ];
   if (shows('advanced')) {
+    const nudges = [
+      { key: 'growthPct', what: 'house prices growing 2 points slower', to: (x) => (Number(x) || 0) - 2 },
+      { key: 'rentRisePct', what: 'rent rising 2 points faster', to: (x) => (Number(x) || 0) + 2 },
+      { key: 'investPct', what: 'investments growing 2 points faster', to: (x) => (Number(x) || 0) + 2 },
+      { key: 'investShare', what: 'only half the difference really invested', to: () => 50 },
+      { key: 'ratePct', what: 'the bond rate 1 point higher', to: (x) => (Number(x) || 0) + 1 },
+      { key: 'maintYearly', what: 'maintenance costing twice as much', to: (x) => (Number(x) || 0) * 2 },
+    ];
     out.push(el('div', { class: 'panel stack' }, [
       el('h2', { text: 'Year by year', style: { margin: 0 } }),
       lineChart([
-        { name: 'Buyer', points: r.series.map((s) => [s.year * 12, s.buyer]) },
-        { name: 'Renter', points: r.series.map((s) => [s.year * 12, s.renter]), dashed: true },
-      ], { label: 'What the buyer and the renter would each have, year by year' }),
+        { name: r.keep ? 'Keeping our home' : 'Buying', points: r.series.map((s) => [s.year * 12, s.owner]) },
+        { name: r.keep ? 'Selling and renting' : 'Renting', points: r.series.map((s) => [s.year * 12, s.renter]), dashed: true },
+      ], { label: 'What each side would have, year by year' }),
       el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums' }, [
-        el('thead', {}, [el('tr', {}, ['After', 'Buyer', 'Renter', 'Difference'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
+        el('thead', {}, [el('tr', {}, ['After', 'Owning', 'Renting', 'Ahead', 'Month: own · rent'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
         el('tbody', {}, r.series.filter((s) => [1, 2, 3, 5, 7, 10, 15, 20, 25, 30].includes(s.year)).map((s) => el('tr', {}, [
-          el('td', { text: `${s.year} year${s.year === 1 ? '' : 's'}` }), el('td', { class: 'num', text: rand(s.buyer) }), el('td', { class: 'num', text: rand(s.renter) }),
-          el('td', { class: `num ${s.ahead >= 0 ? 'fin-better' : 'fin-worse'}`, text: `${s.ahead >= 0 ? 'buy' : 'rent'} ${rand(Math.abs(s.ahead))}` }),
+          el('td', { text: yrs(s.year) }), el('td', { class: 'num', text: rand(s.owner) }), el('td', { class: 'num', text: rand(s.renter) }),
+          el('td', { class: `num ${s.ahead >= 0 ? 'fin-better' : 'fin-worse'}`, text: `${s.ahead >= 0 ? 'own' : 'rent'} ${rand(Math.abs(s.ahead))}` }),
+          el('td', { class: 'num', text: `${rand(s.own)} · ${rand(s.rent)}` }),
         ]))),
       ])]),
+      el('h3', { text: 'What moves the answer most', style: { margin: 0 } }),
+      el('ul', { style: { margin: 0 } }, sensitivity(v, (x) => ownOrRent(x).ahead, nudges).filter((x) => Math.abs(x.change) >= 1)
+        .map((x) => el('li', { text: `${x.what[0].toUpperCase()}${x.what.slice(1)}: owning ${x.change > 0 ? 'better' : 'worse'} off by ${rand(Math.abs(x.change))}.` }))),
     ]));
   }
   if (shows('learn')) {
     out.push(el('div', { class: 'panel stack fin-learn' }, [
       el('h2', { text: 'How it is worked out', style: { margin: 0 } }),
-      step('Same money, both ways', 'Each month: budget = the dearer of owning and renting; the other side saves the difference', `Month 1: owning ${rand(r.firstOwn)}, renting ${rand(r.firstRent)}`, 'Comparing rent with a bond instalment alone is unfair both ways: owning also costs rates, upkeep, duty and fees, and renting leaves the deposit free to grow.'),
-      step('Day one', 'The renter saves what the buyer pays up front: deposit + transfer duty + fees − the rental deposit', `${rand(r.upBuy)} for the buyer`),
-      step('Savings grow', 'Saved = saved × (1 + r) + this month’s difference', `r = ${pct(Number(v.otherRatePct) || 0)} a year ÷ 12`),
-      step('Who is ahead', 'Buyer = value × (1 − selling costs) − bond still owed + savings; renter = savings + deposit back', `${rand(r.buyer)} against ${rand(r.renter)}`),
-      ...leavesOut([
-        'House prices, rent and savings are assumed to grow steadily. They do not, and the order of good and bad years matters.',
-        'Tax on savings growth is not counted; it would favour buying a little.',
-        'It assumes the difference really is saved every month. If it is spent instead, buying usually comes out further ahead.',
-        'Security of tenure, freedom to move, and making a place your own are real, but not money - weigh them yourselves.',
-      ]),
+      step('Same money, both sides', 'Each month the side that pays less invests the difference × the share really invested', `Now: owning ${rand(r.monthOwn)}, renting ${rand(r.monthRent)}`, 'Comparing rent with a bond alone is unfair both ways. Owning also costs rates, maintenance, duty and selling costs; renting leaves the deposit free to grow - but only if it is invested.'),
+      step('Day one', r.keep ? 'Selling now: price − selling costs − bond owed − tax on the gain, invested' : 'The renter invests what the buyer pays up front: deposit + transfer duty + fees + moving − the rental deposit', r.keep ? rand(r.saleNow.cash) : rand(r.ownerUp)),
+      step('Investments', 'Growth after tax = growth before tax × (1 − share lost to tax)', `${pct(Number(v.investPct) || 0, 1)} × (1 − ${pct(Number(v.investTaxPct) || 0, 0)}) = ${pct(r.afterTaxPct, 2)} a year`),
+      step('The home', 'Value = today’s value × (1 + growth)^years + each upgrade’s added value, growing from when it is done', `After ${yrs(r.year)}: ${rand(r.value)}`, 'Upgrades are paid when done (the renter invests the same amount); repairs and maintenance are a cost and add nothing.'),
+      step('Tax on selling your home', 'Taxed = gain − R3 000 000 − R50 000; tax = 40% of that × your tax rate', `Gain = sale price after costs − what it cost (purchase, duty, fees, improvements). ${CGT.source}.`),
+      step('Who is ahead', 'Owner = home sold, less selling costs, bond and tax + investments. Renter = investments + deposit back', `${rand(r.owner)} against ${rand(r.renter)}`),
+      el('h3', { text: 'What this leaves out', style: { margin: 0 } }),
+      el('ul', { class: 'small', style: { margin: 0 } }, [
+        'Prices, rents and returns move steadily here; real ones jump about, and the order of good and bad years matters.',
+        'Bond rates are held steady; a bond linked to prime changes when prime does.',
+        'Security, being able to stay, making a place your own - and the freedom to move - are real but not money. Weigh them yourselves.',
+      ].map((t) => el('li', { text: t }))),
     ]));
   }
   return out;
+}
+
+/** The things people forget - each either counted, with its value, or plainly not counted yet. */
+function forgotten(v, r) {
+  const n = (k) => Number(v[k]) || 0;
+  const items = [
+    [n('rentRisePct') > 0, `Rent rising every year (${pct(n('rentRisePct'), 1)}) while a bond instalment stays the same`],
+    [r.bondEnds > 0, r.bondEnds > 0 ? `The bond ending in ${Math.ceil(r.bondEnds)} years - then owning costs only rates, insurance and upkeep` : 'No bond to pay'],
+    [v.maintMode !== 'percent' && n('maintYearly') > 0, v.maintMode === 'percent' ? `Maintenance as ${pct(n('upkeepPct'), 1)} of the value - a rule of thumb; your own figure is better` : n('maintYearly') ? `Your own maintenance: ${rand(n('maintYearly'))} a year` : 'Maintenance - not counted yet'],
+    [(v.upgrades ?? []).length > 0, (v.upgrades ?? []).length ? `Upgrades that add value: ${(v.upgrades ?? []).map((u) => u.name || 'an upgrade').join(', ')}` : 'Upgrades that add value - none planned'],
+    [true, r.keep ? 'Transfer duty and fees - already paid on the home you own' : `Transfer duty ${rand(r.duty)} and fees ${rand(r.fees)}, paid however short the stay`],
+    [n('sellPct') > 0, `Selling costs: ${pct(n('sellPct'), 1)} of the price when you sell`],
+    [n('ratesTaxes') + n('levies') + n('insurance') > 0, n('ratesTaxes') + n('levies') + n('insurance') > 0 ? `Rates, levies and insurance: ${rand(n('ratesTaxes') + n('levies') + n('insurance'))} a month` : 'Rates, levies and building insurance - not counted yet'],
+    [n('investTaxPct') > 0, `Tax on the investments: ${pct(n('investTaxPct'), 0)} of their growth`],
+    [n('investShare') < 100, n('investShare') < 100 ? `How much of the difference really gets invested: ${pct(n('investShare'), 0)}` : 'How much of the difference really gets invested - assumed all of it, every month. Is that realistic?'],
+    [true, `Tax on selling your home: none on the first R3 million of gain${r.keep && r.saleNow?.tax ? ` - here ${rand(r.saleNow.tax)}` : ''}`],
+    [n('rentDeposit') > 0, n('rentDeposit') ? `The rental deposit (${rand(n('rentDeposit'))}) - cash needed, but it comes back` : 'The rental deposit - not counted yet'],
+    [n('travelOwn') + n('travelRent') > 0, n('travelOwn') + n('travelRent') > 0 ? 'Getting to work from each place' : 'Getting to work from each place - not counted yet (Advanced)'],
+    [n('moveCost') + n('rentMove') > 0, n('moveCost') + n('rentMove') > 0 ? 'Moving costs' : 'Moving costs - not counted yet (Advanced)'],
+  ];
+  return el('div', { class: 'panel stack', 'data-field': 'forgotten' }, [
+    el('h2', { text: 'Did you think of…', style: { margin: 0 } }),
+    el('ul', { class: 'checklist', style: { margin: 0, paddingLeft: 0, listStyle: 'none' } }, items.map(([ok, t]) => el('li', { class: ok ? null : 'muted', text: `${ok ? '✓' : '○'} ${t}` }))),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'And what is not money: being able to stay, making the place your own, the freedom to move. Weigh those yourselves.' }),
+  ]);
 }
 
 /* ------------------------------------------------------------- compare */
@@ -403,12 +532,12 @@ function compareScreen(hub, param) {
       { label: 'Paid in all', get: (b) => b.totalPaid, lower: true },
     ]);
   } else {
-    table = compareTable(recs.map((rec) => ({ title: rec.title, out: rentOrBuy(v(rec)) })), [
+    table = compareTable(recs.map((rec) => ({ title: rec.title, out: ownOrRent(v(rec)) })).filter((x) => x.out.ahead != null), [
       { label: 'Compared after', get: (r) => `${r.year} years` },
-      { label: 'Buyer would have', get: (r) => r.buyer, lower: false },
-      { label: 'Renter would have', get: (r) => r.renter, lower: false },
-      { key: 1, label: 'Buying ahead by', get: (r) => r.ahead, lower: false, total: true },
-      { label: 'Buying gets ahead after', get: (r) => (r.breakeven ? `${r.breakeven} years` : 'not in 30 years') },
+      { label: 'Owning would have', get: (r) => r.owner, lower: false },
+      { label: 'Renting would have', get: (r) => r.renter, lower: false },
+      { key: 1, label: 'Owning ahead by', get: (r) => r.ahead, lower: false, total: true },
+      { label: 'Owning gets ahead after', get: (r) => (r.breakeven ? `${r.breakeven} years` : 'not in 30 years') },
     ]);
   }
   return el('section', { class: 'stack', 'aria-labelledby': 'cmp-title' }, [

@@ -250,16 +250,16 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'homes', section: 'finance', name: 'Homes', version: '1.0.0',
+      fhManifest: 1, id: 'homes', section: 'finance', name: 'Homes', version: '1.1.0',
       description: 'A bond, renting against buying, and one home against another - the trip to work included.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [
         { id: 'tools', title: 'Homes' }, { id: 'home', title: 'A home' }, { id: 'bond', title: 'Bond' },
-        { id: 'rentbuy', title: 'Rent or buy' }, { id: 'compare', title: 'Side by side', nav: false },
+        { id: 'rentbuy', title: 'Own or rent' }, { id: 'compare', title: 'Side by side', nav: false },
       ],
       modes: [
         { mode: 'plan', screen: 'home', label: 'Work out what a home really costs' },
-        { mode: 'plan', screen: 'rentbuy', label: 'Rent or buy?' },
+        { mode: 'plan', screen: 'rentbuy', label: 'Own or rent?' },
       ],
       data: { collections: [{ name: 'saved', schema: 1 }] },
       permissions: ['data:own', 'notify'],
