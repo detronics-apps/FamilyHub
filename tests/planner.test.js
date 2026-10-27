@@ -7,7 +7,7 @@ import {
   normaliseRecipe, recipeSummary, ratingState, setRating, setTried, setPref, addNote, ratingMeaning,
   normalisePlan, setSlot, updateSlot, prepared, leftoverMeals, setReservation, addReservation, slotNeeds, ingredientsForPlan, scaleCarefully,
   batchMultiplier, slotBatch, expandIngredients, collectRecipes, wholeOnly,
-  POOL, normalisePool, addToPool, moveMeal, slotAt, mealsBetween, mondaysBetween, goodFor, setGoodFor,
+  POOL, normalisePool, addToPool, moveMeal, slotAt, mealsBetween, mondaysBetween, goodFor, setGoodFor, stillToBuy, sentAs,
 } from '../js/apps/meals/logic.js';
 import { recipeFacts, passes, emptyFilters, describeFilters } from '../js/apps/meals/facts.js';
 import { proposeWeek, analyseWeek, optimiseWeek, additionFor, mixGroup } from '../js/apps/mealplan/logic.js';
@@ -88,6 +88,39 @@ test('a shopping trip from Wednesday to Tuesday takes the meals of two weeks', (
   assert.deepEqual(mondaysBetween('2026-10-28', '2026-11-03'), [MONDAY, NEXT]);
   const trip = mealsBetween((m) => weeks[m], '2026-10-28', '2026-11-03');
   assert.deepEqual(trip.map((x) => [x.date, x.s.title, x.key]), [['2026-10-28', 'Wednesday pasta', MONDAY], ['2026-11-03', 'Next Tuesday curry', NEXT]]);
+});
+
+test('sending again: only what is still missing - each meal counted once, bought or not (D-059)', async () => {
+  const { normaliseShopping, addMore, toggleItem, clearBought, readSend } = await import('../js/apps/shopping/logic.js');
+  const chicken = (need) => need.items.find((i) => /chicken/.test(i.name));
+  let plan = setSlot(normalisePlan({}, MONDAY), 0, 'dinner', { recipeId: 'r1', title: 'Chicken and rice', servings: 4 });
+  const first = stillToBuy(plan.slots, recipes);
+  assert.equal(chicken(first).qty, 400, 'never sent: all of it');
+  let list = addMore(normaliseShopping({}), { source: 'trip:a' }, first.items, (i) => `a${i}`);
+  // Shopping says it was added; the meal notes what it went as.
+  plan = { ...plan, slots: plan.slots.map((s) => ({ ...s, sent: sentAs(s) })) };
+  assert.deepEqual(normalisePlan(JSON.parse(JSON.stringify(plan)), MONDAY).slots[0].sent.servings, 4, 'kept when read back');
+  assert.deepEqual(stillToBuy(plan.slots, recipes), { items: [], own: [] }, 'sent again unchanged, or in an overlapping trip: nothing');
+  // Bought and cleared, then a second meal is added: only the new meal is asked for.
+  list = clearBought(toggleItem(list, list.items.find((i) => /chicken/.test(i.name)).id));
+  plan = setSlot(plan, 1, 'dinner', { recipeId: 'r1', title: 'Chicken and rice', servings: 2 });
+  assert.equal(chicken(stillToBuy(plan.slots, recipes)).qty, 200, 'the bought 400 g is not asked for again');
+  // More people at the first meal: just the difference.
+  plan = updateSlot(plan, plan.slots[0].id, { servings: 6 });
+  const more = stillToBuy(plan.slots, recipes);
+  assert.equal(chicken(more).qty, 400, '200 g more for Monday + 200 g for Tuesday');
+  assert.equal(more.items.find((i) => /rice/.test(i.name)).qty, 300, '150 g + 150 g rice');
+  // Added onto what is still on the list, not as a second line.
+  list = addMore(list, { source: 'trip:b' }, more.items, (i) => `b${i}`);
+  assert.equal(list.items.filter((i) => /rice/.test(i.name)).length, 1);
+  assert.equal(list.items.find((i) => /rice/.test(i.name)).qty, 600, '300 g still to buy + 300 g more');
+  assert.equal(list.items.find((i) => /chicken/.test(i.name)).qty, 400, 'the bought line was cleared, so a fresh one');
+  // A ticked line is never topped up - the extra goes on its own line.
+  const ticked = toggleItem(list, list.items.find((i) => /rice/.test(i.name)).id);
+  assert.deepEqual(addMore(ticked, { source: 'trip:c' }, [{ name: 'rice', qty: 1, unit: 'kg' }], () => 'c').items.filter((i) => /rice/.test(i.name)).map((i) => [i.qty, i.unit, i.checked]), [[600, 'g', true], [1, 'kg', false]]);
+  assert.equal(addMore(list, { source: 'x' }, [{ name: 'rice', qty: 1, unit: 'kg' }]).items.find((i) => /rice/.test(i.name)).qty, 1.6, 'g and kg add up');
+  assert.equal(readSend(JSON.stringify({ source: 's', items: [], more: true, then: 'https://evil.example/' })).then, '', 'only an app link to go back to');
+  assert.equal(readSend(JSON.stringify({ source: 's', items: [], then: '#/mealplan/sent/x' })).then, '#/mealplan/sent/x');
 });
 
 test('A: leftovers scale what is cooked, and the list counts them once', () => {

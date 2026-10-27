@@ -20,7 +20,7 @@ import {
   MEALS, MEAL_LABEL, WEEKDAYS, normaliseRecipe, recipeSummary, formatIngredient, parseIngredient,
   weekStart, weekDays, normalisePlan, slotAt, setSlot, updateSlot, copyPlan, planId, planShopping, slotNeeds,
   prepared, reserved, leftoverMeals, setReservation, addReservation, SUMMARY_VERSION, slotBatch, collectRecipes,
-  POOL, normalisePool, addToPool, moveMeal, addSlot, mealsBetween, mondaysBetween, goodFor,
+  POOL, normalisePool, addToPool, moveMeal, addSlot, mealsBetween, mondaysBetween, goodFor, stillToBuy, sentAs,
 } from '../meals/logic.js';
 import { ingredientEditor } from '../../ui/ingredient-editor.js';
 import { recipeFacts, passes, emptyFilters, describeFilters, PROTEIN, CARB, GROUP, TRIAL, MEAL_TAGS } from '../meals/facts.js';
@@ -77,6 +77,7 @@ export function render(hub, route) {
     case 'add': return addScreen(hub, a, b);
     case 'modify': return modifyScreen(hub, a, b, c);
     case 'today': return todayScreen(hub);
+    case 'sent': return sentScreen(hub, route.rest[0] ?? '');
     case 'assign': return assignScreen(hub, route.rest[0] ?? null);
     case 'week': return weekScreen(hub, route.rest[0] ?? null);
     default: return planScreen(hub);
@@ -101,7 +102,10 @@ function todayScreen(hub) {
   const from = inTrip ? t.from : today;
   const to = inTrip ? t.to : addDays(today, 6);
   const weeks = mondaysBetween(from, to).map((m) => [m, loadPlan(hub, m)]);
-  if (weeks.some(([, x]) => x.loading)) return loading();
+  const pool = loadPool(hub);
+  if (weeks.some(([, x]) => x.loading) || pool.loading) return loading();
+  // Shopped for but on no day (D-060): there to drag onto today, in any order.
+  const bought = (pool.data?.slots ?? []).filter((s) => s.sent);
   const bad = weeks.find(([, x]) => x.error);
   if (bad) return failure(bad[1].error);
   const got = Object.fromEntries(weeks.map(([m, x]) => [m, x.data]));
@@ -147,14 +151,17 @@ function todayScreen(hub) {
           ? 'In the mood for something else? Drag a meal onto today’s and the two swap days (on a phone, press and hold first).'
           : 'Send the days you shop for from Meal Planner (To Shopping) and this shows exactly those. Drag a meal onto today’s to swap them.' }),
       ]),
-      el('div', { class: 'shop-strip__days' }, days.map((d) => {
+      el('div', { class: 'shop-strip__days' }, [bought.length ? dropTarget(el('div', { class: 'shop-strip__day', 'data-field': 'strip:pool', title: 'Bought for, not on a day - cook them in any order' }, [
+        el('strong', { class: 'small', text: 'Any day' }),
+        ...bought.map((s) => mealChip(hub, POOL, s)),
+      ]), (dd) => applyMove(hub, dd, { key: POOL, meal: dd.meal }), { accepts: (dd) => dd.key !== POOL }) : null, ...days.map((d) => {
         const m = weekStart(d);
         const i = dayDiff(m, d);
         return dropTarget(el('div', { class: `shop-strip__day${d === today ? ' is-today' : ''}`, 'data-field': `strip:${d}` }, [
           el('strong', { class: 'small', text: d === today ? 'Today' : `${WEEKDAYS[i]} ${Number(d.slice(8))}` }),
           ...all.filter((x) => x.date === d).map((x) => mealChip(hub, x.key, x.s)),
         ]), (dd) => applyMove(hub, dd, { key: m, day: i, meal: dd.meal || 'dinner' }));
-      })),
+      })]),
     ]),
   ]);
 }
@@ -188,9 +195,14 @@ function shopPanel(hub) {
             const got = Object.fromEntries(await Promise.all(mondaysBetween(st.from, to).map(async (m) => [m, await fetchPlan(hub, m)])));
             const list = mealsBetween((m) => got[m], st.from, to);
             if (!list.length) { hub.ui.notice('Nothing is planned on those days yet.'); return; }
-            await saveRecord(hub, plans(hub), { id: TRIP, week: TRIP, from: st.from, to, at: new Date().toISOString(), slots: [] });
+            // A shop sent before meals remembered what they sent (D-059): its days count as sent.
+            const last = await plans(hub).get(TRIP).catch(() => null);
+            const slots = list.map((x) => (!x.s.sent && last && !last.marks && last.from <= x.date && x.date <= last.to ? { ...x.s, sent: sentAs(x.s) } : x.s));
+            await saveRecord(hub, plans(hub), { id: TRIP, week: TRIP, from: st.from, to, at: new Date().toISOString(), marks: true, slots: [] });
             ui.shopFor = null;
-            await sendPlanned(hub, list.map((x) => x.s), `${fmtDay(st.from, today)} to ${fmtDay(to, today)}`, `trip:${st.from}`);
+            const marks = {};
+            for (const x of list) (marks[x.key] ??= []).push(x.s.id);
+            await sendPlanned(hub, slots, `${fmtDay(st.from, today)} to ${fmtDay(to, today)}`, `trip:${st.from}`, marks);
           },
         },
       }),
@@ -242,7 +254,8 @@ function mealChip(hub, key, s, { short = false } = {}) {
   return draggable(el('a', {
     class: `meal-chip meal-chip--${s.meal || 'unsorted'}`, href: hub.href('slot', ref(key, s.id)), 'data-field': `chip:${s.id}`,
     title: `${kind}: ${s.title}${good.length ? ` (good for ${good.map((m) => MEAL_LABEL[m].toLowerCase()).join(', ')})` : ''} - drag to move, or open it`,
-  }, [short ? el('span', { class: 'meal-chip__kind', text: kind[0] }) : null, el('span', { class: 'meal-chip__title', text: s.title }), short ? null : flags(good)]), { key, id: s.id, meal: s.meal });
+  }, [short ? el('span', { class: 'meal-chip__kind', text: kind[0] }) : null, el('span', { class: 'meal-chip__title', text: s.title }), short ? null : flags(good),
+    s.sent ? el('span', { class: 'meal-chip__sent', text: '✓', title: 'Sent to Shopping', 'aria-label': 'sent to Shopping' }) : null]), { key, id: s.id, meal: s.meal });
 }
 
 /** One group of planned meals - gathered (not sorted) or a meal - that meals can be dragged into. */
@@ -283,6 +296,12 @@ function planScreen(hub) {
       el('div', { class: 'row' }, [
         el('a', { class: 'btn btn-primary', href: hub.href('choose', `${POOL}~0~any`), text: '+ Add', title: 'Add a meal from the Cookbook, or type one', 'data-field': 'pool-add:any' }),
         el('a', { class: 'btn', href: hub.href('mix'), text: 'Suggest meals', title: 'A mix of family favourites and new ones to try, from the Cookbook', 'data-field': 'plan-my-week' }),
+        // Shop for them now (D-060): no need to sort them or put them on days - cook them in any order.
+        n && hub.data.installed('shopping') ? el('button', {
+          class: 'btn', type: 'button', text: 'To Shopping', 'data-field': 'pool-shop',
+          title: 'Send what all the planned meals need to the shopping list now - sorting and days can wait, or never happen',
+          on: { click: () => sendPlanned(hub, pool.data.slots, 'Planned meals', 'pool', { [POOL]: pool.data.slots.map((s) => s.id) }) },
+        }) : null,
       ]),
       poolGroup(hub, pool.data, '', { add: false }),
     ]),
@@ -291,7 +310,7 @@ function planScreen(hub) {
       el('div', { class: 'pool-sort' }, MEALS.map((meal) => poolGroup(hub, pool.data, meal))),
     ]),
     el('div', { class: 'panel stack' }, [
-      step(3, 'Assign them to days', n ? `${sorted} of ${n} sorted. Next, drag them onto the calendar.` : 'Once meals are gathered and sorted, put them on the calendar.'),
+      step(3, 'Assign them to days', n ? `${sorted} of ${n} sorted. Next, drag them onto the calendar - or skip this: send them to Shopping and cook them in any order.` : 'Once meals are gathered and sorted, put them on the calendar.'),
       el('div', {}, [el('a', { class: `btn${sorted ? ' btn-primary' : ''}`, href: hub.href('assign'), text: 'Assign', title: 'Put the planned meals on days', 'data-field': 'go-assign' })]),
     ]),
   ]);
@@ -412,8 +431,12 @@ function weekScreen(hub, param) {
   ]);
 }
 
-/** Shopping owns the list: what these meals need (leftovers counted once, with each meal's own changes) goes over in the link. */
-async function sendPlanned(hub, slots, from, source) {
+/**
+ * Shopping owns the list: what these meals still need (leftovers counted once, with each
+ * meal's own changes, less what each sent before - D-059) goes over in the link. Once
+ * added, Shopping comes back here to note what each meal went as (`marks`: week -> ids).
+ */
+async function sendPlanned(hub, slots, from, source, marks) {
   const b = book(hub);
   const byId = new Map();
   for (const s of slots) {
@@ -424,7 +447,39 @@ async function sendPlanned(hub, slots, from, source) {
   }
   // Our own items inside them (home-made mayo) are bought as their own ingredients.
   if (b) for (const s of slots) await collectRecipes(s.ingredients ?? byId.get(s.recipeId)?.ingredients ?? [], (id) => b.get(id), byId);
-  hub.open(sendHref({ source, from, group: 'food', ...planShopping({ slots }, byId) }));
+  const need = stillToBuy(slots, byId);
+  if (!need.items.length && !need.own.length) {
+    await markSent(hub, marks);
+    hub.ui.notice('Everything these meals need was sent before - nothing new to add.');
+    return;
+  }
+  hub.open(sendHref({ source, from, group: 'food', more: true, then: `#/mealplan/sent/${encodeURIComponent(JSON.stringify({ ...marks, at: Date.now() }))}`, ...need }));
+}
+
+/** Note on each meal what it went to Shopping as, so it is not asked for again. */
+async function markSent(hub, marks) {
+  for (const [key, ids] of Object.entries(marks && typeof marks === 'object' ? marks : {})) {
+    if ((!isDate(key) && key !== POOL) || !Array.isArray(ids)) continue;
+    const plan = await fetchPlan(hub, key);
+    await saveRecord(hub, plans(hub), { ...plan, id: planId(key), week: key, slots: plan.slots.map((s) => (ids.includes(s.id) ? { ...s, sent: sentAs(s) } : s)) });
+  }
+  hub.invalidate('plan:');
+}
+
+/** Back from Shopping after Add: note what went, then on to the list. Coming back here again only says so. */
+const marked = new Set();
+function sentScreen(hub, param) {
+  if (!marked.has(param)) {
+    marked.add(param);
+    let marks = {};
+    try { marks = JSON.parse(param); } catch { /* an incomplete link notes nothing */ }
+    markSent(hub, marks).then(() => hub.open('#/shopping'));
+    return loading();
+  }
+  return el('div', { class: 'panel stack' }, [
+    el('p', { text: 'These meals are noted as sent to Shopping.' }),
+    el('div', { class: 'row' }, [el('a', { class: 'btn', href: '#/shopping', text: 'Shopping list' }), el('a', { class: 'btn', href: hub.href('week'), text: 'Calendar' })]),
+  ]);
 }
 
 /* ------------------------------------------------------------- servings and leftovers */

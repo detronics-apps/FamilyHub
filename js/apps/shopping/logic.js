@@ -4,9 +4,10 @@
 // Each item remembers where it came from (`source`). Sending from the same
 // place again replaces those items with the new amounts instead of doubling
 // them; what was already bought stays bought, and typed-in items are never
-// touched by a send.
+// touched by a send. Meal Planner instead sends only what is still missing
+// (addMore, D-059), which is added on.
 
-import { parseIngredient, unitKey } from '../meals/logic.js';
+import { parseIngredient, unitKey, combineIngredients } from '../meals/logic.js';
 import { parseMeal } from '../assistant/logic.js';
 import { GUIDE } from '../assistant/guide.js';
 import { tokens } from '../../food.js';
@@ -107,6 +108,27 @@ export function addFromSource(list, { source, from = '', group = 'food' }, neede
   return { ...list, items: [...keep, ...added] };
 }
 
+/**
+ * Put more on the list (D-059): Meal Planner sends only what is still missing, so
+ * it is added to what is there - onto a line of the same thing not yet bought
+ * (500 g + 300 g mince is one line of 800 g), else as a line of its own.
+ */
+export function addMore(list, { source, from = '', group = 'food' }, needed, newId = (i) => `${source}_${i}_${Date.now().toString(36)}`) {
+  const items = [...list.items];
+  needed.filter((n) => str(n.name)).forEach((n, i) => {
+    const at = items.findIndex((x) => !x.checked && nameKey(x.name) === nameKey(n.name) && combineIngredients([x, n]).length === 1);
+    if (at >= 0 && items[at].qty != null && n.qty != null) {
+      const [sum] = combineIngredients([items[at], n]);
+      items[at] = { ...items[at], qty: sum.qty, unit: sum.unit };
+      return;
+    }
+    if (at >= 0 && n.qty == null) return;   // "some" is already on the list
+    const g = group === 'food' ? categorise(n.name) : GROUPS[group] ? group : 'food';
+    items.push({ id: newId(i), name: str(n.name, 120), qty: num(n.qty), unit: unitKey(n.unit ?? ''), note: str(n.note, 120), checked: false, source, from: str(from, 80), group: g });
+  });
+  return { ...list, items };
+}
+
 /** The meal plan's own send, kept by name for the week screen. */
 export const refreshFromPlan = (list, monday, needed, newId) => addFromSource(list, { source: `week:${monday}`, from: `Week of ${monday}`, group: 'food' }, needed, newId);
 
@@ -168,6 +190,10 @@ export function readSend(param) {
   const item = (i) => ({ name: str(i.name, 120), qty: num(i.qty), unit: unitKey(str(i.unit, 20)), note: str(i.note, 120) });
   return {
     source: str(raw.source, 80), from: str(raw.from, 80), group: GROUPS[raw.group] ? raw.group : 'food',
+    // 'more': only what is still missing - added to the list rather than replacing (D-059).
+    more: raw.more === true,
+    // Where to go once added, so the sender can note what went (another app's own link only).
+    then: typeof raw.then === 'string' && /^#\/[a-z][a-z0-9.-]*\//.test(raw.then) ? raw.then.slice(0, 4000) : '',
     items: raw.items.slice(0, 120).filter((i) => i && str(i.name)).map(item),
     // Home-made items (mayo): bought as their ingredients unless the family already has some made.
     own: (Array.isArray(raw.own) ? raw.own : []).slice(0, 30).filter((g) => g && str(g.name) && Array.isArray(g.items)).map((g) => ({

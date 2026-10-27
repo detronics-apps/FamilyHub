@@ -313,8 +313,13 @@ export function normaliseSlot(s) {
     // Guests joining this meal, by kind only ('man', 'woman', 'teen', 'child', 'toddler').
     guests: (Array.isArray(s.guests) ? s.guests : []).filter((g) => g && ['man', 'woman', 'teen', 'child', 'toddler'].includes(g.who)).slice(0, 30)
       .map((g, i) => ({ id: str(g.id, 40) || `g${i}`, who: g.who })),
+    // What this meal was when it last went to Shopping (D-059) - only what changes the amounts.
+    sent: s.sent && typeof s.sent === 'object' ? sentAs(normaliseSlot({ ...s, ...s.sent, sent: null })) : null,
   };
 }
+
+/** The parts of a planned meal that decide what it needs bought. */
+export const sentAs = (s) => ({ recipeId: s.recipeId, servings: s.servings, extra: s.extra, reserve: s.reserve, ingredients: s.ingredients, basis: s.basis });
 
 export function normalisePlan(p = {}, monday) {
   const slots = (Array.isArray(p.slots) ? p.slots : [])
@@ -341,7 +346,7 @@ export const addSlot = (plan, day, meal, slot, id = `s${Date.now().toString(36)}
 export const updateSlot = (plan, id, patch) => ({ ...plan, slots: plan.slots.map((s) => (s.id === id ? normaliseSlot({ ...s, ...patch, id }) : s)) });
 
 /** Reuse a previous week's plan for another week (same days and meals). Leftovers and notes stay behind. */
-export const copyPlan = (from, monday) => ({ week: monday, slots: from.slots.map((s) => normaliseSlot({ ...s, reserve: [], extra: 0, note: '', feedback: null })) });
+export const copyPlan = (from, monday) => ({ week: monday, slots: from.slots.map((s) => normaliseSlot({ ...s, reserve: [], extra: 0, note: '', feedback: null, sent: null })) });
 
 export const planId = (monday) => (monday === POOL ? POOL : `week_${monday.replace(/-/g, '')}`);
 
@@ -579,6 +584,41 @@ export function planShopping(plan, recipes) {
     for (const r of s.reserve) base.push(...r.additions);
   }
   return { items: combineIngredients(base), own: mergeOwn(own) };
+}
+
+const lineKey = (i) => `${nameKey(i.name)}|${UNITS[unitKey(i.unit)]?.[0] ?? `unit:${unitKey(i.unit)}`}`;
+const factor = (i) => UNITS[unitKey(i.unit)]?.[1] ?? 1;
+
+/** `lines` less what `done` already covered: only the amount still missing, in the same kind of unit. */
+function less(lines, done) {
+  const had = new Map(done.map((i) => [lineKey(i), i]));
+  return lines.flatMap((i) => {
+    const h = had.get(lineKey(i));
+    if (!h) return [i];
+    if (i.qty == null || h.qty == null) return [];   // "some" was asked for already
+    const left = i.qty * factor(i) - h.qty * factor(h);
+    return left > 1e-6 ? combineIngredients([{ ...i, qty: left / factor(i) }]) : [];
+  });
+}
+
+/**
+ * What these planned meals still need from the shop (D-059): planShopping, less what
+ * each meal already sent (its `sent`). A meal sent before and unchanged adds nothing,
+ * however many trips it falls in; one with more servings adds only the difference.
+ */
+export function stillToBuy(slots, recipes) {
+  const now = planShopping({ slots }, recipes);
+  const was = planShopping({ slots: slots.filter((s) => s.sent).map((s) => normaliseSlot({ ...s, ...s.sent, sent: null })) }, recipes);
+  return {
+    items: less(now.items, was.items),
+    own: now.own.flatMap((g) => {
+      const h = was.own.find((x) => x.id === g.id && x.unit === g.unit);
+      if (!h) return [g];
+      const qty = Math.round(((g.qty ?? 0) - (h.qty ?? 0)) * 10) / 10;
+      const items = less(g.items, h.items);
+      return qty > 0 && items.length ? [{ ...g, qty, items }] : [];
+    }),
+  };
 }
 
 export const INGREDIENT_CSV_TEMPLATE = 'ingredient,amount,unit,note\nflour,200,g,\neggs,2,pieces,\nmilk,300,ml,full cream\n';

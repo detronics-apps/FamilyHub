@@ -117,7 +117,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'mealplan', section: 'meals', name: 'Meal Planner', version: '1.2.0',
+      fhManifest: 1, id: 'mealplan', section: 'meals', name: 'Meal Planner', version: '1.2.1',
       description: 'Choose the meals, then drag them onto days - a week or a month ahead - and send what they need to the shopping list.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [
@@ -125,6 +125,7 @@ const RAW = [
         { id: 'add', title: 'Plan a meal', nav: false }, { id: 'choose', title: 'Choose a meal', nav: false },
         { id: 'slot', title: 'Planned meal', nav: false }, { id: 'mix', title: 'Suggest meals', nav: false }, { id: 'review', title: 'How the week looks', nav: false },
         { id: 'modify', title: 'Change a planned meal', nav: false }, { id: 'today', title: 'Cook today' },
+        { id: 'sent', title: 'Sent to Shopping', nav: false },
       ],
       modes: [
         { mode: 'plan', screen: 'plan', label: 'Plan the next meals', hint: 'Choose the meals, then drag them onto days' },
@@ -138,7 +139,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'shopping', section: 'shopping', name: 'Shopping', version: '1.1.0',
+      fhManifest: 1, id: 'shopping', section: 'shopping', name: 'Shopping', version: '1.1.1',
       description: 'One family shopping list. Find what you buy by kind - food, cleaning, hygiene - add anything new, and tick it off at the shop.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [{ id: 'list', title: 'Shopping list' }, { id: 'shop', title: 'At the shop' }, { id: 'add', title: 'Add to the list', nav: false }],

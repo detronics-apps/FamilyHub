@@ -8,7 +8,7 @@ import { loading, failure, saveRecord } from '../kit.js';
 import { formatIngredient, combineIngredients, parseIngredient } from '../meals/logic.js';
 import { inSystem } from '../../units.js';
 import {
-  GROUPS, KINDS, LIST_ID, normaliseShopping, addFromSource, addShoppingItem, toggleItem, clearBought, removeItem, byGroup, readSend, listText,
+  GROUPS, KINDS, LIST_ID, normaliseShopping, addFromSource, addMore, addShoppingItem, toggleItem, clearBought, removeItem, byGroup, readSend, listText,
   findItems, kindOf, categorise,
 } from './logic.js';
 
@@ -47,7 +47,7 @@ function finder(hub, list, save) {
     const found = findItems(list, { query: words, kind: st.kind || null, ours: st.ours });
     const exact = found.some((f) => f.name.toLowerCase() === words.toLowerCase());
     const fresh = st.query.trim() && !exact ? newItem(st.query.trim()) : null;
-    results.replaceChildren(
+    results.replaceChildren(...[
       found.length ? el('ul', { class: 'list' }, found.slice(0, 40).map((f) => el('li', {}, [
         el('span', { class: 'list__main' }, [
           el('strong', { text: f.name }),
@@ -58,7 +58,7 @@ function finder(hub, list, save) {
       ]))) : el('p', { class: 'small muted', text: st.ours ? 'Nothing of ours matches yet - choose "Everything" to see more, or add it as a new item.' : 'Nothing matches.' }),
       found.length > 40 ? el('p', { class: 'small muted', text: `${found.length - 40} more - type a word to narrow it down.` }) : null,
       fresh,
-    );
+    ].filter(Boolean));   // replaceChildren would write a null as the text "null"
   };
   // A new item, in the kind being looked at (food goes to its aisle).
   const newItem = (text) => {
@@ -127,7 +127,7 @@ function listScreen(hub, list, save) {
       el('ul', { class: 'list' }, bought.map(item)),
       el('button', { class: 'btn btn-small', type: 'button', text: 'Clear bought', on: { click: () => save(clearBought(list)) } }),
     ]) : null,
-    el('p', { class: 'small muted', text: 'Amounts in grams and kilos (or millilitres and litres) are added together. Different kinds of measure - cups and grams, say - are listed separately rather than guessed. Sending the same meal or week again updates its items instead of doubling them.' }),
+    el('p', { class: 'small muted', text: 'Amounts in grams and kilos (or millilitres and litres) are added together. Different kinds of measure - cups and grams, say - are listed separately rather than guessed. Sending the same meal again updates its items instead of doubling them; Meal Planner sends only what its meals still need.' }),
   ]);
 }
 
@@ -158,7 +158,7 @@ function shopScreen(hub, list, save) {
 function addScreen(hub, list, save, param) {
   const send = readSend(param);
   if (!send) return el('div', { class: 'panel' }, [el('p', { text: 'Nothing to add - the link was incomplete.' }), el('a', { class: 'btn', href: hub.href(), text: 'Open list' })]);
-  const already = list.items.some((i) => i.source === send.source);
+  const already = !send.more && list.items.some((i) => i.source === send.source);
   const boxes = send.items.map((i, n) => el('label', { class: 'checkline' }, [
     el('input', { type: 'checkbox', checked: true, 'data-index': String(n) }), formatIngredient(inSystem(i, hub.units())), i.note ? el('span', { class: 'small muted', text: ` (${i.note})` }) : null,
   ]));
@@ -175,6 +175,7 @@ function addScreen(hub, list, save, param) {
   return el('section', { class: 'stack' }, [
     el('h1', { text: `Add to the shopping list${send.from ? `: ${send.from}` : ''}` }),
     already ? el('p', { class: 'small', text: 'These are already on the list from before - adding replaces them with the amounts below. Anything already bought stays bought.' }) : null,
+    send.more ? el('p', { class: 'small muted', text: 'Only what these meals still need - what was sent for them before is not asked for again, bought or not. Amounts are added to what is on the list.' }) : null,
     send.items.length ? el('div', { class: 'panel stack' }, [
       el('p', { class: 'small muted', text: 'Untick anything you already have.' }),
       ...boxes,
@@ -189,10 +190,10 @@ function addScreen(hub, list, save, param) {
             const picked = boxes.map((b) => b.querySelector('input')).filter((b) => b.checked).map((b) => send.items[Number(b.dataset.index)]);
             const toMake = made.map((m) => m.querySelector('input')).filter((b) => !b.checked).flatMap((b) => send.own[Number(b.dataset.own)].items);
             const chosen = combineIngredients([...picked, ...toMake]);
-            await save(addFromSource(list, send, chosen));
+            await save((send.more ? addMore : addFromSource)(list, send, chosen));
             hub.invalidate('list');
             hub.ui.notice(`${chosen.length} item${chosen.length === 1 ? '' : 's'} on the list.`);
-            hub.go();
+            if (send.then) hub.open(send.then); else hub.go();
           },
         },
       }),

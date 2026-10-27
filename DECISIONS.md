@@ -426,6 +426,25 @@ the family's own when no entry uses it. An entry keeps its topics whatever the l
 guide's starting passages come only with its own topics, and the family's logged passages and
 questions show under every topic.
 
+**D-059 Sending meals to Shopping again adds only what is new (owner, 2026-10-27).** A trip was
+replaced by its start day, so overlapping trips counted shared meals twice, a resend after "Done"
+asked for everything already bought, and a ticked line whose amount grew looked bought. Now each
+planned meal remembers what it went to Shopping as (`sent`: recipe, servings, extra, leftovers,
+its own ingredients). A send works out the meals' needs less what each sent before
+(`stillToBuy`), so an unchanged meal adds nothing however many trips it falls in, and more people
+adds just the difference. Shopping adds that on (`addMore`): onto a line of the same thing not yet
+bought, else a line of its own. A meal is marked sent only after Add (Shopping returns through
+`#/mealplan/sent/...`), so Cancel leaves it unsent; what was unticked as "already have" counts as
+sent. Days of the last trip sent before this change count as sent once. Not covered: a meal sent
+alone from the Cookbook ("To Shopping" there) is still its own send.
+
+**D-060 Shop for the planned meals before they are on days (owner, 2026-10-27).** Sorting and
+assigning are optional: "To Shopping" in step 1 (Gather) sends what every planned meal needs,
+sorted or not, on a day or not, through the same send as a trip (D-059), so a meal later put on a
+day is not bought twice. A sent meal shows a ✓ on its chip. Cook today lists sent meals that are
+on no day under "Any day", first in the strip, to drag onto today (a meal already there swaps back
+into the list); dragging one back to "Any day" takes it off its day.
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).
