@@ -36,8 +36,9 @@ export const shows = (want) => ({ simple: 0, advanced: 1, learn: 2 })[level()] >
 /* ------------------------------------------------------------ amounts */
 
 const ZAR = new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', maximumFractionDigits: 0 });
-/** Rands, rounded to the rand for reading; the sums underneath are never rounded. */
-export const rand = (n) => (n == null || !Number.isFinite(n) ? '-' : ZAR.format(Math.round(n) || 0));
+const ZAR_CENTS = new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/** Rands, rounded to the rand for reading (small amounts like R4.95 a km keep their cents); the sums underneath are never rounded. */
+export const rand = (n) => (n == null || !Number.isFinite(n) ? '-' : Math.abs(n) < 100 && Math.round(n) !== n ? ZAR_CENTS.format(n) : ZAR.format(Math.round(n) || 0));
 export const pct = (n, dp = 2) => `${Number(n.toFixed(dp))}%`;
 export const months = (m) => (m % 12 === 0 ? `${m / 12} year${m === 12 ? '' : 's'}` : m < 12 ? `${m} months` : `${Math.floor(m / 12)} years ${m % 12} months`);
 
@@ -54,7 +55,7 @@ export function draft(key, defaults) {
   return drafts.get(key);
 }
 export function loadDraft(key, defaults, record) {
-  drafts.set(key, { values: { ...defaults, ...record.values }, mine: new Set(Object.keys(record.values)), savedId: record.id, title: record.title });
+  drafts.set(key, { values: { ...defaults, ...record.values }, mine: new Set(Object.keys(record.values)), savedId: record.id, savedKind: record.kind, title: record.title });
 }
 
 /** Where a value came from, in words. */
@@ -87,15 +88,30 @@ export function input(f, d, onInput) {
   } else {
     control = el('input', {
       class: 'input', id, type: 'number', inputmode: 'decimal', step: 'any', min: f.min ?? '0', value: d.values[f.key] ?? '',
-      placeholder: f.optional ? 'not counted' : '', 'data-field': `in:${f.key}`, style: { maxWidth: '200px' },
+      placeholder: f.estimate ? 'estimate' : f.optional ? 'not counted' : '', 'data-field': `in:${f.key}`, style: { maxWidth: '200px' },
       on: { input: (e) => set(e.target.value === '' ? null : Number(e.target.value)) },
     });
   }
-  const unit = { money: 'R', percent: '% a year', years: 'years', months: 'months', km: 'km a year' }[f.type];
+  const unit = { money: 'R', percent: '% a year', years: 'years', months: 'months', km: 'km a year', kmOne: 'km', minutes: 'minutes' }[f.type];
   return el('div', { class: 'field' }, [
     el('label', { class: 'field__label', for: f.type === 'choice' ? null : id }, [f.label, ' ', tag]),
     el('div', { class: 'row', style: { gap: 'var(--space-2)' } }, [unit === 'R' ? el('span', { class: 'muted', text: 'R' }) : null, control, unit && unit !== 'R' ? el('span', { class: 'small muted', text: unit }) : null]),
     f.hint ? el('div', { class: 'field__hint', text: f.hint }) : null,
+  ]);
+}
+
+/**
+ * The inputs this level shows, grouped under headings. `when(values)` hides a
+ * field that does not apply (a rent with "Buy" chosen).
+ */
+export function inputsPanel(fields, d, groups, onChange) {
+  const visible = fields.filter((f) => shows(f.level) && (!f.when || f.when(d.values)));
+  return el('div', { class: 'panel stack' }, [
+    el('h2', { text: 'What we need', style: { margin: 0 } }),
+    ...[...new Set(visible.map((f) => f.group))].map((g) => {
+      const nodes = visible.filter((f) => f.group === g).map((f) => input(f, d, onChange));
+      return groups[g] ? el('fieldset', { class: 'stack fin-group' }, [el('legend', { text: groups[g] }), ...nodes]) : el('div', { class: 'stack' }, nodes);
+    }),
   ]);
 }
 
@@ -105,7 +121,7 @@ export function assumed(fields, d) {
   if (!hidden.length) return null;
   return el('p', { class: 'small muted', 'data-field': 'assumed' }, [
     el('strong', { text: 'Also counted: ' }),
-    hidden.map((f) => `${f.label.toLowerCase()} ${f.type === 'money' ? rand(d.values[f.key]) : f.type === 'percent' ? pct(d.values[f.key]) : f.type === 'check' ? (d.values[f.key] ? 'yes' : 'no') : d.values[f.key]} (${origin(f, d)})`).join('; '),
+    hidden.map((f) => `${f.label.toLowerCase()} ${f.type === 'money' ? rand(d.values[f.key] ?? f.estimate?.(d.values)) : f.type === 'percent' ? pct(d.values[f.key]) : f.type === 'check' ? (d.values[f.key] ? 'yes' : 'no') : d.values[f.key]} (${origin(f, d)})`).join('; '),
     '. Change them under Advanced.',
   ]);
 }
@@ -184,9 +200,10 @@ export function savedPanel(hub, { col, kind, d, summary, onOpen, compareScreen }
   // Same name as the one opened: update it. A new name: a new saved one, the old kept as it was.
   const save = async () => {
     const title = name.value.trim() || 'Untitled';
-    const same = d.savedId && title === d.title;
+    const same = d.savedId && title === d.title && d.savedKind === kind;
     const saved = await saveRecord(hub, col, { ...(same ? { id: d.savedId } : {}), kind, title, values: { ...d.values }, result: summary(), savedAt: new Date().toISOString() });
     d.savedId = saved?.id ?? d.savedId;
+    d.savedKind = kind;
     d.title = title;
     hub.ui.notice(`Saved "${title}".`);
   };

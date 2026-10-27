@@ -137,3 +137,61 @@ test('D-066 car true cost: nothing counted twice, an early sale, and the "profit
   const s = sensitivity(base, (v) => carCost(v).total, CAR_NUDGES);
   assert.ok(Math.abs(s[0].change) >= Math.abs(s.at(-1).change));
 });
+
+/* ------------------------------------------------------ D-067 homes */
+
+import { transferDuty, homeCost, bond, rentOrBuy, travel } from '../js/apps/finance/maths.js';
+
+test('D-067 transfer duty follows the SARS bands', () => {
+  near(transferDuty(1000000), 0);
+  near(transferDuty(1210000), 0);
+  near(transferDuty(1500000), 8700);                         // 3% of 290 000
+  near(transferDuty(2000000), 13614 + 0.06 * 336200);
+  near(transferDuty(5000000), 106784 + 0.11 * 2005200);
+});
+
+test('D-067 bond: textbook instalment, paying extra, and the cash needed first', () => {
+  const b = bond({ price: 1000000, deposit: 100000, ratePct: 12, termYears: 20, fees: 40000 });
+  near(b.instalment, 9909.75, 0.05);                       // R900 000 at 12% over 20 years
+  near(b.interest, b.instalment * 240 - 900000);
+  near(b.cashFirst, 100000 + 0 + 40000);
+  assert.equal(b.monthsWithExtra, 240);
+  near(b.interestWithExtra, b.interest, 1);
+  const more = bond({ price: 1000000, deposit: 100000, ratePct: 12, termYears: 20, extra: 1000 });
+  assert.ok(more.monthsWithExtra < 240 && more.interestWithExtra < b.interest);
+  near(bond({ price: 1000000, ratePct: 12, termYears: 20, income: 40000 }).share, payment(1000000, 0.01, 240) / 40000);
+});
+
+test('D-067 one home: nothing counted twice, travel counted, and a short stay', () => {
+  near(travel({ km: 20, days: 21, perKm: 4.95 }).money, 2 * 20 * 21 * 4.95);
+  near(travel({ minutes: 30, days: 20 }).hours, 20);
+  const base = { price: 1500000, deposit: 150000, ratePct: 11, termYears: 20, stayYears: 5, ratesTaxes: 1200, levies: 800, insurance: 400, km: 25, minutes: 40, moveCost: 15000 };
+  for (const extra of [{}, { stayYears: 25 }, { growthPct: -2 }, { deposit: 1500000 }]) {
+    const c = homeCost({ ...base, ...extra });
+    near(c.total, c.valueChange + c.duty + c.fees + c.move + c.sellCosts + c.interest + c.running + c.travel + c.forgone);
+    near(c.timeline.at(-1).cost + c.forgone, c.total);
+  }
+  const rent = homeCost({ mode: 'rent', rent: 12000, rentDeposit: 24000, moveCost: 8000, stayYears: 5, km: 5 });
+  near(rent.total, rent.move + rent.rent + rent.travel + rent.forgone);
+  // Staying one year: duty, fees and selling costs are paid in full for a short stay, so a month costs far more.
+  const year = homeCost({ ...base, stayYears: 1 });
+  assert.ok(year.perMonth > 1.5 * homeCost(base).perMonth);
+  // Closer to work: a dearer house can still cost less once the trip is counted.
+  const far = homeCost({ ...base, km: 45 });
+  const near_ = homeCost({ ...base, price: 1600000, km: 5 });
+  assert.ok(near_.travel < far.travel);
+  assert.deepEqual(homeCost({}).missing, ['the price']);
+  assert.deepEqual(homeCost({ mode: 'rent' }).missing, ['the rent']);
+});
+
+test('D-067 rent or buy: same money each month, and when buying gets ahead', () => {
+  const v = { price: 1500000, deposit: 150000, ratePct: 11, termYears: 20, rent: 11000, rentDeposit: 11000, ratesTaxes: 1500, insurance: 400, growthPct: 5, otherRatePct: 8, stayYears: 10 };
+  const r = rentOrBuy(v);
+  near(r.ahead, r.buyer - r.renter);
+  assert.equal(r.year, 10);
+  assert.equal(r.series.length, 30);
+  // Buying needs years to cover duty, fees and selling costs: never ahead after one year here.
+  assert.ok(r.series[0].ahead < 0);
+  // A house that never grows in value and costs far more each month never gets ahead.
+  assert.equal(rentOrBuy({ ...v, growthPct: 0, rent: 3000 }).breakeven, null);
+});

@@ -250,6 +250,24 @@ const RAW = [
   },
   {
     manifest: {
+      fhManifest: 1, id: 'homes', section: 'finance', name: 'Homes', version: '1.0.0',
+      description: 'A bond, renting against buying, and one home against another - the trip to work included.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
+      screens: [
+        { id: 'tools', title: 'Homes' }, { id: 'home', title: 'A home' }, { id: 'bond', title: 'Bond' },
+        { id: 'rentbuy', title: 'Rent or buy' }, { id: 'compare', title: 'Side by side', nav: false },
+      ],
+      modes: [
+        { mode: 'plan', screen: 'home', label: 'Work out what a home really costs' },
+        { mode: 'plan', screen: 'rentbuy', label: 'Rent or buy?' },
+      ],
+      data: { collections: [{ name: 'saved', schema: 1 }] },
+      permissions: ['data:own', 'notify'],
+    },
+    load: () => import('./homes/app.js'),
+  },
+  {
+    manifest: {
       fhManifest: 1, id: 'exercise', section: 'exercise', name: 'Exercise', version: '1.0.0',
       description: 'Log activity, keep flexible weekly plans, and see what the family did together.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
@@ -301,7 +319,6 @@ export const starter = (id) => STARTERS.find((s) => s.manifest.id === id) ?? nul
 /** On the roadmap, not built. Shown in the library so nobody mistakes them for working apps. */
 export const COMING_LATER = [
   { id: 'planner', name: 'Planner', purpose: 'A family calendar: the week at a glance, with chores, tasks, meals, trips and review dates from the other mini-apps in one place.' },
-  { id: 'homes', name: 'Homes', purpose: 'Bond repayments, renting against buying, and one house against another - travel to work included.' },
   { id: 'children', name: 'Children’s future', purpose: 'School, studies, a first car and other milestones for each child, from the ages Family Hub already knows.' },
   { id: 'jobs', name: 'Job offers', purpose: 'One offer against another: take-home pay, increases, benefits, moving costs and how long a move takes to pay back.' },
   { id: 'money-plan', name: 'Money plan', purpose: 'Every goal on one timeline - holidays, cars, school, a house - with what to put aside each month and where it does not fit.' },

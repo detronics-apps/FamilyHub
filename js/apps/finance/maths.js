@@ -9,6 +9,8 @@
 export const REFERENCE = {
   prime: { value: 10.75, label: 'Prime lending rate', source: 'SA Reserve Bank, 23 Sep 2026' },
   cpi: { value: 4.5, label: 'Inflation (CPI)', source: 'Stats SA, September 2026' },
+  perKm: { value: 4.95, label: 'SARS rate per km', source: 'SARS, 2026/27 tax year' },
+  transferDuty: { label: 'Transfer duty', source: 'SARS table from 1 April 2025, unchanged from 1 April 2026' },
 };
 
 const MAX_MONTHS = 600;
@@ -164,3 +166,185 @@ export const CAR_NUDGES = [
   { key: 'escalatePct', what: 'running costs rising 2 points faster a year', to: (x) => (Number(x) || 0) + 2 },
   { key: 'fuel', what: 'fuel 20% dearer', to: (x) => (Number(x) || 0) * 1.2 },
 ];
+
+/* ------------------------------------------------------- homes (D-067) */
+
+/** SARS transfer duty bands: [from, base amount, % of the value above `from`]. */
+const DUTY_BANDS = [[0, 0, 0], [1210000, 0, 3], [1663800, 13614, 6], [2329300, 53544, 8], [2994800, 106784, 11], [13310000, 1241456, 13]];
+
+export function transferDuty(price) {
+  const p = Number(price) || 0;
+  const [from, base, rate] = DUTY_BANDS.filter(([f]) => p > f).at(-1) ?? DUTY_BANDS[0];
+  return base + ((p - from) * rate) / 100;
+}
+
+/**
+ * Attorney, bond registration and deeds office costs, when none are entered:
+ * a rough illustrative estimate (transfer: R10 000 + 1.2% of the price; bond:
+ * R10 000 + 1% of the loan). A conveyancer's quote replaces it.
+ */
+export const feesEstimate = (price, loan) => 10000 + 0.012 * price + (loan > 0 ? 10000 + 0.01 * loan : 0);
+
+export const HOME_DEFAULTS = {
+  mode: 'buy', price: null, deposit: 0, ratePct: REFERENCE.prime.value, termYears: 20, stayYears: 5,
+  fees: null, growthPct: 4, sellPct: 7.5,
+  ratesTaxes: null, levies: null, insurance: null, upkeepPct: 1,
+  rent: null, rentRisePct: 6, rentDeposit: null, moveCost: null,
+  escalatePct: REFERENCE.cpi.value,
+  km: null, days: 21, perKm: REFERENCE.perKm.value, travelExtra: null, minutes: null, hourValue: null,
+  otherRatePct: 7,
+};
+
+/** Shared by the home tools: the bond, the house's value, and the monthly costs, month by month. */
+function homeParts(v) {
+  const price = num(v.price) ?? 0;
+  const deposit = Math.min(price, num(v.deposit) ?? 0);
+  const loan = price - deposit;
+  const n = Math.max(0, Math.round((num(v.termYears) ?? 0) * 12));
+  const r = monthlyRate(v.ratePct);
+  const pmt = loan > 0 && n > 0 ? payment(loan, r, n) : 0;
+  const esc = (num(v.escalatePct) ?? 0) / 100;
+  const g = (num(v.growthPct) ?? 0) / 100;
+  const year = (m) => Math.floor((m - 1) / 12);
+  const valueAt = (m) => price * (1 + g) ** (m / 12);
+  return {
+    price, deposit, loan, n, r, pmt,
+    duty: transferDuty(price),
+    fees: num(v.fees) ?? feesEstimate(price, loan),
+    owedAt: (m) => (loan > 0 && m < n ? balanceAfter(loan, r, pmt, m) : 0),
+    valueAt,
+    // Rates, levies and insurance rise with the escalation; upkeep is a share of what the house is worth.
+    runningIn: (m) => ((num(v.ratesTaxes) ?? 0) + (num(v.levies) ?? 0) + (num(v.insurance) ?? 0)) * (1 + esc) ** year(m) + (valueAt(m) * (num(v.upkeepPct) ?? 0)) / 100 / 12,
+    rentIn: (m) => (num(v.rent) ?? 0) * (1 + (num(v.rentRisePct) ?? 0) / 100) ** year(m),
+  };
+}
+
+/** Getting to work from this home, in one month: money and hours. */
+export function travel(v, m = 1) {
+  const esc = (num(v.escalatePct) ?? 0) / 100;
+  const days = num(v.days) ?? 0;
+  const money = (2 * (num(v.km) ?? 0) * days * (num(v.perKm) ?? 0) + (num(v.travelExtra) ?? 0)) * (1 + esc) ** Math.floor((m - 1) / 12);
+  const hours = (2 * (num(v.minutes) ?? 0) * days) / 60;
+  return { money, hours, time: hours * (num(v.hourValue) ?? 0) };
+}
+
+/**
+ * The true cost of living in one home for a while - bought or rented - with the
+ * trip to work counted. Like the car: cash out, less what comes back at the end,
+ * plus what the money paid up front could have earned meanwhile.
+ */
+export function homeCost(input) {
+  const v = { ...HOME_DEFAULTS, ...input };
+  const buy = v.mode !== 'rent';
+  if (buy && !(num(v.price) > 0)) return { missing: ['the price'] };
+  if (!buy && !(num(v.rent) > 0)) return { missing: ['the rent'] };
+  if (buy && (num(v.deposit) ?? 0) > num(v.price)) return { error: 'The deposit is more than the price.' };
+  const h = homeParts(v);
+  if (buy && h.loan > 0 && h.n === 0) return { error: 'Choose how long the bond runs, or put the whole price down as the deposit.' };
+  const S = Math.max(1, Math.min(MAX_MONTHS, Math.round((num(v.stayYears) ?? 0) * 12)));
+  const move = num(v.moveCost) ?? 0;
+  const rentDeposit = num(v.rentDeposit) ?? 0;
+  const sell = (num(v.sellPct) ?? 0) / 100;
+  const upfront = buy ? h.deposit + h.duty + h.fees + move : rentDeposit + move;
+
+  let toBank = 0; let running = 0; let rent = 0; let travelMoney = 0; let hours = 0; let timeCost = 0;
+  const timeline = [{ month: 0, cost: upfront - (buy ? h.price * (1 - sell) - h.loan : rentDeposit) }];
+  for (let m = 1; m <= S; m += 1) {
+    if (buy) { if (m <= h.n) toBank += h.pmt; running += h.runningIn(m); } else rent += h.rentIn(m);
+    const t = travel(v, m);
+    travelMoney += t.money; hours += t.hours; timeCost += t.time;
+    const back = buy ? h.valueAt(m) * (1 - sell) - h.owedAt(m) : rentDeposit;
+    timeline.push({ month: m, cost: upfront + toBank + running + rent + travelMoney - back });
+  }
+  const value = buy ? h.valueAt(S) : 0;
+  const sellCosts = value * sell;
+  const owed = buy ? h.owedAt(S) : 0;
+  const back = buy ? value - sellCosts - owed : rentDeposit;
+  const interest = buy ? toBank - (h.loan - owed) : 0;
+  const forgone = upfront * ((1 + (num(v.otherRatePct) ?? 0) / 100) ** (S / 12) - 1);
+  const total = upfront + toBank + running + rent + travelMoney - back + forgone;
+  const first = travel(v, 1);
+  return {
+    buy, months: S, price: h.price, deposit: h.deposit, loan: h.loan, instalment: h.pmt, termMonths: h.n,
+    duty: buy ? h.duty : 0, fees: buy ? h.fees : 0, move, rentDeposit,
+    upfront, toBank, running, rent, interest, travel: travelMoney, hours, timeCost,
+    value, sellCosts, owed, back, forgone, total,
+    valueChange: buy ? h.price - value : 0,       // positive: it lost value; negative: it gained
+    perMonth: total / S,
+    monthNow: buy ? h.pmt + h.runningIn(1) + first.money : h.rentIn(1) + first.money,
+    travelNow: first.money,
+    hoursMonth: first.hours,
+    timeline,
+  };
+}
+
+/** A bond on its own: the instalment, what it costs, the cash needed first, and paying extra. */
+export function bond(input) {
+  const v = { ...HOME_DEFAULTS, extra: null, income: null, ...input };
+  if (!(num(v.price) > 0)) return { missing: ['the price'] };
+  if ((num(v.deposit) ?? 0) > num(v.price)) return { error: 'The deposit is more than the price.' };
+  const h = homeParts(v);
+  if (h.loan > 0 && h.n === 0) return { error: 'Choose how long the bond runs.' };
+  const extra = Math.max(0, num(v.extra) ?? 0);
+  let bal = h.loan; let months = 0; let interestExtra = 0;
+  const yearly = [{ month: 0, balance: h.loan }];
+  while (bal > 0.005 && months < MAX_MONTHS) {
+    const i = bal * h.r;
+    interestExtra += i;
+    bal = bal + i - Math.min(bal + i, h.pmt + extra);
+    months += 1;
+    if (months % 12 === 0 || bal <= 0.005) yearly.push({ month: months, balance: Math.max(0, bal) });
+  }
+  const income = num(v.income);
+  return {
+    price: h.price, deposit: h.deposit, loan: h.loan, termMonths: h.n, instalment: h.pmt, r: h.r,
+    totalPaid: h.pmt * h.n, interest: h.pmt * h.n - h.loan,
+    duty: h.duty, fees: h.fees, cashFirst: h.deposit + h.duty + h.fees,
+    extra, monthsWithExtra: months, interestWithExtra: interestExtra, yearly,
+    share: income ? h.pmt / income : null,
+    // A common bank guide: the instalment no more than about 30% of gross monthly income.
+    incomeGuide: h.pmt / 0.3,
+  };
+}
+
+/**
+ * Rent or buy the same home, with the same money each month. The buyer pays the
+ * deposit, duty and fees; the renter invests that instead. Each month whoever
+ * spends less invests the difference. Who is ahead is what each would have if
+ * they stopped: the house sold (after selling costs, the bond settled) plus
+ * investments, against the renter's investments plus the rental deposit back.
+ */
+export function rentOrBuy(input) {
+  const v = { ...HOME_DEFAULTS, ...input };
+  if (!(num(v.price) > 0)) return { missing: ['the price'] };
+  if (!(num(v.rent) > 0)) return { missing: ['the rent'] };
+  if ((num(v.deposit) ?? 0) > num(v.price)) return { error: 'The deposit is more than the price.' };
+  const h = homeParts(v);
+  if (h.loan > 0 && h.n === 0) return { error: 'Choose how long the bond runs.' };
+  const S = Math.max(1, Math.min(30, Math.round(num(v.stayYears) ?? 0)));
+  const o = monthlyRate(v.otherRatePct);
+  const sell = (num(v.sellPct) ?? 0) / 100;
+  const rentDeposit = num(v.rentDeposit) ?? 0;
+  const upBuy = h.deposit + h.duty + h.fees;
+  let invBuyer = Math.max(0, rentDeposit - upBuy);
+  let invRenter = Math.max(0, upBuy - rentDeposit);
+  const series = [];
+  let breakeven = null;
+  for (let m = 1; m <= 360; m += 1) {
+    const buyOut = (m <= h.n ? h.pmt : 0) + h.runningIn(m);
+    const rentOut = h.rentIn(m);
+    invBuyer = invBuyer * (1 + o) + Math.max(0, rentOut - buyOut);
+    invRenter = invRenter * (1 + o) + Math.max(0, buyOut - rentOut);
+    if (m % 12 === 0) {
+      const home = h.valueAt(m) * (1 - sell) - h.owedAt(m);
+      const buyer = home + invBuyer;
+      const renter = invRenter + rentDeposit;
+      series.push({ year: m / 12, buyer, renter, home, invBuyer, invRenter, ahead: buyer - renter });
+      if (breakeven == null && buyer > renter) breakeven = m / 12;
+    }
+  }
+  return {
+    ...series[S - 1], breakeven, upBuy, duty: h.duty, fees: h.fees, instalment: h.pmt,
+    firstRent: h.rentIn(1), firstOwn: h.pmt + h.runningIn(1), series,
+  };
+}

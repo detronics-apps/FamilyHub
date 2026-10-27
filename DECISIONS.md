@@ -516,6 +516,26 @@ come back to. First release, as the brief asks: the shared parts and two represe
   one house against another with travel to work); Children's future (from the ages already known);
   goals with Holidays' budgets; Job offers (take-home, increases, moving cost and payback); and a
   Money plan that puts every goal on one timeline. They are listed in the Library as coming later.
+  (Homes was built next - D-067.)
+
+**D-067 Homes (owner, 2026-10-27).** The second Finance mini-app, in the D-066 shape: three tools
+sharing one set of inputs, so a price typed in one is there in the others.
+- **A home**: the true cost of living in one home for a chosen time, bought or rented, with the
+  trip to work counted (distance × 2 × days × cost per km, plus tolls; hours on the road shown, and
+  an hour's worth shown beside it but never added). Total = cash out − what comes back (sale after
+  selling costs and the bond, or the rental deposit) + what the money paid up front could have
+  earned. Tested to equal value change + duty + fees + moving + selling costs + interest + running
+  costs + travel + earnings given up. This is the owner's "closer to work but dearer" and "only
+  staying a year" question: save each home by name and compare.
+- **Bond**: instalment, interest, cash needed first (deposit, transfer duty, fees), the instalment
+  at rates ±1 and +2 points, paying extra, and the 30%-of-income bank guide (labelled as a guide).
+- **Rent or buy**: the same home both ways with the same money each month; whoever pays less saves
+  the difference; who is ahead after N years, and the year buying gets ahead (if within 30).
+- **Reference figures**: transfer duty from the SARS table (from 1 April 2025, confirmed unchanged
+  from 1 April 2026 on sars.gov.za); SARS rate per km R4.95 (2026/27). Attorney and bond fees, when
+  not entered, are a rough illustrative formula (R10 000 + 1.2% of the price, plus R10 000 + 1% of
+  the bond), not the legal tariff - labelled so, with "ask a conveyancer".
+- Amounts under R100 keep their cents (R4.95 a km), everything else is shown to the rand.
 
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,

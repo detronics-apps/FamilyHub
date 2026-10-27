@@ -5,7 +5,7 @@
 import { el } from '../../ui/dom.js';
 import { loading, failure } from '../kit.js';
 import { carCost, CAR_DEFAULTS, REFERENCE, sensitivity, CAR_NUDGES, monthlyRate } from '../finance/maths.js';
-import { levelBar, shows, draft, loadDraft, input, assumed, stat, sums, step, lineChart, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
+import { levelBar, shows, draft, loadDraft, inputsPanel, assumed, stat, sums, step, lineChart, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => r.title, prefix: 'car' });
 const KIND = 'car';
@@ -31,7 +31,7 @@ const FIELDS = [
   { key: 'depreciationPct', label: 'Drops in value by', type: 'percent', level: 'advanced', source: { kind: 'illustrative' }, hint: 'New cars often lose 15 to 20% a year at first. Look up what similar used cars sell for.', group: 'sale', when: (v) => v.resaleMode !== 'amount' },
   { key: 'resaleAmount', label: 'Expected sale price', type: 'money', level: 'advanced', optional: true, group: 'sale', when: (v) => v.resaleMode === 'amount' },
 ];
-const GROUPS = { undefined: null, running: 'Running costs', loan: 'Loan details', sale: 'Selling it' };
+const GROUPS = { running: 'Running costs (optional)', loan: 'Loan details', sale: 'Selling it' };
 
 export function render(hub, route) {
   if (route.sub === 'compare') return compareScreen(hub, route.rest[0] ?? '');
@@ -43,20 +43,12 @@ function mainScreen(hub) {
   const answer = el('div', { class: 'stack', 'aria-live': 'polite' });
   const refresh = () => answer.replaceChildren(...results(d));
   const changed = (key) => (FIELDS.find((f) => f.key === key)?.redraw ? hub.render() : refresh());
-  const visible = FIELDS.filter((f) => shows(f.level) && (!f.when || f.when(d.values)));
-  const groups = [...new Set(visible.map((f) => f.group))];
   refresh();
   return el('section', { class: 'stack', 'aria-labelledby': 'cars-title' }, [
     el('h1', { id: 'cars-title', text: 'What will this car really cost?', style: { margin: 0 } }),
     el('p', { class: 'muted', style: { margin: 0 }, text: 'Not just the instalment: interest, fees, running costs, and what it is worth - and still owed - when you sell it.' }),
     levelBar(() => hub.render()),
-    el('div', { class: 'panel stack' }, [
-      el('h2', { text: 'What we need', style: { margin: 0 } }),
-      ...groups.map((g) => {
-        const fields = visible.filter((f) => f.group === g).map((f) => input(f, d, changed));
-        return GROUPS[g] ? el('fieldset', { class: 'stack fin-group' }, [el('legend', { text: GROUPS[g] + (g === 'running' ? ' (optional)' : '') }), ...fields]) : el('div', { class: 'stack' }, fields);
-      }),
-    ]),
+    inputsPanel(FIELDS, d, GROUPS, changed),
     answer,
     savedPanel(hub, {
       col: col(hub), kind: KIND, d, compareScreen: 'compare',
