@@ -40,7 +40,7 @@ const ZAR_CENTS = new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 
 /** Rands, rounded to the rand for reading (small amounts like R4.95 a km keep their cents); the sums underneath are never rounded. */
 export const rand = (n) => (n == null || !Number.isFinite(n) ? '-' : Math.abs(n) < 100 && Math.round(n) !== n ? ZAR_CENTS.format(n) : ZAR.format(Math.round(n) || 0));
 export const pct = (n, dp = 2) => `${Number(n.toFixed(dp))}%`;
-export const months = (m) => (m % 12 === 0 ? `${m / 12} year${m === 12 ? '' : 's'}` : m < 12 ? `${m} months` : `${Math.floor(m / 12)} years ${m % 12} months`);
+export const months = (m) => (m % 12 === 0 ? `${m / 12} year${m === 12 ? '' : 's'}` : m < 12 ? `${m} month${m === 1 ? '' : 's'}` : `${Math.floor(m / 12)} years ${m % 12} months`);
 
 /* ------------------------------------------------------------- inputs */
 
@@ -82,12 +82,14 @@ export function input(f, d, onInput) {
       class: 'chip', type: 'button', 'aria-pressed': String(d.values[f.key] === c.value), 'data-field': `${f.key}:${c.value}`, text: c.label,
       on: { click: (e) => { for (const b of e.currentTarget.parentNode.children) b.setAttribute('aria-pressed', String(b === e.currentTarget)); set(c.value); } },
     })));
+  } else if (f.type === 'text') {
+    control = el('textarea', { class: 'input', id, rows: 3, text: d.values[f.key] ?? '', placeholder: f.placeholder ?? '', 'data-field': `in:${f.key}`, on: { input: (e) => set(e.target.value) } });
   } else if (f.type === 'check') {
     control = el('input', { type: 'checkbox', id, checked: !!d.values[f.key], on: { change: (e) => set(e.target.checked) } });
     return el('label', { class: 'checkline' }, [control, el('span', {}, [f.label, ' ', tag])]);
   } else {
     control = el('input', {
-      class: 'input', id, type: 'number', inputmode: 'decimal', step: 'any', min: f.min ?? '0', value: d.values[f.key] ?? '',
+      class: 'input', id, type: 'number', inputmode: 'decimal', step: 'any', min: f.min === null ? null : f.min ?? '0', value: d.values[f.key] ?? '',
       placeholder: f.estimate ? 'estimate' : f.optional ? 'not counted' : '', 'data-field': `in:${f.key}`, style: { maxWidth: '200px' },
       on: { input: (e) => set(e.target.value === '' ? null : Number(e.target.value)) },
     });
@@ -121,7 +123,7 @@ export function assumed(fields, d) {
   if (!hidden.length) return null;
   return el('p', { class: 'small muted', 'data-field': 'assumed' }, [
     el('strong', { text: 'Also counted: ' }),
-    hidden.map((f) => `${f.label.toLowerCase()} ${f.type === 'money' ? rand(d.values[f.key] ?? f.estimate?.(d.values)) : f.type === 'percent' ? pct(d.values[f.key]) : f.type === 'check' ? (d.values[f.key] ? 'yes' : 'no') : d.values[f.key]} (${origin(f, d)})`).join('; '),
+    hidden.map((f) => `${f.label.toLowerCase()} ${f.type === 'money' ? rand(d.values[f.key] ?? f.estimate?.(d.values)) : f.type === 'percent' ? pct(d.values[f.key]) : f.type === 'check' ? (d.values[f.key] ? 'yes' : 'no') : `${d.values[f.key]}${{ months: ' months', years: ' years' }[f.type] ?? ''}`} (${origin(f, d)})`).join('; '),
     '. Change them under Advanced.',
   ]);
 }
@@ -160,7 +162,8 @@ export function lineChart(series, { label }) {
   const Y = (y) => T + (1 - (y - y0) / (y1 - y0 || 1)) * (H - T - B);
   const colours = ['var(--accent-strong)', 'var(--text-dim)', 'var(--warn)', 'var(--ok)'];
   const ticks = [y0, (y0 + y1) / 2, y1];
-  const years = [...new Set([x0, ...xs.filter((x) => x % 12 === 0), x1])];
+  const whole = [...new Set(xs.filter((x) => x % 12 === 0))];
+  const years = whole.length > 1 ? whole : [x0, x1];
   return el('figure', { class: 'fin-chart', style: { margin: 0 } }, [
     svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': label, width: '100%' }, [
       ...ticks.map((t) => svg('g', {}, [

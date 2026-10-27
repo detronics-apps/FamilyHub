@@ -268,6 +268,18 @@ const RAW = [
   },
   {
     manifest: {
+      fhManifest: 1, id: 'jobs', section: 'finance', name: 'Job offers', version: '1.0.0',
+      description: 'One job against another on what reaches the household: take-home, increases, benefits, moving costs and how long a move takes to pay back.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
+      screens: [{ id: 'offer', title: 'A job' }, { id: 'compare', title: 'Which job', nav: false }],
+      modes: [{ mode: 'plan', screen: 'offer', label: 'Compare a job offer' }],
+      data: { collections: [{ name: 'saved', schema: 1 }] },
+      permissions: ['data:own', 'notify'],
+    },
+    load: () => import('./jobs/app.js'),
+  },
+  {
+    manifest: {
       fhManifest: 1, id: 'exercise', section: 'exercise', name: 'Exercise', version: '1.0.0',
       description: 'Log activity, keep flexible weekly plans, and see what the family did together.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
@@ -320,7 +332,6 @@ export const starter = (id) => STARTERS.find((s) => s.manifest.id === id) ?? nul
 export const COMING_LATER = [
   { id: 'planner', name: 'Planner', purpose: 'A family calendar: the week at a glance, with chores, tasks, meals, trips and review dates from the other mini-apps in one place.' },
   { id: 'children', name: 'Children’s future', purpose: 'School, studies, a first car and other milestones for each child, from the ages Family Hub already knows.' },
-  { id: 'jobs', name: 'Job offers', purpose: 'One offer against another: take-home pay, increases, benefits, moving costs and how long a move takes to pay back.' },
   { id: 'money-plan', name: 'Money plan', purpose: 'Every goal on one timeline - holidays, cars, school, a house - with what to put aside each month and where it does not fit.' },
   { id: 'medical', name: 'Medical', purpose: 'Emergency summary and medical records - only once private records and access rules exist.' },
 ];

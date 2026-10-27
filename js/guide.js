@@ -30,6 +30,7 @@ export const SEARCH_ALIASES = {
   'shopping list': ['groceries', 'shop', 'buy', 'ingredients'],
   trip: ['holiday', 'vacation', 'travel', 'packing', 'itinerary'],
   budget: ['money', 'spending', 'expenses', 'finance', 'savings', 'debt'],
+  job: ['job offer', 'offer', 'salary', 'career', 'new job', 'take-home', 'take home', 'payslip', 'tax', 'paye', 'increase', 'raise', 'relocate', 'relocation', 'moving for work', 'payback'],
   home: ['house', 'bond', 'mortgage', 'home loan', 'rent', 'renting', 'buy a house', 'transfer duty', 'commute', 'travel to work', 'closer to work', 'move', 'moving'],
   'true cost': ['car', 'vehicle', 'car finance', 'loan', 'instalment', 'balloon', 'resale', 'total cost of ownership', 'compare cars'],
   'compound interest': ['interest', 'grow', 'growth', 'investment', 'savings growth', 'calculator', 'inflation'],
@@ -214,6 +215,12 @@ export const HOWTOS = [
     'When you spend something, add it under "Spent something?". The table shows what is left in each category.',
     'Next month, press "Reuse" with last month’s name.',
   ] },
+  { id: 'job', title: 'Compare a job offer with the job you have', steps: [
+    'Open Finance, then Job offers. Fill in the job you have now: the salary, and the take-home from your payslip if you have it. Save it as "Staying".',
+    'Change it for the offer: its salary (the take-home is estimated with the SARS tables until you have a payslip), the yearly increase you expect, travel and other costs it changes, and moving costs if it means moving. Save it with the company’s name.',
+    'Tick both and press Compare. Choose which one to compare with, and over how many years.',
+    'It says which leaves the household better off, what cash a move needs first and how long saving it takes, and how long the move takes to pay back.',
+  ] },
   { id: 'home', title: 'Compare homes - nearer work or further, bought or rented', steps: [
     'Open Finance, then Homes, then "A home". Choose Buy or Rent, and fill in the price (or the rent) and how long you expect to live there.',
     'Under "Getting to work", add the distance and the time, one way. The answer counts the trip each month, and the hours on the road.',
@@ -388,6 +395,7 @@ export const FEATURES = [
   { name: 'Calorie Checker', where: 'Meals › Calorie Checker', what: 'Calories and nutrients in the amount you actually eat, from 13,000 foods.' },
   { name: 'One shopping list', where: 'Home › Shopping', what: 'Meals, the week’s plan and chore supplies can all be sent to it; anything else can be typed in.' },
   { name: 'Portions and leftovers', where: 'Meals › Cookbook › an item', what: 'How much each person might eat, and how many servings to make with or without leftovers.' },
+  { name: 'Job offers', where: 'Finance › Job offers', what: 'Jobs compared on take-home, the household’s costs, increases, moving and payback - with a labelled SARS tax estimate when there is no payslip yet.' },
   { name: 'Homes compared', where: 'Finance › Homes', what: 'The true cost of living in a home, bought or rented, with the trip to work and transfer duty counted - plus a bond calculator and rent or buy.' },
   { name: 'True cost of a car', where: 'Finance › Cars', what: 'The instalment, interest, fees, running costs, and what is still owed when you sell - saved by name and compared side by side.' },
   { name: 'Simple, Advanced, Learn', where: 'Finance calculators', what: 'The quick answer, every cost and assumption, or each sum worked out step by step - switch any time without losing what you typed.' },

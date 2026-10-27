@@ -537,6 +537,26 @@ sharing one set of inputs, so a price typed in one is there in the others.
   the bond), not the legal tariff - labelled so, with "ask a conveyancer".
 - Amounts under R100 keep their cents (R4.95 a km), everything else is shown to the rand.
 
+**D-068 Job offers (owner, 2026-10-27).** The third Finance mini-app. Each job - the one you have
+and each offer - is saved by name, then compared.
+- **Take-home from a payslip first** (the owner's choice); left empty, it is a SARS estimate,
+  labelled as one: 2027 tax year bands, rebates and thresholds, medical credits (R376 / R376 /
+  R254 a month), UIF 1% to R177.12, retirement deduction 27.5% up to R350 000; the employer's
+  medical and retirement contributions as taxable benefits. Checked against sars.gov.za.
+  Allowances are taxed like salary (a car allowance may be taxed less - said so).
+- **Four views**: take-home, total package, what is left for the household after the job's own
+  costs (travel, living costs that change, costs a benefit saves), and the long term.
+- **Increases** are assumptions with a first-review delay; a performance bonus is never counted as
+  certain, only shown beside. Today's money, retirement saved, milestones at 1/3/5/10 years.
+- **Moving**: cash needed before the move (a refundable deposit counts as cash, not cost; the
+  employer's allowance only if paid before), what is missing, months to save it from what can be
+  put aside now, and whether that fits before the move. **Payback** from the projected extra each
+  month, not one division; moving costs count on whichever side has them; months without pay
+  count too. The salary overtaking and the running total overtaking are told apart.
+- Compare chooses what to compare with (at first the job saved earliest) and over how many years,
+  answers the three questions in words, tests smaller and bigger increases, and lists what is not
+  money ("Worth weighing") without pricing it.
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).
