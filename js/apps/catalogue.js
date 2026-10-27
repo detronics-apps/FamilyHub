@@ -247,6 +247,7 @@ const RAW = [
       screens: [
         { id: 'reading', title: 'Reading' }, { id: 'journal', title: 'Journal' }, { id: 'write', title: 'Write an entry' }, { id: 'questions', title: 'Questions' },
         { id: 'guide', title: 'Bible guide' }, { id: 'entry', title: 'Entry', nav: false }, { id: 'plan', title: 'Reading plan', nav: false },
+        { id: 'topics', title: 'Topics', nav: false },
       ],
       modes: [
         { mode: 'note', screen: 'write', label: 'Write down a message or a question', hint: 'Something you heard or saw, to come back to' },
@@ -255,7 +256,7 @@ const RAW = [
         { mode: 'plan', screen: 'questions', label: 'Come back to your questions' },
         { mode: 'plan', screen: 'journal', label: 'Look back through the journal' },
       ],
-      data: { collections: [{ name: 'plans', schema: 1 }, { name: 'notes', schema: 1 }, { name: 'books', schema: 1 }] },
+      data: { collections: [{ name: 'plans', schema: 1 }, { name: 'notes', schema: 1 }, { name: 'books', schema: 1 }, { name: 'topics', schema: 1 }] },
       permissions: ['data:own', 'people:read', 'notify'],
     },
     load: () => import('./faith/app.js'),

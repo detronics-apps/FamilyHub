@@ -9,13 +9,18 @@ import { fmtDay } from '../../dates.js';
 import { tabs, loading, failure, saveRecord, nameOf } from '../kit.js';
 import {
   BOOKS, PRESETS, normalisePlan, planSummary, planProgress, nextReading, describe, markRead, markUnread, chapters, daysIn,
-  NOTE_KINDS, QUESTION_STATUS, QUESTION_SHORT, VERSIONS, chaptersIn, normaliseNote, noteSummary, noteText, passageRef, filterNotes, allQuestions, termsUsed, loggedOn, bookNoteId, normaliseBookNote,
+  NOTE_KINDS, QUESTION_STATUS, QUESTION_SHORT, VERSIONS, chaptersIn, normaliseNote, noteSummary, noteText, passageRef, filterNotes, allQuestions, termsUsed, loggedOn, normaliseTopics, topicList, topicLabel, addTopic, setTopicHidden, removeTopic, bookNoteId, normaliseBookNote,
 } from './logic.js';
 import { BOOK_GUIDE, TOPICS } from './guide.js';
 
 const plans = (hub) => hub.data.collection('plans', { summary: planSummary, text: (p) => p.title, prefix: 'rdp' });
 const notes = (hub) => hub.data.collection('notes', { summary: noteSummary, text: noteText, prefix: 'fnt' });
 const books = (hub) => hub.data.collection('books', { summary: (b) => ({ book: b.book, why: b.why, about: b.about }) });
+// The family's topics (D-058): the guide's, plus their own, minus any they hid - one record.
+const topicsCol = (hub) => hub.data.collection('topics', { summary: (t) => ({ own: t.own.length, hidden: t.hidden.length }) });
+const loadTopics = (hub) => hub.use('topics', async () => normaliseTopics((await topicsCol(hub).get('family')) ?? {}));
+const famOf = (hub) => loadTopics(hub).data ?? normaliseTopics({});
+const saveTopics = (hub, fam) => saveRecord(hub, topicsCol(hub), { id: 'family', ...fam });
 // Journal filters, the entry being written, the question filter and the guide's choices.
 const ui = { query: '', kind: '', topic: '', term: '', status: '', draft: null, qStatus: '', book: 'John', topicGuide: 'marriage', version: '' };
 
@@ -26,6 +31,7 @@ export function render(hub, route) {
   if (route.sub === 'entry') return entryScreen(hub, route.rest[0]);
   if (route.sub === 'questions') return questionsScreen(hub);
   if (route.sub === 'guide') return guideScreen(hub);
+  if (route.sub === 'topics') return topicsScreen(hub);
   if (route.sub === 'plan') return planScreen(hub, route.rest[0]);
   if (route.sub === 'new-plan') return newPlanScreen(hub);
   return readingScreen(hub);
@@ -166,7 +172,7 @@ function journalScreen(hub) {
       el('input', { class: 'input', type: 'search', placeholder: 'Search the journal', 'aria-label': 'Search the journal', value: ui.query, 'data-field': 'journal-search', on: { change: (e) => set({ query: e.target.value }) } }),
       el('div', { class: 'chipset', role: 'group', 'aria-label': 'Kind' }, [chip(!ui.kind, 'All', 'jkind:all', () => set({ kind: '' })), ...Object.entries(NOTE_KINDS).map(([k, t]) => chip(ui.kind === k, t, `jkind:${k}`, () => set({ kind: k })))]),
       el('div', { class: 'row' }, [
-        select(ui.topic, Object.entries(TOPICS).map(([k, t]) => [k, t.label]), 'Any topic', 'jtopic', (v) => set({ topic: v }), 'Topic'),
+        select(ui.topic, topicList(famOf(hub)).filter((t) => !t.hidden || t.id === ui.topic).map((t) => [t.id, t.label]), 'Any topic', 'jtopic', (v) => set({ topic: v }), 'Topic'),
         termsUsed(all.data).length ? select(ui.term, termsUsed(all.data).map((t) => [t, t]), 'Any term', 'jterm', (v) => set({ term: v }), 'Term') : null,
         select(ui.status, Object.entries(QUESTION_STATUS), 'Any question', 'jstatus', (v) => set({ status: v }), 'Question status'),
       ]),
@@ -178,7 +184,7 @@ function journalScreen(hub) {
         el('div', { class: 'small muted', text: [
           fmtDay(n.day, hub.today()), n.who ? nameOf(people, n.who) : null,
           n.questions.length ? `${n.questions.length} question${n.questions.length === 1 ? '' : 's'}${open(n.questions) ? `, ${open(n.questions)} still open` : ', answered'}` : null,
-          [...n.topics.map((t) => TOPICS[t]?.label), ...n.terms].filter(Boolean).join(', ') || null,
+          [...n.topics.map((t) => topicLabel(famOf(hub), t)), ...n.terms].filter(Boolean).join(', ') || null,
         ].filter(Boolean).join(' · ') }),
       ]),
     ]))) : el('p', { class: 'small muted', text: all.data.length ? 'Nothing matches - clear a filter.' : 'Nothing written yet.' }),
@@ -203,7 +209,7 @@ function entryScreen(hub, id) {
       ]))]) : null,
       n.passages.length || n.passage ? el('div', {}, [el('h2', { text: 'Passages', style: { margin: 0 } }), el('ul', {}, [...n.passages.map(passageRef), n.passage].filter(Boolean).map((t) => el('li', { text: t })))]) : null,
       n.notes ? el('p', { text: n.notes, style: { whiteSpace: 'pre-wrap' } }) : null,
-      n.topics.length || n.terms.length ? el('div', { class: 'chipset' }, [...n.topics.map((t) => el('span', { class: 'badge badge--accent', text: TOPICS[t].label })), ...n.terms.map((t) => el('span', { class: 'badge', text: t }))]) : null,
+      n.topics.length || n.terms.length ? el('div', { class: 'chipset' }, [...n.topics.map((t) => el('span', { class: 'badge badge--accent', text: topicLabel(famOf(hub), t) })), ...n.terms.map((t) => el('span', { class: 'badge', text: t }))]) : null,
     ]),
     el('div', { class: 'row' }, [
       el('a', { class: 'btn', href: hub.href('edit', n.id), text: 'Edit', 'data-field': 'note-edit' }),
@@ -273,7 +279,9 @@ function writeScreen(hub, id) {
     el('textarea', { class: 'input', rows: '6', placeholder: 'What stood out, what you learnt, what to talk about together...', 'aria-label': 'Notes', 'data-field': 'w-notes', text: d.notes, on: { input: (e) => { d.notes = e.target.value; } } }),
 
     el('h2', { text: 'Topics', style: { margin: 'var(--space-2) 0 0' } }),
-    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Topics' }, Object.entries(TOPICS).map(([k, t]) => chip(d.topics.includes(k), t.label, `w-topic:${k}`, () => { d.topics = d.topics.includes(k) ? d.topics.filter((x) => x !== k) : [...d.topics, k]; redraw(); }))),
+    // The family's topics (hidden ones only when this entry already has them), and a new one right here.
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Topics' }, topicList(famOf(hub)).filter((t) => !t.hidden || d.topics.includes(t.id)).map((t) => chip(d.topics.includes(t.id), t.label, `w-topic:${t.id}`, () => { d.topics = d.topics.includes(t.id) ? d.topics.filter((x) => x !== t.id) : [...d.topics, t.id]; redraw(); }))),
+    topicAdder(hub, (id) => { if (id && !d.topics.includes(id)) d.topics.push(id); redraw(); }),
     el('h2', { text: 'Finer terms to search by', style: { margin: 'var(--space-2) 0 0' } }),
     el('p', { class: 'small muted', style: { margin: 0 }, text: 'Words of your own, like tattoos, judging or trinity. Ones you used before are offered as you type.' }),
     d.terms.length ? el('div', { class: 'chipset' }, d.terms.map((t) => el('button', { class: 'chip', type: 'button', 'aria-pressed': 'true', text: `${t} ×`, 'aria-label': `Remove ${t}`, on: { click: () => { d.terms = d.terms.filter((x) => x !== t); redraw(); } } }))) : null,
@@ -297,6 +305,53 @@ function writeScreen(hub, id) {
 }
 
 /** A term box: type, pick from earlier terms, Enter or Add. */
+/** A new topic of the family's own, from an entry: typed, added to the list, and ticked. Same name, same topic. */
+function topicAdder(hub, picked) {
+  const box = el('input', { class: 'input', maxlength: '40', placeholder: 'A topic not listed', 'aria-label': 'New topic', 'data-field': 'w-topic-new', style: { maxWidth: '220px' } });
+  const add = async () => {
+    const { fam, id } = addTopic(famOf(hub), box.value);
+    if (!id) return;
+    if (JSON.stringify(fam) !== JSON.stringify(famOf(hub))) await saveTopics(hub, fam);
+    picked(id);
+  };
+  box.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+  return el('div', { class: 'row' }, [
+    box,
+    el('button', { class: 'btn btn-small', type: 'button', text: '+ Topic', 'data-field': 'w-topic-add', on: { click: add } }),
+    el('a', { class: 'small', href: hub.href('topics'), text: 'Edit topics', title: 'Hide topics you do not use, show them again, or remove your own' }),
+  ]);
+}
+
+/** Topics: the family's list - hide what you do not use, show it again, add your own, remove your own. */
+function topicsScreen(hub) {
+  const t = loadTopics(hub);
+  const all = allNotes(hub);
+  if (t.loading || all.loading) return el('section', { class: 'stack' }, [nav(hub, 'guide'), loading()]);
+  if (t.error || all.error) return el('section', { class: 'stack' }, [nav(hub, 'guide'), failure(t.error ?? all.error)]);
+  const fam = t.data;
+  const used = (id) => all.data.filter((n) => (n.topics ?? []).includes(id)).length;
+  const box = el('input', { class: 'input', maxlength: '40', placeholder: 'e.g. Tithing', 'aria-label': 'New topic', 'data-field': 'topic-new', style: { maxWidth: '240px' } });
+  const add = async () => { const r = addTopic(fam, box.value); if (r.id) await saveTopics(hub, r.fam); };
+  box.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+  const row = (x) => el('li', { 'data-field': `topic:${x.id}` }, [
+    el('div', { class: 'list__main' }, [
+      el('strong', { text: x.label, class: x.hidden ? 'muted' : null }),
+      el('div', { class: 'small muted', text: [x.own ? 'Your own' : 'From the Bible guide', used(x.id) ? `${used(x.id)} entr${used(x.id) === 1 ? 'y' : 'ies'}` : null, x.hidden ? 'hidden' : null].filter(Boolean).join(' · ') }),
+    ]),
+    el('button', { class: 'btn btn-small', type: 'button', text: x.hidden ? 'Show' : 'Hide', 'data-field': `topic-${x.hidden ? 'show' : 'hide'}:${x.id}`, title: x.hidden ? 'Offer it again on entries and in the guide' : 'Stop offering it - entries that have it keep it', on: { click: () => saveTopics(hub, setTopicHidden(fam, x.id, !x.hidden)) } }),
+    x.own && !used(x.id) ? el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'data-field': `topic-remove:${x.id}`, on: { click: async () => { if (await confirmAction({ title: `Remove "${x.label}"?`, text: 'No entry uses it, so nothing else changes.', confirmLabel: 'Remove' })) await saveTopics(hub, removeTopic(fam, x.id)); } } }) : null,
+  ]);
+  const list = topicList(fam);
+  return el('section', { class: 'stack', 'aria-label': 'Topics' }, [
+    nav(hub, 'guide'),
+    el('h1', { text: 'Topics', style: { margin: 0 } }),
+    el('p', { class: 'muted', text: 'The topics offered on journal entries and in the Bible guide. Add your own; hide the ones you do not use. An entry keeps its topics whatever you change here.' }),
+    el('div', { class: 'panel row' }, [box, el('button', { class: 'btn btn-primary', type: 'button', text: 'Add', 'data-field': 'topic-add', on: { click: add } })]),
+    list.some((x) => x.own) ? el('div', { class: 'panel' }, [el('h2', { text: 'Your own', style: { margin: 0 } }), el('ul', { class: 'list' }, list.filter((x) => x.own).map(row))]) : null,
+    el('div', { class: 'panel' }, [el('h2', { text: 'From the Bible guide', style: { margin: 0 } }), el('p', { class: 'small muted', text: 'These come with starting passages. Hiding one only stops it being offered.' }), el('ul', { class: 'list' }, list.filter((x) => !x.own).map(row))]),
+  ]);
+}
+
 function termAdder(known, add) {
   const listId = `terms-${Date.now().toString(36)}`;
   const box = el('input', { class: 'input', list: listId, maxlength: '40', placeholder: 'e.g. tattoos', 'aria-label': 'Add a term', 'data-field': 'w-term', style: { maxWidth: '220px' }, on: { keydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); add(box.value.trim().toLowerCase()); } } } });
@@ -357,7 +412,10 @@ function ourOwn(hub, t) {
 /** Who wrote each book, when, to whom, why and what it is about - and where to start reading on a question. */
 function guideScreen(hub) {
   const g = BOOK_GUIDE[ui.book];
-  const t = TOPICS[ui.topicGuide];
+  const fam = famOf(hub);
+  const offered = topicList(fam).filter((x) => !x.hidden);
+  if (!offered.some((x) => x.id === ui.topicGuide)) ui.topicGuide = offered[0]?.id ?? 'marriage';
+  const t = { id: ui.topicGuide, label: topicLabel(fam, ui.topicGuide), start: TOPICS[ui.topicGuide]?.start ?? [] };
   const row = (label, text, extra = null) => el('div', { class: 'glance__item' }, [el('dt', { text: label }), el('dd', { text }), extra]);
   const ours = hub.use('books', () => books(hub).list({ limit: 1000 }));
   const mine = ours.data?.items.find((b) => b.id === bookNoteId(ui.book)) ?? {};
@@ -394,8 +452,10 @@ function guideScreen(hub) {
     el('div', { class: 'panel stack' }, [
       el('h2', { text: 'Where to start reading on a question', style: { margin: 0 } }),
       el('select', { class: 'select', style: { width: 'auto' }, 'aria-label': 'Topic', 'data-field': 'guide-topic', on: { change: (e) => { ui.topicGuide = e.target.value; hub.render(); } } },
-        Object.entries(TOPICS).map(([k, x]) => el('option', { value: k, text: x.label, selected: ui.topicGuide === k }))),
-      el('ul', { 'data-field': 'guide-start' }, t.start.map((ref) => el('li', { text: ref }))),
+        offered.map((x) => el('option', { value: x.id, text: x.label, selected: ui.topicGuide === x.id }))),
+      el('a', { class: 'small', href: hub.href('topics'), text: 'Edit topics', title: 'Add your own topics, or hide ones you do not use', 'data-field': 'guide-edit-topics' }),
+      t.start.length ? el('ul', { 'data-field': 'guide-start' }, t.start.map((ref) => el('li', { text: ref })))
+        : el('p', { class: 'small muted', 'data-field': 'guide-start', text: 'One of your own topics - no starting passages come with it. What you log on it shows here.' }),
       ourOwn(hub, t),
       el('a', { class: 'btn btn-small', href: hub.href('write'), text: 'New question', title: 'Write down a question on this topic', style: { alignSelf: 'flex-start' }, on: { click: () => { ui.draft = { key: 'new', n: { ...normaliseNote({ kind: 'question', topics: [ui.topicGuide] }, hub.today()), heading: '', questions: [{ id: 'q1', text: '', status: 'new', answer: '' }], passages: [], terms: [] } }; } } }),
     ]),

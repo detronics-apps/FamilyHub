@@ -417,6 +417,15 @@ often after cooking it ("this was a nice dinner"). The Cookbook writes it; the p
 Alongside: a save in one mini-app now also forgets what other mini-apps had loaded, so a change made
 in the Cookbook shows in Meal Planner straight away instead of after a reload.
 
+**D-058 The family's own Faith topics (owner, 2026-10-27).** The 25 guide topics were fixed in
+code. Now the family's list is the guide's, plus their own, minus any they hid (one record,
+`topics/family`). A new topic is typed right on a journal entry ("+ Topic") and ticked at once; the
+same name in any capitals is the same topic (a hidden one is shown again rather than doubled).
+Topics (from "Edit topics" on an entry or in the Bible guide) hides and shows any topic and removes
+the family's own when no entry uses it. An entry keeps its topics whatever the list does; the
+guide's starting passages come only with its own topics, and the family's logged passages and
+questions show under every topic.
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).

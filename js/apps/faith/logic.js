@@ -8,6 +8,49 @@ import { TOPICS } from './guide.js';
 const TOPIC_IDS = new Set(Object.keys(TOPICS));
 const TOPIC_LABELS = Object.fromEntries(Object.entries(TOPICS).map(([k, t]) => [k, t.label]));
 
+/*
+ * The family's topics (D-058): the guide's own, plus ones the family added, minus any
+ * they hid. One record: { own: [{ id, label }], hidden: [id] }. Their own have ids
+ * 'own-…', so an entry keeps a topic even when it is hidden or the list changes.
+ */
+export const OWN_TOPIC = /^own-[a-z0-9-]{1,60}$/;
+const isTopic = (id) => TOPIC_IDS.has(id) || OWN_TOPIC.test(id);
+
+export function normaliseTopics(r = {}) {
+  const own = (Array.isArray(r.own) ? r.own : []).filter((t) => t && OWN_TOPIC.test(t.id) && String(t.label ?? '').trim())
+    .map((t) => ({ id: t.id, label: String(t.label).trim().replace(/\s+/g, ' ').slice(0, 40) }));
+  const known = new Set([...TOPIC_IDS, ...own.map((t) => t.id)]);
+  return { own, hidden: [...new Set((Array.isArray(r.hidden) ? r.hidden : []).filter((id) => known.has(id)))] };
+}
+
+/** Every topic, the guide's first then the family's own (A-Z), each with whether it is hidden. */
+export function topicList(fam) {
+  const hidden = new Set(fam.hidden);
+  return [
+    ...Object.entries(TOPICS).map(([id, t]) => ({ id, label: t.label, own: false, hidden: hidden.has(id) })),
+    ...[...fam.own].sort((a, b) => a.label.localeCompare(b.label)).map((t) => ({ ...t, own: true, hidden: hidden.has(t.id) })),
+  ];
+}
+
+/** A topic's name, whatever list it came from (a removed one of the family's reads from its id). */
+export const topicLabel = (fam, id) => TOPIC_LABELS[id] ?? fam.own.find((t) => t.id === id)?.label ?? id.replace(/^own-/, '').replace(/-\d+$/, '').replace(/-/g, ' ');
+
+/** Add a topic of the family's own. A name that is already there (any capitals) is used - and shown again if it was hidden. */
+export function addTopic(fam, label) {
+  const name = String(label ?? '').trim().replace(/\s+/g, ' ').slice(0, 40);
+  if (!name) return { fam, id: null };
+  const same = topicList(fam).find((t) => t.label.toLowerCase() === name.toLowerCase());
+  if (same) return { fam: setTopicHidden(fam, same.id, false), id: same.id };
+  const base = `own-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'topic'}`;
+  let id = base;
+  for (let n = 2; fam.own.some((t) => t.id === id); n += 1) id = `${base}-${n}`;
+  return { fam: { ...fam, own: [...fam.own, { id, label: name }] }, id };
+}
+
+export const setTopicHidden = (fam, id, hide) => ({ ...fam, hidden: hide ? [...new Set([...fam.hidden, id])] : fam.hidden.filter((x) => x !== id) });
+/** Take one of the family's own topics off the list for good (only offered when no entry uses it). */
+export const removeTopic = (fam, id) => ({ own: fam.own.filter((t) => t.id !== id), hidden: fam.hidden.filter((x) => x !== id) });
+
 /** The 66 books (Protestant canon) with their chapter counts. */
 export const BOOKS = [
   ['Genesis', 50], ['Exodus', 40], ['Leviticus', 27], ['Numbers', 36], ['Deuteronomy', 34], ['Joshua', 24], ['Judges', 21], ['Ruth', 4],
@@ -131,7 +174,7 @@ export function normaliseNote(n = {}, today) {
     passages: (Array.isArray(n.passages) ? n.passages : []).map(normalisePassage).filter(Boolean).slice(0, 30),
     passage: str(n.passage, 120),                  // a passage typed before passages were picked from lists
     notes: text,
-    topics: [...new Set((Array.isArray(n.topics) ? n.topics : []).filter((t) => TOPIC_IDS.has(t)))],
+    topics: [...new Set((Array.isArray(n.topics) ? n.topics : []).filter(isTopic))],
     terms: terms(n.terms),
     day: typeof n.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(n.day) ? n.day : today,
     who: typeof n.who === 'string' ? n.who : null,
@@ -145,7 +188,7 @@ export const noteSummary = (n) => ({
   refs: [...n.passages.map(passageRef), n.passage].filter(Boolean),
   questions: n.questions.map((q) => ({ id: q.id, text: q.text, status: q.status })),
 });
-export const noteText = (n) => [n.heading, NOTE_KINDS[n.kind], n.notes, n.passage, ...n.passages.map(passageRef), ...n.topics.map((t) => TOPIC_LABELS[t]), ...n.terms, ...n.questions.flatMap((q) => [q.text, q.answer])].join(' ');
+export const noteText = (n) => [n.heading, NOTE_KINDS[n.kind], n.notes, n.passage, ...n.passages.map(passageRef), ...n.topics.map((t) => topicLabel({ own: [] }, t)), ...n.terms, ...n.questions.flatMap((q) => [q.text, q.answer])].join(' ');
 
 /** Entries matching a kind, a topic, a term and a question status - every one chosen must match. */
 export function filterNotes(list, { kind = '', topic = '', term = '', status = '' } = {}) {

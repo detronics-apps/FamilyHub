@@ -73,6 +73,24 @@ test('faith journal: heading, questions with where they stand, picked passages, 
   assert.deepEqual(logged.passages, [{ ref: 'Ephesians 5:25-33 (NIV)', entry: 'a', heading: 'Loving my family better' }, { ref: 'Jude 1:3', entry: 'a', heading: 'Loving my family better' }]);
   assert.deepEqual(logged.questions.map((q) => [q.text, q.entry]), [['How do I love my wife better?', 'a'], ['And the kids?', 'a']]);
   assert.deepEqual(faith.loggedOn(s.map((x) => ({ ...x, heading: x.title })), 'money'), { passages: [], questions: [] }, 'nothing logged on a topic yet');
+  // The family's own topics: added (any capitals finds the same one), hidden, shown again, removed.
+  let fam = faith.normaliseTopics({});
+  let r = faith.addTopic(fam, '  Tithing  and giving ');
+  assert.equal(r.id, 'own-tithing-and-giving');
+  fam = r.fam;
+  assert.equal(faith.addTopic(fam, 'tithing AND giving').id, r.id, 'the same name is the same topic');
+  assert.equal(faith.addTopic(fam, 'Marriage').id, 'marriage', 'a guide topic is not added twice');
+  assert.equal(faith.addTopic(fam, '   ').id, null);
+  fam = faith.setTopicHidden(fam, 'endtimes', true);
+  assert.ok(faith.topicList(fam).find((t) => t.id === 'endtimes').hidden);
+  assert.equal(faith.addTopic(fam, 'End times').fam.hidden.includes('endtimes'), false, 'adding a hidden one shows it again');
+  assert.deepEqual(faith.topicList(fam).filter((t) => t.own).map((t) => t.label), ['Tithing and giving']);
+  const kept = faith.normaliseNote({ heading: 'Giving', topics: [r.id, 'own-gone', 'made-up', 'money'] }, '2026-10-27');
+  assert.deepEqual(kept.topics, [r.id, 'own-gone', 'money'], 'own topics are kept on an entry, made-up ids are not');
+  assert.equal(faith.topicLabel(fam, r.id), 'Tithing and giving');
+  assert.equal(faith.topicLabel(fam, 'own-gone'), 'gone', 'a removed one still reads');
+  assert.deepEqual(faith.removeTopic(fam, r.id).own, []);
+  assert.deepEqual(faith.normaliseTopics({ own: [{ id: 'bad id', label: 'x' }], hidden: ['nope', 'marriage'] }), { own: [], hidden: ['marriage'] });
   assert.equal(faith.bookNoteId('Song of Songs'), 'book-song-of-songs');
   assert.deepEqual(faith.normaliseBookNote({ why: '  To show love wins ', about: undefined }, '1 John'), { id: 'book-1-john', book: '1 John', why: 'To show love wins', about: '' });
   assert.deepEqual(faith.termsUsed([n, faith.normaliseNote({ terms: ['tattoos'] }, '2026-01-01')]), ['tattoos', 'love']);

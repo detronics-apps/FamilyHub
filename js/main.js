@@ -38,7 +38,7 @@ import { openDoc } from './ui/views/docs.js';
 import { syncChip, syncNotices } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.9.2';
+export const APP_VERSION = '0.9.3';
 
 const store = createLocalStore(window.localStorage);
 

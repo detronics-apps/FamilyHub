@@ -219,6 +219,7 @@ export const HOWTOS = [
     'In Faith, press "New entry" (Journal tab). Choose the kind - a reflection, a question, a message you heard... - and give it a heading.',
     'Add the questions it is trying to answer, each with where it stands: only the question so far, needs more reading, or found a reasonable answer.',
     'Add the passages it is about from the lists - version, book, chapter and verses - as many as you need. Tick topics like Marriage or End times, and add finer terms of your own like tattoos or trinity.',
+    'A topic that is not listed? Type it under the topics and press "+ Topic" - it is added to the list and ticked. "Edit topics" (also in the Bible guide) hides ones you do not use, shows them again, and removes your own.',
     'Look back in the Journal tab with filters, and go through your questions in the Questions tab. The Bible guide shows where to start reading on a topic, with the passages and questions you have logged on it underneath.',
     'In the Bible guide, press "+ Notes" under Why or What it is about to keep your own notes on a book.',
   ] },
