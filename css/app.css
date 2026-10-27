@@ -443,11 +443,13 @@ body:has(.player:not([hidden])) .app-footer { padding-bottom: 72px; }
 .shop-mode .shop-tick input { width: 1.4em; height: 1.4em; }
 
 /* Drag and drop (js/ui/drag.js): a copy follows the pointer, the place under it lights up. */
-.draggable { cursor: grab; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.draggable { cursor: grab; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-user-drag: none; }
 .dragging { opacity: .35; }
 .drag-ghost { position: fixed; z-index: 1000; pointer-events: none; margin: 0; background: var(--panel); border-radius: var(--radius-sm); box-shadow: var(--shadow-md); opacity: .95; list-style: none; }
 .is-dragging, .is-dragging * { cursor: grabbing !important; }
-.drop-over { outline: 2px dashed var(--accent); outline-offset: 2px; background: var(--accent-soft); }
+/* While dragging, every place it can go is outlined; the one under the pointer lights up. */
+.is-dragging .drop-target { outline: 1px dashed var(--border-strong); outline-offset: 2px; }
+.is-dragging .drop-target.drop-over, .drop-over { outline: 3px solid var(--accent); outline-offset: 2px; background: var(--accent-soft); }
 .reorder > li { padding-left: var(--space-2); padding-right: var(--space-2); border-radius: var(--radius-sm); }
 .reorder > li.drag-ghost { display: flex; gap: var(--space-3); align-items: center; padding: var(--space-3) var(--space-2); }
 .grip { color: var(--text-dim); font-size: 18px; line-height: 1; }
@@ -476,3 +478,18 @@ body:has(.player:not([hidden])) .app-footer { padding-bottom: 72px; }
 .cal-day.cal-today { border-color: var(--accent); }
 .cal-day__num { color: var(--text-dim); }
 @media (max-width: 600px) { .cal-day { min-height: 64px; padding: 2px; } .cal-day .meal-chip__title { display: none; } .cal-day .meal-chip { justify-content: center; } }
+
+/* Plan in three steps (D-055): gather, sort, assign. */
+.step-head { align-items: flex-start; flex-wrap: nowrap; }
+.step-num { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; }
+.pool-group { display: flex; flex-direction: column; gap: 6px; padding: var(--space-2) var(--space-3); border: 1px dashed var(--border-strong); border-radius: var(--radius); min-height: 70px; }
+.pool-group__empty { margin: 0; }
+.pool-sort { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.meal-chip--unsorted { border-left-color: var(--text-dim); border-left-style: dashed; }
+
+/* Cook today (D-056): this shop's meals in a bar at the bottom, to swap with today's. */
+.shop-strip { position: sticky; bottom: 0; z-index: 5; box-shadow: var(--shadow-md); max-height: 45vh; overflow-y: auto; }
+.shop-strip__days { display: flex; gap: var(--space-2); overflow-x: auto; padding-bottom: 4px; }
+.shop-strip__day { flex: 0 0 140px; display: flex; flex-direction: column; gap: 4px; min-height: 64px; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.shop-strip__day.is-today { border-color: var(--accent); background: var(--accent-soft); }
+.shop-strip__day .meal-chip { font-size: 13px; }

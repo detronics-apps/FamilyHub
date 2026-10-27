@@ -390,6 +390,22 @@ finger (`js/ui/drag.js` - native drag and drop does nothing on phones).
 onto another and it takes that place (after it when moving down, before it when moving up), so two
 apps go to the top in two drags. The arrows stay for keyboards.
 
+**D-055 Plan in three steps: gather, sort, assign (owner, 2026-10-27).** Refines D-053. Plan
+starts with gathering meals with no meal and no day ("what are we in the mood for?" - added, or
+suggested); a gathered meal is stored with meal ''. Step two drags each into Breakfasts, Lunches,
+Dinners or Snacks (or a planned meal's page has a Meal choice, for anyone who cannot drag). Step
+three is Assign. Dropped on a month day without a meal, a meal becomes dinner. Drag fix: meal chips
+are links, and a link has the browser's own drag, which cancelled ours on a real mouse - draggable
+items now switch it off.
+
+**D-056 A shop is any run of days; Cook today shows it (owner, 2026-10-27).** Shopping does not
+start on a Monday, and not on the same day every week. "To Shopping" asks which days: from a day
+(three days back to three weeks ahead) for 2 to 14 days, across week boundaries, and remembers
+them (`shop-trip`). Cook today shows today's meals and, in a bar at the bottom, every meal of that
+shop (or the next 7 days when today is not in one). Dragging a meal onto today's swaps the two;
+dragging today's onto another day does the same. While dragging, every place a thing can be dropped
+is outlined and the one under the pointer lights up.
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).

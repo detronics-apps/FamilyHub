@@ -341,20 +341,34 @@ export const copyPlan = (from, monday) => ({ week: monday, slots: from.slots.map
 export const planId = (monday) => (monday === POOL ? POOL : `week_${monday.replace(/-/g, '')}`);
 
 /*
- * The planned meals not on a day yet (D-053): planned like any other meal, then
- * dragged onto the calendar. Kept as one record shaped like a week, without days.
- * A meal in the list has no leftovers set aside - those need a day to count from.
+ * The planned meals not on a day yet (D-053, D-055): gathered first (meal ''),
+ * sorted into breakfast, lunch, dinner or snack, then dragged onto the calendar.
+ * Kept as one record shaped like a week, without days. A meal in the list has no
+ * leftovers set aside - those need a day to count from.
  */
 export const POOL = 'pool';
 export function normalisePool(p = {}) {
   const slots = (Array.isArray(p.slots) ? p.slots : []).filter((s) => s && typeof s === 'object')
-    .map((s, i) => normaliseSlot({ ...s, id: s.id || `p${i}`, day: null, meal: MEALS.includes(s.meal) ? s.meal : 'dinner', reserve: [] }));
+    .map((s, i) => normaliseSlot({ ...s, id: s.id || `p${i}`, day: null, meal: MEALS.includes(s.meal) ? s.meal : '', reserve: [] }));
   return { ...p, id: POOL, week: POOL, slots };
 }
 
-/** Add a meal to the planned-meals list. */
+/** The Mondays of every week that touches from..to. */
+export const mondaysBetween = (from, to) => { const out = []; for (let m = weekStart(from); m <= to; m = addDays(m, 7)) out.push(m); return out; };
+
+/**
+ * Every planned meal from one day to another, whatever weeks they fall in - a shopping
+ * trip need not start on a Monday (D-056). `get` is Monday -> that week's plan.
+ */
+export function mealsBetween(get, from, to) {
+  return mondaysBetween(from, to).flatMap((m) => get(m).slots.map((s) => ({ key: m, date: addDays(m, s.day), s })))
+    .filter((x) => x.date >= from && x.date <= to)
+    .sort((a, b) => a.date.localeCompare(b.date) || MEALS.indexOf(a.s.meal) - MEALS.indexOf(b.s.meal));
+}
+
+/** Add a meal to the planned-meals list - not sorted into a meal unless one is given. */
 export const addToPool = (pool, slot, id = `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`) =>
-  ({ ...pool, slots: [...pool.slots, normaliseSlot({ meal: 'dinner', ...slot, id, day: null, reserve: [] })] });
+  ({ ...pool, slots: [...pool.slots, normaliseSlot({ meal: '', ...slot, id, day: null, reserve: [] })] });
 
 /**
  * Move a planned meal by dragging it: from the list or a day, onto the list or a day.
@@ -363,7 +377,7 @@ export const addToPool = (pool, slot, id = `p${Date.now().toString(36)}${Math.ra
  * the same number of days on; going into the list lets them go.
  * @param get   key -> plan ('pool' or a week's Monday)
  * @param from  { key, id }
- * @param to    { key: 'pool' } | { key: monday, day, meal }
+ * @param to    { key: 'pool', meal? } | { key: monday, day, meal } - on the list, `meal` sorts it ('' = not sorted)
  * @returns { [key]: plan } - only the plans that changed
  */
 export function moveMeal(get, { from, to }) {
@@ -373,13 +387,19 @@ export function moveMeal(get, { from, to }) {
   if (!slot) return out;
   const fromDate = from.key === POOL ? null : addDays(from.key, slot.day);
   const toDate = to.key === POOL ? null : addDays(to.key, to.day);
-  if (to.key === from.key && (to.key === POOL || (slot.day === to.day && slot.meal === to.meal))) return out;   // dropped where it was
+  // Within the list: sorting it into another meal, or nothing.
+  if (to.key === POOL && from.key === POOL) {
+    if (to.meal === undefined || to.meal === slot.meal) return out;
+    out[POOL] = { ...cur(POOL), slots: cur(POOL).slots.map((s) => (s.id === slot.id ? { ...s, meal: to.meal } : s)) };
+    return out;
+  }
+  if (to.key === from.key && slot.day === to.day && slot.meal === to.meal) return out;   // dropped where it was
   const shift = (s, days) => s.reserve.map((r) => ({ ...r, date: addDays(r.date, days) }));
   const place = (k, s, day, meal, reserve) => { out[k] = { ...cur(k), slots: [...cur(k).slots, normaliseSlot({ ...s, day, meal, reserve })] }; };
   const take = (k, id) => { out[k] = { ...cur(k), slots: cur(k).slots.filter((s) => s.id !== id) }; };
 
   take(from.key, slot.id);
-  if (to.key === POOL) { place(POOL, slot, null, slot.meal, []); return out; }
+  if (to.key === POOL) { place(POOL, slot, null, to.meal ?? slot.meal, []); return out; }
   // Snacks are not one-per-day: a day can have several, so nothing is pushed aside.
   const occupant = to.meal === 'snack' ? null : slotAt(cur(to.key), to.day, to.meal);
   if (occupant) {

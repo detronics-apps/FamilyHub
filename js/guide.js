@@ -126,10 +126,12 @@ export const HOWTOS = [
     'Things whose name already exists are left alone, so nothing is doubled. Lines with a problem are listed by line number.',
   ] },
   { id: 'meals', title: 'Plan the meals and make the shopping list', steps: [
-    'Open Meals, then Meal Planner. On Plan, press "+ Add" under Breakfasts, Lunches, Dinners or Snacks and choose a meal - or just type one, like "Carrots". "Suggest meals" picks a mix of favourites and new ones. No days yet.',
+    'Open Meals, then Meal Planner. Step 1, gather: press "+ Add" and choose a meal - or just type one, like "Carrots" - or press "Suggest meals" for a mix of favourites and new ones. No need to decide which meal or which day yet.',
+    'Step 2, sort: drag each gathered meal into Breakfasts, Lunches, Dinners or Snacks (on a phone, press and hold first). Or open a meal and choose its meal there.',
     'Press Assign: the planned meals sit beside a calendar. Drag each one onto a day (on a phone, press and hold first) - a week at a time, or a whole month. Drag one back to the list to take it off its day.',
     'Calendar shows just the calendar. Drag a meal to another day to swap them; tap a meal to open it, change it, or rate it.',
-    'Press "To Shopping". Amounts from all the meals on the calendar you are looking at (the week or the month) are added up, scaled to the servings you chose; untick what you already have.',
+    'Press "To Shopping" and say which days you are shopping for - from the day you shop, say Wednesday, for 7 days. Their meals’ amounts are added up, scaled to the servings you chose; untick what you already have.',
+    'On the day, open Cook today: today’s meals, and at the bottom every meal of that shop. In the mood for another one? Drag it onto today’s and the two swap days. Where you can drop is outlined, and the place under your finger lights up.',
     'Tick things off in Shopping as you buy them. Sending the week again updates its items; your own additions and ticked items stay.',
   ] },
   { id: 'shopping', title: 'Keep one shopping list', steps: [

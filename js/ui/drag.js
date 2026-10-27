@@ -15,6 +15,9 @@ let drag = null;   // { node, data, ghost, target, dx, dy }
 /** Make `node` draggable, carrying `data` to whatever it is dropped on. */
 export function draggable(node, data) {
   node.classList.add('draggable');
+  // A link (or image) has the browser's own drag, which would take over and cancel this one.
+  node.setAttribute('draggable', 'false');
+  node.addEventListener('dragstart', (e) => e.preventDefault());
   node.addEventListener('pointerdown', (e) => {
     if (e.button !== 0 || drag) return;
     const start = { x: e.clientX, y: e.clientY };
