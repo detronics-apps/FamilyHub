@@ -65,6 +65,7 @@ function origin(f, d) {
   const s = f.source;
   if (!s) return null;
   if (s.ref) return `${s.ref.label}, ${s.ref.source}${s.note ? ` ${s.note}` : ''}`;
+  if (s.kind === 'reference') return s.text;
   return { illustrative: 'Illustrative - check your own', assumption: 'Assumption' }[s.kind] ?? s.text;
 }
 
@@ -96,7 +97,7 @@ export function input(f, d, onInput) {
       on: { input: (e) => set(e.target.value === '' ? null : Number(e.target.value)) },
     });
   }
-  const unit = { money: 'R', percent: '% a year', years: 'years', months: 'months', km: 'km a year', kmOne: 'km', minutes: 'minutes' }[f.type];
+  const unit = f.unitText ?? { money: 'R', percent: '% a year', years: 'years', months: 'months', km: 'km a year', kmOne: 'km', minutes: 'minutes' }[f.type];
   return el('div', { class: 'field' }, [
     el('label', { class: 'field__label', for: f.type === 'choice' ? null : id }, [f.label, ' ', tag]),
     el('div', { class: 'row', style: { gap: 'var(--space-2)' } }, [unit === 'R' ? el('span', { class: 'muted', text: 'R' }) : null, control, unit && unit !== 'R' ? el('span', { class: 'small muted', text: unit }) : null]),

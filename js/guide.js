@@ -34,6 +34,7 @@ export const SEARCH_ALIASES = {
   'money plan': ['plan', 'goals', 'afford', 'can we afford', 'timeline', 'save each month', 'forecast', 'emergency fund', 'all our goals'],
   'children’s future': ['children', 'kids', 'school fees', 'university', 'studies', 'education', 'tuition', 'first car', 'wedding', 'save for school', 'baby'],
   job: ['job offer', 'offer', 'salary', 'career', 'new job', 'take-home', 'take home', 'payslip', 'tax', 'paye', 'increase', 'raise', 'relocate', 'relocation', 'moving for work', 'payback'],
+  'sell to buy': ['sell our house', 'selling costs', 'agent commission', 'agent fees', 'bond cancellation', 'compliance certificate', 'electrical certificate', 'beetle certificate', 'transfer costs', 'attorney fees', 'conveyancing', 'deeds office', 'bond registration', 'deposit from the sale', 'hidden costs'],
   'own or rent': ['rent or buy', 'buy or rent', 'renting', 'is renting better', 'sell and rent', 'keep our house', 'invest the difference', 'maintenance', 'upgrade', 'capital gains'],
   home: ['house', 'bond', 'mortgage', 'home loan', 'rent', 'renting', 'buy a house', 'transfer duty', 'commute', 'travel to work', 'closer to work', 'move', 'moving'],
   'true cost': ['car', 'vehicle', 'car finance', 'loan', 'instalment', 'balloon', 'resale', 'total cost of ownership', 'compare cars'],
@@ -218,6 +219,12 @@ export const HOWTOS = [
     'Open Finance. Add the categories you want to watch with a planned amount.',
     'When you spend something, add it under "Spent something?". The table shows what is left in each category.',
     'Next month, press "Reuse" with last month’s name.',
+  ] },
+  { id: 'selltobuy', title: 'Sell our home to buy the next one', steps: [
+    'Open Finance, then Homes, then "Sell to buy". Put in what your home will sell for, what is still owed on the bond, and the agent’s commission.',
+    'Put in the price of the new home, and what you want to keep back for renovations, moving and a reserve.',
+    '"Where the sale money goes" shows every step down to the deposit; below it, every selling and buying cost item by item, with where each figure comes from.',
+    'Press Bond or Compare to take that deposit straight into the bond or into Own or rent.',
   ] },
   { id: 'ownrent', title: 'Own or rent - with your own numbers', steps: [
     'Open Finance, then Homes, then "Own or rent". Choose Buying, or Owners already if you have a home now.',
@@ -423,6 +430,7 @@ export const FEATURES = [
   { name: 'Calorie Checker', where: 'Meals › Calorie Checker', what: 'Calories and nutrients in the amount you actually eat, from 13,000 foods.' },
   { name: 'One shopping list', where: 'Home › Shopping', what: 'Meals, the week’s plan and chore supplies can all be sent to it; anything else can be typed in.' },
   { name: 'Portions and leftovers', where: 'Meals › Cookbook › an item', what: 'How much each person might eat, and how many servings to make with or without leftovers.' },
+  { name: 'Sell to buy', where: 'Finance › Homes › Sell to buy', what: 'What selling your home really leaves - agent plus VAT, certificates, bond cancellation, the bond - and the new home’s attorney, Deeds Office and bank fees, down to the deposit.' },
   { name: 'Graphs with the turning points', where: 'Every Finance tool', what: 'Each tool has a graph that tells its story, with the moments that matter marked: when owning gets ahead of renting, when a car is worth more than is owed, when more of the bond pays it off than interest.' },
   { name: 'Own or rent', where: 'Finance › Homes › Own or rent', what: 'Buy or rent, or keep or sell - with your own maintenance, upgrades that add value, your home’s own growth, investments after tax, and what each side quietly assumes.' },
   { name: 'Variations', where: 'Cookbook › a meal › Variations', what: 'One meal made several ways - cheese, pepper or mushroom sauce from one white sauce - with one set of ratings, and shopping that follows the way chosen.' },

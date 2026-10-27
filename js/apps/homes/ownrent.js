@@ -4,7 +4,7 @@
 // upgrades that add value, growth from their own home's history, investments after
 // tax, and how much of the monthly difference really gets invested. Pure - no DOM.
 
-import { REFERENCE, monthlyRate, payment, balanceAfter, transferDuty, feesEstimate } from '../finance/maths.js';
+import { REFERENCE, monthlyRate, payment, balanceAfter, transferDuty, feesEstimate, buyingCosts, sellingCosts, total } from '../finance/maths.js';
 
 /** SARS capital gains tax for individuals (sars.gov.za, 2026 and 2027 years). */
 export const CGT = {
@@ -140,4 +140,31 @@ export function evenAt(input, key, lo, hi) {
     if (Math.sign(fm) === Math.sign(fa)) { a = mid; fa = fm; } else b = mid;
   }
   return (a + b) / 2;
+}
+
+/**
+ * Selling our home to buy the next one: the sale price, less selling costs, any
+ * tax on the gain and the bond still owed, is the cash we have. From it come the
+ * new home's buying costs (cash, before anything else), money kept back for
+ * renovations and a reserve - and the rest is the deposit.
+ */
+export function sellToBuy(v) {
+  const sale = Number(v.sellPrice) || 0;
+  if (!(sale > 0)) return { missing: ['what our home will sell for'] };
+  const owed = Math.max(0, Number(v.owedNow) || 0);
+  const selling = sellingCosts(sale, owed, v.ratePct, v);
+  const sellTotal = total(selling);
+  const tax = homeGainTax(sale - sellTotal, (Number(v.boughtFor) || sale) + (Number(v.improvedSoFar) || 0), v.marginalPct);
+  const cash = sale - sellTotal - owed - tax.tax;
+  const price = Number(v.price) || 0;
+  const keep = Math.max(0, Number(v.renovations) || 0) + Math.max(0, Number(v.reserve) || 0);
+  // The deposit depends on the bond, and the bond's costs on the deposit: work it out from the top down.
+  let deposit = 0; let buying = [];
+  for (let i = 0; i < 6; i += 1) {
+    buying = price > 0 ? buyingCosts(price, price - deposit, v.own ?? {}) : [];
+    deposit = Math.max(0, Math.min(price, cash - total(buying) - keep));
+  }
+  const buyTotal = total(buying);
+  const short = price > 0 ? Math.max(0, total(buying) + keep - cash) : 0;
+  return { sale, owed, selling, sellTotal, tax, cash, price, buying, buyTotal, keep, deposit, loan: Math.max(0, price - deposit), short, leftOver: price > 0 ? Math.max(0, cash - buyTotal - keep - price) : Math.max(0, cash - keep) };
 }

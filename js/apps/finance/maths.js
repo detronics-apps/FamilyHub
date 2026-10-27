@@ -179,11 +179,10 @@ export function transferDuty(price) {
 }
 
 /**
- * Attorney, bond registration and deeds office costs, when none are entered:
- * a rough illustrative estimate (transfer: R10 000 + 1.2% of the price; bond:
- * R10 000 + 1% of the loan). A conveyancer's quote replaces it.
+ * Attorney, Deeds Office and bank fees for buying, when none are entered: the itemised
+ * buying costs (D-074) without the transfer duty. A conveyancer's quote replaces it.
  */
-export const feesEstimate = (price, loan) => 10000 + 0.012 * price + (loan > 0 ? 10000 + 0.01 * loan : 0);
+export const feesEstimate = (price, loan) => buyingCosts(price, loan).filter((x) => x.key !== 'duty').reduce((s, x) => s + x.amount, 0);
 
 export const HOME_DEFAULTS = {
   mode: 'buy', price: null, deposit: 0, ratePct: REFERENCE.prime.value, termYears: 20, stayYears: 5,
@@ -348,3 +347,86 @@ export function rentOrBuy(input) {
     firstRent: h.rentIn(1), firstOwn: h.pmt + h.runningIn(1), series,
   };
 }
+
+/* ------------------------------------------ buying and selling costs (D-074) */
+
+export const VAT = 0.15;
+
+/**
+ * Attorney's fee for a transfer or a bond registration, on the price or the bond:
+ * the Law Society (LSSA) guideline from 1 July 2026, before VAT. A guideline, not a
+ * fixed tariff - attorneys may quote differently, and the family's quote wins.
+ */
+export function attorneyFee(value) {
+  const v = Number(value) || 0;
+  const steps = (over, size) => Math.ceil(Math.max(0, v - over) / size);
+  if (v <= 100000) return 6875;
+  if (v <= 500000) return 6875 + 1100 * steps(100000, 50000);
+  if (v <= 1000000) return 15675 + 2120 * steps(500000, 100000);
+  if (v <= 5000000) return 26275 + 2120 * steps(1000000, 200000);
+  return 68675 + 5340 * steps(5000000, 1000000);
+}
+
+/** Deeds Office registration fees (Government Notice 7180, from 27 March 2026). No VAT. */
+const DEEDS_TRANSFER = [[100000, 50], [200000, 114], [300000, 727], [600000, 956], [800000, 1346], [1000000, 1546], [2000000, 1738], [4000000, 2408], [6000000, 2922], [8000000, 3480], [10000000, 4068], [15000000, 4844], [20000000, 5818], [Infinity, 7751]];
+const DEEDS_BOND = [[150000, 561], [300000, 727], [600000, 956], [800000, 1346], [1000000, 1546], [2000000, 1738], [4000000, 2408], [6000000, 2922], [8000000, 3480], [10000000, 4068], [15000000, 4844], [20000000, 5818], [30000000, 6781], [Infinity, 9690]];
+const band = (table, v) => table.find(([upTo]) => (Number(v) || 0) <= upTo)[1];
+export const deedsTransferFee = (price) => band(DEEDS_TRANSFER, price);
+export const deedsBondFee = (loan) => band(DEEDS_BOND, loan);
+
+export const COST_SOURCES = {
+  attorney: 'LSSA conveyancing fee guideline from 1 July 2026, plus 15% VAT',
+  deeds: 'Deeds Office fees, Government Notice 7180, from 27 March 2026',
+  initiation: 'Bank initiation fee in Nedbank and Standard Bank 2026 pricing',
+  estimate: 'Illustrative, from published ranges - use your quote',
+};
+
+/**
+ * Everything it costs to buy, item by item. Each item: { key, label, amount, source, note }.
+ * `own` replaces any item's amount with the family's own figure (a quote).
+ */
+export function buyingCosts(price, loan = 0, own = {}) {
+  const p = Number(price) || 0; const l = Math.max(0, Number(loan) || 0);
+  const items = [
+    { key: 'duty', label: 'Transfer duty', amount: transferDuty(p), source: REFERENCE.transferDuty.source, note: 'Paid to SARS. None on homes up to R1 210 000.' },
+    { key: 'transferAttorney', label: 'Transfer attorney', amount: attorneyFee(p) * (1 + VAT), source: COST_SOURCES.attorney },
+    { key: 'transferDeeds', label: 'Deeds Office: transfer', amount: deedsTransferFee(p), source: COST_SOURCES.deeds },
+    { key: 'transferExtras', label: 'Attorney’s extras: FICA, postage, searches', amount: 2000, source: COST_SOURCES.estimate },
+    ...(l > 0 ? [
+      { key: 'bondAttorney', label: 'Bond registration attorney', amount: attorneyFee(l) * (1 + VAT), source: COST_SOURCES.attorney, note: 'On the bond amount.' },
+      { key: 'bondDeeds', label: 'Deeds Office: bond', amount: deedsBondFee(l), source: COST_SOURCES.deeds },
+      { key: 'bondExtras', label: 'Bond attorney’s extras', amount: 1500, source: COST_SOURCES.estimate },
+      { key: 'initiation', label: 'Bank’s initiation fee', amount: 6037.5, source: COST_SOURCES.initiation, note: 'Can often be added to the bond instead - then interest is charged on it.' },
+    ] : []),
+  ];
+  return items.map((x) => (own[x.key] != null && own[x.key] !== '' ? { ...x, amount: Number(own[x.key]) || 0, source: 'Yours' } : x));
+}
+
+export const SELL_DEFAULTS = { agentPct: 6, cancelFee: 6900, noticeShort: 0, coc: 2500, beetle: null, gas: null, fence: null, otherSell: null };
+
+/**
+ * Everything it costs to sell, item by item - before the bond is settled.
+ * The agent's commission has VAT on top; a bond cancelled with less than the
+ * bank's notice (usually 90 days) can cost up to that many months' interest.
+ */
+export function sellingCosts(price, owed = 0, ratePct = 0, opts = {}) {
+  const o = { ...SELL_DEFAULTS, ...opts };
+  const p = Number(price) || 0; const b = Math.max(0, Number(owed) || 0);
+  const n = (v) => (v === null || v === '' || v === undefined ? null : Number(v) || 0);
+  const items = [
+    { key: 'agent', label: `Agent’s commission (${Number(o.agentPct) || 0}% plus VAT)`, amount: p * ((Number(o.agentPct) || 0) / 100) * (1 + VAT), source: 'Yours to agree with the agent - often 5 to 7.5% plus VAT' },
+    ...(b > 0 ? [
+      { key: 'cancelFee', label: 'Bond cancellation attorney', amount: n(o.cancelFee) ?? 0, source: COST_SOURCES.estimate },
+      { key: 'notice', label: `Short notice to the bank (${Number(o.noticeShort) || 0} month${Number(o.noticeShort) === 1 ? '' : 's'})`, amount: b * ((Number(ratePct) || 0) / 1200) * (Number(o.noticeShort) || 0), source: 'Interest for the months of notice not given (usually 90 days are needed)' },
+    ] : []),
+    { key: 'coc', label: 'Electrical compliance certificate', amount: n(o.coc) ?? 0, source: COST_SOURCES.estimate, note: 'Needed by law for every sale; repairs it finds cost extra.' },
+    ...(n(o.beetle) != null ? [{ key: 'beetle', label: 'Beetle certificate', amount: n(o.beetle), source: COST_SOURCES.estimate, note: 'Usually at the coast, when the sale agreement asks for it.' }] : []),
+    ...(n(o.gas) != null ? [{ key: 'gas', label: 'Gas certificate', amount: n(o.gas), source: COST_SOURCES.estimate }] : []),
+    ...(n(o.fence) != null ? [{ key: 'fence', label: 'Electric fence certificate', amount: n(o.fence), source: COST_SOURCES.estimate }] : []),
+    ...(n(o.otherSell) ? [{ key: 'otherSell', label: 'Other selling costs', amount: n(o.otherSell), source: 'Yours' }] : []),
+  ];
+  return items.filter((x) => x.key === 'notice' ? x.amount > 0 : true);
+}
+
+export const total = (items) => items.reduce((s, x) => s + x.amount, 0);
+

@@ -4,13 +4,13 @@
 
 import { el } from '../../ui/dom.js';
 import { loading, failure } from '../kit.js';
-import { homeCost, bond, transferDuty, feesEstimate, HOME_DEFAULTS, REFERENCE, sensitivity, monthlyRate } from '../finance/maths.js';
-import { ownOrRent, evenAt, historyGrowth, OWN_RENT_DEFAULTS, CGT } from './ownrent.js';
+import { homeCost, bond, transferDuty, feesEstimate, buyingCosts, total, HOME_DEFAULTS, REFERENCE, sensitivity, monthlyRate, payment, SELL_DEFAULTS } from '../finance/maths.js';
+import { ownOrRent, evenAt, historyGrowth, OWN_RENT_DEFAULTS, CGT, sellToBuy } from './ownrent.js';
 import { levelBar, shows, draft, loadDraft, inputsPanel, assumed, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => r.title, prefix: 'hom' });
 // Own or rent adds its own fields; where both have one (price, rent...) the home's default is kept, so they share it.
-const DEFAULTS = { ...OWN_RENT_DEFAULTS, ...HOME_DEFAULTS, extra: null, income: null };
+const DEFAULTS = { ...SELL_DEFAULTS, ...OWN_RENT_DEFAULTS, ...HOME_DEFAULTS, extra: null, income: null, sellPrice: null, renovations: null, reserve: null, quoteTransfer: null, quoteBond: null };
 const D = () => draft('homes', DEFAULTS);
 const buying = (v) => v.mode !== 'rent';
 const renting = (v) => v.mode === 'rent';
@@ -35,10 +35,10 @@ const F = {
   perKm: { key: 'perKm', label: 'Cost per km', type: 'money', level: 'advanced', source: { ref: REFERENCE.perKm }, hint: 'Covers fuel, wear and the car losing value. Fuel alone is less; use your own figure if you prefer.' },
   travelExtra: { key: 'travelExtra', label: 'Tolls, parking or taxi fares a month', type: 'money', level: 'advanced', optional: true },
   hourValue: { key: 'hourValue', label: 'What an hour of your time is worth', type: 'money', level: 'advanced', optional: true, hint: 'Optional. Shown beside the money, never added to it.' },
-  fees: { key: 'fees', label: 'Attorney, bond and deeds office fees', type: 'money', level: 'advanced', source: { kind: 'illustrative' }, estimate: (v) => feesEstimate(Number(v.price) || 0, (Number(v.price) || 0) - (Number(v.deposit) || 0)), hint: 'Left empty: a rough estimate. Ask a conveyancer for the real figure.' },
+  fees: { key: 'fees', label: 'Attorney, bond and deeds office fees', type: 'money', level: 'advanced', source: { kind: 'reference', text: 'Law Society guideline, Deeds Office and bank fees, 2026' }, estimate: (v) => feesEstimate(Number(v.price) || 0, (Number(v.price) || 0) - (Number(v.deposit) || 0)), hint: 'Left empty: worked out item by item from the attorney fee guideline, the Deeds Office fees and the bank’s initiation fee. A conveyancer’s quote replaces it.' },
   moveCost: { key: 'moveCost', label: 'Moving in', type: 'money', level: 'advanced', optional: true, hint: 'Removals, connecting services, things the new place needs.' },
   growthPct: { key: 'growthPct', label: 'House prices grow by', type: 'percent', level: 'advanced', source: { kind: 'illustrative' }, hint: 'Not a promise: prices can stall or fall, and differ by area.' },
-  sellPct: { key: 'sellPct', label: 'Selling costs, of the price', type: 'percent', level: 'advanced', source: { kind: 'illustrative' }, hint: 'Agent’s commission (often 5 to 7.5% plus VAT) and other costs of selling.' },
+  sellPct: { key: 'sellPct', label: 'Selling costs, of the price', type: 'percent', level: 'advanced', source: { kind: 'illustrative' }, hint: 'Agent’s commission plus VAT and other costs of selling, as one share of the price. "Sell to buy" works them out item by item.' },
   rentRisePct: { key: 'rentRisePct', label: 'Rent rises by', type: 'percent', level: 'advanced', source: { kind: 'illustrative' } },
   otherRatePct: { key: 'otherRatePct', label: 'Money could earn elsewhere', type: 'percent', level: 'advanced', source: { kind: 'illustrative' }, hint: 'What money paid up front could have grown by if it had been saved instead.' },
   income: { key: 'income', label: 'Household income a month, before tax', type: 'money', level: 'simple', optional: true },
@@ -50,6 +50,7 @@ export function render(hub, route) {
   if (route.sub === 'home') return homeScreen(hub);
   if (route.sub === 'bond') return bondScreen(hub);
   if (route.sub === 'rentbuy') return rentBuyScreen(hub);
+  if (route.sub === 'selltobuy') return sellBuyScreen(hub);
   if (route.sub === 'compare') return compareScreen(hub, route.rest[0] ?? '');
   return el('section', { class: 'stack', 'aria-labelledby': 'homes-title' }, [
     el('h1', { id: 'homes-title', text: 'Homes', style: { margin: 0 } }),
@@ -57,6 +58,7 @@ export function render(hub, route) {
     el('ul', { class: 'list panel' }, [
       ['home', 'A home', 'What will living here really cost - the trip to work included? Save each one and compare.'],
       ['bond', 'Bond', 'What will the bond cost each month, and in total - and what is needed up front?'],
+      ['selltobuy', 'Sell to buy', 'Selling our home to buy the next one: every cost item by item, what is left after the bond, and the deposit.'],
       ['rentbuy', 'Own or rent', 'Buying against renting, or keeping our home against selling and renting - with what people forget.'],
     ].map(([id, title, q]) => el('li', {}, [
       el('a', { class: 'list__main', href: hub.href(id), 'data-field': `tool:${id}`, style: { color: 'inherit', textDecoration: 'none' } }, [el('strong', { text: title }), el('div', { class: 'small muted', text: q })]),
@@ -267,6 +269,11 @@ function bondResults(d) {
       sums(rates.map(({ dp, b: x }) => ({ label: dp === 0 ? `At ${pct(Number(v.ratePct))} (now)` : `If the rate ${dp > 0 ? 'rises' : 'falls'} ${Math.abs(dp)} point${Math.abs(dp) === 1 ? '' : 's'}`, value: x.instalment, total: dp === 0 }))),
     ]),
     bondStory(b),
+    el('div', { class: 'panel stack' }, [
+      el('h2', { text: 'Buying costs, item by item', style: { margin: 0 } }),
+      (() => { const items = buyingCosts(b.price, b.loan); return sums([...items.map((x) => ({ label: x.label, value: x.amount, note: [x.note, x.source].filter(Boolean).join(' · ') })), { label: 'Buying costs', value: total(items), total: true }]); })(),
+      v.fees != null && v.fees !== '' ? el('p', { class: 'small muted', style: { margin: 0 }, text: `Your own figure for the fees (${rand(Number(v.fees))}) is used above instead of these.` }) : null,
+    ]),
     assumed(BOND_FIELDS, d),
     list('What would change it', [
       ...[500, 1000, 2000].map((x) => { const e = bond({ ...v, extra: x }); return `Paying ${rand(x)} extra a month: paid off in ${months(e.monthsWithExtra)} instead of ${months(b.termMonths)}, ${rand(b.interest - e.interestWithExtra)} less interest.`; }),
@@ -290,7 +297,7 @@ function bondResults(d) {
       step('The instalment', 'P = L × r ÷ (1 − (1+r)^−n)', `${rand(b.loan)} × ${(b.r * 100).toFixed(4)}% ÷ (1 − (1+${(b.r * 100).toFixed(4)}%)^−${b.termMonths}) = ${rand(b.instalment)}`, 'L is the bond, r the yearly rate ÷ 12, n the months. Each month the interest is worked out on what is still owed, and the rest of the instalment pays it down.'),
       step('Interest', 'Interest = instalment × months − bond', `${rand(b.instalment)} × ${b.termMonths} − ${rand(b.loan)} = ${rand(b.interest)}`),
       step('Transfer duty', '0% up to R1 210 000; then 3%, 6%, 8%, 11% and 13% on the value in each band', `${rand(b.duty)}`, REFERENCE.transferDuty.source),
-      step('Fees, when none are entered', 'R10 000 + 1.2% of the price, plus R10 000 + 1% of the bond', `${rand(feesEstimate(b.price, b.loan))}`, 'A rough illustrative estimate of transfer and bond registration costs, not the legal tariff - a conveyancer’s quote replaces it.'),
+      step('Fees, when none are entered', 'Transfer attorney + bond attorney (Law Society guideline, plus VAT) + Deeds Office fees + attorneys’ extras + the bank’s initiation fee', `${rand(feesEstimate(b.price, b.loan))}`, 'Item by item under "Buying costs". A conveyancer’s quote replaces it.'),
       step('Paying extra', 'Each month: owed = owed × (1 + r) − (instalment + extra), until nothing is owed', `${months(b.monthsWithExtra)}`, 'Every extra rand saves the interest it would have attracted for the rest of the bond. Some banks let you take extra payments back out; check yours.'),
       ...leavesOut(['The rate is held steady for the whole bond.', 'Bond insurance, initiation and monthly bank fees are not included unless you add them to the fees.']),
     ]));
@@ -313,6 +320,125 @@ function bondStory(b) {
   ], { label: 'How each instalment splits between interest and the bond itself',
     marks: [turn != null && capital[0][1] < interest[0][1] ? { x: turn, label: `More pays off the bond from ${whenLabel(turn)}` } : null],
     story: 'At first most of each instalment is interest. Paying extra early cuts the interest most.' }));
+}
+
+/* ----------------------------------------------------------- sell to buy */
+
+// Selling our home to buy the next one (D-074): what the sale really leaves after
+// every selling cost and the bond, then the new home's buying costs, money kept for
+// renovations and a reserve - and what is left is the deposit.
+const S2B_FIELDS = [
+  { key: 'sellPrice', label: 'What our home will sell for', type: 'money', level: 'simple', group: 'sell', hint: 'Ask two or three agents, and look at what similar homes nearby sold for.' },
+  { key: 'owedNow', label: 'Still owed on our bond', type: 'money', level: 'simple', group: 'sell', source: { kind: 'assumption' }, hint: 'From your latest bond statement, or ask the bank for a settlement figure.' },
+  { key: 'agentPct', label: 'Agent’s commission', type: 'percent', level: 'simple', group: 'sell', source: { kind: 'illustrative' }, hint: 'Agents ask different rates - often 5 to 7.5% - and VAT is added on top. It can be negotiated.', unitText: '% of the price, plus VAT' },
+  { key: 'coc', label: 'Electrical certificate', type: 'money', level: 'simple', group: 'sell', source: { kind: 'illustrative' }, hint: 'Needed by law to sell. Repairs it finds are extra.' },
+  { key: 'cancelFee', label: 'Bond cancellation attorney', type: 'money', level: 'advanced', group: 'sell', source: { kind: 'illustrative' } },
+  { key: 'noticeShort', label: 'Months of notice the bank will not get', type: 'number', level: 'advanced', group: 'sell', source: { kind: 'assumption' }, hint: 'Banks usually want 90 days’ notice to cancel a bond. Give it early and this is 0.' },
+  { key: 'beetle', label: 'Beetle certificate', type: 'money', level: 'advanced', optional: true, group: 'sell', hint: 'Usually at the coast, if the sale agreement asks for one.' },
+  { key: 'gas', label: 'Gas certificate', type: 'money', level: 'advanced', optional: true, group: 'sell' },
+  { key: 'fence', label: 'Electric fence certificate', type: 'money', level: 'advanced', optional: true, group: 'sell' },
+  { key: 'otherSell', label: 'Other selling costs', type: 'money', level: 'advanced', optional: true, group: 'sell', hint: 'Repairs before selling, a plumbing certificate (Cape Town), staging…' },
+  { key: 'boughtFor', label: 'We bought it for', type: 'money', level: 'advanced', optional: true, group: 'sell', hint: 'Only to check the tax on the gain: none on the first R3 million.' },
+  { key: 'improvedSoFar', label: 'Spent on improvements so far', type: 'money', level: 'advanced', optional: true, group: 'sell' },
+  { ...F.price, label: 'Price of the new home', group: 'buy' },
+  { ...F.ratePct, label: 'Bond interest rate', group: 'buy' },
+  { ...F.termYears, group: 'buy' },
+  { key: 'quoteTransfer', label: 'Transfer attorney’s quote', type: 'money', level: 'advanced', optional: true, group: 'buy', hint: 'Including VAT. Left empty: the Law Society guideline.' },
+  { key: 'quoteBond', label: 'Bond attorney’s quote', type: 'money', level: 'advanced', optional: true, group: 'buy' },
+  { key: 'moveCost', label: 'Moving', type: 'money', level: 'simple', optional: true, group: 'keep' },
+  { key: 'renovations', label: 'Kept for renovations', type: 'money', level: 'simple', optional: true, group: 'keep' },
+  { key: 'reserve', label: 'Kept free, just in case', type: 'money', level: 'simple', optional: true, group: 'keep', hint: 'Something always comes up after a move.' },
+];
+const S2B_GROUPS = { sell: 'Selling our home', buy: 'The new home', keep: 'Kept back' };
+const s2bValues = (v) => ({ ...v, renovations: (Number(v.renovations) || 0) + (Number(v.moveCost) || 0), own: { transferAttorney: v.quoteTransfer, bondAttorney: v.quoteBond } });
+const s2bHeadline = (v) => { const r = sellToBuy(s2bValues(v)); return r.missing ? '' : `${rand(r.cash)} from the sale · ${rand(r.deposit)} deposit`; };
+
+function sellBuyScreen(hub) {
+  return page(hub, {
+    id: 's2b-title', title: 'Selling our home to buy the next one', kind: 'selltobuy', headline: s2bHeadline,
+    intro: 'What the sale really leaves - after the agent, the certificates, the bond and the rest - and how much of it can go into the next home as a deposit.',
+    fields: S2B_FIELDS, groups: S2B_GROUPS, results: (d) => s2bResults(hub, d),
+  });
+}
+
+/** Where the money goes, as a falling staircase: each step a cost or what is kept, the last the deposit. */
+function moneySteps(steps) {
+  const top = Math.max(...steps.map((x) => Math.max(x.from, x.to))) || 1;
+  return el('div', { class: 'money-steps', role: 'list' }, steps.map((x) => {
+    const lo = Math.min(x.from, x.to); const w = Math.abs(x.to - x.from);
+    return el('div', { class: 'money-steps__row', role: 'listitem' }, [
+      el('span', { class: 'money-steps__label', text: x.label }),
+      el('span', { class: 'money-steps__track' }, [el('span', { class: `money-steps__bar money-steps__bar--${x.kind}`, style: { marginLeft: `${(lo / top) * 100}%`, width: `${Math.max(0.6, (w / top) * 100)}%` } })]),
+      el('span', { class: 'money-steps__amount', text: `${x.kind === 'cost' || x.kind === 'kept' ? '−' : ''}${rand(w)}` }),
+    ]);
+  }));
+}
+
+function s2bResults(hub, d) {
+  const v = d.values;
+  const r = sellToBuy(s2bValues(v));
+  if (r.missing) return [el('p', { class: 'panel muted', text: `Fill in ${r.missing.join(' and ')} to see the answer.` })];
+  let at = r.sale;
+  const step = (label, amount, kind) => { const s = { label, from: at, to: kind === 'total' ? amount : at - amount, kind }; if (kind === 'total') s.from = 0; at = kind === 'total' ? amount : at - amount; return s; };
+  const steps = [
+    { label: 'Sale price', from: 0, to: r.sale, kind: 'total' },
+    step('Selling costs', r.sellTotal, 'cost'),
+    r.tax.tax ? step('Tax on the gain', r.tax.tax, 'cost') : null,
+    r.owed ? step('Bond settled', r.owed, 'cost') : null,
+    step('Cash from the sale', r.cash, 'total'),
+    r.price ? step('Buying costs', r.buyTotal, 'cost') : null,
+    r.keep ? step('Kept back', r.keep, 'kept') : null,
+    r.price ? step('Deposit', r.deposit, 'deposit') : null,
+  ].filter(Boolean);
+  const n = r.loan > 0 ? Math.round((Number(v.termYears) || 0) * 12) : 0;
+  const pmt = r.loan > 0 && n ? payment(r.loan, monthlyRate(v.ratePct), n) : 0;
+  const lines = [
+    `Selling for ${rand(r.sale)} leaves ${rand(r.cash)}: ${rand(r.sellTotal)} in selling costs${r.tax.tax ? `, ${rand(r.tax.tax)} tax on the gain` : ''}${r.owed ? ` and the ${rand(r.owed)} bond settled` : ''}.`,
+    r.tax.gain > 0 && Number(v.boughtFor) ? `The gain is about ${rand(r.tax.gain)} - ${r.tax.gain > 3000000 ? `more than the R3 million SARS leaves untaxed on the home you live in` : 'under the R3 million SARS leaves untaxed on the home you live in: no tax'}.` : null,
+    r.price ? (r.short > 0
+      ? `That is ${rand(r.short)} short of the buying costs and what you want to keep back - before any deposit. Something has to give: a lower price, less kept back, or more cash.`
+      : `The new home’s buying costs come first, in cash: ${rand(r.buyTotal)}. Then ${rand(r.keep)} kept back. That leaves a ${rand(r.deposit)} deposit${r.leftOver > 0 ? `, with ${rand(r.leftOver)} over even after paying the whole price` : ''}.`) : 'Put in the price of the new home to see the deposit.',
+    r.loan > 0 ? `The new bond: ${rand(r.loan)} over ${months(n)} at ${pct(Number(v.ratePct) || 0)} - about ${rand(pmt)} a month.` : r.price ? 'No bond needed.' : null,
+  ];
+  const take = (screen) => { v.deposit = Math.round(r.deposit); d.mine.add('deposit'); hub.go(screen); };
+  return [
+    el('div', { class: 'stats' }, [
+      stat(rand(r.cash), 'cash from the sale', 'r-cash'),
+      r.price ? stat(rand(r.deposit), 'for the deposit', 'r-deposit') : null,
+      r.loan > 0 ? stat(rand(pmt), `a month on the new bond of ${rand(r.loan)}`, 'r-newbond') : null,
+    ]),
+    chartPanel('Where the sale money goes', el('div', { class: 'stack' }, [
+      moneySteps(steps),
+      el('p', { class: 'small', style: { margin: 0 }, text: 'From the sale price down: each step is a cost or money kept back, and what is left at the bottom is the deposit.' }),
+    ])),
+    el('div', { class: 'panel stack' }, [
+      el('h2', { text: 'What it means', style: { margin: 0 } }),
+      ...lines.filter(Boolean).map((t) => el('p', { style: { margin: 0 }, text: t })),
+      r.price && r.deposit > 0 ? el('div', { class: 'row' }, [
+        el('span', { class: 'small', text: `Take the ${rand(r.deposit)} deposit to:` }),
+        el('button', { class: 'btn btn-small', type: 'button', text: 'Bond', title: 'Open Bond with this price and deposit', 'data-field': 's2b-bond', on: { click: () => take('bond') } }),
+        el('button', { class: 'btn btn-small', type: 'button', text: 'Compare', title: 'Open Own or rent with this price and deposit', 'data-field': 's2b-ownrent', on: { click: () => { v.rbMode = 'buy'; take('rentbuy'); } } }),
+      ]) : null,
+    ]),
+    el('div', { class: 'panel stack' }, [
+      el('h2', { text: 'Selling costs', style: { margin: 0 } }),
+      sums([...r.selling.map((x) => ({ label: x.label, value: x.amount, note: [x.note, x.source].filter(Boolean).join(' · ') })), { label: 'Selling costs', value: r.sellTotal, total: true }]),
+      r.price ? el('h2', { text: 'Buying costs', style: { margin: 0 } }) : null,
+      r.price ? sums([...r.buying.map((x) => ({ label: x.label, value: x.amount, note: [x.note, x.source].filter(Boolean).join(' · ') })), { label: 'Buying costs', value: r.buyTotal, total: true }]) : null,
+    ]),
+    el('div', { class: 'panel stack' }, [
+      el('h2', { text: 'Did you think of…', style: { margin: 0 } }),
+      el('ul', { style: { margin: 0 } }, [
+        'Giving the bank 90 days’ notice to cancel the bond, as soon as the sale is likely - short notice costs interest.',
+        'Repairs the electrical inspection finds, before the certificate is issued.',
+        'Rates and levies paid ahead for the clearance certificate - most of it comes back after transfer.',
+        'Buying before the sale goes through: bridging finance, or two bonds at once for a while. Not counted here.',
+        'Occupational rent if you stay in the old home after transfer, or move into the new one before.',
+        'The bank’s initiation fee can be added to the new bond instead of paid in cash - then interest is charged on it.',
+        'Moving, and what a new home always needs in the first months.',
+      ].map((t) => el('li', { text: t }))),
+    ]),
+  ];
 }
 
 /* ---------------------------------------------------------- rent or buy */
@@ -595,6 +721,16 @@ function compareScreen(hub, param) {
       { key: 1, label: 'Cash needed first', get: (b) => b.cashFirst, lower: true },
       { key: 1, label: 'Interest', get: (b) => b.interest, lower: true, total: true },
       { label: 'Paid in all', get: (b) => b.totalPaid, lower: true },
+    ]);
+  } else if (kind === 'selltobuy') {
+    table = compareTable(recs.map((rec) => ({ title: rec.title, out: sellToBuy(s2bValues(v(rec))) })).filter((x) => !x.out.missing), [
+      { label: 'Sale price', get: (r) => r.sale, lower: false },
+      { key: 1, label: 'Selling costs', get: (r) => r.sellTotal, lower: true },
+      { label: 'Cash from the sale', get: (r) => r.cash, lower: false },
+      { key: 1, label: 'Buying costs', get: (r) => r.buyTotal, lower: true },
+      { label: 'Kept back', get: (r) => r.keep },
+      { key: 1, label: 'Deposit', get: (r) => r.deposit, lower: false, total: true },
+      { label: 'New bond', get: (r) => r.loan, lower: true },
     ]);
   } else {
     table = compareTable(recs.map((rec) => ({ title: rec.title, out: ownOrRent(v(rec)) })).filter((x) => x.out.ahead != null), [

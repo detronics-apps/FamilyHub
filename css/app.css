@@ -545,3 +545,14 @@ table.plain .num { text-align: right; white-space: nowrap; font-variant-numeric:
 .fin-formula { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; padding: var(--space-1) var(--space-2); border-radius: 6px; background: color-mix(in srgb, var(--text) 6%, transparent); }
 .fin-formula--worked { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .fin-overlap td { background: color-mix(in srgb, var(--warn) 10%, transparent); }
+
+/* Where the money goes (D-074): a falling staircase of bars */
+.money-steps { display: grid; gap: var(--space-2); }
+.money-steps__row { display: grid; grid-template-columns: minmax(110px, 30%) 1fr auto; gap: var(--space-2); align-items: center; font-size: 14px; }
+.money-steps__track { height: 14px; background: color-mix(in srgb, var(--text) 5%, transparent); border-radius: 4px; overflow: hidden; }
+.money-steps__bar { display: block; height: 100%; border-radius: 4px; }
+.money-steps__bar--total { background: var(--accent-strong); }
+.money-steps__bar--cost { background: var(--warn); }
+.money-steps__bar--kept { background: var(--text-dim); }
+.money-steps__bar--deposit { background: var(--ok); }
+.money-steps__amount { font-variant-numeric: tabular-nums; white-space: nowrap; }

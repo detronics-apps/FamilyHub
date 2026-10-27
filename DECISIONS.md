@@ -631,6 +631,22 @@ purpose (saved): show people what they have not thought of, and let them put the
   marked not counted), what moves the answer most, and year by year.
 - Tested: a home growing exactly as fast as after-tax investments, with no costs, comes out level.
 
+**D-074 Selling to buy, and every cost item by item (owner, 2026-10-27).** Agents ask different
+rates; lawyers' and "hidden" fees were not visible. Buying costs are now itemised from published
+figures: transfer duty (SARS); transfer and bond attorney fees on the LSSA conveyancing guideline from
+1 July 2026 plus 15% VAT (tested against the published R1m, R1.5m, R2m, R3m, R5m and R10m figures);
+Deeds Office transfer and bond fees (GN 7180, from 27 March 2026); the bank's initiation fee
+(R6 037.50 in Nedbank and Standard Bank 2026 pricing); attorneys' extras (illustrative). This
+replaces the earlier rough fee formula everywhere in Homes, and Bond lists them item by item.
+Selling costs: the agent's % plus VAT (the family's own rate), bond cancellation attorney and
+months of notice not given (interest), the electrical certificate, and beetle, gas and fence
+certificates where they apply (illustrative, from published ranges). **Sell to buy** (Homes): sale
+price → selling costs → tax on the gain (above R3m) → bond settled = cash; then the new home's
+buying costs (in cash, first), what is kept for renovations, moving and a reserve, and the rest is
+the deposit - shown as a falling staircase, with what it leaves on the new bond, and a tap to take
+the deposit into Bond or Own or rent. Bridging, double bonds and occupational rent are named, not
+counted. Every estimate says it is one and that a quote replaces it.
+
 **D-073 Graphs that tell the story (owner, 2026-10-27).** "Graphs that tell a story, that make
 sense": every Finance tool now has one graph in plain view (Simple included), with the moments that
 matter marked as labelled upright lines and a one-line story under it. Own or rent: ahead or behind
