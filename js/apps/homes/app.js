@@ -6,11 +6,12 @@ import { el } from '../../ui/dom.js';
 import { loading, failure } from '../kit.js';
 import { homeCost, bond, transferDuty, feesEstimate, buyingCosts, total, HOME_DEFAULTS, REFERENCE, sensitivity, monthlyRate, payment, SELL_DEFAULTS } from '../finance/maths.js';
 import { ownOrRent, evenAt, historyGrowth, OWN_RENT_DEFAULTS, CGT, sellToBuy } from './ownrent.js';
-import { levelBar, shows, draft, loadDraft, inputsPanel, assumed, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
+import { runBond, bondNow, monthsFrom, EVENT_KINDS } from './bondlog.js';
+import { levelBar, shows, draft, loadDraft, inputsPanel, assumed, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, short, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => r.title, prefix: 'hom' });
 // Own or rent adds its own fields; where both have one (price, rent...) the home's default is kept, so they share it.
-const DEFAULTS = { ...SELL_DEFAULTS, ...OWN_RENT_DEFAULTS, ...HOME_DEFAULTS, extra: null, income: null, sellPrice: null, renovations: null, reserve: null, quoteTransfer: null, quoteBond: null };
+const DEFAULTS = { ...SELL_DEFAULTS, ...OWN_RENT_DEFAULTS, ...HOME_DEFAULTS, extra: null, income: null, sellPrice: null, renovations: null, reserve: null, quoteTransfer: null, quoteBond: null, bondLoan: null, bondStart: null, bondYears: 20, bondRate: REFERENCE.prime.value, bondEvents: [], tryExtra: 2000 };
 const D = () => draft('homes', DEFAULTS);
 const buying = (v) => v.mode !== 'rent';
 const renting = (v) => v.mode === 'rent';
@@ -51,6 +52,7 @@ export function render(hub, route) {
   if (route.sub === 'bond') return bondScreen(hub);
   if (route.sub === 'rentbuy') return rentBuyScreen(hub);
   if (route.sub === 'selltobuy') return sellBuyScreen(hub);
+  if (route.sub === 'ourbond') return ourBondScreen(hub);
   if (route.sub === 'compare') return compareScreen(hub, route.rest[0] ?? '');
   return el('section', { class: 'stack', 'aria-labelledby': 'homes-title' }, [
     el('h1', { id: 'homes-title', text: 'Homes', style: { margin: 0 } }),
@@ -58,6 +60,7 @@ export function render(hub, route) {
     el('ul', { class: 'list panel' }, [
       ['home', 'A home', 'What will living here really cost - the trip to work included? Save each one and compare.'],
       ['bond', 'Bond', 'What will the bond cost each month, and in total - and what is needed up front?'],
+      ['ourbond', 'Our bond', 'Log what you really paid - more for a few years, extra paid in, money taken out - and see what it did, and what paying more would do.'],
       ['selltobuy', 'Sell to buy', 'Selling our home to buy the next one: every cost item by item, what is left after the bond, and the deposit.'],
       ['rentbuy', 'Own or rent', 'Buying against renting, or keeping our home against selling and renting - with what people forget.'],
     ].map(([id, title, q]) => el('li', {}, [
@@ -92,7 +95,6 @@ const nothing = (r) => (r.missing ? [el('p', { class: 'panel muted', text: `Fill
 const said = (title, lines) => el('div', { class: 'panel stack' }, [el('h2', { text: title, style: { margin: 0 } }), ...lines.filter(Boolean).map((t) => (typeof t === 'string' ? el('p', { style: { margin: 0 }, text: t }) : t))]);
 const list = (title, items) => (items.length ? el('div', { class: 'panel stack' }, [el('h2', { text: title, style: { margin: 0 } }), el('ul', { style: { margin: 0 } }, items.map((t) => el('li', { text: t })))]) : null);
 const leavesOut = (items) => [el('h3', { text: 'What this leaves out', style: { margin: 0 } }), el('ul', { class: 'small', style: { margin: 0 } }, items.map((t) => el('li', { text: t })))];
-const signed = (n) => `${n > 0 ? '+' : '−'}${rand(Math.abs(n))}`;
 
 /* --------------------------------------------------------------- a home */
 
@@ -139,7 +141,7 @@ function homeResults(d) {
   const out = [
     el('div', { class: 'stats' }, [
       stat(rand(c.monthNow), trip ? 'a month now, with travel' : 'a month now', 'r-month-now'),
-      stat(rand(c.total), `total cost of living here for ${stay}`, 'r-total'),
+      c.total < 0 ? stat(rand(-c.total), `ahead after living here ${stay}`, 'r-total') : stat(rand(c.total), `total cost of living here for ${stay}`, 'r-total'),
       stat(rand(c.upfront), 'cash needed to move in', 'r-upfront'),
     ]),
     said('What it means', [
@@ -151,7 +153,7 @@ function homeResults(d) {
         { label: 'Getting to work', value: trip ? c.travel : 'not entered' },
         { label: c.buy ? 'Less what the sale brings back' : 'Less the deposit back', value: -c.back },
         { label: 'What the money up front could have earned', value: c.forgone, note: `At ${pct(Number(v.otherRatePct) || 0)} a year` },
-        { label: `Total cost of living here for ${stay}`, value: c.total, total: true, note: `About ${rand(c.perMonth)} a month, all in` },
+        { label: `Total cost of living here for ${stay}`, value: c.total, total: true, note: c.total < 0 ? `A minus total: you come out about ${rand(-c.total)} ahead - ${rand(-c.perMonth)} a month.` : `About ${rand(c.perMonth)} a month, all in` },
       ]),
       c.buy ? el('h3', { text: 'Where the cost goes', style: { margin: 0 } }) : null,
       c.buy ? sums([
@@ -167,10 +169,17 @@ function homeResults(d) {
         { label: 'Total', value: c.total, total: true, note: 'The same total, counted the other way. Repaying the bond’s capital is paying for the house, not a cost on top of it.' },
       ]) : null,
     ]),
-    chartPanel('Cost a month, by how long you stay', lineChart([
-      { name: 'Cost a month, all in, if you left then', points: c.timeline.filter((t) => t.month >= 3).map((t) => [t.month, t.cost / t.month]) },
-    ], { label: 'What living here costs a month, depending on how long you stay', marks: [{ x: c.months, label: `You: ${stay}` }],
-      story: c.buy ? 'Duty, fees and selling costs are paid however short the stay - the longer you stay, the less each month costs.' : 'Renting costs about the same each month, rising with the rent.' })),
+    (() => {
+      // Money in your pocket reads the right way up: above zero you come out ahead, below it the home costs you.
+      const perMonth = c.timeline.filter((t) => t.month >= 3).map((t) => [t.month, -t.cost / t.month]);
+      const free = crossing(perMonth);
+      return chartPanel('Ahead or costing you, a month - by how long you stay', lineChart([
+        { name: 'Above zero: ahead each month. Below: what it costs each month', points: perMonth },
+      ], { label: 'How much a month living here leaves you ahead, or costs you, depending on how long you stay', marks: [free != null ? { x: free, label: `Pays for itself from ${whenLabel(free)}` } : null, { x: c.months, label: `You: ${stay}` }],
+        story: c.buy
+          ? `Below zero it costs you that much a month - duty, fees and selling costs are paid however short the stay, so a short stay costs a lot.${free != null ? ' Above zero, the home has grown by more than everything paid into it: that is money ahead each month.' : ''} (Before what the money up front could have earned elsewhere.)`
+          : 'Renting costs about the same each month, rising with the rent - always below zero, because rent does not come back.' }));
+    })(),
     assumed(HOME_FIELDS, d),
     list('What would change it', homeLevers(v, c)),
   ];
@@ -182,7 +191,8 @@ function homeResults(d) {
 function homeLevers(v, c) {
   const tries = [];
   const longer = homeCost({ ...v, stayYears: (Number(v.stayYears) || 0) + 3 });
-  tries.push(`Staying 3 years longer: ${rand(longer.perMonth)} a month all in, against ${rand(c.perMonth)}.`);
+  const a = (x) => (x < 0 ? `${rand(-x)} a month ahead` : `${rand(x)} a month`);
+  tries.push(`Staying 3 years longer: ${a(longer.perMonth)} all in, against ${a(c.perMonth)}.`);
   if (Number(v.km) > 0) {
     const closer = homeCost({ ...v, km: Math.max(0, Number(v.km) - 10) });
     tries.push(`Living 10 km closer to work: about ${rand((c.travel - closer.travel) / c.months)} a month less on travel${Number(v.minutes) > 0 ? ', and time back' : ''}.`);
@@ -209,10 +219,14 @@ function homeAdvanced(v, c) {
   const sens = sensitivity(v, (x) => homeCost(x).total, HOME_NUDGES).filter((x) => Math.abs(x.change) >= 1);
   return el('div', { class: 'panel stack' }, [
     el('h2', { text: 'Over time', style: { margin: 0 } }),
-    lineChart([{ name: 'Cost so far, if you left that month', points: c.timeline.map((t) => [t.month, t.cost]) }], { label: 'The cost of living here so far, if you left that month' }),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: c.buy ? 'Buying starts high - duty, fees and selling costs are paid however short the stay - then grows more slowly.' : 'Renting grows steadily with the rent.' }),
+    (() => {
+      const pts = c.timeline.map((t) => [t.month, -t.cost]); const even = crossing(pts);
+      return lineChart([{ name: 'Ahead (above zero) or behind (below), if you left that month', points: pts }], { label: 'How far ahead or behind living here leaves you, if you left that month',
+        marks: even != null ? [{ x: even, label: `Ahead from ${whenLabel(even)}` }] : [],
+        story: c.buy ? 'It starts below zero at what you would lose selling straight away - duty, fees and selling costs. Above zero, selling would bring back more than everything paid in.' : 'Renting goes further below zero with every month’s rent.' });
+    })(),
     sens.length ? el('h3', { text: 'What moves the answer most', style: { margin: 0 } }) : null,
-    sens.length ? el('ul', { style: { margin: 0 } }, sens.map((x) => el('li', { text: `${x.what[0].toUpperCase()}${x.what.slice(1)}: ${signed(x.change)}` }))) : null,
+    sens.length ? el('ul', { style: { margin: 0 } }, sens.map((x) => el('li', { text: `${x.what[0].toUpperCase()}${x.what.slice(1)}: ${x.change > 0 ? 'costs' : 'saves'} ${rand(Math.abs(x.change))} over the stay` }))) : null,
   ]);
 }
 
@@ -320,6 +334,126 @@ function bondStory(b) {
   ], { label: 'How each instalment splits between interest and the bond itself',
     marks: [turn != null && capital[0][1] < interest[0][1] ? { x: turn, label: `More pays off the bond from ${whenLabel(turn)}` } : null],
     story: 'At first most of each instalment is interest. Paying extra early cuts the interest most.' }));
+}
+
+/* ------------------------------------------------------------- our bond */
+
+// Our bond as it really went (D-075): payments over different periods, money paid in,
+// money taken out again, rate changes - where it stands, and what paying extra would do.
+const OB_FIELDS = [
+  { key: 'bondLoan', label: 'The bond when it started', type: 'money', level: 'simple', hint: 'The amount registered - not the price of the house.' },
+  { key: 'bondStart', label: 'It started in', type: 'month', level: 'simple' },
+  { key: 'bondYears', label: 'Over', type: 'years', level: 'simple', source: { kind: 'assumption' } },
+  { key: 'bondRate', label: 'Interest rate at the start', type: 'percent', level: 'simple', source: { ref: REFERENCE.prime }, hint: 'Rates changed since? Add each change below as "Rate changed".' },
+  { key: 'tryExtra', label: 'What if we paid this much more a month, from now', type: 'money', level: 'simple', source: { kind: 'assumption' } },
+];
+const ymName = (ym) => (ym ? new Date(`${ym}-01T00:00:00Z`).toLocaleDateString('en-ZA', { month: 'short', year: 'numeric', timeZone: 'UTC' }) : '-');
+const obInput = (v) => ({ loan: v.bondLoan, ratePct: v.bondRate, termYears: v.bondYears, start: v.bondStart, events: v.bondEvents ?? [] });
+const obHeadline = (v) => { const b = bondNow(obInput(v), new Date().toISOString().slice(0, 10)); return b.missing ? '' : `${rand(b.owedNow)} owed · paid off ${ymName(b.actual.paidOff)}`; };
+
+function ourBondScreen(hub) {
+  const d = D();
+  const answer = el('div', { class: 'stack', 'aria-live': 'polite' });
+  const refresh = () => answer.replaceChildren(...obResults(hub, d).filter(Boolean));
+  refresh();
+  return el('section', { class: 'stack', 'aria-labelledby': 'ob-title' }, [
+    el('h1', { id: 'ob-title', text: 'Our bond, as it really went', style: { margin: 0 } }),
+    el('p', { class: 'muted', style: { margin: 0 }, text: 'Log what you actually paid - more for a few years, then the minimum; extra amounts paid in; money taken out again - and see what it did, and what paying more from now would do.' }),
+    levelBar(() => hub.render()),
+    inputsPanel(OB_FIELDS, d, {}, () => refresh()),
+    eventsPanel(d, refresh),
+    answer,
+    savedPanel(hub, {
+      col: col(hub), kind: 'ourbond', d, compareScreen: 'compare',
+      summary: () => ({ headline: obHeadline(d.values) }),
+      onOpen: (rec) => { loadDraft('homes', DEFAULTS, rec); hub.go('ourbond'); },
+    }),
+  ]);
+}
+
+/** The log: each line a period of payments, an amount paid in or taken out, or a rate change. */
+function eventsPanel(d, refresh) {
+  const list = Array.isArray(d.values.bondEvents) ? d.values.bondEvents : (d.values.bondEvents = []);
+  const box = el('div', { class: 'stack' });
+  const save = () => { d.mine.add('bondEvents'); refresh(); };
+  const draw = () => box.replaceChildren(...list.map((e, i) => el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' }, 'data-field': `event:${i}` }, [
+    el('select', { class: 'select', 'aria-label': 'What happened', style: { width: 'auto' }, on: { change: (x) => { e.kind = x.target.value; draw(); save(); } } },
+      Object.entries(EVENT_KINDS).map(([k, label]) => el('option', { value: k, text: label, selected: e.kind === k }))),
+    el('span', { class: 'small muted', text: e.kind === 'pay' ? 'from' : 'in' }),
+    el('input', { class: 'input', type: 'month', value: e.from ?? '', 'aria-label': 'From', style: { maxWidth: '170px' }, on: { change: (x) => { e.from = x.target.value || null; save(); } } }),
+    e.kind === 'pay' ? el('span', { class: 'small muted', text: 'to' }) : null,
+    e.kind === 'pay' ? el('input', { class: 'input', type: 'month', value: e.to ?? '', 'aria-label': 'To (empty: still going)', style: { maxWidth: '170px' }, on: { change: (x) => { e.to = x.target.value || null; save(); } } }) : null,
+    el('span', { class: 'small muted', text: e.kind === 'rate' ? 'new rate' : e.kind === 'pay' ? 'R a month' : 'R' }),
+    el('input', { class: 'input', type: 'number', min: '0', step: 'any', value: e.amount ?? '', 'aria-label': e.kind === 'rate' ? 'New rate, % a year' : 'Amount', style: { maxWidth: '130px' }, on: { change: (x) => { e.amount = Number(x.target.value) || 0; save(); } } }),
+    e.kind === 'rate' ? el('span', { class: 'small muted', text: '%' }) : null,
+    el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': 'Remove this line', on: { click: () => { list.splice(i, 1); draw(); save(); } } }),
+  ])));
+  draw();
+  return el('div', { class: 'panel stack' }, [
+    el('h2', { text: 'What happened, over the years', style: { margin: 0 } }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: '"Paid each month" for a period (leave "to" empty if it is still going); "Paid in once" for a lump sum; "Took out" for money drawn from the bond again; "Rate changed" when the bank’s rate moved. Outside any period, the minimum is paid.' }),
+    box,
+    el('div', {}, [el('button', { class: 'btn btn-small', type: 'button', text: 'Add line', 'data-field': 'event-add', on: { click: () => { list.push({ kind: 'pay', from: d.values.bondStart ?? null, to: null, amount: null }); draw(); } } })]),
+  ]);
+}
+
+function obResults(hub, d) {
+  const v = d.values;
+  const today = hub.today();
+  const b = bondNow(obInput(v), today);
+  if (b.missing) return [el('p', { class: 'panel muted', text: 'Fill in the bond when it started, and the month it started, to see the answer.' })];
+  const a = b.actual; const p = b.plain;
+  const sooner = p.months - a.months;
+  const noTakeOut = runBond({ ...obInput(v), events: (v.bondEvents ?? []).filter((e) => e.kind !== 'withdraw') });
+  const extra = Number(v.tryExtra) || 0;
+  const more = extra > 0 && b.owedNow > 0 ? b.withExtra(extra) : null;
+  const yearly = (run) => run.rows.filter((r) => r.m % 12 === 0 || r.m === run.months).map((r) => [r.m, r.balance]);
+  const lines = [
+    `It started at ${rand(Number(v.bondLoan))} in ${ymName(v.bondStart)} over ${months(p.plannedMonths)}: a minimum of ${rand(p.rows[1]?.minPmt ?? 0)} a month, ending ${ymName(p.paidOff)}.`,
+    (v.bondEvents ?? []).length ? `With what you logged, it ends ${a.paidOff ? ymName(a.paidOff) : 'after more than 60 years'} - ${sooner > 0 ? `${months(sooner)} sooner` : sooner < 0 ? `${months(-sooner)} later` : 'the same time'} - with ${rand(Math.abs(p.interest - a.interest))} ${a.interest <= p.interest ? 'less' : 'more'} interest in all.` : 'Log what you really paid below the bond details, and see what it did.',
+    b.owedNow > 0 ? `Today (${ymName(today.slice(0, 7))}): ${rand(b.owedNow)} still owed, a minimum of ${rand(b.minNow)} a month, ${months(Math.max(0, a.months - b.now))} to go at the minimum.` : 'It is paid off.',
+    a.taken > 0 ? `The ${rand(a.taken)} taken out again costs about ${rand(a.interest - noTakeOut.interest)} in bond interest over the years it is paid back - a cost of whatever it bought (a car, say) that is easy to miss.` : null,
+    more ? `Paying ${rand(extra)} more a month from now: paid off ${ymName(more.paidOff)}, ${months(a.months - more.months)} sooner, saving about ${rand(a.interest - more.interest)} interest.` : null,
+    ...a.notes.map((x) => x.text),
+  ];
+  const marks = [
+    ...(v.bondEvents ?? []).filter((e) => e.from && e.kind !== 'pay').map((e) => ({ x: monthsFrom(v.bondStart, e.from), label: `${EVENT_KINDS[e.kind]}${e.kind === 'rate' ? ` ${e.amount}%` : ` ${short(e.amount)}`}` })),
+    b.owedNow > 0 ? { x: b.now, label: 'Today' } : null,
+  ];
+  const out = [
+    el('div', { class: 'stats' }, [
+      stat(rand(b.owedNow), 'still owed today', 'r-owed'),
+      stat(ymName(a.paidOff), 'paid off', 'r-paidoff'),
+      stat(rand(Math.abs(p.interest - a.interest)), a.interest <= p.interest ? 'less interest than the minimum all along' : 'more interest than the minimum all along', 'r-interest'),
+    ]),
+    chartPanel('The bond over the years', lineChart([
+      { name: 'As it really went', points: yearly(a) },
+      { name: 'Minimum only, nothing taken out', points: yearly(p) },
+      ...(more ? [{ name: `${short(extra)} more a month from now`, points: [[b.now, b.owedNow], ...yearly(more).filter(([m]) => m > b.now)], dashed: true }] : []),
+    ], { label: 'What is owed on the bond, year by year', marks, xLabel: (m) => String(Number(v.bondStart.slice(0, 4)) + Math.round(m / 12)), story: 'Where your line is below the minimum-only line, you are ahead of the bank’s plan. A step up is money taken out again. The dashed line is paying more from today.' })),
+    el('div', { class: 'panel stack' }, [
+      el('h2', { text: 'What it means', style: { margin: 0 } }),
+      ...lines.filter(Boolean).map((t) => el('p', { style: { margin: 0 }, text: t })),
+    ]),
+    list('Paying more from now', b.owedNow > 0 ? [1000, 2000, 5000].map((x) => { const r = b.withExtra(x); return `${rand(x)} more a month: paid off ${ymName(r.paidOff)}, ${months(a.months - r.months)} sooner, about ${rand(a.interest - r.interest)} less interest.`; }) : []),
+  ];
+  if (shows('advanced')) {
+    out.push(chartPanel('Each month: what was paid', lineChart([
+      { name: 'Paid', points: a.rows.filter((r) => r.m > 0 && r.m % 3 === 0).map((r) => [r.m, r.paidThis]) },
+      { name: 'The minimum', points: a.rows.filter((r) => r.m > 0 && r.m % 3 === 0).map((r) => [r.m, r.minPmt]), dashed: true },
+    ], { label: 'What was paid each month against the minimum', marks: b.owedNow > 0 ? [{ x: b.now, label: 'Today' }] : [], story: 'The minimum steps up when money is taken out or the rate rises; paying more than it is what shortens the bond.' })));
+  }
+  if (shows('learn')) {
+    out.push(el('div', { class: 'panel stack fin-learn' }, [
+      el('h2', { text: 'How it is worked out', style: { margin: 0 } }),
+      step('Each month', 'Owed = owed × (1 + r) − what was paid', `r = the yearly rate ÷ 12; paid = your amount for that period, or the minimum`, 'Interest is worked out on what is still owed, so every rand paid early saves the interest it would have attracted for the rest of the bond.'),
+      step('The minimum', 'Minimum = owed × r ÷ (1 − (1 + r)^−months left)', null, 'Paying more does not lower the minimum - it shortens the bond, as most South African access bonds work. Taking money out, or a rate change, makes the bank work the minimum out again over the months that are left. Check how your own bank does it.'),
+      step('Money taken out', 'Owed goes up by the amount; it is then paid back at the bond rate over the months left', null, 'Cheap compared with a car loan or a credit card, but not free: the interest over the remaining years is a cost of what it bought.'),
+      el('h3', { text: 'What this leaves out', style: { margin: 0 } }),
+      el('ul', { class: 'small', style: { margin: 0 } }, ['The bank’s monthly service fee and bond insurance, unless they are in what you logged.', 'Interest worked out daily: banks do, this works monthly - close, not exact. Your bond statement is the true figure.'].map((t) => el('li', { text: t }))),
+    ]));
+  }
+  return out;
 }
 
 /* ----------------------------------------------------------- sell to buy */
@@ -721,6 +855,12 @@ function compareScreen(hub, param) {
       { key: 1, label: 'Cash needed first', get: (b) => b.cashFirst, lower: true },
       { key: 1, label: 'Interest', get: (b) => b.interest, lower: true, total: true },
       { label: 'Paid in all', get: (b) => b.totalPaid, lower: true },
+    ]);
+  } else if (kind === 'ourbond') {
+    table = compareTable(recs.map((rec) => ({ title: rec.title, out: bondNow(obInput(v(rec)), hub.today()) })).filter((x) => !x.out.missing), [
+      { label: 'Still owed today', get: (b) => b.owedNow, lower: true },
+      { label: 'Paid off', get: (b) => ymName(b.actual.paidOff) },
+      { key: 1, label: 'Interest in all', get: (b) => b.actual.interest, lower: true, total: true },
     ]);
   } else if (kind === 'selltobuy') {
     table = compareTable(recs.map((rec) => ({ title: rec.title, out: sellToBuy(s2bValues(v(rec))) })).filter((x) => !x.out.missing), [

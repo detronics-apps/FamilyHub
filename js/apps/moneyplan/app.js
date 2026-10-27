@@ -311,7 +311,7 @@ function planStory(s, today) {
   return chartPanel('Free against needed, month by month', lineChart([
     { name: 'Free each month', points: pts.map((x) => [x.m, x.avail]) },
     { name: 'Needed each month', points: pts.map((x) => [x.m, x.needed]), dashed: true },
-  ], { label: 'Money free each month against what the goals need',
+  ], { label: 'Money free each month against what the goals need', xLabel: (m) => monthAt(today, m).slice(0, 4),
     marks: [firstShort != null ? { x: firstShort, label: `First goal short: ${monthName(monthAt(today, firstShort))}` } : null,
       s.deficitFrom != null ? { x: s.deficitFrom, label: 'Commitments outgrow income' } : null],
     story: 'Where the dashed line is above, the goals need more than is free that month - money put aside earlier, a goal moving, or a goal shrinking has to cover it.' }));

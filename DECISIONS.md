@@ -631,6 +631,24 @@ purpose (saved): show people what they have not thought of, and let them put the
   marked not counted), what moves the answer most, and year by year.
 - Tested: a home growing exactly as fast as after-tax investments, with no costs, comes out level.
 
+**D-075 Our bond, as it really went (owner, 2026-10-27).** The owner paid R12 000 a month for years
+when the instalment was about R9 800, then the minimum; took R100 000 out after 4 years for a car;
+and wanted to log that and see what it did. Homes › Our bond: the bond at the start (amount, month,
+years, rate) and a log of what happened - "Paid each month" for a period, "Paid in once", "Took
+out", "Rate changed". Worked month by month as an access bond: paying more does not lower the
+minimum, it shortens the bond; money taken out, or a rate change, makes the minimum be worked out
+again over the months left (said in Learn - "check how your own bank does it"). A payment below the
+minimum is raised to it and said. Shows what is owed today, when it will be paid off, interest
+against paying only the minimum, what money taken out costs in bond interest, and what paying R1 000,
+R2 000 or R5 000 more from today would do - on a graph with each event and today marked.
+
+Also: the owner pointed out A home's graphs read upside down - cost was positive, so coming out
+ahead showed as a minus. They are flipped to money in your pocket: above zero you are ahead, below
+it the home costs you (as Own or rent and Job offers already were), with "Pays for itself from…"
+marked; the total says "R… ahead" instead of a minus cost, and "what moves it" says costs or saves.
+Every graph was then checked: graphs about dates (Children, Money plan, Our bond) show calendar
+years; year ticks fall on whole years whether or not a point does.
+
 **D-074 Selling to buy, and every cost item by item (owner, 2026-10-27).** Agents ask different
 rates; lawyers' and "hidden" fees were not visible. Buying costs are now itemised from published
 figures: transfer duty (SARS); transfer and bond attorney fees on the LSSA conveyancing guideline from

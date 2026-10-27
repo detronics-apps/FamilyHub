@@ -177,7 +177,7 @@ export const whenLabel = (m) => (m >= 12 ? `year ${Math.ceil(m / 12)}` : `month 
  * upright lines. A zero line is drawn whenever the lines go below zero. `story` is one
  * sentence under the chart saying what to look at. Colours come from the theme.
  */
-export function lineChart(series, { label, marks = [], story = null }) {
+export function lineChart(series, { label, marks = [], story = null, xLabel = null }) {
   const W = 640; const H = 240; const L = 64; const B = 26; const T = 14; const R = 12;
   const xs = series.flatMap((s) => s.points.map((p) => p[0]));
   const ys = series.flatMap((s) => s.points.map((p) => p[1]));
@@ -188,8 +188,9 @@ export function lineChart(series, { label, marks = [], story = null }) {
   const colours = ['var(--accent-strong)', 'var(--text-dim)', 'var(--warn)', 'var(--ok)'];
   // Axis amounts short (R2.4m, R850k); a tick too close to zero is left out so labels never overlap.
   const ticks = (y0 < 0 && y1 > 0 ? [y0, 0, y1] : [y0, (y0 + y1) / 2, y1]).filter((t) => t === 0 || !(y0 < 0 && y1 > 0) || Math.abs(Y(t) - Y(0)) >= 16);
-  const whole = [...new Set(xs.filter((x) => x % 12 === 0))];
-  const years = whole.length > 1 ? whole : [x0, x1];
+  // Year ticks on whole years between the ends, whether or not a point falls there.
+  const grid = []; for (let x = Math.ceil(x0 / 12) * 12; x <= x1; x += 12) grid.push(x);
+  const years = grid.length > 1 ? grid : [x0, x1];
   const shown = marks.filter((m) => m && Number.isFinite(m.x) && m.x >= x0 && m.x <= x1);
   return el('figure', { class: 'fin-chart', style: { margin: 0 } }, [
     svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': [label, ...shown.map((m) => m.label)].join('. '), width: '100%' }, [
@@ -197,7 +198,7 @@ export function lineChart(series, { label, marks = [], story = null }) {
         svg('line', { x1: L, x2: W - R, y1: Y(t), y2: Y(t), stroke: t === 0 && y0 < 0 ? 'var(--text-dim)' : 'var(--border)', 'stroke-width': t === 0 && y0 < 0 ? 1.5 : 1 }),
         svg('text', { x: L - 6, y: Y(t) + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--text-dim)' }, [short(t)]),
       ])),
-      ...years.filter((x, i) => years.length < 14 || i % Math.ceil(years.length / 10) === 0).map((x) => svg('text', { x: X(x), y: H - 8, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--text-dim)' }, [x % 12 === 0 ? `${x / 12}y` : `${x}m`])),
+      ...years.filter((x, i) => years.length < 14 || i % Math.ceil(years.length / 10) === 0).map((x) => svg('text', { x: X(x), y: H - 8, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--text-dim)' }, [xLabel ? xLabel(x) : x % 12 === 0 ? `${x / 12}y` : `${x}m`])),
       ...series.map((s, i) => svg('polyline', {
         points: s.points.map(([x, y]) => `${X(x).toFixed(1)},${Y(y).toFixed(1)}`).join(' '),
         fill: 'none', stroke: colours[i % colours.length], 'stroke-width': 2.5, 'stroke-dasharray': s.dashed ? '6 4' : null,

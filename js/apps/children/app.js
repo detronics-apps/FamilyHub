@@ -96,7 +96,7 @@ function familyScreen(hub, data) {
       ]),
     ]) : null,
     known.length && f.rows.length ? chartPanel('What falls due each year', lineChart([{ name: 'All the children together', points: f.rows.map((y) => [(y.year - Number(today.slice(0, 4))) * 12, y.total]) }], {
-      label: 'What falls due each year, all the children together',
+      label: 'What falls due each year, all the children together', xLabel: (m) => String(Number(today.slice(0, 4)) + Math.round(m / 12)),
       marks: f.peak ? [{ x: (f.peak.year - Number(today.slice(0, 4))) * 12, label: `Biggest year: ${f.peak.year}` }] : [],
       story: 'The peaks are the years to be ready for - often when two children’s schooling or studies overlap.' })) : null,
     known.length ? yearTable(f, known) : null,
