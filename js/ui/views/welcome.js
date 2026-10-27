@@ -24,7 +24,7 @@ export function openWelcome(ctx) {
       el('span', { class: 'small muted', text: 'A pretend household with a kitchen, bathroom and living room, clearly labelled. Remove it with one button whenever you like.' }),
       el('div', {}, [el('button', {
         class: 'btn btn-primary', type: 'button', 'data-field': 'w-demo',
-        text: demoHere ? 'Show me' : (fresh ? 'Load the example family' : 'Add the example family alongside yours'),
+        text: demoHere ? 'Show me' : (fresh ? 'Load example' : 'Add example'), title: fresh ? 'Load the example family' : 'Add the example family alongside yours',
         on: { click: () => { if (!demoHere) ctx.seedDemo(); finish('#/chores'); } },
       })]),
     ])]),
@@ -36,7 +36,7 @@ export function openWelcome(ctx) {
       ]),
       el('span', { class: 'small muted', text: 'Both optional. You can add the rest of the family later in Settings.' }),
       el('div', {}, [el('button', {
-        class: 'btn', type: 'button', text: 'Start our household', 'data-field': 'w-own',
+        class: 'btn', type: 'button', text: 'Get started', 'data-field': 'w-own',
         on: { click: () => { ctx.startOwn(familyName.value || 'Our family', yourName.value); finish('#/chores/plan'); } },
       })]),
     ])]) : null,
@@ -45,7 +45,7 @@ export function openWelcome(ctx) {
       el('span', { class: 'small muted', text: ctx.folderSupported()
         ? 'On a computer with Google Drive for Desktop, pick your Drive folder once and everything saves there - shared across your laptops, never lost with an update.'
         : 'On a phone, save a family file to your Drive now and then - Settings shows how.' }),
-      el('div', {}, [el('button', { class: 'btn', type: 'button', text: 'Set it up', on: { click: () => finish('#/settings/drive') } })]),
+      el('div', {}, [el('button', { class: 'btn', type: 'button', text: 'Set up', on: { click: () => finish('#/settings/drive') } })]),
     ])]),
     el('li', {}, [el('div', {}, [
       el('strong', { text: 'Whenever you have a few minutes' }),
@@ -60,7 +60,7 @@ export function openWelcome(ctx) {
       el('ol', { class: 'welcome-steps' }, steps),
       el('p', { class: 'small muted', text: 'Everything stays in this browser on this device. Nothing is uploaded.' }),
     ],
-    foot: [el('a', { class: 'btn btn-quiet', href: '#/help', text: 'Read the guide', on: { click: () => finish('#/help') } })],
+    foot: [el('a', { class: 'btn btn-quiet', href: '#/help', text: 'Read guide', on: { click: () => finish('#/help') } })],
     onClose: () => {
       ctx.setDevice({ onboardedAt: ctx.app.device.onboardedAt ?? new Date().toISOString() });
       if (!ctx.app.household) ctx.commit(emptyHousehold());

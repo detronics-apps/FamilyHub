@@ -11,7 +11,7 @@ export function placeholderView(ctx, route) {
       el('h1', { text: 'That page does not exist' }),
       el('p', { text: 'It may belong to a mini-app that is not installed.' }),
       el('div', { class: 'row', style: { justifyContent: 'center' } }, [
-        el('a', { class: 'btn btn-primary', href: '#/', text: 'Back to home' }),
+        el('a', { class: 'btn btn-primary', href: '#/', text: 'Home' }),
         el('a', { class: 'btn', href: '#/library', text: 'Mini-apps' }),
       ]),
     ]);
@@ -20,6 +20,6 @@ export function placeholderView(ctx, route) {
     el('h1', { text: planned.name }),
     el('p', { text: planned.purpose }),
     el('p', { class: 'muted', text: `${planned.name} is not built yet. It will arrive as a mini-app you can install.` }),
-    el('a', { class: 'btn', href: '#/', text: 'Back to home' }),
+    el('a', { class: 'btn', href: '#/', text: 'Home' }),
   ]);
 }

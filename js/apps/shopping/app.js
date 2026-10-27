@@ -67,7 +67,7 @@ function finder(hub, list, save) {
     const group = el('select', { class: 'select', style: { width: 'auto' }, 'aria-label': 'Where it goes', 'data-field': 'new-group' },
       Object.entries(GROUPS).map(([k, t]) => el('option', { value: k, text: t, selected: k === guess })));
     return el('div', { class: 'row' }, [
-      el('button', { class: 'btn btn-small btn-primary', type: 'button', text: `+ Add "${text}" as a new item`, 'data-field': 'find-new', on: { click: () => add(text, group.value) } }),
+      el('button', { class: 'btn btn-small btn-primary', type: 'button', text: `+ Add "${text}"`, title: 'Add as a new item', 'data-field': 'find-new', on: { click: () => add(text, group.value) } }),
       el('span', { class: 'small', text: 'in' }), group,
     ]);
   };
@@ -78,7 +78,7 @@ function finder(hub, list, save) {
       keydown: (e) => { if (e.key === 'Enter' && st.query.trim()) { e.preventDefault(); results.querySelector('[data-field="find-new"], [data-field^="find-add:"]')?.click(); } },
     },
   });
-  const chip = (pressed, text, field, click) => el('button', { class: 'chip', type: 'button', 'aria-pressed': String(pressed), text, 'data-field': field, on: { click } });
+  const chip = (pressed, text, field, click, title) => el('button', { class: 'chip', type: 'button', 'aria-pressed': String(pressed), text, title, 'data-field': field, on: { click } });
   draw();
   return el('div', { class: 'panel stack no-print', 'aria-label': 'Find or add' }, [
     el('div', { class: 'row' }, [input]),
@@ -87,8 +87,8 @@ function finder(hub, list, save) {
       ...Object.entries(KINDS).map(([k, t]) => chip(st.kind === k, t, `find-kind:${k}`, () => { st.kind = k; hub.render(); })),
     ]),
     el('div', { class: 'chipset', role: 'group', 'aria-label': 'Look in' }, [
-      chip(st.ours, `Ours - bought before or added by us (${list.known.length})`, 'find-ours', () => { st.ours = true; hub.render(); }),
-      chip(!st.ours, 'Everything', 'find-all', () => { st.ours = false; hub.render(); }),
+      chip(st.ours, `Ours (${list.known.length})`, 'find-ours', () => { st.ours = true; hub.render(); }, 'What we have bought before or added'),
+      chip(!st.ours, 'Everything', 'find-all', () => { st.ours = false; hub.render(); }, 'Also common things of each kind, for a first purchase'),
     ]),
     results,
   ]);
@@ -109,7 +109,7 @@ function listScreen(hub, list, save) {
   ]);
 
   return el('section', { class: 'stack', 'aria-label': 'Shopping list' }, [
-    list.items.some((i) => !i.checked) ? el('a', { class: 'btn btn-primary no-print', href: hub.href('shop'), text: 'At the shop - tick things off', 'data-field': 'go-shop', style: { alignSelf: 'flex-start' } }) : null,
+    list.items.some((i) => !i.checked) ? el('a', { class: 'btn btn-primary no-print', href: hub.href('shop'), text: 'Start shopping', title: 'At the shop: just the list, big, to tick off', 'data-field': 'go-shop', style: { alignSelf: 'flex-start' } }) : null,
     finder(hub, list, save),
     ...byGroup({ items: list.items.filter((i) => !i.checked) }).map(([g, items]) => el('div', { class: 'panel' }, [
       el('h2', { text: `${GROUPS[g]} (${items.length})` }),
@@ -117,7 +117,7 @@ function listScreen(hub, list, save) {
     ])),
     list.items.some((i) => !i.checked) ? el('div', { class: 'row no-print' }, [
       el('button', {
-        class: 'btn btn-small', type: 'button', text: 'Copy the list', 'data-field': 'shop-copy',
+        class: 'btn btn-small', type: 'button', text: 'Copy list', 'data-field': 'shop-copy',
         on: { click: async () => { try { await navigator.clipboard.writeText(listText(list, (i) => formatIngredient(inSystem(i, hub.units())))); hub.ui.notice('Copied - paste it into a message or notes.'); } catch { hub.ui.notice('This browser would not allow copying. Use Print instead.', 'warn'); } } },
       }),
       el('button', { class: 'btn btn-small', type: 'button', text: 'Print', 'data-field': 'shop-print', on: { click: () => window.print() } }),
@@ -125,7 +125,7 @@ function listScreen(hub, list, save) {
     bought.length ? el('div', { class: 'panel' }, [
       el('h2', { text: `Bought (${bought.length})` }),
       el('ul', { class: 'list' }, bought.map(item)),
-      el('button', { class: 'btn btn-small', type: 'button', text: 'Clear bought items', on: { click: () => save(clearBought(list)) } }),
+      el('button', { class: 'btn btn-small', type: 'button', text: 'Clear bought', on: { click: () => save(clearBought(list)) } }),
     ]) : null,
     el('p', { class: 'small muted', text: 'Amounts in grams and kilos (or millilitres and litres) are added together. Different kinds of measure - cups and grams, say - are listed separately rather than guessed. Sending the same meal or week again updates its items instead of doubling them.' }),
   ]);
@@ -148,8 +148,8 @@ function shopScreen(hub, list, save) {
     ...byGroup({ items: left }).map(([g, items]) => el('div', { class: 'panel stack' }, [el('h2', { text: GROUPS[g], style: { margin: 0 } }), ...items.map(tick)])),
     got.length ? el('details', { class: 'panel' }, [el('summary', { text: `In the trolley (${got.length})` }), el('div', { class: 'stack' }, got.map(tick))]) : null,
     el('div', { class: 'row' }, [
-      got.length ? el('button', { class: 'btn btn-primary', type: 'button', text: 'Done - clear what we bought', 'data-field': 'shop-done', on: { click: async () => { await save(clearBought(list)); hub.go(); } } }) : null,
-      el('a', { class: 'btn', href: hub.href(), text: 'Back to the list' }),
+      got.length ? el('button', { class: 'btn btn-primary', type: 'button', text: 'Done', title: 'Clear what we bought', 'data-field': 'shop-done', on: { click: async () => { await save(clearBought(list)); hub.go(); } } }) : null,
+      el('a', { class: 'btn', href: hub.href(), text: 'Back', title: 'Back to the list' }),
     ]),
   ]);
 }
@@ -157,7 +157,7 @@ function shopScreen(hub, list, save) {
 /** Items sent by another mini-app: shown, ticked, and only added on Add. */
 function addScreen(hub, list, save, param) {
   const send = readSend(param);
-  if (!send) return el('div', { class: 'panel' }, [el('p', { text: 'Nothing to add - the link was incomplete.' }), el('a', { class: 'btn', href: hub.href(), text: 'Open the list' })]);
+  if (!send) return el('div', { class: 'panel' }, [el('p', { text: 'Nothing to add - the link was incomplete.' }), el('a', { class: 'btn', href: hub.href(), text: 'Open list' })]);
   const already = list.items.some((i) => i.source === send.source);
   const boxes = send.items.map((i, n) => el('label', { class: 'checkline' }, [
     el('input', { type: 'checkbox', checked: true, 'data-index': String(n) }), formatIngredient(inSystem(i, hub.units())), i.note ? el('span', { class: 'small muted', text: ` (${i.note})` }) : null,
@@ -183,7 +183,7 @@ function addScreen(hub, list, save, param) {
     anything ? null : el('p', { class: 'panel', text: 'There is nothing to buy for this.' }),
     el('div', { class: 'row' }, [
       el('button', {
-        class: 'btn btn-primary', type: 'button', text: 'Add to the list', 'data-field': 'shop-confirm', disabled: !anything,
+        class: 'btn btn-primary', type: 'button', text: 'Add', 'data-field': 'shop-confirm', disabled: !anything,
         on: {
           click: async () => {
             const picked = boxes.map((b) => b.querySelector('input')).filter((b) => b.checked).map((b) => send.items[Number(b.dataset.index)]);

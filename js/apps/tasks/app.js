@@ -56,7 +56,7 @@ function listScreen(hub, filter) {
     body = items.length
       ? el('div', { class: 'stack' }, [
         el('ul', { class: 'list panel' }, shown.map((s) => row(hub, s, all.data))),
-        items.length > shown.length ? el('button', { class: 'btn', type: 'button', text: `Show ${items.length - shown.length} more`, on: { click: () => { ui.showAll = true; hub.render(); } } }) : null,
+        items.length > shown.length ? el('button', { class: 'btn', type: 'button', text: `${items.length - shown.length} more`, on: { click: () => { ui.showAll = true; hub.render(); } } }) : null,
       ])
       : el('div', { class: 'panel empty' }, [el('p', { text: {
         open: 'Nothing to do. Add something above when it comes up.',
@@ -72,7 +72,7 @@ function listScreen(hub, filter) {
       el('label', { class: 'sr-only', for: 'quick-task', text: 'New task' }),
       el('div', { style: { flex: '1 1 240px' } }, [quick]),
       el('button', { class: 'btn btn-primary', type: 'button', text: 'Add', on: { click: addQuick } }),
-      el('a', { class: 'btn', href: hub.href('new'), text: 'Add with details' }),
+      el('a', { class: 'btn', href: hub.href('new'), text: 'More details', title: 'Add with details' }),
     ]) : null,
     el('input', {
       class: 'input', type: 'search', placeholder: 'Find a task', 'aria-label': 'Find a task', value: ui.query, 'data-field': 'task-search',
@@ -124,7 +124,7 @@ function taskScreen(hub, id) {
   const all = allSummaries(hub);
   if (r.loading || all.loading) return loading();
   if (r.error) return failure(r.error);
-  if (!r.data) return el('div', { class: 'panel empty' }, [el('p', { text: 'This task no longer exists.' }), el('a', { class: 'btn', href: hub.href(), text: 'Back to tasks' })]);
+  if (!r.data) return el('div', { class: 'panel empty' }, [el('p', { text: 'This task no longer exists.' }), el('a', { class: 'btn', href: hub.href(), text: 'Back', title: 'Back to tasks' })]);
   const t = normaliseTask(r.data);
   const people = hub.people.list();
   const save = async (next, message) => { await saveRecord(hub, col(hub), next); if (message) hub.ui.notice(message); };
@@ -156,7 +156,7 @@ function taskScreen(hub, id) {
         t.status === 'open' && t.kind === 'task' ? el('button', { class: 'btn', type: 'button', text: 'Start', on: { click: () => save(setStatus(t, 'doing')) } }) : null,
         open && t.kind === 'project' ? el('button', { class: 'btn btn-primary', type: 'button', text: 'Project finished', on: { click: () => save(setStatus(t, 'done', { by }), `${t.title} is finished.`) } }) : null,
         !open ? el('button', { class: 'btn', type: 'button', text: 'Reopen', on: { click: () => save(setStatus(t, 'open')) } }) : null,
-        open ? el('button', { class: 'btn btn-quiet', type: 'button', text: 'No longer needed', on: { click: () => save(setStatus(t, 'dropped'), `${t.title} closed.`) } }) : null,
+        open ? el('button', { class: 'btn btn-quiet', type: 'button', text: 'Not needed', on: { click: () => save(setStatus(t, 'dropped'), `${t.title} closed.`) } }) : null,
         el('a', { class: 'btn', href: hub.href('edit', t.id), text: 'Edit' }),
       ]),
     ]),
@@ -173,7 +173,7 @@ function taskScreen(hub, id) {
     t.kind === 'project' ? el('div', { class: 'panel stack' }, [
       el('h2', { text: 'Tasks in this project' }),
       kids.length ? el('ul', { class: 'list' }, kids.map((s) => row(hub, s, all.data))) : el('p', { class: 'small muted', text: 'None yet.' }),
-      el('a', { class: 'btn', href: hub.href('new', t.id), text: 'Add a task to this project' }),
+      el('a', { class: 'btn', href: hub.href('new', t.id), text: 'New task' }),
     ]) : null,
     t.source ? el('p', { class: 'small' }, ['Started from ', el('a', { href: `#/${t.source.split(':')[0]}/item/${encodeURIComponent(t.source.split(':')[1])}`, text: t.source.startsWith('tickets') ? 'a ticket' : 'a decision' }), '.']) : null,
     t.links.length ? el('div', { class: 'panel' }, [
@@ -181,7 +181,7 @@ function taskScreen(hub, id) {
       el('ul', { class: 'list' }, t.links.map((l) => el('li', {}, [el('a', { href: `#/${l.app}/${l.screen ?? 'item'}/${encodeURIComponent(l.id)}`, text: l.title ?? l.id }), el('span', { class: 'small muted', text: ` (${l.app})` })]))),
     ]) : null,
     el('button', {
-      class: 'btn btn-danger', type: 'button', text: 'Delete this task',
+      class: 'btn btn-danger', type: 'button', text: 'Delete',
       on: {
         click: async () => {
           if (!await confirmAction({ title: `Delete ${t.title}?`, text: kids.length ? 'Its tasks stay, without a project.' : 'This cannot be undone. "No longer needed" keeps it in the history instead.', confirmLabel: 'Delete', danger: true })) return;

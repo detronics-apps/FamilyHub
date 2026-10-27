@@ -228,7 +228,7 @@ walkthrough with a screen reader, Safari/Firefox, a real phone.
   first, dried left out, tofu found in a short list; shopping remembers added and bought items,
   finds by kind, ours first, everything for a first purchase; places tags/filters/areas; faith
   entries (questions, passages, topics, terms, old entries), all 66 books in the guide, every
-  starting passage a real book. Browser - section pages show Plan / Check and note / Do for Meals,
+  starting passage a real book. Browser - section pages show Plan / Check / Do for Meals,
   Shopping, Faith, Holidays and Chores; Calorie Checker: 80 everyday foods by protein, tofu under
   beans, nuts and seeds; 126 yellow foods in 9 pages; Shopping: hygiene from Everything, add
   toothpaste, it is then ours; a new item offered; At the shop ticks one off; Places: a place with

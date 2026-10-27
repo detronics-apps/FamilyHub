@@ -95,9 +95,11 @@ export const daysIn = (plan, today) => (plan.startDay ? Math.max(0, dayDiff(plan
 // found again. Entries written before kept their text as notes.
 export const NOTE_KINDS = {
   reflection: 'Reflection', lesson: 'Lesson', question: 'Question', passage: 'Meaningful passage',
-  message: 'A message I heard', discussion: 'Family discussion',
+  message: 'Message heard', discussion: 'Family discussion',
 };
 export const QUESTION_STATUS = { new: 'Only the question so far', research: 'Needs more reading', answered: 'Found a reasonable answer' };
+/** The same, as one-word names for chips and badges - the longer wording is their hover text. */
+export const QUESTION_SHORT = { new: 'New', research: 'Reading', answered: 'Answered' };
 export const VERSIONS = {
   niv: 'NIV', esv: 'ESV', kjv: 'KJV', nkjv: 'NKJV', nlt: 'NLT', nasb: 'NASB', csb: 'CSB', msg: 'The Message',
   afr53: 'Afrikaans 1933/53', afr83: 'Afrikaans 1983', nlv: 'Nuwe Lewende Vertaling', b2020: 'Bybel 2020', other: 'Other',
@@ -154,6 +156,16 @@ export function filterNotes(list, { kind = '', topic = '', term = '', status = '
 /** Every question across the journal, newest entry first - to come back to and reflect on. */
 export const allQuestions = (list, status = '') => list.flatMap((n) => n.questions.filter((q) => !status || q.status === status).map((q) => ({ ...q, entry: n.id, heading: n.heading, day: n.day })))
   .sort((a, b) => String(b.day).localeCompare(String(a.day)));
+
+/** The family's own notes on a book's "why" and "about", one record per book - "1 John" is kept as book-1-john. */
+export const bookNoteId = (book) => `book-${book.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+export const normaliseBookNote = (b = {}, book = b.book) => ({ id: bookNoteId(book), book, why: String(b.why ?? '').trim().slice(0, 2000), about: String(b.about ?? '').trim().slice(0, 2000) });
+
+/** What the family has logged on a topic - its passages and questions, newest entry first - shown with the guide's starting points. */
+export function loggedOn(list, topic) {
+  const on = filterNotes(list, { topic }).sort((a, b) => String(b.day).localeCompare(String(a.day)));
+  return { passages: on.flatMap((n) => n.refs.map((ref) => ({ ref, entry: n.id, heading: n.heading }))), questions: allQuestions(on) };
+}
 
 /** The terms already used, most used first - offered when adding one, so "tattoos" is always spelt the same. */
 export function termsUsed(list) {

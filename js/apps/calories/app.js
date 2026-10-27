@@ -43,7 +43,7 @@ export function render(hub) {
     food ? null : browseControls(hub),
     people.length ? el('div', { class: 'chipset', role: 'group', 'aria-label': 'Building' }, [
       el('span', { class: 'small', text: 'Building:' }),
-      ...[['family', 'For the family'], ...people.map((p) => [p.id, `For ${p.name}`])].map(([id, label]) => el('button', {
+      ...[['family', 'Family'], ...people.map((p) => [p.id, `For ${p.name}`])].map(([id, label]) => el('button', {
         class: 'chip', type: 'button', 'aria-pressed': String(ui.target === id), 'data-field': `target:${id}`,
         text: `${label}${ui.plates[id]?.length ? ` (${ui.plates[id].length})` : ''}`, on: { click: () => { ui.target = id; hub.render(); } },
       })),
@@ -63,7 +63,7 @@ function browseControls(hub) {
   return el('div', { class: 'stack' }, [
     el('div', { class: 'chipset', role: 'group', 'aria-label': 'Browse in' }, [
       el('span', { class: 'small', text: 'Browse:' }),
-      ...[['explore', `Everyday foods to explore (${EVERYDAY.size})`], ['all', 'The whole food database']].map(([k, t]) => el('button', {
+      ...[['explore', `Everyday foods (${EVERYDAY.size})`], ['all', 'All foods']].map(([k, t]) => el('button', {
         class: 'chip', type: 'button', 'aria-pressed': String(ui.scope === k), text: t, 'data-field': `scope:${k}`,
         on: { click: () => { ui.scope = k; ui.page = 0; hub.render(); } },
       })),
@@ -138,7 +138,7 @@ function foodPanel(hub, db, food, target) {
     hub.units() === 'imperial' ? el('option', { value: 'oz', selected: ui.unit === 'oz', text: 'ounces' }) : el('option', { value: 'g', selected: ui.unit === 'g', text: 'grams' }),
   ]);
   return el('div', { class: 'panel stack' }, [
-    el('button', { class: 'linkish small', type: 'button', text: '‹ Back to the list', style: { alignSelf: 'flex-start' }, on: { click: () => { ui.foodId = null; hub.render(); } } }),
+    el('button', { class: 'linkish small', type: 'button', text: '‹ Back', title: 'Back to the list', style: { alignSelf: 'flex-start' }, on: { click: () => { ui.foodId = null; hub.render(); } } }),
     el('h2', { text: food.name }),
     el('div', { class: 'row' }, [field('How much', count), field('Of', unit)]),
     el('p', { class: 'stat-big', 'aria-live': 'polite' }, [
@@ -152,7 +152,7 @@ function foodPanel(hub, db, food, target) {
     ]),
     el('div', { class: 'row' }, [
       el('button', {
-        class: 'btn btn-primary', type: 'button', text: `Add to ${target}`, 'data-field': 'add-item', disabled: grams <= 0,
+        class: 'btn btn-primary', type: 'button', text: 'Add', title: `Add to ${target}`, 'data-field': 'add-item', disabled: grams <= 0,
         on: { click: () => { (ui.plates[ui.target] ??= []).push({ foodId: food.id, grams, label: describe(food, hub.units()) }); ui.foodId = null; hub.render(); } },
       }),
     ]),
@@ -199,8 +199,8 @@ function platePanel(hub, db, people, plate) {
       el('p', { class: 'small muted', text: 'A rough guide from age and gender, and height and weight where recorded on the People page. Appetites vary - let everyone eat to their hunger.' }),
     ]) : null,
     el('div', { class: 'row' }, [
-      el('a', { class: 'btn btn-primary', href: `#/meals/new/${encodeURIComponent(`item:${JSON.stringify(meal)}`)}`, text: 'Save to the Cookbook', 'data-field': 'save-meal' }),
-      el('button', { class: 'btn btn-small', type: 'button', text: 'Clear the item', on: { click: () => { ui.plates[ui.target] = []; hub.render(); } } }),
+      el('a', { class: 'btn btn-primary', href: `#/meals/new/${encodeURIComponent(`item:${JSON.stringify(meal)}`)}`, text: 'Save item', title: 'Save to the Cookbook', 'data-field': 'save-meal' }),
+      el('button', { class: 'btn btn-small', type: 'button', text: 'Clear', on: { click: () => { ui.plates[ui.target] = []; hub.render(); } } }),
     ]),
     el('p', { class: 'small muted', text: 'Saving opens the Cookbook with these foods filled in. Name it, and say whether it is a meal, a recipe or an own ingredient - or leave it as an item.' }),
   ]);

@@ -34,10 +34,10 @@ export function planView(ctx, notices) {
   return el('div', { class: 'stack' }, [
     el('div', { class: 'row' }, [
       el('p', { class: 'muted', style: { margin: 0, flex: '1 1 240px' }, text: 'Decide what needs doing and roughly how often. Only a name is needed - the rest can come later.' }),
-      el('button', { class: 'btn btn-primary', type: 'button', text: 'Add a chore', 'data-field': 'add-chore', on: { click: () => openEditor(ctx, null) } }),
+      el('button', { class: 'btn btn-primary', type: 'button', text: 'New chore', 'data-field': 'add-chore', on: { click: () => openEditor(ctx, null) } }),
       shoppingOn(ctx) && h.chores.some((c) => c.supplies.length) ? el('a', {
         class: 'btn', 'data-field': 'send-supplies',
-        href: suppliesHref('chores:supplies', 'Cleaning supplies', [...new Set(h.chores.flatMap((c) => c.supplies))]), text: 'Send cleaning supplies to Shopping',
+        href: suppliesHref('chores:supplies', 'Cleaning supplies', [...new Set(h.chores.flatMap((c) => c.supplies))]), text: 'To Shopping', title: 'Send the cleaning supplies to the shopping list',
       }) : null,
     ]),
     groups.length ? null : el('div', { class: 'panel empty' }, [el('p', { text: 'No chores yet. Add the first one - "Wipe counters, daily, 5 minutes" is a good start.' })]),
@@ -244,7 +244,7 @@ export function openEditor(ctx, choreId) {
         },
       }) : null,
       existing && shoppingOn(ctx) ? el('button', {
-        class: 'btn', type: 'button', text: 'Save and send supplies to Shopping', 'data-field': 'ed-send',
+        class: 'btn', type: 'button', text: 'Save & send', title: 'Save, and send the supplies to the shopping list', 'data-field': 'ed-send',
         on: { click: () => save((h2) => suppliesHref(`chore:${existing.id}`, existing.name, h2.chores.find((c) => c.id === existing.id)?.supplies ?? [])) },
       }) : null,
       el('button', { class: 'btn', type: 'button', text: 'Cancel', on: { click: () => close() } }),

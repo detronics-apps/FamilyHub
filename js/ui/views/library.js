@@ -90,7 +90,7 @@ export function libraryView(ctx) {
             on: { click: () => (st ? doInstall(ctx, st.manifest, { source: 'starter' }) : reviewInstall(ctx, pkg)) },
           }) : el('span', { class: 'small muted', text: 'Package not found in your folder' }),
           el('button', {
-            class: 'btn btn-small btn-danger', type: 'button', text: 'Delete its records',
+            class: 'btn btn-small btn-danger', type: 'button', text: 'Delete records',
             on: { click: () => deleteData(ctx, id, r.name) },
           }),
         ]);
@@ -126,7 +126,7 @@ function folderPanel(ctx, folderMode) {
     return el('div', { class: 'panel' }, [
       el('h2', { text: 'From your Drive folder' }),
       el('p', { class: 'small muted', text: 'Mini-apps made by others are added by copying their folder into your Drive folder’s MiniApps/ThirdParty. Connect your Drive folder in Settings to use them.' }),
-      el('a', { class: 'btn btn-small', href: '#/settings/drive', text: 'Connect your Drive folder' }),
+      el('a', { class: 'btn btn-small', href: '#/settings/drive', text: 'Connect Drive' }),
     ]);
   }
   const STATUS = { new: 'Not installed', installed: 'Installed', update: 'Update available', changed: 'Changed since you approved it', invalid: 'Cannot be used' };
@@ -144,8 +144,8 @@ function folderPanel(ctx, folderMode) {
         el('div', { class: 'small', text: STATUS[f.status] }),
         f.errors.length ? el('div', { class: 'small muted', text: f.errors.slice(0, 3).join(' ') }) : null,
       ]),
-      f.status === 'new' ? el('button', { class: 'btn btn-small', type: 'button', text: 'Review and install', 'data-field': `review:${f.manifest.id}`, on: { click: () => reviewInstall(ctx, f) } }) : null,
-      f.status === 'update' || f.status === 'changed' ? el('button', { class: 'btn btn-small', type: 'button', text: 'Review the change', on: { click: () => reviewInstall(ctx, f, { updating: true }) } }) : null,
+      f.status === 'new' ? el('button', { class: 'btn btn-small', type: 'button', text: 'Review', 'data-field': `review:${f.manifest.id}`, on: { click: () => reviewInstall(ctx, f) } }) : null,
+      f.status === 'update' || f.status === 'changed' ? el('button', { class: 'btn btn-small', type: 'button', text: 'Review', on: { click: () => reviewInstall(ctx, f, { updating: true }) } }) : null,
     ]))) : el('p', { class: 'small muted', text: 'Nothing found in MiniApps/ThirdParty yet.' })) : null,
   ]);
 }
@@ -216,7 +216,7 @@ async function deleteData(ctx, id, name) {
   const ok = await confirmAction({
     title: `Delete ${name}’s records?`,
     text: [`This permanently removes everything ${name} kept${id === 'chores' ? ' - every chore and its history' : ` - the Data/${id} folder`}. If the folder is in Google Drive, the files go to Drive’s bin, where they can be recovered for a while.`, 'Make a backup first if you might want them.'],
-    confirmLabel: 'Delete the records',
+    confirmLabel: 'Delete records',
     danger: true,
   });
   if (!ok) return;

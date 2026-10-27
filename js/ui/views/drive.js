@@ -57,7 +57,7 @@ export function syncNotices(ctx) {
   if (s.mode === 'device' && !ctx.folderSupported() && ctx.app.household.chores.length && fileDirty(ctx)) {
     const last = ctx.app.device.fileSavedAt ? Date.parse(ctx.app.device.fileSavedAt) : 0;
     if (Date.now() - last > DAY_MS) {
-      out.push({ id: 'sync:phone-save', level: 'info', text: 'You have changes that are only on this phone. Save them to your Google Drive?', action: { label: 'Save to Drive', onClick: () => saveFamilyFile(ctx) } });
+      out.push({ id: 'sync:phone-save', level: 'info', text: 'You have changes that are only on this phone. Save them to your Google Drive?', action: { label: 'Save file', onClick: () => saveFamilyFile(ctx) } });
     }
   }
   return out;
@@ -116,7 +116,7 @@ export function openConflicts(ctx) {
     ],
     foot: [
       el('button', { class: 'btn', type: 'button', text: 'Decide later', on: { click: () => close() } }),
-      el('button', { class: 'btn btn-primary', type: 'button', text: 'Keep my choices', 'data-field': 'conflict-apply', on: { click: () => { close(); ctx.sync.resolveConflict(choices); } } }),
+      el('button', { class: 'btn btn-primary', type: 'button', text: 'Save choices', 'data-field': 'conflict-apply', on: { click: () => { close(); ctx.sync.resolveConflict(choices); } } }),
     ],
   });
 }
@@ -134,8 +134,8 @@ export function openFirstConnect(ctx) {
     ],
     foot: [
       el('button', { class: 'btn', type: 'button', text: 'Cancel', on: { click: () => { close(); ctx.sync.chooseFirstConnect('cancel'); } } }),
-      el('button', { class: 'btn', type: 'button', text: 'Merge this device’s into it', 'data-field': 'first-merge', on: { click: () => { close(); ctx.sync.chooseFirstConnect('merge'); } } }),
-      el('button', { class: 'btn btn-primary', type: 'button', text: 'Use the folder’s family', 'data-field': 'first-use', on: { click: () => { close(); ctx.sync.chooseFirstConnect('use'); } } }),
+      el('button', { class: 'btn', type: 'button', text: 'Merge', title: 'Add this device’s family into the folder’s', 'data-field': 'first-merge', on: { click: () => { close(); ctx.sync.chooseFirstConnect('merge'); } } }),
+      el('button', { class: 'btn btn-primary', type: 'button', text: 'Use folder', title: 'Use the family already in the folder', 'data-field': 'first-use', on: { click: () => { close(); ctx.sync.chooseFirstConnect('use'); } } }),
     ],
   });
 }
@@ -183,7 +183,7 @@ export function openFamilyFile(ctx) {
       foot: [
         el('button', { class: 'btn', type: 'button', text: 'Cancel', on: { click: () => close() } }),
         el('button', {
-          class: 'btn btn-danger', type: 'button', text: 'Use the file',
+          class: 'btn btn-danger', type: 'button', text: 'Use file',
           on: {
             click: async () => {
               close();
@@ -220,14 +220,14 @@ export function driveSection(ctx) {
       el('p', { text: statusLine }),
       el('div', { class: 'row' }, [
         s.state === 'reconnect' ? el('button', { class: 'btn btn-primary', type: 'button', text: 'Reconnect', 'data-field': 'drive-reconnect', on: { click: () => ctx.sync.reconnect() } }) : null,
-        s.state === 'decision' ? el('button', { class: 'btn btn-primary', type: 'button', text: 'Choose what to keep', on: { click: () => openConflicts(ctx) } }) : null,
+        s.state === 'decision' ? el('button', { class: 'btn btn-primary', type: 'button', text: 'Choose', title: 'Choose what to keep', on: { click: () => openConflicts(ctx) } }) : null,
         s.state === 'first-connect' ? el('button', { class: 'btn btn-primary', type: 'button', text: 'Decide', on: { click: () => openFirstConnect(ctx) } }) : null,
         s.state !== 'reconnect' ? el('button', { class: 'btn', type: 'button', text: 'Save now', 'data-field': 'drive-save-now', on: { click: () => ctx.sync.run() } }) : null,
         el('button', {
-          class: 'btn btn-quiet', type: 'button', text: 'Stop using this folder',
+          class: 'btn btn-quiet', type: 'button', text: 'Disconnect', title: 'Stop using this folder',
           on: {
             click: async () => {
-              if (!await confirmAction({ title: 'Stop using the Drive folder?', text: 'Nothing is deleted. The folder keeps everything; this device keeps its own copy and stops saving to Drive.', confirmLabel: 'Stop using it' })) return;
+              if (!await confirmAction({ title: 'Stop using the Drive folder?', text: 'Nothing is deleted. The folder keeps everything; this device keeps its own copy and stops saving to Drive.', confirmLabel: 'Disconnect' })) return;
               ctx.sync.disconnect({ keepCopy: true });
             },
           },
@@ -244,7 +244,7 @@ export function driveSection(ctx) {
         el('li', { text: 'Allow access when the browser asks. That is all - from then on everything saves there automatically.' }),
       ]),
       privateTestMode() ? el('p', { class: 'small muted', text: 'Test mode: this uses the browser’s private storage instead of a real Drive folder.' }) : null,
-      el('button', { class: 'btn btn-primary', type: 'button', text: 'Choose my Drive folder', 'data-field': 'drive-connect', on: { click: () => ctx.sync.connect() } }),
+      el('button', { class: 'btn btn-primary', type: 'button', text: 'Choose folder', 'data-field': 'drive-connect', on: { click: () => ctx.sync.connect() } }),
     );
   } else {
     body.push(
@@ -256,8 +256,8 @@ export function driveSection(ctx) {
     el('h3', { text: 'Family file' }),
     el('p', { class: 'small', text: 'One file with everything: the household and every mini-app’s records. Use it on a phone to save to or open from Google Drive, to move between devices, or as a backup you keep.' }),
     el('div', { class: 'row' }, [
-      el('button', { class: 'btn', type: 'button', text: ctx.folderSupported() ? 'Save a family file' : 'Save to Drive', 'data-field': 'file-save', on: { click: () => saveFamilyFile(ctx) } }),
-      el('button', { class: 'btn', type: 'button', text: ctx.folderSupported() ? 'Open a family file' : 'Open from Drive', 'data-field': 'file-open', on: { click: () => openFamilyFile(ctx) } }),
+      el('button', { class: 'btn', type: 'button', text: 'Save file', title: ctx.folderSupported() ? 'Save a family file' : 'Save a family file to your Drive', 'data-field': 'file-save', on: { click: () => saveFamilyFile(ctx) } }),
+      el('button', { class: 'btn', type: 'button', text: 'Open file', title: ctx.folderSupported() ? 'Open a family file' : 'Open a family file from your Drive', 'data-field': 'file-open', on: { click: () => openFamilyFile(ctx) } }),
     ]),
     ctx.app.device.fileSavedAt ? el('p', { class: 'small muted', text: `Last saved a family file on ${new Date(ctx.app.device.fileSavedAt).toLocaleString()}.` }) : null,
   );
@@ -290,7 +290,7 @@ function backupsBlock(ctx) {
     el('h3', { text: 'Backups' }),
     el('p', { class: 'small', text: 'A backup is a complete copy saved in the folder’s Backups/ folder. Google Drive also keeps earlier versions of each file (right-click a file in Drive › Manage versions).' }),
     el('div', {}, [el('button', {
-      class: 'btn', type: 'button', text: 'Back up now', 'data-field': 'backup-now',
+      class: 'btn', type: 'button', text: 'Back up', 'data-field': 'backup-now',
       on: { click: async () => { try { const n = await ctx.sync.backupNow(); ctx.flash({ id: `bk:${n}`, level: 'ok', text: `Backup saved: Backups/${n}` }); fill(); ctx.render(); } catch (err) { ctx.flash({ id: 'bk:err', level: 'error', text: err.message }); ctx.render(); } } },
     })]),
     list,

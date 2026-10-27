@@ -100,11 +100,11 @@ function itemScreen(hub, id) {
     ]),
     el('div', { class: 'row' }, [
       d.status === 'discussing' ? el('button', {
-        class: 'btn btn-primary', type: 'button', text: 'Start trying it', 'data-field': 'start-trial',
+        class: 'btn btn-primary', type: 'button', text: 'Start trying', 'data-field': 'start-trial',
         on: { click: () => { if (!d.agreement) { hub.go('edit', d.id); return; } save(startTrial(d, today), 'Trying it now. You will be reminded to look back.'); } },
       }) : null,
-      d.status === 'trying' ? el('button', { class: 'btn btn-primary', type: 'button', text: 'Look back now', 'data-field': 'look-back', on: { click: () => lookBack(hub, d, save) } }) : null,
-      d.status !== 'discussing' ? el('button', { class: 'btn', type: 'button', text: 'Change the agreement', on: { click: () => reviseDialog(hub, d, save, today) } }) : null,
+      d.status === 'trying' ? el('button', { class: 'btn btn-primary', type: 'button', text: 'Look back', 'data-field': 'look-back', on: { click: () => lookBack(hub, d, save) } }) : null,
+      d.status !== 'discussing' ? el('button', { class: 'btn', type: 'button', text: 'Edit agreement', on: { click: () => reviseDialog(hub, d, save, today) } }) : null,
       el('a', { class: 'btn', href: hub.href('edit', d.id), text: 'Edit' }),
     ]),
     el('div', { class: 'panel stack' }, [
@@ -118,14 +118,14 @@ function itemScreen(hub, id) {
     actions ? el('div', { class: 'panel stack' }, [
       el('h2', { text: 'Actions' }),
       actions.data?.items?.length ? el('ul', { class: 'list' }, actions.data.items.map((s) => el('li', {}, [el('a', { href: `#/tasks/item/${encodeURIComponent(s.id)}`, text: s.title }), el('span', { class: 'small muted', text: ` · ${{ open: 'to do', doing: 'in progress', done: 'done', dropped: 'no longer needed' }[s.status] ?? s.status}` })]))) : el('p', { class: 'small muted', text: 'No actions yet.' }),
-      el('a', { class: 'btn', href: `#/tasks/new/${encodeURIComponent(`decisions:${d.id}`)}`, text: 'Add an action' }),
+      el('a', { class: 'btn', href: `#/tasks/new/${encodeURIComponent(`decisions:${d.id}`)}`, text: 'New action' }),
     ]) : null,
     d.history.length ? el('details', { class: 'panel more' }, [
       el('summary', { text: `Earlier agreements (${d.history.length})` }),
       el('ul', { class: 'list' }, d.history.slice().reverse().map((h) => el('li', {}, [el('span', { class: 'list__main', text: h.agreement }), el('span', { class: 'small muted', text: `until ${fmtDay(h.at.slice(0, 10), today)}${h.outcome ? ` · ${OUTCOMES[h.outcome]}` : ''}` })]))),
     ]) : null,
     el('button', {
-      class: 'btn btn-danger', type: 'button', text: 'Delete this decision',
+      class: 'btn btn-danger', type: 'button', text: 'Delete',
       on: {
         click: async () => {
           if (!await confirmAction({ title: `Delete "${d.title}"?`, text: 'Settled decisions keep their reasoning for later; deleting cannot be undone.', confirmLabel: 'Delete', danger: true })) return;
@@ -170,7 +170,7 @@ function reviseDialog(hub, d, save, today) {
     foot: [
       el('button', { class: 'btn', type: 'button', text: 'Cancel', on: { click: () => close() } }),
       el('button', {
-        class: 'btn btn-primary', type: 'button', text: 'Save and try it',
+        class: 'btn btn-primary', type: 'button', text: 'Save & try',
         on: { click: () => { try { const next = revise(d, text.value, { today, reviewOn: review.value }); close(); save(next, 'New agreement saved. Trying it now.'); } catch (e) { err.textContent = e.message; } } },
       }),
     ],

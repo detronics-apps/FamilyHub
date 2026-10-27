@@ -55,8 +55,8 @@ function executeView(ctx) {
       el('h2', { text: 'No chores planned yet' }),
       el('p', { text: 'Chores are the regular jobs that keep a home going. Add a few, and this screen will suggest one that fits your time and energy.' }),
       el('div', { class: 'row', style: { justifyContent: 'center' } }, [
-        el('a', { class: 'btn btn-primary', href: '#/chores/plan', text: 'Plan your first chore' }),
-        el('button', { class: 'btn', type: 'button', text: 'Try the example family', on: { click: () => { ctx.seedDemo(); ctx.render(); } } }),
+        el('a', { class: 'btn btn-primary', href: '#/chores/plan', text: 'Plan chore' }),
+        el('button', { class: 'btn', type: 'button', text: 'Try example', title: 'Load an example family to look around', on: { click: () => { ctx.seedDemo(); ctx.render(); } } }),
       ]),
     ]);
   }
@@ -66,8 +66,8 @@ function executeView(ctx) {
       el('h2', { text: 'All done for now' }),
       el('p', { text: 'Thank you. Stopping here is a perfectly good finish.' }),
       el('div', { class: 'row' }, [
-        el('a', { class: 'btn btn-primary', href: '#/', text: 'Back to home', on: { click: () => { ex.phase = 'choose'; } } }),
-        el('button', { class: 'btn', type: 'button', text: 'Actually, one more', on: { click: () => { ex.phase = 'choose'; ctx.render(); } } }),
+        el('a', { class: 'btn btn-primary', href: '#/', text: 'Home', on: { click: () => { ex.phase = 'choose'; } } }),
+        el('button', { class: 'btn', type: 'button', text: 'One more', on: { click: () => { ex.phase = 'choose'; ctx.render(); } } }),
       ]),
     ]);
   }
@@ -89,8 +89,8 @@ function executeView(ctx) {
         el('h2', { text: 'That’s one thing taken care of.' }),
         el('p', { text: `${doneChore?.name ?? 'It'} is recorded${person ? ` for ${person.name}` : ''}. Want to do anything else? No pressure either way.` }),
         el('div', { class: 'row' }, [
-          el('button', { class: 'btn btn-primary', type: 'button', text: 'Finish for now', 'data-field': 'finish', on: { click: () => { ex.phase = 'finished'; ex.justDone = null; ctx.render(); } } }),
-          el('button', { class: 'btn', type: 'button', text: 'Choose something else', 'data-field': 'choose-else', on: { click: () => { ex.phase = 'choose'; ex.justDone = null; ctx.render(); } } }),
+          el('button', { class: 'btn btn-primary', type: 'button', text: 'Finish', 'data-field': 'finish', on: { click: () => { ex.phase = 'finished'; ex.justDone = null; ctx.render(); } } }),
+          el('button', { class: 'btn', type: 'button', text: 'Something else', 'data-field': 'choose-else', on: { click: () => { ex.phase = 'choose'; ex.justDone = null; ctx.render(); } } }),
           el('button', { class: 'btn btn-quiet', type: 'button', text: 'Undo', on: { click: () => ctx.undo(ex.justDone.eventId) } }),
         ]),
       ]),
@@ -141,14 +141,14 @@ function executeView(ctx) {
       : el('div', { class: 'panel empty' }, [
         el('p', { text: 'That is fine - it may simply be a good moment to rest. Or widen the search:' }),
         el('div', { class: 'row', style: { justifyContent: 'center' } }, [
-          f.minutes != null ? el('button', { class: 'btn', type: 'button', text: 'Allow longer chores', on: { click: () => setF({ minutes: null }) } }) : null,
-          f.energy ? el('button', { class: 'btn', type: 'button', text: 'Any energy level', on: { click: () => setF({ energy: null }) } }) : null,
-          el('button', { class: 'btn', type: 'button', text: 'Include chores not due yet', on: { click: () => setF({ includeNotDue: true }) } }),
-          el('button', { class: 'btn btn-quiet', type: 'button', text: 'Clear all choices', on: { click: () => setF({ ...defaultFilters() }) } }),
+          f.minutes != null ? el('button', { class: 'btn', type: 'button', text: 'Longer chores', on: { click: () => setF({ minutes: null }) } }) : null,
+          f.energy ? el('button', { class: 'btn', type: 'button', text: 'Any energy', on: { click: () => setF({ energy: null }) } }) : null,
+          el('button', { class: 'btn', type: 'button', text: 'Not due', title: 'Include chores not due yet', on: { click: () => setF({ includeNotDue: true }) } }),
+          el('button', { class: 'btn btn-quiet', type: 'button', text: 'Clear all', on: { click: () => setF({ ...defaultFilters() }) } }),
         ]),
       ]),
     results.length > shown.length
-      ? el('button', { class: 'btn', type: 'button', text: `Show ${results.length - shown.length} more`, on: { click: () => { ex.showAll = true; ctx.render(); } } })
+      ? el('button', { class: 'btn', type: 'button', text: `${results.length - shown.length} more`, on: { click: () => { ex.showAll = true; ctx.render(); } } })
       : null,
     whyPanel(f, h, results.length),
   ]);
@@ -184,7 +184,7 @@ function roomsView(ctx) {
   if (!groups.length) {
     return el('div', { class: 'panel empty' }, [
       el('p', { text: 'No rooms or chores yet.' }),
-      el('a', { class: 'btn btn-primary', href: '#/chores/plan', text: 'Plan a chore' }),
+      el('a', { class: 'btn btn-primary', href: '#/chores/plan', text: 'Plan chore' }),
     ]);
   }
 

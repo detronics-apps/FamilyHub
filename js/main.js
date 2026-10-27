@@ -38,7 +38,7 @@ import { openDoc } from './ui/views/docs.js';
 import { syncChip, syncNotices } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.7.1';
+export const APP_VERSION = '0.7.2';
 
 const store = createLocalStore(window.localStorage);
 
@@ -209,14 +209,14 @@ function appView(route, notices) {
     return el('section', { class: 'panel empty' }, [
       el('h1', { text: label }),
       el('p', { text: `${label} is not installed.${app.registry.retained[id] ? ' Its records are still kept in your folder.' : ''}` }),
-      el('a', { class: 'btn btn-primary', href: '#/library', text: 'Open Mini-apps to install it' }),
+      el('a', { class: 'btn btn-primary', href: '#/library', text: 'Install', title: 'Open Mini-apps to install it' }),
     ]);
   }
   if (!entry.enabled) {
     return el('section', { class: 'panel empty' }, [
       el('h1', { text: label }),
       el('p', { text: `${label} is turned off. Its records are kept.` }),
-      el('button', { class: 'btn btn-primary', type: 'button', text: `Turn ${label} on`, on: { click: () => saveRegistry(setEnabled(app.registry, id, true)) } }),
+      el('button', { class: 'btn btn-primary', type: 'button', text: `Turn on`, on: { click: () => saveRegistry(setEnabled(app.registry, id, true)) } }),
     ]);
   }
 
@@ -226,7 +226,7 @@ function appView(route, notices) {
     el('p', { class: 'small muted', text: String(err?.message || err) }),
     el('div', { class: 'row' }, [
       el('button', { class: 'btn', type: 'button', text: 'Try again', on: { click: () => { loadedModules.delete(id); render(); } } }),
-      el('button', { class: 'btn', type: 'button', text: `Turn ${label} off`, on: { click: () => saveRegistry(setEnabled(app.registry, id, false)) } }),
+      el('button', { class: 'btn', type: 'button', text: `Turn off`, on: { click: () => saveRegistry(setEnabled(app.registry, id, false)) } }),
     ]),
   ]);
 
@@ -315,7 +315,7 @@ function openWho() {
       el('button', { class: 'chip', type: 'button', 'aria-pressed': String(!currentPerson()), text: 'Just looking (no one)', on: { click: () => choose(null) } }),
       el('p', { class: 'small muted', text: 'Choosing a name is a convenience, not a login. It records who did what and keeps your own dashboard order on this device. Anyone using this device can pick any name.' }),
     ],
-    foot: [el('a', { class: 'btn btn-quiet', href: '#/people', text: 'Add or edit people', on: { click: () => close() } })],
+    foot: [el('a', { class: 'btn btn-quiet', href: '#/people', text: 'People', on: { click: () => close() } })],
   });
 }
 
@@ -351,7 +351,7 @@ function buildBack(route) {
   const [href, to] = m && route.sub && route.sub !== m.screens[0]?.id ? [`#/${route.name}`, routeLabel(route)]
     : s && s.name !== routeLabel(route) ? [`#/section/${s.id}`, s.name]
       : ['#/', 'Home'];
-  return el('nav', { class: 'page-back no-print', 'aria-label': 'Back' }, [el('a', { class: 'btn', href, text: `‹ Back to ${to}`, 'data-field': 'page-back' })]);
+  return el('nav', { class: 'page-back no-print', 'aria-label': 'Back' }, [el('a', { class: 'btn', href, text: `‹ Back`, title: `Back to ${to}`, 'data-field': 'page-back' })]);
 }
 
 function buildFooter() {
@@ -362,9 +362,9 @@ function buildFooter() {
     el('span', { text: where }),
     el('nav', { 'aria-label': 'About this app' }, [
       el('a', { href: '#/help', text: 'How to use' }),
-      el('button', { class: 'linkish', type: 'button', text: 'Privacy & your data', on: { click: () => openDoc('privacy') } }),
+      el('button', { class: 'linkish', type: 'button', text: 'Privacy', on: { click: () => openDoc('privacy') } }),
       el('button', { class: 'linkish', type: 'button', text: 'About', on: { click: () => openDoc('about') } }),
-      el('button', { class: 'btn btn-small', type: 'button', text: 'I am new here', 'data-field': 'new-here', on: { click: () => openWelcome(ctx) } }),
+      el('button', { class: 'btn btn-small', type: 'button', text: 'New here?', 'data-field': 'new-here', on: { click: () => openWelcome(ctx) } }),
       el('span', { class: 'muted', text: `v${APP_VERSION}` }),
     ]),
   ]);

@@ -41,13 +41,13 @@ function listScreen(hub) {
   return el('section', { class: 'stack', 'aria-label': 'Principles' }, [
     el('div', { class: 'row' }, [
       el('p', { class: 'muted', style: { margin: 0, flex: '1 1 260px' }, text: 'What your family believes and has agreed - with the reasons, so they can be revisited when they stop making sense.' }),
-      el('a', { class: 'btn btn-primary', href: hub.href('new'), text: 'Add a principle', 'data-field': 'add-principle' }),
+      el('a', { class: 'btn btn-primary', href: hub.href('new'), text: 'New principle', 'data-field': 'add-principle' }),
     ]),
     due.length ? el('div', { class: 'banner banner--info' }, [el('span', { class: 'banner__text', text: `Time to look again at: ${due.map((s) => s.title).join(', ')}.` })]) : null,
     active.length ? null : el('div', { class: 'panel empty stack' }, [
       el('p', { text: 'No principles yet. Start with one thing you already agree on - "assume positive intent", say.' }),
       hasExamples ? null : el('button', {
-        class: 'btn', type: 'button', text: 'Add the two examples from the guide',
+        class: 'btn', type: 'button', text: 'Add examples', title: 'Add the two examples from the guide',
         on: { click: async () => { for (const ex of EXAMPLES) await col(hub).put(normalisePrinciple(ex)); hub.invalidate(); hub.ui.notice('Two example principles added - edit or remove them freely.'); } },
       }),
     ]),
@@ -87,11 +87,11 @@ function itemScreen(hub, id) {
     el('div', { class: 'row' }, [
       el('a', { class: 'btn btn-primary', href: hub.href('edit', p.id), text: 'Edit' }),
       reviewDue(p, today) ? el('button', {
-        class: 'btn', type: 'button', text: 'We looked at it - still right',
+        class: 'btn', type: 'button', text: 'Still right', title: 'We looked at it again, and it still holds',
         on: { click: async () => { await saveRecord(hub, col(hub), { ...p, reviewOn: null }); hub.ui.notice('Noted. Set a new review date in Edit if you want one.'); } },
       }) : null,
       el('button', {
-        class: 'btn', type: 'button', text: p.status === 'active' ? 'Retire it' : 'Bring it back',
+        class: 'btn', type: 'button', text: p.status === 'active' ? 'Retire it' : 'Restore',
         on: { click: async () => { await saveRecord(hub, col(hub), { ...p, status: p.status === 'active' ? 'retired' : 'active' }); } },
       }),
       el('button', {

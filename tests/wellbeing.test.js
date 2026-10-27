@@ -69,6 +69,12 @@ test('faith journal: heading, questions with where they stand, picked passages, 
   assert.deepEqual(faith.filterNotes(s, { status: 'research' }).map((x) => x.id), ['a']);
   assert.deepEqual(faith.filterNotes(s, { term: 'tattoos', kind: 'reflection' }), []);
   assert.deepEqual(faith.allQuestions(s.map((x) => ({ ...x, heading: x.title })), 'new').map((q) => q.text), ['And the kids?']);
+  const logged = faith.loggedOn(s.map((x) => ({ ...x, heading: x.title })), 'marriage');
+  assert.deepEqual(logged.passages, [{ ref: 'Ephesians 5:25-33 (NIV)', entry: 'a', heading: 'Loving my family better' }, { ref: 'Jude 1:3', entry: 'a', heading: 'Loving my family better' }]);
+  assert.deepEqual(logged.questions.map((q) => [q.text, q.entry]), [['How do I love my wife better?', 'a'], ['And the kids?', 'a']]);
+  assert.deepEqual(faith.loggedOn(s.map((x) => ({ ...x, heading: x.title })), 'money'), { passages: [], questions: [] }, 'nothing logged on a topic yet');
+  assert.equal(faith.bookNoteId('Song of Songs'), 'book-song-of-songs');
+  assert.deepEqual(faith.normaliseBookNote({ why: '  To show love wins ', about: undefined }, '1 John'), { id: 'book-1-john', book: '1 John', why: 'To show love wins', about: '' });
   assert.deepEqual(faith.termsUsed([n, faith.normaliseNote({ terms: ['tattoos'] }, '2026-01-01')]), ['tattoos', 'love']);
   assert.ok(faith.noteText(n).includes('How do I love my wife better?'), 'questions are searchable');
   assert.deepEqual(Object.keys(BOOK_GUIDE).sort(), faith.BOOKS.map(([b]) => b).sort(), 'all 66 books have a guide');

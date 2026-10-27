@@ -54,7 +54,7 @@ export function helpView(ctx) {
       el('h2', { text: 'Features worth knowing' }),
       el('div', { class: 'stats' }, FEATURES.map((f) => idea(f.name, f.what, f.where))),
     ]),
-    el('div', { class: 'row' }, [el('button', { class: 'btn', type: 'button', text: 'Show me around again', on: { click: () => openWelcome(ctx) } })]),
+    el('div', { class: 'row' }, [el('button', { class: 'btn', type: 'button', text: 'Tour again', title: 'Show me around again', on: { click: () => openWelcome(ctx) } })]),
   ]);
 }
 

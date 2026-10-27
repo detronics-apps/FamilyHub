@@ -101,7 +101,7 @@ function dataSection(ctx) {
         `"${chosen.name}" contains ${s.name}: ${s.people} people, ${s.rooms} rooms, ${s.chores} chores and ${s.events} history records${s.exportedAt ? `, exported ${s.exportedAt.slice(0, 10)}` : ''}.`,
         `Importing replaces everything currently here (${h.household.name}: ${h.chores.length} chores). Export first if you want to keep it.`,
       ],
-      confirmLabel: 'Replace with this file',
+      confirmLabel: 'Replace',
       danger: true,
     });
     if (!ok) return;
@@ -118,7 +118,7 @@ function dataSection(ctx) {
         class: 'btn btn-primary', type: 'button', text: 'Export household', 'data-field': 'export',
         on: { click: () => download(new Blob([exportData(ctx.app.household)], { type: 'application/json' }), exportFilename(ctx.app.household)) },
       }),
-      el('button', { class: 'btn', type: 'button', text: 'Import a file', 'data-field': 'import', on: { click: () => file.click() } }),
+      el('button', { class: 'btn', type: 'button', text: 'Import', 'data-field': 'import', on: { click: () => file.click() } }),
       file,
     ]),
     el('p', { class: 'small muted', text: 'The export is a plain JSON file (format "family-hub-household", data version 1). Settings for this device - who you are, dashboard order, theme - are not in it.' }),
@@ -181,7 +181,7 @@ function musicSection(ctx) {
     el('label', { class: 'checkline' }, [el('input', { type: 'checkbox', checked: prefs.shuffle, on: { change: (e) => save({ shuffle: e.target.checked }) } }), 'Shuffle']),
     count,
     el('div', { class: 'row' }, [
-      prefs.source === 'device' || !ctx.folderSupported() ? el('button', { class: 'btn', type: 'button', text: 'Choose music files', on: { click: () => picker.click() } }) : null,
+      prefs.source === 'device' || !ctx.folderSupported() ? el('button', { class: 'btn', type: 'button', text: 'Choose music', on: { click: () => picker.click() } }) : null,
       playing
         ? el('button', { class: 'btn', type: 'button', text: 'Stop music', on: { click: () => ctx.media.stop() } })
         : el('button', { class: 'btn', type: 'button', text: 'Try it', 'data-field': 'mu-try', on: { click: () => ctx.media.start() } }),
@@ -213,8 +213,8 @@ function importSection(ctx) {
     el('p', { class: 'small', text: 'Already have recipes, chores or a to-do list somewhere? Download a template, fill it in with a spreadsheet (Excel, Google Sheets, Numbers), save it as CSV and bring it in. Things whose name already exists are left alone, so nothing is doubled.' }),
     list,
     el('div', { class: 'row' }, [
-      el('button', { class: 'btn btn-primary', type: 'button', text: 'Import a file', 'data-field': 'import-file-csv', on: { click: () => importFromDevice(ctx) } }),
-      folder ? el('button', { class: 'btn', type: 'button', text: 'Check the Import folder now', on: { click: async () => { const r = await ctx.scanImports(); if (!r.length) { ctx.flash({ id: `inbox-empty:${Date.now()}`, level: 'info', text: 'Nothing waiting in the Import folder.' }); ctx.render(); } } } }) : null,
+      el('button', { class: 'btn btn-primary', type: 'button', text: 'Import', 'data-field': 'import-file-csv', on: { click: () => importFromDevice(ctx) } }),
+      folder ? el('button', { class: 'btn', type: 'button', text: 'Check now', title: 'Check the Import folder now', on: { click: async () => { const r = await ctx.scanImports(); if (!r.length) { ctx.flash({ id: `inbox-empty:${Date.now()}`, level: 'info', text: 'Nothing waiting in the Import folder.' }); ctx.render(); } } } }) : null,
     ]),
     el('p', { class: 'small muted', text: folder
       ? 'Or drop filled-in files into the Import folder inside your Family Hub Drive folder - they are brought in automatically and moved to Import/Imported with a short report. Empty templates are waiting in Import/Templates.'

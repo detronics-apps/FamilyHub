@@ -68,7 +68,7 @@ function ticketRow(hub, s) {
 
 function allScreen(hub) {
   const list = all(hub);
-  const filters = { open: 'Open', discuss: 'For the meeting', deferred: 'Later', closed: 'Closed' };
+  const filters = { open: 'Open', discuss: 'Meeting', deferred: 'Later', closed: 'Closed' };
   let body;
   if (list.loading) body = loading();
   else if (list.error) body = failure(list.error);
@@ -144,7 +144,7 @@ function itemScreen(hub, id) {
       el('p', { class: 'small muted', text: [t.createdBy ? `From ${nameOf(people, t.createdBy)}` : null, t.createdAt ? `logged ${fmtDay(t.createdAt.slice(0, 10), hub.today())}` : null, t.about.length ? `about ${t.about.map((x) => nameOf(people, x)).join(', ')}` : null].filter(Boolean).join(' · ') }),
       t.notes ? el('p', { class: 'small', text: `Notes: ${t.notes}` }) : null,
       t.status === 'closed' ? el('p', { class: 'small', text: `Closed${t.closedReason ? `: ${t.closedReason}` : ''}.` }) : null,
-      el('div', { class: 'row' }, [el('a', { class: 'btn btn-small', href: hub.href('edit', t.id), text: 'Clarify or add notes' })]),
+      el('div', { class: 'row' }, [el('a', { class: 'btn btn-small', href: hub.href('edit', t.id), text: 'Add notes' })]),
     ]),
     linked.length ? el('div', { class: 'panel' }, [
       el('h2', { text: 'What came of it' }),
@@ -153,18 +153,18 @@ function itemScreen(hub, id) {
     t.status !== 'closed' ? el('div', { class: 'panel stack' }, [
       el('h2', { text: 'What next?' }),
       el('div', { class: 'row' }, [
-        t.status !== 'discuss' && !isPositive(t) ? el('button', { class: 'btn', type: 'button', text: 'Add to the family meeting', on: { click: () => save(setStatus(t, 'discuss'), 'Added to the next family meeting.') } }) : null,
-        hub.data.installed('decisions') ? el('a', { class: 'btn', href: `#/decisions/new/${encodeURIComponent(`tickets:${t.id}`)}`, text: 'Make a decision or experiment' }) : null,
-        hub.data.installed('tasks') ? el('a', { class: 'btn', href: `#/tasks/new/${encodeURIComponent(`tickets:${t.id}`)}`, text: 'Turn into a task' }) : null,
+        t.status !== 'discuss' && !isPositive(t) ? el('button', { class: 'btn', type: 'button', text: 'For meeting', title: 'Add to the family meeting', on: { click: () => save(setStatus(t, 'discuss'), 'Added to the next family meeting.') } }) : null,
+        hub.data.installed('decisions') ? el('a', { class: 'btn', href: `#/decisions/new/${encodeURIComponent(`tickets:${t.id}`)}`, text: 'Decide', title: 'Make a decision or an experiment from this' }) : null,
+        hub.data.installed('tasks') ? el('a', { class: 'btn', href: `#/tasks/new/${encodeURIComponent(`tickets:${t.id}`)}`, text: 'Make task', title: 'Turn this into a task' }) : null,
         t.status !== 'deferred' ? el('button', { class: 'btn', type: 'button', text: 'Later', on: { click: () => save(setStatus(t, 'deferred'), 'Saved for later.') } }) : null,
       ]),
       el('div', { class: 'row' }, [
         el('div', { style: { flex: '1 1 240px' } }, [reason]),
-        el('button', { class: 'btn', type: 'button', text: linked.length ? 'Close - it is being handled' : 'Close with no action', on: { click: () => save(setStatus(t, 'closed', { reason: reason.value, outcome: linked.length ? (linked[0].app === 'tasks' ? 'task' : 'decision') : 'none' }), 'Ticket closed.') } }),
+        el('button', { class: 'btn', type: 'button', text: 'Close', title: linked.length ? 'Close - it is being handled' : 'Close with no action', on: { click: () => save(setStatus(t, 'closed', { reason: reason.value, outcome: linked.length ? (linked[0].app === 'tasks' ? 'task' : 'decision') : 'none' }), 'Ticket closed.') } }),
       ]),
     ]) : el('div', { class: 'row' }, [el('button', { class: 'btn', type: 'button', text: 'Reopen', on: { click: () => save(setStatus(t, 'captured'), 'Reopened.') } })]),
     el('button', {
-      class: 'btn btn-danger', type: 'button', text: 'Delete this ticket',
+      class: 'btn btn-danger', type: 'button', text: 'Delete',
       on: {
         click: async () => {
           if (!await confirmAction({ title: 'Delete this ticket?', text: 'Closing it keeps it in the history instead. Deleting cannot be undone.', confirmLabel: 'Delete', danger: true })) return;

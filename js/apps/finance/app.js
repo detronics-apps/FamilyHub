@@ -54,7 +54,7 @@ function budgetScreen(hub, param) {
       el('strong', { text: monthName(month), style: { flex: '1 1 auto', textAlign: 'center' } }),
       el('a', { class: 'btn btn-small', href: hub.href('month', shiftMonth(month, 1)), text: '›', 'aria-label': 'Next month' }),
     ]),
-    !m.lines.length && prev.data?.lines.length ? el('button', { class: 'btn', type: 'button', text: `Start from ${monthName(shiftMonth(month, -1))}’s plan`, on: { click: () => save(copyMonth(prev.data, month)) } }) : null,
+    !m.lines.length && prev.data?.lines.length ? el('button', { class: 'btn', type: 'button', text: `Reuse ${monthName(shiftMonth(month, -1))}`, title: `Start from ${monthName(shiftMonth(month, -1))}’s plan`, on: { click: () => save(copyMonth(prev.data, month)) } }) : null,
     el('div', { class: 'stats' }, [
       stat(money(s.income), 'income'),
       stat(money(s.planned), 'planned'),
@@ -128,7 +128,7 @@ function goalsScreen(hub) {
     nav(hub, 'goals'),
     el('div', { class: 'row' }, [
       el('p', { class: 'muted', style: { margin: 0, flex: '1 1 260px' }, text: 'Saving towards something, or paying something off - with the arithmetic shown.' }),
-      el('a', { class: 'btn btn-primary', href: hub.href('new-goal'), text: 'Add a goal', 'data-field': 'add-goal' }),
+      el('a', { class: 'btn btn-primary', href: hub.href('new-goal'), text: 'New goal', 'data-field': 'add-goal' }),
     ]),
     list.length ? el('div', { class: 'stats' }, [stat(money(totals.all.saved), 'saved towards goals'), stat(money(totals.all.owed), 'still owed on debts')]) : null,
     list.length ? el('div', { class: 'cards' }, list.map((g) => el('article', { class: 'card' }, [

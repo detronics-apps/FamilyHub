@@ -345,7 +345,7 @@ earlier ones, one spelling per town), kind of place, tags from a list (great for
 pet friendly, free, rainy day...), want to go / been, and how it was.
 
 **D-049 The faith journal and Bible guide (owner, 2026-10-26).** Writing an entry and looking back
-are separate screens. An entry has a kind (adds "A message I heard"), a heading, questions with
+are separate screens. An entry has a kind (adds "Message heard"), a heading, questions with
 their status (only the question / needs more reading / found a reasonable answer) and answer,
 passages picked from lists (version incl. Afrikaans ones, book, chapter, verses - several per
 entry), notes, topics from a list and finer terms of your own (offered from earlier ones).
@@ -353,6 +353,16 @@ Questions has its own tab to come back to. The Bible guide gives each of the 66 
 to whom, why and about (traditional view, with "traditionally" and "c." where it is debated), and
 where to start reading on 25 topics. Older entries keep their text as notes and their first line
 as the heading.
+
+**D-050 A button is a name, never an explanation (owner, 2026-10-27).** Every button, button-styled
+link, chip and confirm button is one word, two at most ("Start shopping", "Save & send", "Restore",
+"Ours"). The detail people need once or twice goes in a hover title, an info icon, a hint line
+beside it or the page's own text - never in the button. `tests/buttons.test.js` reads every label
+in the source, both sides of a ternary, and fails on more than two words. Inline text links in a
+sentence are prose and exempt. Page headings keep their full wording.
+
+**D-051 Plan, Check, Do - and no "jotting" (owner, 2026-10-27).** The three ways in (D-045) are
+named Plan, Check and Do. "Jot", "jot down" and "jotting" are never used - the word is "write".
 
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,

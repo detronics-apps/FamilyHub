@@ -13,7 +13,7 @@ let waysOpen = false;
 
 export function sectionView(ctx, route) {
   const s = section(route.sub);
-  if (!s) return el('section', { class: 'panel empty' }, [el('h1', { text: 'Not found' }), el('a', { class: 'btn', href: '#/', text: 'Back to home' })]);
+  if (!s) return el('section', { class: 'panel empty' }, [el('h1', { text: 'Not found' }), el('a', { class: 'btn', href: '#/', text: 'Home' })]);
   const reg = ctx.app.registry;
   // Starter apps in the order they ship (most-used first), anything added after them.
   const rank = (m) => { const i = STARTERS.findIndex((x) => x.manifest.id === m.id); return i < 0 ? 999 : i; };
@@ -43,7 +43,7 @@ export function sectionView(ctx, route) {
       : el('p', { class: 'panel', text: `No mini-apps are installed in ${s.name} yet.` }),
     // Extra help, folded away under the mini-apps: the same ways in, grouped by the time you have.
     ways.length ? el('details', { class: 'panel', open: waysOpen, 'data-field': 'ways', on: { toggle: (e) => { waysOpen = e.target.open; } } }, [
-      el('summary', { text: 'Extra help: Plan · Check and note · Do' }),
+      el('summary', { text: 'Extra help: Plan · Check · Do' }),
       el('div', { class: 'modes' }, ways.map(([k, mode, list]) => el('div', { class: `panel stack mode mode--${k}`, 'data-field': `mode:${k}` }, [
         el('div', {}, [el('h2', { text: mode.title, style: { margin: 0 } }), el('p', { class: 'small muted', style: { margin: 0 }, text: mode.when })]),
         el('ul', { class: 'list' }, list.map((x) => el('li', {}, [el('a', { class: 'list__main', href: `#/${x.app.id}${x.screen ? `/${x.screen}` : ''}`, 'data-field': `way:${x.app.id}:${x.screen ?? ''}` }, [

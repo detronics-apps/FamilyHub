@@ -104,7 +104,7 @@ const RAW = [
         { id: 'recipes', title: 'Cookbook' }, { id: 'item', title: 'Item', nav: false }, { id: 'new', title: 'Add an item', nav: false },
       ],
       modes: [
-        { mode: 'note', screen: 'new', label: 'Jot down a meal to try', hint: 'Saw something good? Save it before you forget' },
+        { mode: 'note', screen: 'new', label: 'Write down a meal to try', hint: 'Saw something good? Save it before you forget' },
         { mode: 'plan', screen: 'recipes', label: 'Look through the Cookbook' },
       ],
       // Plans and the shopping list were kept here before This Week and Shopping became
@@ -247,13 +247,13 @@ const RAW = [
         { id: 'guide', title: 'Bible guide' }, { id: 'entry', title: 'Entry', nav: false }, { id: 'plan', title: 'Reading plan', nav: false },
       ],
       modes: [
-        { mode: 'note', screen: 'write', label: 'Jot down a message or a question', hint: 'Something you heard or saw, to come back to' },
+        { mode: 'note', screen: 'write', label: 'Write down a message or a question', hint: 'Something you heard or saw, to come back to' },
         { mode: 'note', screen: 'guide', label: 'Who wrote a book, and where to start on a question' },
         { mode: 'do', screen: 'reading', label: 'A study session - today’s reading' },
         { mode: 'plan', screen: 'questions', label: 'Come back to your questions' },
         { mode: 'plan', screen: 'journal', label: 'Look back through the journal' },
       ],
-      data: { collections: [{ name: 'plans', schema: 1 }, { name: 'notes', schema: 1 }] },
+      data: { collections: [{ name: 'plans', schema: 1 }, { name: 'notes', schema: 1 }, { name: 'books', schema: 1 }] },
       permissions: ['data:own', 'people:read', 'notify'],
     },
     load: () => import('./faith/app.js'),

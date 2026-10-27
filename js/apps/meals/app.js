@@ -29,7 +29,7 @@ import { sendHref } from '../shopping/logic.js';
 import { inSystem } from '../../units.js';
 
 const ui = { query: '', avoid: [], kind: 'all', maxMinutes: null, servings: {}, limit: 50, who: {}, leftovers: {} };
-const TIMES = [[null, 'Any time'], [20, 'Under 20 min'], [30, 'Under 30 min'], [60, 'Under 1 hour']];
+const TIMES = [[null, 'Any time'], [20, '≤ 20 min'], [30, '≤ 30 min'], [60, '≤ 1 hour']];
 const KINDS = { all: 'All', ...TYPES };
 // "an item", "a meal", "a recipe", "an own ingredient"
 const aType = (t) => `${t === 'own' || !TYPES[t] ? 'an' : 'a'} ${typeName(t).toLowerCase()}`;
@@ -82,7 +82,7 @@ function recipesScreen(hub) {
         class: 'input', type: 'search', placeholder: 'Search by name, ingredient or tag', 'aria-label': 'Search the Cookbook', value: ui.query, 'data-field': 'recipe-search',
         on: { change: (e) => { ui.query = e.target.value; ui.limit = 50; hub.render(); } },
       })]),
-      el('a', { class: 'btn btn-primary', href: hub.href('new'), text: 'Add an item', 'data-field': 'add-recipe' }),
+      el('a', { class: 'btn btn-primary', href: hub.href('new'), text: 'New item', 'data-field': 'add-recipe' }),
     ]),
     el('div', { class: 'chipset', role: 'group', 'aria-label': 'Show' }, Object.entries(KINDS).map(([k, label]) => el('button', {
       class: 'chip', type: 'button', 'aria-pressed': String(ui.kind === k), text: label, 'data-field': `kind:${k}`,
@@ -174,9 +174,9 @@ function recipeScreen(hub, id, back) {
     portionsPanel(hub, rec, serves, setServes, kcal),
     el('div', { class: 'row' }, [
       hub.data.installed('mealplan') ? el('a', { class: 'btn btn-primary', href: `#/mealplan/add/${encodeURIComponent(`${rec.id}~${serves}`)}`, text: 'Plan it', 'data-field': 'plan-meal' }) : null,
-      hub.data.installed('shopping') && rec.ingredients.length ? el('a', { class: 'btn', href: sendHref({ source: `meal:${rec.id}`, from: rec.title, group: 'food', ...shopSplit(rec.ingredients, serves / rec.servings, getSub) }), text: 'Send to the shopping list', 'data-field': 'send-shopping' }) : null,
+      hub.data.installed('shopping') && rec.ingredients.length ? el('a', { class: 'btn', href: sendHref({ source: `meal:${rec.id}`, from: rec.title, group: 'food', ...shopSplit(rec.ingredients, serves / rec.servings, getSub) }), text: 'To Shopping', title: 'Send the ingredients to the shopping list', 'data-field': 'send-shopping' }) : null,
       el('a', { class: 'btn', href: hub.href('edit', rec.id), text: 'Edit' }),
-      hub.data.installed('assistant') ? el('a', { class: 'btn', href: `#/assistant/meal/recipe:${encodeURIComponent(rec.id)}`, text: 'Ideas to improve it', 'data-field': 'improve-recipe' }) : null,
+      hub.data.installed('assistant') ? el('a', { class: 'btn', href: `#/assistant/meal/recipe:${encodeURIComponent(rec.id)}`, text: 'Improve', title: 'Ideas from the Meal Assistant', 'data-field': 'improve-recipe' }) : null,
       el('button', {
         class: 'btn btn-quiet', type: 'button', text: 'Delete',
         on: { click: async () => { if (!await confirmAction({ title: `Delete ${rec.title}?`, text: 'Meals already planned keep their name. Its notes and ratings go with it.', confirmLabel: 'Delete', danger: true })) return; await recipes(hub).remove(rec.id); hub.invalidate(); hub.go('recipes'); } },
@@ -345,7 +345,7 @@ function noteScreen(hub, id, param) {
     el('p', { class: 'small muted', text: `From ${note.occasion || 'a planned meal'}. It will show with the recipe for every future time; the planned meal keeps its own note too.` }),
     el('div', { class: 'row' }, [
       el('button', {
-        class: 'btn btn-primary', type: 'button', text: 'Add to the recipe’s notes', 'data-field': 'note-promote',
+        class: 'btn btn-primary', type: 'button', text: 'Save note', title: 'Add to the recipe’s notes', 'data-field': 'note-promote',
         on: { click: async () => { if (await saveRecord(hub, recipes(hub), addNote(rec, note.text, { from: 'occurrence', occasion: note.occasion, at: hub.today() }))) { hub.ui.notice('Added to the recipe’s notes.'); hub.open(note.back || hub.href('item', id)); } } },
       }),
       el('a', { class: 'btn', href: note.back || hub.href('item', id), text: 'Cancel' }),
@@ -439,7 +439,7 @@ function portionsPanel(hub, rec, serves, setServes, kcalPerServing) {
     ]))) : el('p', { class: 'small muted', text: 'Choose who is eating.' }),
     shares.length ? batchLine(rec, plan) : null,
     shares.length && batch(rec, plan).makes !== serves ? el('button', {
-      class: 'btn', type: 'button', text: `Use x${batch(rec, plan).m} for the ingredients`, style: { alignSelf: 'flex-start' }, 'data-field': 'use-portions',
+      class: 'btn', type: 'button', text: `Use x${batch(rec, plan).m}`, title: 'Multiply the ingredients by this', style: { alignSelf: 'flex-start' }, 'data-field': 'use-portions',
       on: { click: () => setServes(batch(rec, plan).makes) },
     }) : null,
     el('p', { class: 'small muted', text: 'A rough guide from each person’s age and gender, and height and weight where recorded on the People page. One portion is one serving of this meal, sized for an adult. Appetites vary from day to day - let everyone eat to their hunger.' }),

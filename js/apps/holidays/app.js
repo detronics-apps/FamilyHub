@@ -41,7 +41,7 @@ function listScreen(hub) {
   return el('section', { class: 'stack', 'aria-label': 'Holidays' }, [
     el('div', { class: 'row' }, [
       el('p', { class: 'muted', style: { margin: 0, flex: '1 1 260px' }, text: 'Trips you are planning and ideas for one day - with the plan, the packing and the budget in one place.' }),
-      el('a', { class: 'btn btn-primary', href: hub.href('new'), text: 'Add a trip or idea', 'data-field': 'add-trip' }),
+      el('a', { class: 'btn btn-primary', href: hub.href('new'), text: 'New trip', 'data-field': 'add-trip' }),
     ]),
     list.data.length ? null : el('div', { class: 'panel empty' }, [el('p', { text: 'No trips yet. Even "camping, some time in summer" is a good start.' })]),
     group('Happening now', by('now')),
@@ -116,7 +116,7 @@ function tripScreen(hub, id) {
         el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': `Remove ${p.text}`, on: { click: () => save(removeFrom(t, 'packing', p.id)) } }),
       ]))) : el('div', { class: 'row' }, [
         el('span', { class: 'small muted', text: 'Nothing on the list yet.' }),
-        el('button', { class: 'btn btn-small', type: 'button', text: 'Start with a basic list', on: { click: () => save(STARTER_PACKING.reduce((acc, x) => addPacking(acc, x), t)) } }),
+        el('button', { class: 'btn btn-small', type: 'button', text: 'Basic list', title: 'Start from a basic packing list', on: { click: () => save(STARTER_PACKING.reduce((acc, x) => addPacking(acc, x), t)) } }),
       ]),
       el('div', { class: 'row' }, [el('div', { style: { flex: '1 1 200px' } }, [packText]), packWho, el('button', { class: 'btn', type: 'button', text: 'Add', on: { click: doPack } })]),
     ]),
@@ -143,7 +143,7 @@ function tripScreen(hub, id) {
     ]),
 
     el('button', {
-      class: 'btn btn-danger', type: 'button', text: 'Delete this trip',
+      class: 'btn btn-danger', type: 'button', text: 'Delete',
       on: { click: async () => { if (!await confirmAction({ title: `Delete ${t.title}?`, text: 'Marking it "Been" keeps the memory instead.', confirmLabel: 'Delete', danger: true })) return; await col(hub).remove(t.id); hub.invalidate(); hub.go(null); } },
     }),
   ]);

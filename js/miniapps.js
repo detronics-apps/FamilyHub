@@ -37,7 +37,7 @@ const CROSS = /^data:([a-z][a-z0-9.-]*):read$/;
 /** The three ways into a section: when there is time to think, for a quick look or note, and when it is time to do. */
 export const MODES = {
   plan: { title: 'Plan', when: 'When you have time to sit and think it through' },
-  note: { title: 'Check and note', when: 'A quick look, or jotting something down before you forget' },
+  note: { title: 'Check', when: 'A quick look, or writing something down before you forget' },
   do: { title: 'Do', when: 'When you have 20 minutes to an hour to get things done' },
 };
 

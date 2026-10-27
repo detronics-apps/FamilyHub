@@ -147,7 +147,7 @@ export function ingredientEditor({ rows, db = null, own = [], selfId = null, onC
     };
     return el('div', { class: 'ing-row__full stack', style: { gap: '0.25rem' } }, [
       el('div', { class: 'row' }, ['1', label, '=', g, 'g',
-        el('button', { class: 'btn btn-small btn-primary', type: 'button', text: 'Save this size', 'data-field': 'size-save', on: { click: save } }),
+        el('button', { class: 'btn btn-small btn-primary', type: 'button', text: 'Save size', 'data-field': 'size-save', on: { click: save } }),
         el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Cancel', on: { click: () => { adding = null; redraw(); } } }),
         why]),
       el('p', { class: 'small muted', style: { margin: 0 }, text: 'From the packet, e.g. a ring of feta = 200 g. It is kept for the family and offered for this food every time. To correct one, add it again with the same name.' }),
@@ -187,10 +187,10 @@ export function ingredientEditor({ rows, db = null, own = [], selfId = null, onC
       }))),
       ...rows.map(rowNode),
       el('div', { class: 'row' }, [
-        el('button', { class: 'btn btn-small', type: 'button', text: '+ Add an ingredient', 'data-field': 'ing-add', on: { click: () => { rows.push({ name: '', qty: null, unit: 'g' }); changed(); redraw(); box.querySelector(`[data-field="ing-name:${rows.length - 1}"]`)?.focus(); } } }),
+        el('button', { class: 'btn btn-small', type: 'button', text: '+ Ingredient', 'data-field': 'ing-add', on: { click: () => { rows.push({ name: '', qty: null, unit: 'g' }); changed(); redraw(); box.querySelector(`[data-field="ing-name:${rows.length - 1}"]`)?.focus(); } } }),
       ]),
       el('div', { class: 'row' }, [
-        el('label', { class: 'btn btn-small', text: 'Add from a .csv file' }, [file]),
+        el('label', { class: 'btn btn-small', text: 'Import .csv' }, [file]),
         el('a', { class: 'small', href: `data:text/csv;charset=utf-8,${encodeURIComponent(INGREDIENT_CSV_TEMPLATE)}`, download: 'ingredients.csv', text: 'Download an example file' }),
       ]),
       el('p', { class: 'small muted', text: 'Amounts are the total for the whole recipe, in whatever you buy - "½ head" or "1 tin" - and the weight is shown next to it. ✓ = linked, so its calories count; ? = not linked yet.' }),

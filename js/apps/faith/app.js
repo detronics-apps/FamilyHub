@@ -9,12 +9,13 @@ import { fmtDay } from '../../dates.js';
 import { tabs, loading, failure, saveRecord, nameOf } from '../kit.js';
 import {
   BOOKS, PRESETS, normalisePlan, planSummary, planProgress, nextReading, describe, markRead, markUnread, chapters, daysIn,
-  NOTE_KINDS, QUESTION_STATUS, VERSIONS, chaptersIn, normaliseNote, noteSummary, noteText, passageRef, filterNotes, allQuestions, termsUsed,
+  NOTE_KINDS, QUESTION_STATUS, QUESTION_SHORT, VERSIONS, chaptersIn, normaliseNote, noteSummary, noteText, passageRef, filterNotes, allQuestions, termsUsed, loggedOn, bookNoteId, normaliseBookNote,
 } from './logic.js';
 import { BOOK_GUIDE, TOPICS } from './guide.js';
 
 const plans = (hub) => hub.data.collection('plans', { summary: planSummary, text: (p) => p.title, prefix: 'rdp' });
 const notes = (hub) => hub.data.collection('notes', { summary: noteSummary, text: noteText, prefix: 'fnt' });
+const books = (hub) => hub.data.collection('books', { summary: (b) => ({ book: b.book, why: b.why, about: b.about }) });
 // Journal filters, the entry being written, the question filter and the guide's choices.
 const ui = { query: '', kind: '', topic: '', term: '', status: '', draft: null, qStatus: '', book: 'John', topicGuide: 'marriage', version: '' };
 
@@ -65,7 +66,7 @@ function readingScreen(hub) {
         ]) : el('p', { class: 'small', text: 'Finished - every chapter read.' }),
       ]);
     })) : el('div', { class: 'panel empty' }, [el('p', { text: 'No reading plan yet. Choose what to read and how many chapters at a time - there is no deadline.' })]),
-    el('a', { class: 'btn', href: hub.href('new-plan'), text: 'Start a reading plan', 'data-field': 'new-plan' }),
+    el('a', { class: 'btn', href: hub.href('new-plan'), text: 'New plan', title: 'Start a reading plan', 'data-field': 'new-plan' }),
   ]);
 }
 
@@ -134,13 +135,13 @@ function planScreen(hub, id) {
         }))),
       ])),
     ]),
-    el('button', { class: 'btn btn-quiet', type: 'button', text: 'Delete this plan', on: { click: async () => { if (!await confirmAction({ title: `Delete ${p.title}?`, text: 'Your journal entries are kept.', confirmLabel: 'Delete', danger: true })) return; await plans(hub).remove(p.id); hub.invalidate(); hub.go(null); } } }),
+    el('button', { class: 'btn btn-quiet', type: 'button', text: 'Delete', on: { click: async () => { if (!await confirmAction({ title: `Delete ${p.title}?`, text: 'Your journal entries are kept.', confirmLabel: 'Delete', danger: true })) return; await plans(hub).remove(p.id); hub.invalidate(); hub.go(null); } } }),
   ]);
 }
 
 /* ------------------------------------------------------------- journal */
 
-const chip = (pressed, text, field, click) => el('button', { class: 'chip', type: 'button', 'aria-pressed': String(pressed), text, 'data-field': field, on: { click } });
+const chip = (pressed, text, field, click, title) => el('button', { class: 'chip', type: 'button', 'aria-pressed': String(pressed), text, title, 'data-field': field, on: { click } });
 const select = (value, options, any, field, change, label) => el('select', { class: 'select', style: { width: 'auto' }, 'aria-label': label, 'data-field': field, on: { change: (e) => change(e.target.value) } },
   [['', any], ...options].map(([v, t]) => el('option', { value: v, text: t, selected: value === v })));
 const open = (qs) => qs.filter((q) => q.status !== 'answered').length;
@@ -159,7 +160,7 @@ function journalScreen(hub) {
     nav(hub, 'journal'),
     el('div', { class: 'row' }, [
       el('p', { class: 'muted', style: { margin: 0, flex: '1 1 260px' }, text: 'Everything you have written - find it again by kind, topic, term or a question still open.' }),
-      el('a', { class: 'btn btn-primary', href: hub.href('write'), text: 'Write an entry', 'data-field': 'note-new' }),
+      el('a', { class: 'btn btn-primary', href: hub.href('write'), text: 'New entry', 'data-field': 'note-new' }),
     ]),
     el('div', { class: 'panel stack' }, [
       el('input', { class: 'input', type: 'search', placeholder: 'Search the journal', 'aria-label': 'Search the journal', value: ui.query, 'data-field': 'journal-search', on: { change: (e) => set({ query: e.target.value }) } }),
@@ -247,7 +248,7 @@ function writeScreen(hub, id) {
       ]),
       el('textarea', { class: 'input', rows: '2', placeholder: 'What I have found so far (optional)', 'aria-label': `Answer to question ${i + 1}`, text: q.answer, on: { input: (e) => { q.answer = e.target.value; } } }),
     ])),
-    el('button', { class: 'btn btn-small', type: 'button', text: '+ Add a question', 'data-field': 'w-add-q', style: { alignSelf: 'flex-start' }, on: { click: () => { d.questions.push({ id: `q${Date.now().toString(36)}`, text: '', status: 'new', answer: '' }); redraw(); } } }),
+    el('button', { class: 'btn btn-small', type: 'button', text: '+ Question', 'data-field': 'w-add-q', style: { alignSelf: 'flex-start' }, on: { click: () => { d.questions.push({ id: `q${Date.now().toString(36)}`, text: '', status: 'new', answer: '' }); redraw(); } } }),
 
     el('h2', { text: 'Passages', style: { margin: 'var(--space-2) 0 0' } }),
     ...d.passages.map((x, i) => el('div', { class: 'row', 'data-field': `w-p:${i}` }, [
@@ -264,7 +265,7 @@ function writeScreen(hub, id) {
     ])),
     d.passage ? el('p', { class: 'small muted', text: `Written before: ${d.passage}` }) : null,
     el('button', {
-      class: 'btn btn-small', type: 'button', text: '+ Add a passage', 'data-field': 'w-add-p', style: { alignSelf: 'flex-start' },
+      class: 'btn btn-small', type: 'button', text: '+ Passage', 'data-field': 'w-add-p', style: { alignSelf: 'flex-start' },
       on: { click: () => { const last = d.passages.at(-1); d.passages.push({ version: last?.version ?? ui.version, book: last?.book ?? 'John', chapter: last?.chapter ?? 1, from: null, to: null }); redraw(); } },
     }),
 
@@ -320,7 +321,7 @@ function questionsScreen(hub) {
     el('p', { class: 'muted', text: 'The questions you have written down, to come back to. Change where one stands here; open the entry to add what you found.' }),
     el('div', { class: 'chipset', role: 'group', 'aria-label': 'Where it stands' }, [
       chip(!ui.qStatus, 'All', 'qs:all', () => { ui.qStatus = ''; hub.render(); }),
-      ...Object.entries(QUESTION_STATUS).map(([k, t]) => chip(ui.qStatus === k, t, `qs:${k}`, () => { ui.qStatus = k; hub.render(); })),
+      ...Object.entries(QUESTION_SHORT).map(([k, t]) => chip(ui.qStatus === k, t, `qs:${k}`, () => { ui.qStatus = k; hub.render(); }, QUESTION_STATUS[k])),
     ]),
     qs.length ? el('ul', { class: 'list panel', 'data-field': 'questions' }, qs.map((q) => el('li', { style: { alignItems: 'flex-start' } }, [
       el('div', { class: 'list__main' }, [
@@ -333,19 +334,60 @@ function questionsScreen(hub) {
   ]);
 }
 
+/** The passages and questions the family has logged on a guide topic, each linking to its entry. */
+function ourOwn(hub, t) {
+  const all = allNotes(hub);
+  if (all.loading) return loading();
+  if (all.error) return failure(all.error);
+  const { passages, questions } = loggedOn(all.data.filter((n) => n.ix === 2).map((n) => ({ ...n, heading: n.title })), ui.topicGuide);
+  const from = (x) => el('a', { href: hub.href('entry', x.entry), text: x.heading });
+  if (!passages.length && !questions.length) return el('p', { class: 'small muted', 'data-field': 'guide-ours', text: `Nothing logged on ${t.label} yet. Tick this topic on a journal entry, and its passages and questions show here too.` });
+  return el('div', { class: 'stack', 'data-field': 'guide-ours' }, [
+    passages.length ? el('div', {}, [
+      el('h3', { text: 'Passages we have noted on this', style: { margin: '0 0 4px' } }),
+      el('ul', { style: { margin: 0 } }, passages.map((x) => el('li', {}, [x.ref, el('span', { class: 'small muted' }, [' · from ', from(x)])]))),
+    ]) : null,
+    questions.length ? el('div', {}, [
+      el('h3', { text: 'Our questions on this', style: { margin: '0 0 4px' } }),
+      el('ul', { style: { margin: 0 } }, questions.map((q) => el('li', {}, [q.text, el('span', { class: 'small muted' }, [` · ${QUESTION_STATUS[q.status]} · from `, from(q)])]))),
+    ]) : null,
+  ]);
+}
+
 /** Who wrote each book, when, to whom, why and what it is about - and where to start reading on a question. */
 function guideScreen(hub) {
   const g = BOOK_GUIDE[ui.book];
   const t = TOPICS[ui.topicGuide];
-  const row = (label, text) => [el('dt', { text: label }), el('dd', { text })];
+  const row = (label, text, extra = null) => el('div', { class: 'glance__item' }, [el('dt', { text: label }), el('dd', { text }), extra]);
+  const ours = hub.use('books', () => books(hub).list({ limit: 1000 }));
+  const mine = ours.data?.items.find((b) => b.id === bookNoteId(ui.book)) ?? {};
+  // The family's own notes under "why" and "about" - shown below the guide's text, edited in place.
+  const own = (field) => {
+    if (ours.loading || ours.error) return null;
+    if (ui.bookEdit?.field === field && ui.bookEdit.book === ui.book) {
+      const save = async () => { await saveRecord(hub, books(hub), normaliseBookNote({ ...mine, [field]: ui.bookEdit.text }, ui.book)); ui.bookEdit = null; };
+      return el('div', { class: 'stack', style: { marginTop: 'var(--space-2)', gap: 'var(--space-2)' } }, [
+        el('textarea', { class: 'input', rows: '3', maxlength: '2000', 'aria-label': 'Our notes', 'data-field': `book-${field}-text`, text: ui.bookEdit.text, on: { input: (e) => { ui.bookEdit.text = e.target.value; } } }),
+        el('div', { class: 'row' }, [
+          el('button', { class: 'btn btn-small btn-primary', type: 'button', text: 'Save', 'data-field': `book-${field}-save`, on: { click: save } }),
+          el('button', { class: 'btn btn-small', type: 'button', text: 'Cancel', on: { click: () => { ui.bookEdit = null; hub.render(); } } }),
+        ]),
+      ]);
+    }
+    return el('div', { class: 'glance__own' }, [
+      mine[field] ? el('p', { class: 'glance__note', 'data-field': `book-${field}-note` }, [el('strong', { text: 'Our notes: ' }), mine[field]]) : null,
+      el('button', { class: 'btn btn-small', type: 'button', text: mine[field] ? 'Edit notes' : '+ Notes', 'data-field': `book-${field}-edit`, on: { click: () => { ui.bookEdit = { book: ui.book, field, text: mine[field] ?? '' }; hub.render(); } } }),
+    ]);
+  };
   return el('section', { class: 'stack', 'aria-label': 'Bible guide' }, [
     nav(hub, 'guide'),
     el('div', { class: 'panel stack' }, [
       el('h2', { text: 'A book at a glance', style: { margin: 0 } }),
       el('select', { class: 'select', style: { width: 'auto' }, 'aria-label': 'Book', 'data-field': 'guide-book', on: { change: (e) => { ui.book = e.target.value; hub.render(); } } },
         BOOKS.map(([b, n]) => el('option', { value: b, text: `${b} (${n} chapter${n === 1 ? '' : 's'})`, selected: ui.book === b }))),
-      el('dl', { class: 'idea', 'data-field': 'guide-5w' }, [
-        ...row('Who wrote it', g.who), ...row('When', g.when), ...row('To whom', g.to), ...row('Why', g.why), ...row('Who and what it is about', g.about),
+      // The three short answers side by side, then the two longer ones.
+      el('dl', { class: 'glance', 'data-field': 'guide-5w' }, [
+        row('Who wrote it', g.who), row('When', g.when), row('To whom', g.to), row('Why', g.why, own('why')), row('Who and what it is about', g.about, own('about')),
       ]),
       el('p', { class: 'small muted', text: 'Authorship and dates follow the traditional view most churches hold; where scholars widely differ, it says so. A way in, not a commentary.' }),
     ]),
@@ -354,7 +396,8 @@ function guideScreen(hub) {
       el('select', { class: 'select', style: { width: 'auto' }, 'aria-label': 'Topic', 'data-field': 'guide-topic', on: { change: (e) => { ui.topicGuide = e.target.value; hub.render(); } } },
         Object.entries(TOPICS).map(([k, x]) => el('option', { value: k, text: x.label, selected: ui.topicGuide === k }))),
       el('ul', { 'data-field': 'guide-start' }, t.start.map((ref) => el('li', { text: ref }))),
-      el('a', { class: 'btn btn-small', href: hub.href('write'), text: 'Write down a question about this', style: { alignSelf: 'flex-start' }, on: { click: () => { ui.draft = { key: 'new', n: { ...normaliseNote({ kind: 'question', topics: [ui.topicGuide] }, hub.today()), heading: '', questions: [{ id: 'q1', text: '', status: 'new', answer: '' }], passages: [], terms: [] } }; } } }),
+      ourOwn(hub, t),
+      el('a', { class: 'btn btn-small', href: hub.href('write'), text: 'New question', title: 'Write down a question on this topic', style: { alignSelf: 'flex-start' }, on: { click: () => { ui.draft = { key: 'new', n: { ...normaliseNote({ kind: 'question', topics: [ui.topicGuide] }, hub.today()), heading: '', questions: [{ id: 'q1', text: '', status: 'new', answer: '' }], passages: [], terms: [] } }; } } }),
     ]),
   ]);
 }

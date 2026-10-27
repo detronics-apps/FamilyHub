@@ -168,7 +168,7 @@ export async function saveRecord(hub, col, record) {
         body: [el('p', { text: 'Someone changed this on another device while you were editing. Everything else was combined - choose for these:' }), ...rows],
         foot: [
           el('button', { class: 'btn', type: 'button', text: 'Cancel', on: { click: () => close() } }),
-          el('button', { class: 'btn btn-primary', type: 'button', text: 'Save my choices', on: { click: () => { answered = picks; close(); } } }),
+          el('button', { class: 'btn btn-primary', type: 'button', text: 'Save', on: { click: () => { answered = picks; close(); } } }),
         ],
         onClose: () => resolve(answered),
       });

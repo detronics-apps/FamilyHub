@@ -167,11 +167,11 @@ function weekScreen(hub, param) {
       })),
     ])))]),
     el('div', { class: 'row' }, [
-      el('a', { class: 'btn', href: hub.href('mix', monday), text: 'Plan my week', 'data-field': 'plan-my-week' }),
-      plan.slots.length ? el('a', { class: 'btn', href: hub.href('review', monday), text: 'How the week looks', 'data-field': 'review-week' }) : null,
-      !plan.slots.length && prev.data?.slots.length ? el('button', { class: 'btn', type: 'button', text: 'Copy last week’s plan', on: { click: () => savePlan(hub, monday, copyPlan(prev.data, monday)) } }) : null,
+      el('a', { class: 'btn', href: hub.href('mix', monday), text: 'Plan week', 'data-field': 'plan-my-week' }),
+      plan.slots.length ? el('a', { class: 'btn', href: hub.href('review', monday), text: 'Overview', title: 'How the week looks', 'data-field': 'review-week' }) : null,
+      !plan.slots.length && prev.data?.slots.length ? el('button', { class: 'btn', type: 'button', text: 'Repeat week', title: 'Copy last week’s plan', on: { click: () => savePlan(hub, monday, copyPlan(prev.data, monday)) } }) : null,
       plan.slots.length && hub.data.installed('shopping') ? el('button', {
-        class: 'btn btn-primary', type: 'button', text: 'Send the week to the shopping list', 'data-field': 'make-list',
+        class: 'btn btn-primary', type: 'button', text: 'To Shopping', title: 'Send the week’s ingredients to the shopping list', 'data-field': 'make-list',
         on: { click: () => sendWeek(hub, plan, monday) },
       }) : null,
     ]),
@@ -262,7 +262,7 @@ function chooseScreen(hub, monday, day, meal) {
     el('h1', { text: `${label(date, meal, today)}${current ? ` - instead of ${current.title}` : ''}` }),
     el('div', { class: 'row' }, [
       el('input', { class: 'input', type: 'search', value: ui.q, placeholder: 'Search by name or ingredient', 'aria-label': 'Search meals', 'data-field': 'choose-search', style: { flex: '1 1 220px' }, on: { change: (e) => { ui.q = e.target.value; hub.render(); } } }),
-      current ? el('button', { class: 'btn btn-quiet', type: 'button', text: 'Remove from the plan', 'data-field': 'remove-slot', on: { click: async () => { if (await confirmAction({ title: `Remove ${current.title} from ${label(date, meal, today)}?`, text: 'The saved meal stays in the Cookbook. Leftovers set aside from it are cancelled.', confirmLabel: 'Remove' })) { await savePlan(hub, monday, setSlot(p.data, day, meal, null)); hub.open(back); } } } }) : null,
+      current ? el('button', { class: 'btn btn-quiet', type: 'button', text: 'Remove', 'data-field': 'remove-slot', on: { click: async () => { if (await confirmAction({ title: `Remove ${current.title} from ${label(date, meal, today)}?`, text: 'The saved meal stays in the Cookbook. Leftovers set aside from it are cancelled.', confirmLabel: 'Remove' })) { await savePlan(hub, monday, setSlot(p.data, day, meal, null)); hub.open(back); } } } }) : null,
     ]),
     filterPanel(ui.filters, set, people),
     active.length ? el('div', { class: 'chipset', 'aria-label': 'Active filters' }, [
@@ -287,7 +287,7 @@ function chooseScreen(hub, monday, day, meal) {
       },
     }, [
       el('input', { class: 'input', name: 'free', placeholder: 'Or just type a meal, e.g. "Takeaway" or "Leftover soup"', 'aria-label': 'A meal not in the Cookbook', style: { flex: '1 1 220px' } }),
-      el('button', { class: 'btn', type: 'submit', text: 'Use what I typed' }),
+      el('button', { class: 'btn', type: 'submit', text: 'Use this' }),
     ]),
   ]);
 }
@@ -357,12 +357,12 @@ function configureScreen(hub, { monday, day, meal, date, summary, current, back 
   const st = (ui.config?.for === key ? ui.config : (ui.config = { for: key, servings: current?.servings ?? summary.servings ?? 4, mode: 'none', portions: 2, target: defaultTarget(date), meal }));
   const today = hub.today();
   return el('section', { class: 'stack' }, [
-    el('button', { class: 'linkish small', type: 'button', text: '‹ Back to the list', style: { alignSelf: 'flex-start' }, on: { click: () => { ui.pick = null; hub.render(); } } }),
+    el('button', { class: 'linkish small', type: 'button', text: '‹ Back', title: 'Back to the list', style: { alignSelf: 'flex-start' }, on: { click: () => { ui.pick = null; hub.render(); } } }),
     el('h1', { text: `${summary.title} for ${label(date, meal, today)}` }),
     el('div', { class: 'panel' }, [leftoverControls(st, date, (patch) => { Object.assign(ui.config, patch); hub.render(); }, today)]),
     el('div', { class: 'row' }, [
       el('button', {
-        class: 'btn btn-primary', type: 'button', text: 'Put it in the plan', 'data-field': 'plan-save',
+        class: 'btn btn-primary', type: 'button', text: 'Plan it', 'data-field': 'plan-save',
         on: {
           click: async () => {
             const p = await plans(hub).get(planId(monday)).catch(() => null);
@@ -375,7 +375,7 @@ function configureScreen(hub, { monday, day, meal, date, summary, current, back 
           },
         },
       }),
-      el('a', { class: 'btn', href: mealHref(summary.id, hub.href('choose', key)), text: 'See the recipe' }),
+      el('a', { class: 'btn', href: mealHref(summary.id, hub.href('choose', key)), text: 'Recipe' }),
     ]),
   ]);
 }
@@ -432,7 +432,7 @@ function slotScreen(hub, monday, slotId) {
   if (p.error) return failure(p.error);
   const slot = p.data.slots.find((s) => s.id === slotId);
   const back = hub.href('week', monday);
-  if (!slot) return el('div', { class: 'panel' }, [el('p', { text: 'That planned meal is no longer in the plan.' }), el('a', { class: 'btn', href: back, text: 'Back to the week' })]);
+  if (!slot) return el('div', { class: 'panel' }, [el('p', { text: 'That planned meal is no longer in the plan.' }), el('a', { class: 'btn', href: back, text: 'Back', title: 'Back to the week' })]);
   const r = slot.recipeId ? loadRecipe(hub, slot.recipeId) : { data: null };
   const f = loadFood(hub);
   const list = loadSummaries(hub);
@@ -499,7 +499,7 @@ function slotScreen(hub, monday, slotId) {
             el('input', { class: 'input', id: `resadd-${res.id}`, value: res.additions.map(formatIngredient).join(', '), placeholder: 'e.g. 4 wraps, 1 avocado', style: { width: '14em' }, on: { change: async (e) => { await savePlan(hub, monday, setReservation(p.data, slot.id, res.id, { additions: e.target.value.split(',').map((x) => parseIngredient(x.trim())).filter((x) => x.name) })); } } }),
           ]),
         ]),
-        el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Cancel these leftovers', on: { click: async () => { await savePlan(hub, monday, setReservation(p.data, slot.id, res.id, { portions: 0 })); } } }),
+        el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Cancel leftovers', on: { click: async () => { await savePlan(hub, monday, setReservation(p.data, slot.id, res.id, { portions: 0 })); } } }),
       ]))) : null,
       el('div', { class: 'row' }, [
         el('label', { class: 'small', for: 'res-new', text: 'Set aside leftovers for' }),
@@ -528,8 +528,8 @@ function slotScreen(hub, monday, slotId) {
           el('p', { class: 'small', text: `Amounts for ${basis} servings (the recipe's own) - the batch is worked out from what you cook.` }),
           ingredientEditor({ rows: ui.slotDraft.rows, db: f.data ?? null, own: list.data ?? [], selfId: rec?.id ?? null, sizes: ourSizes.data ?? new Map(), system: sys }),
           el('div', { class: 'row' }, [
-            el('button', { class: 'btn btn-small', type: 'button', text: 'Save for this meal', 'data-field': 'slot-ing-save', on: { click: async () => { await update({ ingredients: ui.slotDraft.rows.filter((x) => x.name.trim()), basis }); ui.slotDraft = null; } } }),
-            changed && rec ? el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Go back to the recipe’s ingredients', on: { click: async () => { await update({ ingredients: null }); ui.slotDraft = null; } } }) : null,
+            el('button', { class: 'btn btn-small', type: 'button', text: 'This meal', title: 'Save the changes for this planned meal only', 'data-field': 'slot-ing-save', on: { click: async () => { await update({ ingredients: ui.slotDraft.rows.filter((x) => x.name.trim()), basis }); ui.slotDraft = null; } } }),
+            changed && rec ? el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Reset', title: 'Go back to the recipe’s ingredients', on: { click: async () => { await update({ ingredients: null }); ui.slotDraft = null; } } }) : null,
           ]),
         ]),
       ]),
@@ -543,11 +543,11 @@ function slotScreen(hub, monday, slotId) {
         ]),
         el('div', { class: 'row' }, [
           el('span', { class: 'badge badge--ok', text: 'Kept for this time only' }),
-          el('a', { class: 'btn btn-small', href: `#/meals/edit/${encodeURIComponent(rec.id)}/${encodeURIComponent(`update:${JSON.stringify({ servings: basis, ingredients: slot.ingredients })}`)}`, text: 'Replace the saved recipe', 'data-field': 'update-original' }),
-          el('a', { class: 'btn btn-small', href: `#/meals/new/${encodeURIComponent(`variant:${JSON.stringify({ title: `${rec.title} (our version)`, servings: basis, ingredients: slot.ingredients, variantOf: rec.id, type: rec.type, notes: slot.note, instructions: rec.instructions, tags: rec.tags, prepMinutes: rec.prepMinutes, cookMinutes: rec.cookMinutes, allergens: rec.allergens, description: rec.description })}`)}`, text: 'Save as a new recipe', 'data-field': 'save-variant' }),
+          el('a', { class: 'btn btn-small', href: `#/meals/edit/${encodeURIComponent(rec.id)}/${encodeURIComponent(`update:${JSON.stringify({ servings: basis, ingredients: slot.ingredients })}`)}`, text: 'Replace recipe', title: 'Change the saved recipe too', 'data-field': 'update-original' }),
+          el('a', { class: 'btn btn-small', href: `#/meals/new/${encodeURIComponent(`variant:${JSON.stringify({ title: `${rec.title} (our version)`, servings: basis, ingredients: slot.ingredients, variantOf: rec.id, type: rec.type, notes: slot.note, instructions: rec.instructions, tags: rec.tags, prepMinutes: rec.prepMinutes, cookMinutes: rec.cookMinutes, allergens: rec.allergens, description: rec.description })}`)}`, text: 'New recipe', 'data-field': 'save-variant' }),
         ]),
       ]) : null,
-      hub.data.installed('assistant') && ingredients.length ? el('a', { class: 'btn btn-small', href: `#/assistant/meal/slot:${encodeURIComponent(ref(monday, slot.id))}`, text: 'Improve with Meal Assistant', 'data-field': 'improve-slot', style: { alignSelf: 'flex-start' } }) : null,
+      hub.data.installed('assistant') && ingredients.length ? el('a', { class: 'btn btn-small', href: `#/assistant/meal/slot:${encodeURIComponent(ref(monday, slot.id))}`, text: 'Improve', title: 'Ideas from the Meal Assistant', 'data-field': 'improve-slot', style: { alignSelf: 'flex-start' } }) : null,
     ]),
 
     el('div', { class: 'panel stack', 'aria-label': 'Nutrition' }, [
@@ -565,7 +565,7 @@ function slotScreen(hub, monday, slotId) {
             el('button', { class: 'btn btn-small btn-icon', type: 'button', text: '+', 'aria-label': `More for ${s.name}`, on: { click: () => update({ portions: { ...slot.portions, [s.id]: Math.min(4, s.share + 0.25) } }) } }),
           ])),
         ])))]),
-        Object.keys(slot.portions).length ? el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Back to the portion guide', on: { click: () => update({ portions: {} }) } }) : null,
+        Object.keys(slot.portions).length ? el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Back', title: 'Back to the portion guide', on: { click: () => update({ portions: {} }) } }) : null,
       ]) : null,
     ]),
 
@@ -582,12 +582,12 @@ function slotScreen(hub, monday, slotId) {
       ]),
       el('p', { class: 'small muted', text: 'This rating is for this meal only - the family rating of the recipe is set in the Cookbook.' }),
       rec ? el('div', { class: 'row' }, [
-        el('a', { class: 'btn btn-small', href: mealHref(rec.id, here), text: 'Rate the recipe and who likes it', 'data-field': 'rate-recipe' }),
-        slot.note ? el('a', { class: 'btn btn-small btn-quiet', href: `#/meals/note/${encodeURIComponent(rec.id)}/${encodeURIComponent(JSON.stringify({ text: slot.note, occasion: label(date, slot.meal, today), back: here }))}`, text: 'Add this note to the recipe', 'data-field': 'promote-note' }) : null,
+        el('a', { class: 'btn btn-small', href: mealHref(rec.id, here), text: 'Rate it', title: 'Rate the recipe, and say who likes it', 'data-field': 'rate-recipe' }),
+        slot.note ? el('a', { class: 'btn btn-small btn-quiet', href: `#/meals/note/${encodeURIComponent(rec.id)}/${encodeURIComponent(JSON.stringify({ text: slot.note, occasion: label(date, slot.meal, today), back: here }))}`, text: 'Save note', title: 'Add this note to the recipe', 'data-field': 'promote-note' }) : null,
       ]) : null,
     ]),
     el('div', { class: 'row' }, [
-      el('a', { class: 'btn', href: hub.href('choose', `${monday}~${slot.day}~${slot.meal}`), text: 'Replace with another meal' }),
+      el('a', { class: 'btn', href: hub.href('choose', `${monday}~${slot.day}~${slot.meal}`), text: 'Swap meal', title: 'Replace with another meal' }),
     ]),
   ]);
 }
@@ -620,7 +620,7 @@ function mixScreen(hub, monday) {
       el('label', { class: 'row small', style: { gap: '6px' } }, ['For', el('select', { class: 'select', style: { width: 'auto' }, 'data-field': 'mix-meal', on: { change: (e) => { ui.mix = { ...m, meal: e.target.value }; ui.proposal = null; hub.render(); } } }, MEALS.map((x) => el('option', { value: x, text: MEAL_LABEL[x].toLowerCase(), selected: x === m.meal }))), `- ${empty.length} empty day${empty.length === 1 ? '' : 's'} this week`]),
       ...Object.keys(MIX).map(number),
       el('button', {
-        class: 'btn btn-primary', type: 'button', text: 'Suggest a week', 'data-field': 'mix-go', disabled: !empty.length, style: { alignSelf: 'flex-start' },
+        class: 'btn btn-primary', type: 'button', text: 'Suggest week', 'data-field': 'mix-go', disabled: !empty.length, style: { alignSelf: 'flex-start' },
         on: { click: () => { ui.proposal = { week: monday, ...proposeWeek({ meals, counts: m, slots: empty, recent, people, seed: `${monday}${ui.rejected.length}` }), accept: {} }; hub.render(); } },
       }),
     ]),
@@ -639,7 +639,7 @@ function mixScreen(hub, monday) {
         el('p', { class: 'muted', text: 'Nothing is made up to fill the gaps - you can choose meals for the empty days yourself.' }),
       ]) : null,
       proposal.picks.length ? el('button', {
-        class: 'btn btn-primary', type: 'button', text: 'Put the ticked meals in the plan', 'data-field': 'mix-apply', style: { alignSelf: 'flex-start' },
+        class: 'btn btn-primary', type: 'button', text: 'Plan ticked', title: 'Put the ticked meals in the plan', 'data-field': 'mix-apply', style: { alignSelf: 'flex-start' },
         on: {
           click: async () => {
             let plan = p.data;
@@ -705,7 +705,7 @@ function reviewScreen(hub, monday) {
   const cats = a.categories;
   const opt = ui.optimise?.week === monday ? ui.optimise : null;
   const findLink = (gap) => (GROUP[gap] ? el('button', {
-    class: 'btn btn-small btn-quiet', type: 'button', text: `Find meals with ${GROUP[gap].toLowerCase()}`,
+    class: 'btn btn-small btn-quiet', type: 'button', text: `Find ${GROUP[gap].toLowerCase()}`, title: 'Find meals with these',
     on: { click: () => { ui.filters = { ...emptyFilters(), includes: [gap] }; const day = w.plan.slots[0]?.day ?? 0; hub.go('choose', `${monday}~${day}~${w.plan.slots[0]?.meal ?? 'dinner'}`); } },
   }) : null);
   return el('section', { class: 'stack', 'aria-label': 'How the week looks' }, [
@@ -729,7 +729,7 @@ function reviewScreen(hub, monday) {
         x.text, ' ', x.gap ? findLink(x.gap) : null,
       ]))) : el('p', { class: 'small', text: 'Nothing stands out.' }),
       el('button', {
-        class: 'btn btn-primary', type: 'button', text: 'Optimise my week', 'data-field': 'optimise', style: { alignSelf: 'flex-start' },
+        class: 'btn btn-primary', type: 'button', text: 'Optimise week', 'data-field': 'optimise', style: { alignSelf: 'flex-start' },
         on: { click: () => { ui.optimise = { week: monday, proposals: optimiseWeek({ analysis: a, occasions: w.occasions, meals: (list.data ?? []).filter((s) => !w.plan.slots.some((x) => x.recipeId === s.id)), people, today }), accept: {} }; hub.render(); } },
       }),
     ]),
@@ -743,7 +743,7 @@ function reviewScreen(hub, monday) {
       ]))) : el('p', { class: 'small', text: 'No small change from your own meals would clearly help - the week is fine as it is, or there are not enough recorded ingredients to tell.' }),
       opt.proposals.length ? el('p', { class: 'small muted', text: 'Tick the ones you want. Changes apply to these planned meals only - saved recipes stay as they are. The week and shopping list are worked out again afterwards.' }) : null,
       opt.proposals.length ? el('button', {
-        class: 'btn btn-primary', type: 'button', text: 'Apply the ticked changes', 'data-field': 'opt-apply', style: { alignSelf: 'flex-start' },
+        class: 'btn btn-primary', type: 'button', text: 'Apply ticked', 'data-field': 'opt-apply', style: { alignSelf: 'flex-start' },
         on: { click: () => applyProposals(hub, monday, w, opt) },
       }) : null,
     ]) : null,
@@ -779,7 +779,7 @@ function modifyScreen(hub, monday, slotId, param) {
   let idea = null;
   try { idea = JSON.parse(param ?? ''); } catch { idea = null; }
   const back = hub.href('slot', ref(monday, slotId));
-  if (!slot || !idea) return el('div', { class: 'panel' }, [el('p', { text: 'That change could not be applied - the planned meal or the idea is missing.' }), el('a', { class: 'btn', href: hub.href('week', monday), text: 'Back to the week' })]);
+  if (!slot || !idea) return el('div', { class: 'panel' }, [el('p', { text: 'That change could not be applied - the planned meal or the idea is missing.' }), el('a', { class: 'btn', href: hub.href('week', monday), text: 'Back', title: 'Back to the week' })]);
   const r = slot.recipeId ? loadRecipe(hub, slot.recipeId) : { data: null };
   if (r.loading) return loading();
   const rec = r.data;
@@ -794,7 +794,7 @@ function modifyScreen(hub, monday, slotId, param) {
     el('h1', { text: add ? `Add ${add.name} to ${slot.title}?` : `Use ${swapTo.name} instead of ${swapFrom.name}?` }),
     el('p', { class: 'small', text: `For ${label(dateOf(monday, slot.day), slot.meal, hub.today())} only - the saved recipe stays as it is unless you choose to save the change there afterwards.` }),
     el('div', { class: 'row' }, [
-      el('button', { class: 'btn btn-primary', type: 'button', text: 'Change this planned meal', 'data-field': 'modify-apply', on: { click: async () => { await savePlan(hub, monday, updateSlot(p.data, slot.id, { ingredients: next, basis })); hub.ui.notice('Changed for this meal. The shopping list updates when you send the week again.'); hub.open(back); } } }),
+      el('button', { class: 'btn btn-primary', type: 'button', text: 'Change meal', 'data-field': 'modify-apply', on: { click: async () => { await savePlan(hub, monday, updateSlot(p.data, slot.id, { ingredients: next, basis })); hub.ui.notice('Changed for this meal. The shopping list updates when you send the week again.'); hub.open(back); } } }),
       el('a', { class: 'btn', href: back, text: 'Cancel' }),
     ]),
   ]);

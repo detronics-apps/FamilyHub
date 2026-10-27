@@ -32,7 +32,7 @@ function listScreen(hub) {
   return el('section', { class: 'stack', 'aria-label': 'Places to go' }, [
     el('div', { class: 'row' }, [
       el('p', { class: 'muted', style: { margin: 0, flex: '1 1 260px' }, text: 'Places nearby you would like to go, or have been - for a free Saturday morning. Big trips with travel and packing are in Holidays.' }),
-      el('a', { class: 'btn btn-primary', href: hub.href('new'), text: 'Add a place', 'data-field': 'add-place' }),
+      el('a', { class: 'btn btn-primary', href: hub.href('new'), text: 'New place', 'data-field': 'add-place' }),
     ]),
     list.data.length ? el('div', { class: 'panel stack' }, [
       el('div', { class: 'row' }, [
@@ -59,7 +59,7 @@ function placeScreen(hub, id) {
   const r = hub.use(`place:${id}`, () => col(hub).get(id));
   if (r.loading) return loading();
   if (r.error) return failure(r.error);
-  if (!r.data) return el('div', { class: 'panel empty' }, [el('p', { text: 'This place no longer exists.' }), el('a', { class: 'btn', href: hub.href(), text: 'Places to go' })]);
+  if (!r.data) return el('div', { class: 'panel empty' }, [el('p', { text: 'This place no longer exists.' }), el('a', { class: 'btn', href: hub.href(), text: 'All places' })]);
   const p = normalisePlace(r.data);
   const save = async (patch) => { await saveRecord(hub, col(hub), normalisePlace({ ...p, ...patch })); };
   return el('section', { class: 'stack' }, [
@@ -73,7 +73,7 @@ function placeScreen(hub, id) {
       p.status === 'been' ? el('div', { class: 'chipset', role: 'group', 'aria-label': 'How it was' }, Object.entries(VERDICTS).map(([k, t]) => el('button', {
         class: 'chip', type: 'button', 'aria-pressed': String(p.verdict === k), text: t, 'data-field': `verdict:${k}`, on: { click: () => save({ verdict: k }) },
       }))) : null,
-      el('button', { class: 'btn', type: 'button', text: p.status === 'been' ? 'We went again today' : 'We went - mark as been', 'data-field': 'mark-been', style: { alignSelf: 'flex-start' }, on: { click: () => save({ status: 'been', lastVisit: hub.today() }) } }),
+      el('button', { class: 'btn', type: 'button', text: p.status === 'been' ? 'Went again' : 'We went', title: 'Mark as been, today', 'data-field': 'mark-been', style: { alignSelf: 'flex-start' }, on: { click: () => save({ status: 'been', lastVisit: hub.today() }) } }),
     ]),
     el('div', { class: 'row' }, [
       el('a', { class: 'btn', href: hub.href('edit', p.id), text: 'Edit' }),

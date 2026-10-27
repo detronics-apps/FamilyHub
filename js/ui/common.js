@@ -148,11 +148,11 @@ function laterMenu(ctx, chore, today) {
     el('button', { class: 'btn btn-small', type: 'button', text: 'Next week', on: { click: () => ctx.act(chore.id, 'deferred', addDays(today, 7)) } }),
     el('span', { class: 'row' }, [
       date,
-      el('button', { class: 'btn btn-small', type: 'button', text: 'Move to date', on: { click: () => { if (date.value) ctx.act(chore.id, 'rescheduled', date.value); } } }),
+      el('button', { class: 'btn btn-small', type: 'button', text: 'Move date', on: { click: () => { if (date.value) ctx.act(chore.id, 'rescheduled', date.value); } } }),
     ]),
     once
-      ? el('button', { class: 'btn btn-small', type: 'button', text: 'No longer needed', on: { click: () => ctx.act(chore.id, 'dropped') } })
-      : el('button', { class: 'btn btn-small', type: 'button', text: 'Skip this time', title: 'Let this round go. It comes back on its normal cycle.', on: { click: () => ctx.act(chore.id, 'skipped') } }),
+      ? el('button', { class: 'btn btn-small', type: 'button', text: 'Not needed', on: { click: () => ctx.act(chore.id, 'dropped') } })
+      : el('button', { class: 'btn btn-small', type: 'button', text: 'Skip', title: 'Let this round go. It comes back on its normal cycle.', on: { click: () => ctx.act(chore.id, 'skipped') } }),
   ]);
 }
 

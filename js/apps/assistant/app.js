@@ -152,13 +152,13 @@ function card(hub, c) {
     c.notes.length ? el('ul', { class: 'small' }, c.notes.map((n) => el('li', { text: n }))) : null,
     el('div', { class: 'row', style: { marginTop: 'var(--space-2)' } }, [
       ui.slot && (c.type === 'add' || c.type === 'swap')
-        ? el('a', { class: 'btn btn-small btn-primary', href: `#/mealplan/modify/${encodeURIComponent(`${ui.slot.monday}~${ui.slot.id}~${JSON.stringify(c.type === 'add' ? { add: c.foodId } : { swap: [c.fromId, c.foodId] })}`)}`, text: 'Use in this planned meal', 'data-field': `use:${c.id}` })
+        ? el('a', { class: 'btn btn-small btn-primary', href: `#/mealplan/modify/${encodeURIComponent(`${ui.slot.monday}~${ui.slot.id}~${JSON.stringify(c.type === 'add' ? { add: c.foodId } : { swap: [c.fromId, c.foodId] })}`)}`, text: 'Use it', title: 'Use in this planned meal', 'data-field': `use:${c.id}` })
         : null,
       ui.recipe && ui.work && c.foodId && c.type !== 'time' ? applyButton(hub, c) : null,
       c.type === 'add' || c.type === 'swap'
-        ? el('button', { class: 'btn btn-small', type: 'button', text: 'Not in the house today', on: { click: () => { ui.notToday.push(c.foodId); hub.render(); } } })
+        ? el('button', { class: 'btn btn-small', type: 'button', text: 'Not today', title: 'We do not have it in the house today', on: { click: () => { ui.notToday.push(c.foodId); hub.render(); } } })
         : null,
-      el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Not for us', on: { click: () => { ui.hidden.push(c.id); hub.render(); } } }),
+      el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'No thanks', title: 'Not for us - hide this idea', on: { click: () => { ui.hidden.push(c.id); hub.render(); } } }),
     ]),
   ]);
 }
@@ -168,7 +168,7 @@ function applyButton(hub, c) {
   if (ui.work.applied.some((a) => a.id === c.id)) return el('span', { class: 'badge badge--ok', text: '✓ Applied', 'data-field': `applied:${c.id}` });
   const idea = c.fromId ? { swap: [c.fromId, c.foodId] } : { add: c.foodId };
   return el('button', {
-    class: 'btn btn-small btn-primary', type: 'button', text: 'Apply to the recipe', 'data-field': `apply:${c.id}`,
+    class: 'btn btn-small btn-primary', type: 'button', text: 'Apply', 'data-field': `apply:${c.id}`,
     on: {
       click: () => {
         const next = applyIdea(ui.work.ingredients, idea, ui.recipe.rec.servings);

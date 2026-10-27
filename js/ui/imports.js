@@ -86,7 +86,7 @@ export function importFromDevice(ctx) {
       foot: [
         el('button', { class: 'btn', type: 'button', text: 'Cancel', on: { click: () => close() } }),
         el('button', {
-          class: 'btn btn-primary', type: 'button', text: plan.add.length ? `Add ${plan.add.length}` : 'Nothing to add', disabled: !plan.add.length, 'data-field': 'import-confirm',
+          class: 'btn btn-primary', type: 'button', text: plan.add.length ? `Add ${plan.add.length}` : 'Nothing new', disabled: !plan.add.length, 'data-field': 'import-confirm',
           on: { click: async () => { close(); await apply(ctx, imp, plan); ctx.flash({ id: `imp-ok:${Date.now()}`, level: 'ok', text: `Brought in ${plan.add.length} ${plan.add.length === 1 ? imp.singular : imp.label.toLowerCase()}.` }); ctx.render(); } },
         }),
       ],
