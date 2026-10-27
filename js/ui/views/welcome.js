@@ -23,6 +23,7 @@ export function openWelcome(ctx) {
     // On a phone, the family usually already lives on a laptop's Drive folder.
     !ctx.folderSupported() ? el('li', {}, [el('div', {}, [
       el('strong', { text: 'Already using Family Hub on a computer?' }),
+      el('a', { class: 'small', href: '#/connect', text: 'All the steps', on: { click: () => finish('#/connect') } }),
       el('span', { class: 'small muted', text: 'Choose Google Drive › FamilyHub › Phone › "Family Hub.json" in the window that opens, and your family is on this phone.' }),
       el('div', {}, [el('button', { class: 'btn btn-primary', type: 'button', text: 'Get family', 'data-field': 'w-phone-get', on: { click: () => { finish('#/'); openFamilyFile(ctx); } } })]),
     ])]) : null,

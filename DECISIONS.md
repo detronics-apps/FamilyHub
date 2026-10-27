@@ -463,6 +463,14 @@ item form's "About it" and "Ingredients and method". Any record form can group f
 one inside a folded part and would refuse to save without a word) - they say what is missing. The
 Save row stays at the bottom of the screen on a long form.
 
+**D-063 One page with every step for laptops and phones (owner, 2026-10-27).** The setup was
+spread over two how-tos and Settings. "Phone and laptop" (#/connect, linked at the bottom of every
+page, from Settings › Google Drive, from How to use and from the phone's welcome) has it all in
+order: set up a laptop, get Google Drive into the phone's file window (iPhone: the Google Drive app,
+then Files › Browse › ⋯ › Edit), put Family Hub on the home screen, get the family onto the phone,
+use it day to day - and fourteen things that can go wrong. It opens before a family exists, so a
+new phone can read it. The words live in guide.js (CONNECT) and are tested for every part.
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).

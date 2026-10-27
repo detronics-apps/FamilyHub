@@ -31,6 +31,7 @@ import { libraryView } from './ui/views/library.js';
 import { sectionView } from './ui/views/section.js';
 import { peopleView } from './ui/views/people.js';
 import { helpView } from './ui/views/help.js';
+import { connectView } from './ui/views/connect.js';
 import { placeholderView } from './ui/views/placeholder.js';
 import { recoveryView } from './ui/views/recovery.js';
 import { openWelcome } from './ui/views/welcome.js';
@@ -38,7 +39,7 @@ import { openDoc } from './ui/views/docs.js';
 import { syncChip, syncNotices } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.9.5';
+export const APP_VERSION = '0.9.6';
 
 const store = createLocalStore(window.localStorage);
 
@@ -322,7 +323,7 @@ function openWho() {
 function routeLabel(route) {
   if (route.name === 'home') return null;
   if (route.name === 'section') return section(route.sub)?.name ?? 'Page';
-  return { help: 'How to use', settings: 'Settings', library: 'Mini-apps', people: 'People' }[route.name]
+  return { help: 'How to use', connect: 'Phone and laptop', settings: 'Settings', library: 'Mini-apps', people: 'People' }[route.name]
     ?? app.registry.apps[route.name]?.name ?? starter(route.name)?.manifest.name ?? 'Page';
 }
 
@@ -362,6 +363,7 @@ function buildFooter() {
     el('span', { text: where }),
     el('nav', { 'aria-label': 'About this app' }, [
       el('a', { href: '#/help', text: 'How to use' }),
+      el('a', { href: '#/connect', text: 'Phone and laptop', 'data-field': 'footer-connect' }),
       el('button', { class: 'linkish', type: 'button', text: 'Privacy', on: { click: () => openDoc('privacy') } }),
       el('button', { class: 'linkish', type: 'button', text: 'About', on: { click: () => openDoc('about') } }),
       el('button', { class: 'btn btn-small', type: 'button', text: 'New here?', 'data-field': 'new-here', on: { click: () => openWelcome(ctx) } }),
@@ -429,6 +431,8 @@ function renderNow() {
   let sticky = false;
   if (app.loadError) {
     view = recoveryView(ctx);
+  } else if (!app.household && route.name === 'connect') {
+    view = connectView(ctx);
   } else if (!app.household) {
     view = el('section', { class: 'panel empty' }, [
       el('h1', { text: 'Welcome to Family Hub' }),
@@ -436,7 +440,7 @@ function renderNow() {
       el('button', { class: 'btn btn-primary', type: 'button', text: 'Get started', on: { click: () => openWelcome(ctx) } }),
     ]);
   } else {
-    const core = { home: dashboardView, settings: settingsView, help: helpView, library: libraryView, section: sectionView, people: peopleView }[route.name];
+    const core = { home: dashboardView, settings: settingsView, help: helpView, connect: connectView, library: libraryView, section: sectionView, people: peopleView }[route.name];
     const entry = app.registry.apps[route.name];
     sticky = !core && entry?.source === 'folder' && entry.enabled && Boolean(cachedPackage(route.name));
     if (core) view = core(ctx, route, items);

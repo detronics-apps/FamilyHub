@@ -222,7 +222,10 @@ export function openFamilyFile(ctx) {
 export function driveSection(ctx) {
   const s = ctx.sync.status;
   const supported = ctx.folderSupported() || privateTestMode();
-  const body = [el('h2', { text: 'Google Drive' })];
+  const body = [
+    el('h2', { text: 'Google Drive' }),
+    el('p', { class: 'small', style: { margin: 0 } }, [el('a', { href: '#/connect', 'data-field': 'drive-steps', text: 'All the steps for laptops and phones' }), ' - including the home screen, and what can go wrong.']),
+  ];
 
   if (s.mode === 'folder') {
     const statusLine = {

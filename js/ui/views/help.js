@@ -36,6 +36,7 @@ export function helpView(ctx) {
 
   return el('section', { class: 'stack', 'aria-labelledby': 'help-title' }, [
     el('h1', { id: 'help-title', text: 'How to use Family Hub' }),
+    el('p', { class: 'panel', 'data-field': 'help-connect' }, ['Setting up Google Drive, a phone, or the home screen? ', el('a', { href: '#/connect', text: 'All the steps for laptops and phones' }), ', and what can go wrong.']),
     el('div', { class: 'panel stack' }, [
       el('label', { class: 'field__label', for: 'help-q', text: 'Search in your own words' }),
       search,

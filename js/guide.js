@@ -65,13 +65,15 @@ export const HOWTOS = [
     'In Family Hub, open Settings, then Google Drive, and press "Choose folder". Use Chrome or Edge.',
     'Pick a folder in your Drive, for example My Drive. Family Hub makes a FamilyHub folder inside it and saves everything there.',
     'The status at the top says "Saved to Drive" after each change. On another laptop, do the same and pick the same FamilyHub folder.',
+    'Every step, phones and the home screen included, and what can go wrong: "Phone and laptop" at the bottom of any page.',
   ] },
   { id: 'phone', title: 'Use Family Hub on a phone', steps: [
     'Set it up on a computer first (Keep everything safe in your Google Drive folder). From then on, that laptop keeps one file for phones up to date: FamilyHub › Phone › "Family Hub.json".',
     'On the phone, open the same web address (add it to the home screen). Press "Get family", or Settings, "Get latest", and choose Google Drive › FamilyHub › Phone › "Family Hub.json". Your family is on the phone.',
     'To send the phone’s changes back: Settings, "Send back", choose Drive, and save into the FamilyHub › Phone folder. The next time a laptop has Family Hub open, it adds them in by itself - nothing to press.',
     'Before planning something big on the phone, press "Get latest" first. Combining always keeps everything from both sides, and asks only when the same thing was changed in both places.',
-    'iPhone: if Google Drive is not in the window, open Apple’s Files app, Browse, ⋯, Edit, and switch Google Drive on. Android: tap ☰ in the window and choose Drive.',
+    'iPhone: install the Google Drive app and sign in, then open Apple’s Files app, Browse, ⋯, Edit, and switch Google Drive on. Android: tap ☰ in the window and choose Drive.',
+    'Every step, the home screen included, and what can go wrong: "Phone and laptop" at the bottom of any page.',
   ] },
   { id: 'reconnect', title: 'The top says "Not in Drive yet"', steps: [
     'After the browser restarts it may ask again before Family Hub can use your folder. Press Reconnect on the notice, then Allow.',
@@ -250,6 +252,90 @@ export const HOWTOS = [
   ] },
 ];
 
+/**
+ * Connect your laptop and phones (D-063): every step to put the family in your Google Drive,
+ * get it onto a phone and its home screen, use it day to day - and what can go wrong.
+ * `{address}` is replaced with the address Family Hub is open at.
+ */
+export const CONNECT = {
+  title: 'Connect your laptop and phones',
+  intro: 'Family Hub keeps your family’s data in your own Google Drive - there is no Family Hub account and no company in between. A laptop saves straight into a folder in your Drive. A phone cannot do that, so it swaps one file with that folder. Set up a laptop first, then the phones.',
+  how: [
+    'Laptop: Google Drive for Desktop shows your Drive as a folder on the computer. Family Hub saves into a FamilyHub folder in it after every change, and Drive uploads it.',
+    'Phone: keeps its own copy. "Get latest" opens FamilyHub › Phone › "Family Hub.json", which a laptop keeps up to date while Family Hub is open on it. "Send back" saves the phone’s changes as a new file in that same Phone folder; the next time a laptop has Family Hub open, it adds them in by itself.',
+    'So phones stay in step as long as a laptop opens Family Hub now and then. Nothing a phone sends back is lost while the laptops are off - it waits in the Phone folder.',
+  ],
+  parts: [
+    { id: 'laptop', title: '1. Set up the laptop (once per laptop)', steps: [
+      'Use Chrome or Microsoft Edge on the computer. Firefox and Safari cannot save into a folder.',
+      'Install Google Drive for Desktop - free, from Google (search for "Google Drive for desktop"). Sign in with the Google account the family will use. "Google Drive" now shows in File Explorer (Windows) or Finder (Mac), with "My Drive" inside it.',
+      'Open Family Hub at {address}.',
+      'Go to Settings › Google Drive and press "Choose folder". Choose Google Drive › My Drive - not Desktop or Documents.',
+      'Allow access when the browser asks. If Chrome offers "Allow on every visit", choose that - then it will not ask again after a restart.',
+      'Family Hub makes a FamilyHub folder in My Drive and saves everything there. The top of the page says "Saved to Drive" after each change.',
+      'A second laptop: the same steps, choosing the same My Drive. Family Hub finds the FamilyHub folder already there and asks - "Use the folder’s family" is the right choice.',
+      'Optional: put it in its own window with a desktop icon. Chrome: ⋮ › Cast, save and share › Install page as app. Edge: ⋯ › Apps › Install this site as an app.',
+    ] },
+    { id: 'drive-app', title: '2. Get Google Drive onto the phone (once per phone)', devices: [
+      { name: 'iPhone', steps: [
+        'Install "Google Drive" from the App Store (free, by Google LLC).',
+        'Open it once and sign in with the same Google account as the laptop. Wait until your files show.',
+        'Open Apple’s Files app and tap Browse at the bottom.',
+        'Tap ⋯ (the circle with three dots, top right), then Edit.',
+        'Switch Google Drive on, then tap Done. It now shows under Locations.',
+        'Not there? Close Files fully (swipe it away) and open it again. Still not? Open the Google Drive app once more and check it is signed in.',
+      ] },
+      { name: 'Android', steps: [
+        'The Google Drive app is usually there already; if not, install it from the Play Store (free, by Google LLC).',
+        'Open it and check it is signed in with the same Google account as the laptop.',
+        'That is all: in the window for choosing a file, tap ☰ (top left) and Drive is in the list.',
+      ] },
+    ] },
+    { id: 'home-screen', title: '3. Put Family Hub on the phone’s home screen', devices: [
+      { name: 'iPhone', steps: [
+        'Open {address} in Safari.',
+        'Tap the Share button (a square with an arrow pointing up) - at the bottom, or behind ⋯ on newer iPhones.',
+        'Scroll down and tap "Add to Home Screen", then Add.',
+        'From now on, open Family Hub from that icon - and only from that icon. On some iPhones it keeps its own copy, separate from Safari, so do step 4 after opening it there.',
+      ] },
+      { name: 'Android', steps: [
+        'Open {address} in Chrome.',
+        'Tap ⋮ (top right), then "Add to home screen" (or "Install app"), then Add.',
+        'From now on, open Family Hub from that icon.',
+      ] },
+    ] },
+    { id: 'first-time', title: '4. Get the family onto the phone (first time)', steps: [
+      'Make sure a laptop is set up (step 1) and has had Family Hub open since your last change, so the phone file is fresh.',
+      'Open Family Hub from the home-screen icon. On the welcome screen, under "Already using Family Hub on a computer?", press "Get family". (Already past the welcome? Settings › Google Drive › "Get latest".)',
+      'In the window: iPhone - Browse › Google Drive › My Drive › FamilyHub › Phone › "Family Hub.json". Android - ☰ › Drive › My Drive › FamilyHub › Phone › "Family Hub.json".',
+      'A notice says your family is on this device now. Choose who you are at the top (a convenience, not a login).',
+    ] },
+    { id: 'daily', title: '5. Use it day to day', steps: [
+      'Laptops: nothing to do. Keep Google Drive for Desktop running (it starts with the computer). Every change saves; the top says "Saved to Drive".',
+      'Phone, before you plan anything: Settings › Google Drive › "Get latest" and choose "Family Hub.json" again. A reminder with a "Get latest" button shows when the phone has not had the latest for half a day.',
+      'Phone, after making changes: Settings › Google Drive › "Send back". iPhone: in the share menu choose "Save to Files" › Google Drive › My Drive › FamilyHub › Phone › Save. Android: choose Drive, pick the folder FamilyHub › Phone, then Save. A reminder shows if the phone has changes it has not sent back for a day.',
+      'The next time a laptop has Family Hub open (within a couple of minutes), it adds the phone’s changes in, says so, and moves that file to Phone › "Brought in". The phone’s next "Get latest" then includes everything.',
+      'If the same thing was changed on the phone and on a laptop, the laptop asks which to keep and shows both. Everything else is combined - nothing is overwritten without asking.',
+    ] },
+  ],
+  problems: [
+    { q: 'Google Drive is not in the Files app (iPhone)', a: 'The Google Drive app must be installed and signed in first. Then Files › Browse › ⋯ › Edit › switch Google Drive on › Done. If it still does not show, close Files fully and open it again.' },
+    { q: 'The window only shows Recent or Downloads (Android)', a: 'Tap ☰ at the top left and choose Drive. If Drive is not listed, install the Google Drive app and sign in.' },
+    { q: '"Family Hub.json" has an old date, like yesterday', a: 'A laptop only rewrites it while Family Hub is open there, and only when something changed - so an old date can simply mean nothing has changed. To be sure: open Family Hub on a laptop, wait for "Saved to Drive", give Google Drive for Desktop a minute to upload (its icon shows when it is busy), then press "Get latest" on the phone again.' },
+    { q: 'I am not sure which file, or which folder, is the right one', a: 'The phone file is always FamilyHub › Phone › "Family Hub.json". On a laptop, Settings › Google Drive says which folder it is connected to. Files called "family-hub-…json" elsewhere (Downloads, My Drive) are copies saved earlier - not the one to use.' },
+    { q: 'The phone’s changes did not arrive on the laptop', a: 'Only files saved inside FamilyHub › Phone are picked up, and only while Family Hub is open on a laptop. If you saved somewhere else, move the file into the Phone folder in the Google Drive app (⋮ › Move). Then open Family Hub on the laptop.' },
+    { q: 'A file was moved to Phone › "Not brought in"', a: 'It held a different family, or it was damaged. The laptop’s notice says which. Usually the phone got its family from another Drive or account - get the family again from FamilyHub › Phone › "Family Hub.json" in the right Drive.' },
+    { q: 'The phone is signed in to a different Google account', a: 'Simplest: sign the phone’s Google Drive app in to the same account as the laptop (the app can hold more than one account). Sharing the FamilyHub folder with another account also works in Drive, but how shared folders show in a phone’s file window differs between phones, so the same account is the reliable way.' },
+    { q: 'The laptop says "Not in Drive yet", or asks to Reconnect', a: 'After the browser restarts it may ask again before it can use the folder. Press Reconnect, then Allow. Nothing is lost - changes wait on the laptop until then. Choosing "Allow on every visit" stops it asking.' },
+    { q: '"Choose folder" is not there, or a folder cannot be chosen', a: 'Folders work on a computer, in Chrome or Edge. On a phone, or in Firefox or Safari, Family Hub uses the family file instead.' },
+    { q: 'The phone opens empty, or shows the welcome again', a: 'The phone’s copy was lost or is a different one: the browser’s website data was cleared, it was opened in private browsing, or (on some iPhones) it was opened from Safari instead of the home-screen icon, which keep separate copies. Press "Get family" or "Get latest" - everything already sent back is in Drive.' },
+    { q: 'Changes made on the phone disappeared', a: 'A phone’s changes reach Drive only when you press "Send back". If the phone’s website data was cleared before that, those changes are gone. Send back after each time you change something.' },
+    { q: 'The laptop is asleep or closed', a: 'Nothing is lost. What phones send back waits in the Phone folder, and "Get latest" gives the last version a laptop wrote. It all catches up the next time Family Hub is open on a laptop.' },
+    { q: 'Google Drive for Desktop is paused or signed out', a: 'Family Hub still saves into the folder on the laptop, but nothing reaches the phones. Click its icon (taskbar or menu bar), resume syncing or sign in again.' },
+    { q: '"Send back" on iPhone does not show Google Drive', a: 'In the share menu choose "Save to Files" - Google Drive is listed there once it is switched on in the Files app (see the first question).' },
+  ],
+};
+
 export const FAQS = [
   { q: 'Where is our data kept?', a: 'If you connected your Google Drive folder: in that folder, as ordinary files you can see and back up in Drive. Nobody else - including whoever made this app - can see it. If not: only in this browser, on this device, which is not a backup. The header always says which.' },
   { q: 'Will I lose my details when the app is updated?', a: 'No. Updates change the app, not your data. Data in your Drive folder or in this browser stays, and older data is brought up to date automatically.' },
@@ -285,6 +371,7 @@ export const FEATURES = [
   { name: 'Portions and leftovers', where: 'Meals › Cookbook › an item', what: 'How much each person might eat, and how many servings to make with or without leftovers.' },
   { name: 'Projections with their assumptions', where: 'Finance › Goals', what: 'When a goal could be reached, or a debt paid off - and plainly when it never would at the current payment.' },
   { name: 'Avoid a room', where: 'Chores › Do something now', what: 'With "Anywhere" chosen, tap rooms under "Not today" to leave them out.' },
+  { name: 'Phone and laptop', where: 'Bottom of every page', what: 'Every step to put the family in your Google Drive, onto a phone and its home screen - and what to do when something goes wrong.' },
   { name: 'Fold filters away', where: 'Cookbook, Meal Planner, Shopping, Faith, Places, Calorie Checker', what: 'Tap Filters (or Kinds, Browse) to fold them into one line that still says what is on. On a phone they start folded; this device remembers your choice. Long forms fold by part too, and Save stays at the bottom.' },
   { name: 'Undo', where: 'After pressing Done', what: 'The confirmation has an Undo button, in case it was pressed by mistake.' },
   { name: 'Your own dashboard', where: 'Settings › Your dashboard', what: 'Each profile has its own button order and hidden buttons on this device.' },
