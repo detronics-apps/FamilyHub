@@ -70,8 +70,8 @@ export const HOWTOS = [
   { id: 'phone', title: 'Use Family Hub on a phone', steps: [
     'Set it up on a computer first (Keep everything safe in your Google Drive folder). From then on, that laptop keeps one file for phones up to date: FamilyHub › Phone › "Family Hub.json".',
     'On the phone, open the same web address (add it to the home screen). Press "Get family", or Settings, "Get latest", and choose Google Drive › FamilyHub › Phone › "Family Hub.json". Your family is on the phone.',
-    'To send the phone’s changes back: Settings, "Send back", choose Drive, and save into the FamilyHub › Phone folder. The next time a laptop has Family Hub open, it adds them in by itself - nothing to press.',
-    'Before planning something big on the phone, press "Get latest" first. Combining always keeps everything from both sides, and asks only when the same thing was changed in both places.',
+    'To send the phone’s changes back: tap "Send" at the top (it lights up when there is something to send), choose Drive, and save into the FamilyHub › Phone folder. The next time a laptop has Family Hub open, it adds them in by itself - nothing to press.',
+    'Before planning something big on the phone, tap "↓ Get" at the top first. Combining always keeps everything from both sides, and asks only when the same thing was changed in both places.',
     'iPhone: install the Google Drive app and sign in, then open Apple’s Files app, Browse, ⋯, Edit, and switch Google Drive on. Android: tap ☰ in the window and choose Drive.',
     'Every step, the home screen included, and what can go wrong: "Phone and laptop" at the bottom of any page.',
   ] },
@@ -312,8 +312,8 @@ export const CONNECT = {
     ] },
     { id: 'daily', title: '5. Use it day to day', steps: [
       'Laptops: nothing to do. Keep Google Drive for Desktop running (it starts with the computer). Every change saves; the top says "Saved to Drive".',
-      'Phone, before you plan anything: Settings › Google Drive › "Get latest" and choose "Family Hub.json" again. A reminder with a "Get latest" button shows when the phone has not had the latest for half a day.',
-      'Phone, after making changes: Settings › Google Drive › "Send back". iPhone: in the share menu choose "Save to Files" › Google Drive › My Drive › FamilyHub › Phone › Save. Android: choose Drive, pick the folder FamilyHub › Phone, then Save. A reminder shows if the phone has changes it has not sent back for a day.',
+      'Phone, before you plan anything: tap "↓ Get" at the top of any page and choose "Family Hub.json" again (also in Settings › Google Drive). Opening the app after an hour away, it offers "Get latest" too.',
+      'Phone, after making changes: tap "Send" at the top - it lights up (●) whenever this phone has something Drive does not, the shopping list and meals included. iPhone: in the share menu choose "Save to Files" › Google Drive › My Drive › FamilyHub › Phone › Save. Android: choose Drive, pick the folder FamilyHub › Phone, then Save. If a day goes by without sending, a reminder asks too.',
       'The next time a laptop has Family Hub open (within a couple of minutes), it adds the phone’s changes in, says so, and moves that file to Phone › "Brought in". The phone’s next "Get latest" then includes everything.',
       'If the same thing was changed on the phone and on a laptop, the laptop asks which to keep and shows both. Everything else is combined - nothing is overwritten without asking.',
     ] },
@@ -339,7 +339,7 @@ export const CONNECT = {
 export const FAQS = [
   { q: 'Where is our data kept?', a: 'If you connected your Google Drive folder: in that folder, as ordinary files you can see and back up in Drive. Nobody else - including whoever made this app - can see it. If not: only in this browser, on this device, which is not a backup. The header always says which.' },
   { q: 'Will I lose my details when the app is updated?', a: 'No. Updates change the app, not your data. Data in your Drive folder or in this browser stays, and older data is brought up to date automatically.' },
-  { q: 'Does the phone sync with Google Drive?', a: 'Half by itself. Phone browsers cannot keep a live link to a folder, and the only other way would be signing in to a Google app run by a publisher, which Family Hub deliberately avoids. So laptops keep FamilyHub › Phone › "Family Hub.json" up to date for phones, and add in whatever a phone sends back into that Phone folder. On the phone it is two buttons: "Get latest" and "Send back".' },
+  { q: 'Does the phone sync with Google Drive?', a: 'Half by itself. Phone browsers cannot keep a live link to a folder, and the only other way would be signing in to a Google app run by a publisher, which Family Hub deliberately avoids. So laptops keep FamilyHub › Phone › "Family Hub.json" up to date for phones, and add in whatever a phone sends back into that Phone folder. On the phone it is two buttons at the top of every page, Get and Send - one tap each, because a phone’s browser may only open or save a Drive file when you pick it.' },
   { q: 'What happens if two of us change something at the same time?', a: 'Different things are combined automatically - two chores ticked off on two laptops are both kept. Only when the very same detail was changed differently does Family Hub ask which to keep, showing both. Nothing is overwritten silently.' },
   { q: 'What happens when we miss a chore?', a: 'Nothing piles up. A repeating chore has one current turn: if it is missed, it simply stays ready until someone does it or skips it, then its normal cycle carries on. Missed chores are information about how much the week can hold, not extra work for tomorrow.' },
   { q: 'Why is a chore asking for a review?', a: 'If a chore has been put off three times in a row, or has waited two whole cycles, the Plan tab gently asks whether the plan still fits. Nothing is added or changed unless you change it.' },

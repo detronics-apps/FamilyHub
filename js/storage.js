@@ -22,7 +22,8 @@ export const KEYS = {
   folderBase: 'familyhub.folder.base',
   registryBase: 'familyhub.registry.base',
   fileBase: 'familyhub.file.base',
-  folds: 'familyhub.folds',          // which sections are folded away, on this device (D-062)
+  folds: 'familyhub.folds',
+  phoneChanged: 'familyhub.phone.changed',   // when a phone last changed a mini-app record (D-064)          // which sections are folded away, on this device (D-062)
 };
 
 export const EXPORT_KIND = 'family-hub-household';
@@ -37,6 +38,7 @@ export const defaultDevice = () => ({
   folderName: null,
   music: normaliseMusicPrefs(null),
   fileSavedAt: null,        // last time a family file was saved (phones)
+  fileOpenedAt: null,       // last time a phone got the latest family file
 });
 
 const strings = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x.length <= 64) : []);
@@ -61,6 +63,7 @@ export function normaliseDevice(raw) {
     folderName: typeof d.folderName === 'string' ? d.folderName : null,
     music: normaliseMusicPrefs(d.music),
     fileSavedAt: typeof d.fileSavedAt === 'string' ? d.fileSavedAt : null,
+    fileOpenedAt: typeof d.fileOpenedAt === 'string' ? d.fileOpenedAt : null,
   };
 }
 

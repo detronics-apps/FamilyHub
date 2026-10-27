@@ -15,8 +15,37 @@ import { privateTestMode } from '../sync.js';
 const DAY_MS = 86400000;
 const when = (iso) => new Date(iso).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
+const HOUR_MS = 3600000;
+
+/** A phone has changes Drive does not have yet: in the household, or in any mini-app's records since it last swapped the file. */
 function fileDirty(ctx) {
-  try { return fingerprint(JSON.parse(localStorage.getItem(KEYS.fileBase) || 'null')) !== fingerprint(ctx.app.household); } catch { return true; }
+  try {
+    if (fingerprint(JSON.parse(localStorage.getItem(KEYS.fileBase) || 'null')) !== fingerprint(ctx.app.household)) return true;
+    const last = Math.max(...[ctx.app.device.fileSavedAt, ctx.app.device.fileOpenedAt].map((d) => (d ? Date.parse(d) : 0)));
+    return Number(localStorage.getItem(KEYS.phoneChanged) || 0) > last;
+  } catch { return true; }
+}
+
+/** A phone that swaps the family file with Drive (it has done so at least once). */
+const phoneLinked = (ctx) => ctx.sync.status.mode === 'device' && !ctx.folderSupported() && Boolean(ctx.app.device.fileOpenedAt || ctx.app.device.fileSavedAt);
+
+/**
+ * On a phone, the header has the two swaps as one tap each (D-064): Get (the latest from Drive)
+ * and Send (this phone's changes back). Send lights up while there is something to send.
+ * A phone's browser cannot read or write Drive by itself - each needs a tap in the phone's
+ * own file or share window - so this is as automatic as it can be without a sign-in.
+ */
+export function phoneButtons(ctx) {
+  if (!phoneLinked(ctx)) return null;
+  const unsent = fileDirty(ctx);
+  return el('div', { class: 'phone-swap', role: 'group', 'aria-label': 'Google Drive' }, [
+    el('button', { class: 'btn chip-status', type: 'button', 'data-field': 'phone-get-top', title: `Get the latest from Google Drive (FamilyHub › ${PHONE_DIR} › "${PHONE_FILE}")`, 'aria-label': 'Get the latest from Google Drive', on: { click: () => openFamilyFile(ctx) } }, [
+      el('span', { 'aria-hidden': 'true', class: 'chip-status__glyph', text: '↓' }), el('span', { class: 'chip-status__text', text: 'Get' }),
+    ]),
+    el('button', { class: `btn chip-status${unsent ? ' chip-status--send' : ''}`, type: 'button', 'data-field': 'phone-send-top', title: unsent ? 'This phone has changes Drive does not have yet - send them back' : 'Nothing new to send - everything here is in Drive', 'aria-label': unsent ? 'Send your changes to Google Drive' : 'Send to Google Drive (nothing new)', on: { click: () => saveFamilyFile(ctx) } }, [
+      el('span', { 'aria-hidden': 'true', class: 'chip-status__glyph', text: unsent ? '●' : '↑' }), el('span', { class: 'chip-status__text', text: 'Send' }),
+    ]),
+  ]);
 }
 
 /** The small status button in the header. Never says "saved to Drive" unless it was. */
@@ -58,10 +87,11 @@ export function syncNotices(ctx) {
   if (s.mode === 'device' && !ctx.folderSupported()) {
     const sent = ctx.app.device.fileSavedAt ? Date.parse(ctx.app.device.fileSavedAt) : 0;
     const got = ctx.app.device.fileOpenedAt ? Date.parse(ctx.app.device.fileOpenedAt) : 0;
-    if (ctx.app.household.chores.length && fileDirty(ctx) && Date.now() - sent > DAY_MS) {
+    if (fileDirty(ctx) && Date.now() - sent > DAY_MS) {
       out.push({ id: 'sync:phone-save', level: 'info', text: 'You have changes that are only on this phone. Send them back to your Google Drive?', action: { label: 'Send back', onClick: () => saveFamilyFile(ctx) } });
-    } else if (got && Date.now() - got > DAY_MS / 2) {
-      out.push({ id: `sync:phone-get:${new Date().toDateString()}`, level: 'info', text: `This phone last got the latest from Drive on ${when(ctx.app.device.fileOpenedAt)}.`, action: { label: 'Get latest', onClick: () => openFamilyFile(ctx) } });
+    } else if (got && Date.now() - got > HOUR_MS) {
+      // On opening the app, after an hour away: one tap to get what the laptops have (D-064).
+      out.push({ id: `sync:phone-get:${ctx.app.device.fileOpenedAt}`, level: 'info', text: `Get the latest from Drive? This phone last got it ${when(ctx.app.device.fileOpenedAt)}.`, action: { label: 'Get latest', onClick: () => openFamilyFile(ctx) } });
     }
   }
   return out;

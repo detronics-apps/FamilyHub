@@ -348,6 +348,8 @@ dialog.modal::backdrop { background: rgb(40 25 15 / 45%); }
 .chip-status__glyph { font-weight: 700; }
 .chip-status--ok { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
 .chip-status--warn { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+.phone-swap { display: flex; gap: 4px; }
+.chip-status--send { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--accent-ink); }
 .chip-status--busy .chip-status__glyph { display: inline-block; animation: spin 1.2s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -378,6 +380,10 @@ body:has(.player:not([hidden])) .app-footer { padding-bottom: 72px; }
   .chip-status__text { display: none; }
   .chip-status { width: var(--tap); padding: 0; }
   .session__clock { font-size: 22px; }
+  /* A phone's Get and Send keep their words; the avatar alone says who is using it. */
+  .phone-swap .chip-status { width: auto; padding: 0 10px; }
+  .phone-swap .chip-status__text { display: inline; }
+  .header-actions:has(.phone-swap) .who-btn__name { display: none; }
 }
 
 /* Decisions: where an agreement is in the Observe -> Adapt cycle */

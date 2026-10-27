@@ -100,3 +100,11 @@ test('clearAll removes everything Family Hub stored', () => {
 test('export filename', () => {
   assert.equal(exportFilename(fixture().h, new Date('2026-10-25T10:00:00Z')), 'family-hub-test-family-2026-10-25.json');
 });
+
+test('a phone remembers when it last sent and got the family file, across a restart (D-064)', () => {
+  const d = normaliseDevice(JSON.parse(JSON.stringify({ fileSavedAt: '2026-10-27T08:00:00.000Z', fileOpenedAt: '2026-10-27T09:00:00.000Z' })));
+  assert.equal(d.fileSavedAt, '2026-10-27T08:00:00.000Z');
+  assert.equal(d.fileOpenedAt, '2026-10-27T09:00:00.000Z', 'without it, "Get latest" reminders and "last got" were lost on every restart');
+  assert.equal(normaliseDevice({ fileOpenedAt: 5 }).fileOpenedAt, null);
+  assert.ok(Object.values(KEYS).includes('familyhub.phone.changed') && Object.values(KEYS).includes('familyhub.folds'), 'cleared with everything else');
+});

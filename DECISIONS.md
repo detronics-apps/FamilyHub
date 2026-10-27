@@ -471,6 +471,18 @@ then Files › Browse › ⋯ › Edit), put Family Hub on the home screen, get 
 use it day to day - and fourteen things that can go wrong. It opens before a family exists, so a
 new phone can read it. The words live in guide.js (CONNECT) and are tested for every part.
 
+**D-064 A phone's Get and Send, one tap each from any page (owner, 2026-10-27).** The owner asked
+why a phone cannot swap the file by itself - on opening, or every few minutes. A phone's browser
+may read a Drive file only when the person picks it, and save one only through the share or save
+window; doing it unattended needs a sign-in to a registered Google app, which D-013 rules out. So
+the two taps are made as short as they can be: on a phone that has swapped the file once, the
+header has "↓ Get" and "Send" in place of the status. Send lights up (●) while the phone has
+something Drive does not - the household, or any mini-app record (each phone write is noted in
+`familyhub.phone.changed`, compared with the last Get or Send). Opening the app an hour or more
+after the last Get offers "Get latest". Found on the way: the time of the last Get was dropped on
+every restart (normaliseDevice did not keep `fileOpenedAt`), so its reminder never worked - fixed
+and tested.
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).

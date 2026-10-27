@@ -36,10 +36,10 @@ import { placeholderView } from './ui/views/placeholder.js';
 import { recoveryView } from './ui/views/recovery.js';
 import { openWelcome } from './ui/views/welcome.js';
 import { openDoc } from './ui/views/docs.js';
-import { syncChip, syncNotices } from './ui/views/drive.js';
+import { syncChip, syncNotices, phoneButtons } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.9.6';
+export const APP_VERSION = '0.9.7';
 
 const store = createLocalStore(window.localStorage);
 
@@ -280,7 +280,7 @@ function buildHeader() {
       ]),
     ]),
     el('div', { class: 'header-actions' }, [
-      app.household ? syncChip(ctx) : null,
+      app.household ? (phoneButtons(ctx) ?? syncChip(ctx)) : null,
       app.household ? el('button', {
         class: 'btn who-btn', type: 'button', 'data-field': 'who',
         title: 'Who is using Family Hub? (a convenience, not a login)',

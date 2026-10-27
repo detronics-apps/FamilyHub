@@ -36,6 +36,12 @@ const writeJson = (key, v) => { try { localStorage.setItem(key, JSON.stringify(v
 
 export function createSync(ctx) {
   const deviceStore = createIdbStore();
+  // On a phone, note when a mini-app record changed (the shopping list, a meal...), so "Send"
+  // knows there is something to send - the household alone is not all of it (D-064).
+  for (const m of ['write', 'remove']) {
+    const original = deviceStore[m].bind(deviceStore);
+    deviceStore[m] = async (...args) => { const r = await original(...args); if (!folderSupported()) writeJson(KEYS.phoneChanged, Date.now()); return r; };
+  }
   let handle = null;
   let folder = null;          // folder store once permission is granted
   let timer = null;
