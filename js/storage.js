@@ -22,8 +22,9 @@ export const KEYS = {
   folderBase: 'familyhub.folder.base',
   registryBase: 'familyhub.registry.base',
   fileBase: 'familyhub.file.base',
-  folds: 'familyhub.folds',
-  phoneChanged: 'familyhub.phone.changed',   // when a phone last changed a mini-app record (D-064)          // which sections are folded away, on this device (D-062)
+  folds: 'familyhub.folds',                  // which sections are folded away, on this device (D-062)
+  phoneChanged: 'familyhub.phone.changed',   // when a phone last changed a mini-app record (D-064)
+  financeLevel: 'familyhub.finance.level',   // Simple, Advanced or Learn in the Finance calculators (D-066)
 };
 
 export const EXPORT_KIND = 'family-hub-household';

@@ -211,7 +211,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'finance', section: 'finance', name: 'Finance', version: '1.0.0',
+      fhManifest: 1, id: 'finance', section: 'finance', name: 'Budget and goals', version: '1.1.0',
       description: 'Monthly budgets, and savings and debt goals with the assumptions in plain view.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'month', title: 'Budget' }, { id: 'goals', title: 'Goals' }, { id: 'goal', title: 'Goal', nav: false }, { id: 'new-goal', title: 'Add a goal', nav: false }],
@@ -223,6 +223,30 @@ const RAW = [
       permissions: ['data:own', 'people:read', 'notify'],
     },
     load: () => import('./finance/app.js'),
+  },
+  {
+    manifest: {
+      fhManifest: 1, id: 'calculators', section: 'finance', name: 'Money calculators', version: '1.0.0',
+      description: 'Quick answers to one money question at a time - simple, advanced, or every step explained.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
+      screens: [{ id: 'tools', title: 'Calculators' }, { id: 'compound', title: 'Compound interest' }, { id: 'compare', title: 'Side by side', nav: false }],
+      modes: [{ mode: 'plan', screen: 'compound', label: 'See what savings could grow to' }],
+      data: { collections: [{ name: 'saved', schema: 1 }] },
+      permissions: ['data:own', 'notify'],
+    },
+    load: () => import('./calculators/app.js'),
+  },
+  {
+    manifest: {
+      fhManifest: 1, id: 'cars', section: 'finance', name: 'Cars', version: '1.0.0',
+      description: 'What a car really costs to own: instalments, interest, fees, running costs, and what it is worth - and still owed - when you sell.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
+      screens: [{ id: 'cost', title: 'True cost' }, { id: 'compare', title: 'Side by side', nav: false }],
+      modes: [{ mode: 'plan', screen: 'cost', label: 'Work out what a car really costs' }],
+      data: { collections: [{ name: 'saved', schema: 1 }] },
+      permissions: ['data:own', 'notify'],
+    },
+    load: () => import('./cars/app.js'),
   },
   {
     manifest: {
@@ -277,5 +301,9 @@ export const starter = (id) => STARTERS.find((s) => s.manifest.id === id) ?? nul
 /** On the roadmap, not built. Shown in the library so nobody mistakes them for working apps. */
 export const COMING_LATER = [
   { id: 'planner', name: 'Planner', purpose: 'A family calendar: the week at a glance, with chores, tasks, meals, trips and review dates from the other mini-apps in one place.' },
+  { id: 'homes', name: 'Homes', purpose: 'Bond repayments, renting against buying, and one house against another - travel to work included.' },
+  { id: 'children', name: 'Children’s future', purpose: 'School, studies, a first car and other milestones for each child, from the ages Family Hub already knows.' },
+  { id: 'jobs', name: 'Job offers', purpose: 'One offer against another: take-home pay, increases, benefits, moving costs and how long a move takes to pay back.' },
+  { id: 'money-plan', name: 'Money plan', purpose: 'Every goal on one timeline - holidays, cars, school, a house - with what to put aside each month and where it does not fit.' },
   { id: 'medical', name: 'Medical', purpose: 'Emergency summary and medical records - only once private records and access rules exist.' },
 ];

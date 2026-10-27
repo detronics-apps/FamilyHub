@@ -494,6 +494,29 @@ that room is not added twice; the same chore may live in two rooms (two toilets)
 start today; the rest are spread over the coming days so a fresh list does not all come up at once.
 How often follows common advice (bedding every two weeks, towels weekly); the family changes it.
 
+**D-066 Finance becomes a set of decision tools (owner, 2026-10-27).** The owner set out a
+long-term planning system - not a spending tracker - built from focused tools, each its own
+mini-app under Finance, with things saved by name (this car, that house, this job) to compare and
+come back to. First release, as the brief asks: the shared parts and two representative tools.
+- **Simple / Advanced / Learn** bar on every calculator (Family Hub had no levels before; the
+  choice is kept on this device). Inputs are kept while switching, so nothing resets.
+- **Every default says where it came from**: Yours, a reference figure with source and date (prime
+  10.75%, SARB 23 Sep 2026; CPI 4.5%, Stats SA September 2026), Illustrative, or Assumption.
+  Defaults hidden in Simple are listed under the answer ("Also counted"), so no cost is hidden.
+- **Saved by name**, with every input (so it can be rebuilt exactly) and the answer as it was.
+  Saving under a new name keeps a new one. Tick two or more to compare side by side, with the
+  biggest differences said in words.
+- **Money calculators › Compound interest**, and **Cars › True cost**: instalment, interest, fees,
+  running costs, sale price, what is still owed at an early sale, and the total cost of owning it -
+  shown both as cash in and out and as drop in value + interest + fees + running costs, which are
+  tested to agree (the loan's capital is not a cost on top of the price). What moves the answer
+  most, better and worse resale, and each sum worked out in Learn.
+- Maths in finance/maths.js, tested against textbook results. No discounting yet (said in Learn).
+- Next, in order: more calculators (loan, savings target, inflation); Homes (bond, rent against buy,
+  one house against another with travel to work); Children's future (from the ages already known);
+  goals with Holidays' budgets; Job offers (take-home, increases, moving cost and payback); and a
+  Money plan that puts every goal on one timeline. They are listed in the Library as coming later.
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).

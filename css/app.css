@@ -528,3 +528,19 @@ body:has(.player:not([hidden])) .app-footer { padding-bottom: 72px; }
 .shop-strip__day { flex: 0 0 140px; display: flex; flex-direction: column; gap: 4px; min-height: 64px; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .shop-strip__day.is-today { border-color: var(--accent); background: var(--accent-soft); }
 .shop-strip__day .meal-chip { font-size: 13px; }
+
+/* Finance calculators (D-066) */
+.fin-tag { font-weight: 400; font-size: 12px; color: var(--text-dim); }
+.fin-tag:not(:empty)::before { content: "· "; }
+.fin-group { border: 0; padding: 0; margin: 0; }
+.fin-group legend { font-weight: 700; margin-bottom: var(--space-2); }
+table.plain .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fin-sums__total td { font-weight: 700; border-top: 2px solid var(--text-dim); }
+.table-scroll { overflow-x: auto; }
+.fin-better { color: var(--ok); }
+.fin-worse { color: var(--warn); }
+.fin-chart svg { display: block; max-width: 100%; height: auto; }
+.fin-key { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.fin-step { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius); }
+.fin-formula { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; padding: var(--space-1) var(--space-2); border-radius: 6px; background: color-mix(in srgb, var(--text) 6%, transparent); }
+.fin-formula--worked { background: color-mix(in srgb, var(--accent) 12%, transparent); }
