@@ -1,12 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildFamilyFile, parseFamilyFile, collectAppFiles, filesAsStore, describeFamilyFile, familyFileName } from '../js/family-file.js';
+import { buildFamilyFile, parseFamilyFile, collectAppFiles, filesAsStore, describeFamilyFile, familyFileName, isFromPhone } from '../js/family-file.js';
 import { createMemoryStore } from '../js/folder-store.js';
 import { createCollection, copyAppData } from '../js/collections.js';
 import { exportData } from '../js/storage.js';
 import { mergeRegistry, starterRegistry, emptyRegistry, uninstall, validateManifest } from '../js/miniapps.js';
 import { demoHousehold } from '../js/demo.js';
 import { fingerprint } from '../js/folder-sync.js';
+import { mergeHousehold } from '../js/merge.js';
 import { TODAY } from './helpers.js';
 
 const notes = (store) => createCollection(store, { app: 'notes', name: 'notes', summary: (r) => ({ title: r.title }) });
@@ -62,6 +63,21 @@ test('bad family files are refused with a reason', () => {
     assert.equal(r.ok, false, text.slice(0, 60));
     assert.ok(r.errors.length);
   }
+});
+
+test('a phone file carries what it started from, so a chore deleted on the phone stays deleted', () => {
+  const base = demoHousehold(TODAY);
+  const phone = { ...base, chores: base.chores.slice(1) };                       // deleted one on the phone
+  const laptop = { ...base, chores: [...base.chores, { ...base.chores[0], id: 'new-on-laptop', name: 'Water plants' }] };
+  const parsed = parseFamilyFile(buildFamilyFile({ household: phone, registry: emptyRegistry(), base }));
+  assert.equal(fingerprint(parsed.base), fingerprint(base));
+  const { household } = mergeHousehold(parsed.base, laptop, parsed.household);
+  const ids = household.chores.map((c) => c.id);
+  assert.ok(!ids.includes(base.chores[0].id), 'deleted on the phone');
+  assert.ok(ids.includes('new-on-laptop'), 'added on the laptop');
+  assert.equal(parseFamilyFile(buildFamilyFile({ household: phone, registry: emptyRegistry() })).base, null, 'the laptops’ own copy has no base');
+  assert.deepEqual(['Family Hub.json', 'family-hub-smiths-2026-10-27-09-30.json', 'README.txt', 'Family Hub (1).json'].filter(isFromPhone),
+    ['family-hub-smiths-2026-10-27-09-30.json', 'Family Hub (1).json']);
 });
 
 test('file names sort by time', () => {

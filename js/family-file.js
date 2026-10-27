@@ -5,7 +5,10 @@
 //   - the portable export.
 //
 // { kind: 'family-hub-family-file', format: 1, exportedAt, household, registry,
-//   files: { 'Data/tasks/tasks/index.json': '...', ... } }
+//   base?, files: { 'Data/tasks/tasks/index.json': '...', ... } }
+//
+// `base` is the household the sender last agreed with (the copy it opened), so the
+// receiver can tell "deleted on the phone" from "added on the laptop" (D-052).
 //
 // Mini-app data travels as its own files, so importing it reuses copyAppData:
 // newer records win by rev, indexes merge, nothing is lost.
@@ -30,16 +33,23 @@ export async function collectAppFiles(store) {
   return files;
 }
 
-export function buildFamilyFile({ household, registry, files = {}, now = new Date() }) {
+export function buildFamilyFile({ household, registry, files = {}, base = null, now = new Date() }) {
   return JSON.stringify({
     kind: FAMILY_FILE_KIND,
     format: FAMILY_FILE_FORMAT,
     exportedAt: now.toISOString(),
     household,
     registry: normaliseRegistry(registry),
+    ...(base ? { base } : {}),
     files,
   });
 }
+
+/** Where laptops keep the copy for phones, and where phones send theirs back (D-052). */
+export const PHONE_DIR = 'Phone';
+export const PHONE_FILE = 'Family Hub.json';
+/** A file a phone sent back: any family file in Phone/ but the laptops' own copy. */
+export const isFromPhone = (name) => /\.json$/i.test(name) && name !== PHONE_FILE;
 
 export function familyFileName(household, now = new Date()) {
   const slug = household.household.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'household';
@@ -75,7 +85,9 @@ export function parseFamilyFile(text) {
     files.set(p, t);
   }
   if (errors.length) return { ok: false, errors };
-  return { ok: true, household, registry: raw.registry ? normaliseRegistry(raw.registry) : null, files, exportedAt: raw.exportedAt ?? null, legacy: false };
+  let base = null;
+  try { base = raw.base ? migrate(raw.base) : null; } catch { base = null; }   // a bad base only loses the deletions it would have told us about
+  return { ok: true, household, registry: raw.registry ? normaliseRegistry(raw.registry) : null, files, base, exportedAt: raw.exportedAt ?? null, legacy: false };
 }
 
 /** The mini-app files of a parsed family file, as a store copyAppData can read. */

@@ -4,6 +4,7 @@
 import { el } from '../dom.js';
 import { modal } from '../common.js';
 import { emptyHousehold, hasDemo } from '../../model.js';
+import { openFamilyFile } from './drive.js';
 
 export function openWelcome(ctx) {
   const h = ctx.app.household;
@@ -19,6 +20,12 @@ export function openWelcome(ctx) {
   };
 
   const steps = [
+    // On a phone, the family usually already lives on a laptop's Drive folder.
+    !ctx.folderSupported() ? el('li', {}, [el('div', {}, [
+      el('strong', { text: 'Already using Family Hub on a computer?' }),
+      el('span', { class: 'small muted', text: 'Choose Google Drive › FamilyHub › Phone › "Family Hub.json" in the window that opens, and your family is on this phone.' }),
+      el('div', {}, [el('button', { class: 'btn btn-primary', type: 'button', text: 'Get family', 'data-field': 'w-phone-get', on: { click: () => { finish('#/'); openFamilyFile(ctx); } } })]),
+    ])]) : null,
     el('li', {}, [el('div', {}, [
       el('strong', { text: demoHere ? 'Look around the example family' : 'Try it with an example family' }),
       el('span', { class: 'small muted', text: 'A pretend household with a kitchen, bathroom and living room, clearly labelled. Remove it with one button whenever you like.' }),
@@ -44,7 +51,7 @@ export function openWelcome(ctx) {
       el('strong', { text: 'Keep it safe in your own Google Drive' }),
       el('span', { class: 'small muted', text: ctx.folderSupported()
         ? 'On a computer with Google Drive for Desktop, pick your Drive folder once and everything saves there - shared across your laptops, never lost with an update.'
-        : 'On a phone, save a family file to your Drive now and then - Settings shows how.' }),
+        : 'Set it up on a computer first. The phone then gets the latest from Drive and sends its changes back - Settings shows how.' }),
       el('div', {}, [el('button', { class: 'btn', type: 'button', text: 'Set up', on: { click: () => finish('#/settings/drive') } })]),
     ])]),
     el('li', {}, [el('div', {}, [

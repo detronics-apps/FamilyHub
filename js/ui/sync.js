@@ -14,7 +14,7 @@ import { mergeHousehold, resolveConflicts } from '../merge.js';
 import { copyAppData } from '../collections.js';
 import { normaliseRegistry, mergeRegistry } from '../miniapps.js';
 import { stableStringify } from '../folder-store.js';
-import { buildFamilyFile, collectAppFiles, familyFileName, parseFamilyFile, filesAsStore } from '../family-file.js';
+import { buildFamilyFile, collectAppFiles, familyFileName, parseFamilyFile, filesAsStore, PHONE_DIR, PHONE_FILE, isFromPhone } from '../family-file.js';
 import { idbGet, idbSet, idbDel, createIdbStore } from './idb.js';
 
 import { KEYS } from '../storage.js';
@@ -24,6 +24,7 @@ const REG_BASE_KEY = KEYS.registryBase;
 const FILE_BASE_KEY = KEYS.fileBase;
 const HANDLE_KEY = 'folder';
 const DEBOUNCE_MS = 1000;
+const PHONE_COPY_MS = 120000;   // the copy for phones is rebuilt at most every two minutes
 
 export const folderSupported = () => typeof window.showDirectoryPicker === 'function';
 
@@ -40,6 +41,7 @@ export function createSync(ctx) {
   let timer = null;
   let running = null;
   let again = false;
+  let phoneCopy = { at: 0, body: null };   // when the copy for phones was last checked, and what it held
 
   // Start in the mode last used, so nothing reads from the wrong place while the folder reconnects.
   const startInFolder = ctx.app.device.storageMode === 'folder';
@@ -198,6 +200,61 @@ export function createSync(ctx) {
     set({ state: 'saved', lastSavedAt: new Date(), message: '' });
     // Files dropped into the Import folder are brought in after a good save.
     try { await ctx.scanImports?.(); } catch (err) { console.warn('Import folder:', err); }
+    // Then what phones sent back, and the fresh copy for phones to open (D-052).
+    try { if (await bringInPhoneFiles()) return; await writePhoneCopy(); } catch (err) { console.warn('Phone folder:', err); }
+  }
+
+  const PHONE_README = `This folder is how phones share your family's data.
+
+Family Hub.json - always the latest. Laptops with Family Hub open keep it up to date.
+  On a phone: Family Hub, Settings, "Get latest", then choose this file.
+
+Sending a phone's changes back: on the phone, Settings, "Send back", choose Drive,
+and save into this Phone folder. The next time a laptop has Family Hub open, it adds
+them in by itself and moves the file to "Brought in".
+`;
+
+  /** Keep Phone/Family Hub.json up to date - written only when what it holds has changed. */
+  async function writePhoneCopy({ force = false } = {}) {
+    if (!force && Date.now() - phoneCopy.at < PHONE_COPY_MS) return;
+    phoneCopy.at = Date.now();
+    const parts = { household: ctx.app.household, registry: ctx.app.registry, files: await collectAppFiles(folder) };
+    const body = buildFamilyFile({ ...parts, now: new Date(0) });
+    if (body === phoneCopy.body && !force) return;
+    if ((await folder.read(`${PHONE_DIR}/README.txt`)) !== PHONE_README) await folder.write(`${PHONE_DIR}/README.txt`, PHONE_README);
+    await folder.write(`${PHONE_DIR}/${PHONE_FILE}`, buildFamilyFile(parts));
+    phoneCopy.body = body;
+  }
+
+  /**
+   * Family files a phone saved into Phone/: combined in (everything from both kept),
+   * then moved to "Brought in" so the same file is never added twice. True when a
+   * question about something changed in both places is now waiting.
+   */
+  async function bringInPhoneFiles() {
+    const files = ((await folder.list(PHONE_DIR)) ?? []).filter((e) => e.kind === 'file' && isFromPhone(e.name));
+    const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ').replace(':', '.');
+    let waiting = false;
+    for (const f of files) {
+      const path = `${PHONE_DIR}/${f.name}`;
+      const text = await folder.read(path);
+      if (text == null) continue;
+      const parsed = parseFamilyFile(text);
+      const ours = parsed.ok && parsed.household.household.id === ctx.app.household.household.id;
+      const dest = ours ? 'Brought in' : 'Not brought in';
+      if (ours) {
+        const r = await importFamilyFile(parsed, 'merge', { quiet: true });
+        waiting ||= r.conflicts > 0;
+        ctx.flash({ id: `phone:${f.name}`, level: 'ok', text: r.conflicts ? `Changes from a phone were added in - ${r.conflicts === 1 ? 'one thing was' : `${r.conflicts} things were`} changed in both places, so choose which to keep.` : 'Changes from a phone were added in.' });
+      } else {
+        const why = parsed.ok ? `it holds ${parsed.household.household.name}, not ${ctx.app.household.household.name}` : parsed.errors[0];
+        ctx.flash({ id: `phone:${f.name}`, level: 'warn', text: `"${f.name}" in the Phone folder was not added in: ${why}. It was moved to Phone/Not brought in.` });
+      }
+      await folder.write(`${PHONE_DIR}/${dest}/${stamp} ${f.name}`, text);
+      await folder.remove(path);
+    }
+    if (files.length) { phoneCopy.at = 0; ctx.render(); }
+    return waiting;
   }
 
   async function syncRegistry() {
@@ -277,9 +334,12 @@ export function createSync(ctx) {
 
   /* ------------------------------------------------- backups, family file */
 
-  async function familyFileText() {
+  /** Everything as one file. `withBase` adds the copy this device last agreed on - for a phone sending its changes back. */
+  async function familyFileText({ withBase = false } = {}) {
     const store = appStore() ?? deviceStore;
-    return buildFamilyFile({ household: ctx.app.household, registry: ctx.app.registry, files: await collectAppFiles(store) });
+    const base = withBase ? readJson(FILE_BASE_KEY) : null;
+    const sameFamily = base?.household?.id === ctx.app.household.household.id;
+    return buildFamilyFile({ household: ctx.app.household, registry: ctx.app.registry, files: await collectAppFiles(store), base: sameFamily ? base : null });
   }
 
   async function backupNow() {
@@ -303,13 +363,14 @@ export function createSync(ctx) {
    * `mode`: 'merge' keeps everything from both; 'replace' uses the file's household.
    * Mini-app records always merge (newer wins by rev).
    */
-  async function importFamilyFile(parsed, mode) {
-    const base = readJson(FILE_BASE_KEY);
+  async function importFamilyFile(parsed, mode, { quiet = false } = {}) {
+    // The copy both sides last agreed on: the one the file says it started from, else the last one this device exchanged.
+    const id = parsed.household.household.id;
+    const base = [parsed.base, readJson(FILE_BASE_KEY)].find((b) => b?.household?.id === id) ?? null;
     let household = parsed.household;
     let conflicts = [];
     if (mode === 'merge') {
-      const sameFamily = parsed.household.household.id === ctx.app.household.household.id;
-      ({ household, conflicts } = mergeHousehold(sameFamily && base?.household?.id === parsed.household.household.id ? base : null, ctx.app.household, parsed.household));
+      ({ household, conflicts } = mergeHousehold(id === ctx.app.household.household.id ? base : null, ctx.app.household, parsed.household));
     }
     const report = await copyAppData(filesAsStore(parsed), appStore() ?? deviceStore);
     if (parsed.registry) ctx.replaceRegistry(mergeRegistry(null, ctx.app.registry, parsed.registry).registry);
@@ -317,8 +378,8 @@ export function createSync(ctx) {
       set({ state: 'decision', conflict: { household, conflicts, theirs: parsed.household, fromFile: true, mineAtDetection: ctx.app.household } });
       return { conflicts: conflicts.length, report };
     }
-    ctx.replaceHousehold(household, 'The family file was brought in.');
-    writeJson(FILE_BASE_KEY, household);
+    ctx.replaceHousehold(household, quiet ? null : 'The family file was brought in.');
+    if (s.mode !== 'folder') writeJson(FILE_BASE_KEY, household);   // a phone remembers what it now agrees with
     schedule();
     return { conflicts: 0, report };
   }

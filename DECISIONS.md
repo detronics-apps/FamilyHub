@@ -364,6 +364,16 @@ sentence are prose and exempt. Page headings keep their full wording.
 **D-051 Plan, Check, Do - and no "jotting" (owner, 2026-10-27).** The three ways in (D-045) are
 named Plan, Check and Do. "Jot", "jot down" and "jotting" are never used - the word is "write".
 
+**D-052 Phones swap one file, and laptops do the rest (owner, 2026-10-27).** Replaces the by-hand
+family-file steps of D-014 for phones. A laptop connected to the Drive folder keeps
+`FamilyHub/Phone/Family Hub.json` up to date (rebuilt at most every two minutes, written only when
+what it holds changed). A phone has two buttons: "Get latest" (open that file - combined without a
+question when it is the same family, or used as-is when the phone has nothing yet) and "Send back"
+(share to Drive, into the Phone folder). Any other family file in `Phone/` is combined in by the
+next laptop that has Family Hub open, then moved to `Phone/Brought in` (another family's file goes
+to `Phone/Not brought in`). A phone's file carries the copy it started from (`base`), so a chore
+deleted on the phone stays deleted instead of coming back. First run on a phone offers "Get family".
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).

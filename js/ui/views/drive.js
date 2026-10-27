@@ -6,13 +6,14 @@
 import { el, download } from '../dom.js';
 import { modal, confirmAction } from '../common.js';
 import { conflictKey } from '../../merge.js';
-import { parseFamilyFile, describeFamilyFile, familyFileName } from '../../family-file.js';
+import { parseFamilyFile, describeFamilyFile, familyFileName, PHONE_DIR, PHONE_FILE } from '../../family-file.js';
 import { fingerprint } from '../../folder-sync.js';
 import { KEYS } from '../../storage.js';
 import { roomName, personName } from '../../model.js';
 import { privateTestMode } from '../sync.js';
 
 const DAY_MS = 86400000;
+const when = (iso) => new Date(iso).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
 function fileDirty(ctx) {
   try { return fingerprint(JSON.parse(localStorage.getItem(KEYS.fileBase) || 'null')) !== fingerprint(ctx.app.household); } catch { return true; }
@@ -53,11 +54,14 @@ export function syncNotices(ctx) {
   }
   if (s.state === 'error') out.push({ id: `sync:error:${s.message}`, level: 'error', text: `Saving to your Drive folder failed: ${s.message} Your changes are safe on this device.`, action: { label: 'Try again', onClick: () => ctx.sync.run() } });
 
-  // A phone (no folder access) gets a gentle daily reminder to save to Drive.
-  if (s.mode === 'device' && !ctx.folderSupported() && ctx.app.household.chores.length && fileDirty(ctx)) {
-    const last = ctx.app.device.fileSavedAt ? Date.parse(ctx.app.device.fileSavedAt) : 0;
-    if (Date.now() - last > DAY_MS) {
-      out.push({ id: 'sync:phone-save', level: 'info', text: 'You have changes that are only on this phone. Save them to your Google Drive?', action: { label: 'Save file', onClick: () => saveFamilyFile(ctx) } });
+  // A phone (no folder access): a gentle daily nudge to send its changes back, and to get the latest.
+  if (s.mode === 'device' && !ctx.folderSupported()) {
+    const sent = ctx.app.device.fileSavedAt ? Date.parse(ctx.app.device.fileSavedAt) : 0;
+    const got = ctx.app.device.fileOpenedAt ? Date.parse(ctx.app.device.fileOpenedAt) : 0;
+    if (ctx.app.household.chores.length && fileDirty(ctx) && Date.now() - sent > DAY_MS) {
+      out.push({ id: 'sync:phone-save', level: 'info', text: 'You have changes that are only on this phone. Send them back to your Google Drive?', action: { label: 'Send back', onClick: () => saveFamilyFile(ctx) } });
+    } else if (got && Date.now() - got > DAY_MS / 2) {
+      out.push({ id: `sync:phone-get:${new Date().toDateString()}`, level: 'info', text: `This phone last got the latest from Drive on ${when(ctx.app.device.fileOpenedAt)}.`, action: { label: 'Get latest', onClick: () => openFamilyFile(ctx) } });
     }
   }
   return out;
@@ -143,7 +147,7 @@ export function openFirstConnect(ctx) {
 /* --------------------------------------------------------- family file */
 
 export async function saveFamilyFile(ctx) {
-  const text = await ctx.sync.familyFileText();
+  const text = await ctx.sync.familyFileText({ withBase: ctx.sync.status.mode !== 'folder' });
   const name = familyFileName(ctx.app.household);
   const file = new File([text], name, { type: 'application/json' });
   try {
@@ -158,7 +162,9 @@ export async function saveFamilyFile(ctx) {
   }
   ctx.sync.rememberFileBase();
   ctx.setDevice({ fileSavedAt: new Date().toISOString() });
-  ctx.flash({ id: `file:${Date.now()}`, level: 'ok', text: `Family file prepared (${name}). If you chose Drive, it is in your Drive now.` });
+  ctx.flash({ id: `file:${Date.now()}`, level: 'ok', text: ctx.folderSupported()
+    ? `Family file saved (${name}).`
+    : `Sent (${name}). If you saved it into FamilyHub › ${PHONE_DIR} in Drive, a laptop adds it in the next time Family Hub is open there.` });
   ctx.render();
 }
 
@@ -172,6 +178,17 @@ export function openFamilyFile(ctx) {
     if (!parsed.ok) {
       ctx.flash({ id: `file-bad:${chosen.name}`, level: 'error', text: `"${chosen.name}" was not opened, and nothing was changed. ${parsed.errors.slice(0, 3).join(' ')}` });
       ctx.render();
+      return;
+    }
+    // Nothing here yet, or the same family: no question to ask - combining keeps everything from both.
+    const h = ctx.app.household;
+    const fresh = !h.people.length && !h.chores.length;
+    if (fresh || parsed.household.household.id === h.household.id) {
+      const r = await ctx.sync.importFamilyFile(parsed, fresh ? 'replace' : 'merge', { quiet: true });
+      ctx.setDevice({ fileOpenedAt: new Date().toISOString() });
+      ctx.flash({ id: `file-in:${Date.now()}`, level: 'ok', text: `${fresh ? `${parsed.household.household.name} is on this device now` : 'Up to date'} - from the copy saved ${parsed.exportedAt ? when(parsed.exportedAt) : 'earlier'}.` });
+      ctx.render();
+      if (r.conflicts) openConflicts(ctx);
       return;
     }
     const { close } = modal({
@@ -192,7 +209,7 @@ export function openFamilyFile(ctx) {
             },
           },
         }),
-        el('button', { class: 'btn btn-primary', type: 'button', text: 'Combine', 'data-field': 'file-merge', on: { click: async () => { close(); const r = await ctx.sync.importFamilyFile(parsed, 'merge'); if (r.conflicts) openConflicts(ctx); } } }),
+        el('button', { class: 'btn btn-primary', type: 'button', text: 'Combine', 'data-field': 'file-merge', on: { click: async () => { close(); const r = await ctx.sync.importFamilyFile(parsed, 'merge'); ctx.setDevice({ fileOpenedAt: new Date().toISOString() }); if (r.conflicts) openConflicts(ctx); } } }),
       ],
     });
   });
@@ -234,7 +251,11 @@ export function driveSection(ctx) {
         }),
       ]),
     );
-    body.push(backupsBlock(ctx));
+    body.push(
+      el('h3', { text: 'Phones' }),
+      el('p', { class: 'small', text: `Phones cannot link to the folder, so this laptop keeps one file up to date for them: FamilyHub › ${PHONE_DIR} › "${PHONE_FILE}". A phone sends its changes back into that ${PHONE_DIR} folder, and this laptop adds them in by itself while Family Hub is open. Nothing to do here.` }),
+      backupsBlock(ctx),
+    );
   } else if (supported) {
     body.push(
       el('p', { text: 'Keep your family’s data in your own Google Drive, so it is never lost and every laptop you sign in on sees the same thing. Nobody else - including whoever made this app - can see it.' }),
@@ -247,9 +268,25 @@ export function driveSection(ctx) {
       el('button', { class: 'btn btn-primary', type: 'button', text: 'Choose folder', 'data-field': 'drive-connect', on: { click: () => ctx.sync.connect() } }),
     );
   } else {
+    // A phone: swap one file with the Drive folder; a laptop with Family Hub open does the rest.
+    const d = ctx.app.device;
     body.push(
-      el('p', { text: 'This browser cannot keep a live link to a Drive folder (phones and some browsers cannot). Your data is saved on this device. To keep it in Google Drive, save a family file there - and open the newest one when you switch devices.' }),
+      el('p', { text: 'A phone cannot link to your Drive folder like a laptop does, so it swaps one file with it. Your data stays on this phone in between.' }),
+      el('div', { class: 'stack' }, [
+        el('h3', { text: 'Get the latest', style: { margin: 0 } }),
+        el('p', { class: 'small', style: { margin: 0 }, text: `In the window that opens, go to Google Drive › FamilyHub › ${PHONE_DIR} and choose "${PHONE_FILE}". Laptops with Family Hub keep it up to date.` }),
+        el('div', {}, [el('button', { class: 'btn btn-primary', type: 'button', text: 'Get latest', 'data-field': 'phone-get', on: { click: () => openFamilyFile(ctx) } })]),
+        d.fileOpenedAt ? el('p', { class: 'small muted', style: { margin: 0 }, text: `Last got the latest on ${when(d.fileOpenedAt)}.` }) : null,
+      ]),
+      el('div', { class: 'stack' }, [
+        el('h3', { text: 'Send your changes back', style: { margin: 0 } }),
+        el('p', { class: 'small', style: { margin: 0 }, text: `Choose Drive, then save into the FamilyHub › ${PHONE_DIR} folder. A laptop adds your changes in the next time Family Hub is open on it.` }),
+        el('div', {}, [el('button', { class: 'btn', type: 'button', text: 'Send back', 'data-field': 'phone-send', on: { click: () => saveFamilyFile(ctx) } })]),
+        d.fileSavedAt ? el('p', { class: 'small muted', style: { margin: 0 }, text: `Last sent back on ${when(d.fileSavedAt)}.` }) : null,
+      ]),
+      el('p', { class: 'small muted', text: 'Not set up on a laptop yet? Do that first: on a computer, Settings › Google Drive › Choose folder.' }),
     );
+    return el('div', { class: 'panel stack', id: 'set-drive' }, body);
   }
 
   body.push(
