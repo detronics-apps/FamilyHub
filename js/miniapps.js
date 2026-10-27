@@ -17,6 +17,7 @@ export const MANIFEST_VERSION = 1;
 export const PERMISSIONS = {
   'data:own': { label: 'Keep its own records in your family folder', risk: 'low' },
   'people:read': { label: 'See the names of people in your household', risk: 'medium' },
+  'people:ages': { label: 'See people’s birthdays, to work out their ages', risk: 'medium' },
   'rooms:read': { label: 'See the rooms you have set up', risk: 'low' },
   'notify': { label: 'Show short notices', risk: 'low' },
   'media:audio': { label: 'Play music through the shared player', risk: 'low' },

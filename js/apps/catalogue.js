@@ -280,6 +280,18 @@ const RAW = [
   },
   {
     manifest: {
+      fhManifest: 1, id: 'children', section: 'finance', name: 'Children’s future', version: '1.0.0',
+      description: 'School, studies and starting out for each child, from their birthdays - and every child together, year by year.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
+      screens: [{ id: 'family', title: 'Children’s future' }, { id: 'child', title: 'One child', nav: false }],
+      modes: [{ mode: 'plan', screen: 'family', label: 'Plan for the children’s big costs' }],
+      data: { collections: [{ name: 'plans', schema: 1 }] },
+      permissions: ['data:own', 'people:read', 'people:ages', 'notify'],
+    },
+    load: () => import('./children/app.js'),
+  },
+  {
+    manifest: {
       fhManifest: 1, id: 'exercise', section: 'exercise', name: 'Exercise', version: '1.0.0',
       description: 'Log activity, keep flexible weekly plans, and see what the family did together.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
@@ -331,7 +343,6 @@ export const starter = (id) => STARTERS.find((s) => s.manifest.id === id) ?? nul
 /** On the roadmap, not built. Shown in the library so nobody mistakes them for working apps. */
 export const COMING_LATER = [
   { id: 'planner', name: 'Planner', purpose: 'A family calendar: the week at a glance, with chores, tasks, meals, trips and review dates from the other mini-apps in one place.' },
-  { id: 'children', name: 'Children’s future', purpose: 'School, studies, a first car and other milestones for each child, from the ages Family Hub already knows.' },
   { id: 'money-plan', name: 'Money plan', purpose: 'Every goal on one timeline - holidays, cars, school, a house - with what to put aside each month and where it does not fit.' },
   { id: 'medical', name: 'Medical', purpose: 'Emergency summary and medical records - only once private records and access rules exist.' },
 ];

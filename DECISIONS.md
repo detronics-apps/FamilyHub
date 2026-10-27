@@ -557,6 +557,24 @@ and each offer - is saved by name, then compared.
   answers the three questions in words, tests smaller and bigger increases, and lists what is not
   money ("Worth weighing") without pricing it.
 
+**D-069 Children's future (owner, 2026-10-27).** The fourth Finance mini-app. Ages come from the
+birthdays in People through a new permission, **people:ages** ("See people's birthdays, to work out
+their ages") - names alone (people:read) never carry a birthday. Children are those marked as a
+child or under 25 with a birthday; one without a birthday is named, with a link to People.
+- Each child's list starts from twelve milestones (day care, primary and high school fees, uniforms
+  and devices, activities, tours, university fees, living away, licence, a first car, a deposit, a
+  wedding) with illustrative SA costs in today's money. The family ticks, changes, removes (kept,
+  marked, so it does not come back) or adds its own.
+- **From budget or Save ahead.** Found while testing: saving now for every future year of school
+  fees asked a family of two small children for R43 574 a month. School-type costs default to
+  "From budget" (paid as they come; shown as the monthly amount they add, year by year); studies
+  and starting out default to "Save ahead" (each payment its own savings goal, the saved-already
+  and help-expected amounts used for the earliest first). Either can be switched per item.
+- A yearly cost falls on the birthday the child turns that age; the year under way is in the budget
+  now, not in savings. School fees grow at 8% a year (illustrative), the rest at CPI.
+- The family view adds every child: what to put aside now, the budget now and at its highest, the
+  biggest year, the years with more than one child's costs (shaded), and starting a year later.
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).

@@ -154,7 +154,8 @@ export function createHubFactory(ctx) {
     }
     if (has('people:read')) {
       hub.people = {
-        list: () => (ctx.app.household?.people ?? []).map((p) => ({ id: p.id, name: p.name, role: roleOf(p, ctx.today()), colour: p.colour })),
+        // Birthdays only with people:ages as well - an age is more than a name.
+        list: () => (ctx.app.household?.people ?? []).map((p) => ({ id: p.id, name: p.name, role: roleOf(p, ctx.today()), colour: p.colour, ...(has('people:ages') ? { born: p.born || null } : {}) })),
         current: () => { const p = ctx.currentPerson(); return p ? { id: p.id, name: p.name, role: roleOf(p, ctx.today()), colour: p.colour } : null; },
       };
     }

@@ -30,6 +30,7 @@ export const SEARCH_ALIASES = {
   'shopping list': ['groceries', 'shop', 'buy', 'ingredients'],
   trip: ['holiday', 'vacation', 'travel', 'packing', 'itinerary'],
   budget: ['money', 'spending', 'expenses', 'finance', 'savings', 'debt'],
+  'children’s future': ['children', 'kids', 'school fees', 'university', 'studies', 'education', 'tuition', 'first car', 'wedding', 'save for school', 'baby'],
   job: ['job offer', 'offer', 'salary', 'career', 'new job', 'take-home', 'take home', 'payslip', 'tax', 'paye', 'increase', 'raise', 'relocate', 'relocation', 'moving for work', 'payback'],
   home: ['house', 'bond', 'mortgage', 'home loan', 'rent', 'renting', 'buy a house', 'transfer duty', 'commute', 'travel to work', 'closer to work', 'move', 'moving'],
   'true cost': ['car', 'vehicle', 'car finance', 'loan', 'instalment', 'balloon', 'resale', 'total cost of ownership', 'compare cars'],
@@ -215,6 +216,12 @@ export const HOWTOS = [
     'When you spend something, add it under "Spent something?". The table shows what is left in each category.',
     'Next month, press "Reuse" with last month’s name.',
   ] },
+  { id: 'children', title: 'Plan for the children’s big costs', steps: [
+    'Make sure each child has a birthday in People - the ages come from there.',
+    'Open Finance, then Children’s future. It shows what to put aside each month for studies and starting out, and when school fees and the like step up the monthly budget - for each child and all of them together.',
+    'Press "Change … list" on a child to tick what fits, put in your own school’s fees, choose "From budget" or "Save ahead" for each, and add your own (braces, a gap year).',
+    'The year-by-year table shades the years when more than one child has costs, so a crowded year shows early.',
+  ] },
   { id: 'job', title: 'Compare a job offer with the job you have', steps: [
     'Open Finance, then Job offers. Fill in the job you have now: the salary, and the take-home from your payslip if you have it. Save it as "Staying".',
     'Change it for the offer: its salary (the take-home is estimated with the SARS tables until you have a payslip), the yearly increase you expect, travel and other costs it changes, and moving costs if it means moving. Save it with the company’s name.',
@@ -395,6 +402,7 @@ export const FEATURES = [
   { name: 'Calorie Checker', where: 'Meals › Calorie Checker', what: 'Calories and nutrients in the amount you actually eat, from 13,000 foods.' },
   { name: 'One shopping list', where: 'Home › Shopping', what: 'Meals, the week’s plan and chore supplies can all be sent to it; anything else can be typed in.' },
   { name: 'Portions and leftovers', where: 'Meals › Cookbook › an item', what: 'How much each person might eat, and how many servings to make with or without leftovers.' },
+  { name: 'Children’s future', where: 'Finance › Children’s future', what: 'School, studies and starting out for each child from their birthdays - what to save each month, when the budget steps up, and the years that crowd together.' },
   { name: 'Job offers', where: 'Finance › Job offers', what: 'Jobs compared on take-home, the household’s costs, increases, moving and payback - with a labelled SARS tax estimate when there is no payslip yet.' },
   { name: 'Homes compared', where: 'Finance › Homes', what: 'The true cost of living in a home, bought or rented, with the trip to work and transfer duty counted - plus a bond calculator and rent or buy.' },
   { name: 'True cost of a car', where: 'Finance › Cars', what: 'The instalment, interest, fees, running costs, and what is still owed when you sell - saved by name and compared side by side.' },

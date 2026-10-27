@@ -40,7 +40,7 @@ const ZAR_CENTS = new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 
 /** Rands, rounded to the rand for reading (small amounts like R4.95 a km keep their cents); the sums underneath are never rounded. */
 export const rand = (n) => (n == null || !Number.isFinite(n) ? '-' : Math.abs(n) < 100 && Math.round(n) !== n ? ZAR_CENTS.format(n) : ZAR.format(Math.round(n) || 0));
 export const pct = (n, dp = 2) => `${Number(n.toFixed(dp))}%`;
-export const months = (m) => (m % 12 === 0 ? `${m / 12} year${m === 12 ? '' : 's'}` : m < 12 ? `${m} month${m === 1 ? '' : 's'}` : `${Math.floor(m / 12)} years ${m % 12} months`);
+export const months = (m) => (m % 12 === 0 ? `${m / 12} year${m === 12 ? '' : 's'}` : m < 12 ? `${m} month${m === 1 ? '' : 's'}` : `${Math.floor(m / 12)} year${m < 24 ? '' : 's'} ${m % 12} month${m % 12 === 1 ? '' : 's'}`);
 
 /* ------------------------------------------------------------- inputs */
 
