@@ -8,6 +8,7 @@
 // interrupted by the rest of the page.
 
 import { el } from './dom.js';
+import { fold } from './common.js';
 import { GUIDE } from '../apps/assistant/guide.js';
 import { unitKey, typeOf, typeName, ingredientsFromCSV, INGREDIENT_CSV_TEMPLATE } from '../apps/meals/logic.js';
 import { tokens, foodSizes } from '../food.js';
@@ -20,6 +21,8 @@ export const UNIT_OPTIONS = [
 ];
 
 /** "Rice, white, long-grain, ..." -> "rice - white"; the full name stays visible next to the line. */
+const SEARCH_IN = [['all', 'All'], ['meal', 'Meals'], ['recipe', 'Recipes'], ['own', 'Own ingredients'], ['food', 'Ingredients']];
+
 function shortName(name) {
   const g = GUIDE.find((x) => x.fdc && name && x.name && name.toLowerCase() === x.name);
   if (g) return g.name;
@@ -181,10 +184,10 @@ export function ingredientEditor({ rows, db = null, own = [], selfId = null, onC
     });
     box.replaceChildren(
       // What the suggestions search: everything, one of our own types, or the food database.
-      el('div', { class: 'chipset', role: 'group', 'aria-label': 'Search in' }, [['all', 'All'], ['meal', 'Meals'], ['recipe', 'Recipes'], ['own', 'Own ingredients'], ['food', 'Ingredients']].map(([k, t]) => el('button', {
+      fold('ing-search-in', 'Search in', [el('div', { class: 'chipset', role: 'group', 'aria-label': 'Search in' }, SEARCH_IN.map(([k, t]) => el('button', {
         class: 'chip', type: 'button', 'aria-pressed': String(show === k), text: t, 'data-field': `ing-show:${k}`,
         on: { click: () => { show = k; redraw(); } },
-      }))),
+      })))], { open: false, note: SEARCH_IN.find(([k]) => k === show)?.[1] }),
       ...rows.map(rowNode),
       el('div', { class: 'row' }, [
         el('button', { class: 'btn btn-small', type: 'button', text: '+ Ingredient', 'data-field': 'ing-add', on: { click: () => { rows.push({ name: '', qty: null, unit: 'g' }); changed(); redraw(); box.querySelector(`[data-field="ing-name:${rows.length - 1}"]`)?.focus(); } } }),

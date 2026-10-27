@@ -4,7 +4,7 @@
 // guide, plan, new-plan.
 
 import { el } from '../../ui/dom.js';
-import { confirmAction } from '../../ui/common.js';
+import { confirmAction, fold, roomy } from '../../ui/common.js';
 import { fmtDay } from '../../dates.js';
 import { tabs, loading, failure, saveRecord, nameOf } from '../kit.js';
 import {
@@ -170,12 +170,14 @@ function journalScreen(hub) {
     ]),
     el('div', { class: 'panel stack' }, [
       el('input', { class: 'input', type: 'search', placeholder: 'Search the journal', 'aria-label': 'Search the journal', value: ui.query, 'data-field': 'journal-search', on: { change: (e) => set({ query: e.target.value }) } }),
+      fold('journal-filters', 'Filters', [
       el('div', { class: 'chipset', role: 'group', 'aria-label': 'Kind' }, [chip(!ui.kind, 'All', 'jkind:all', () => set({ kind: '' })), ...Object.entries(NOTE_KINDS).map(([k, t]) => chip(ui.kind === k, t, `jkind:${k}`, () => set({ kind: k })))]),
       el('div', { class: 'row' }, [
         select(ui.topic, topicList(famOf(hub)).filter((t) => !t.hidden || t.id === ui.topic).map((t) => [t.id, t.label]), 'Any topic', 'jtopic', (v) => set({ topic: v }), 'Topic'),
         termsUsed(all.data).length ? select(ui.term, termsUsed(all.data).map((t) => [t, t]), 'Any term', 'jterm', (v) => set({ term: v }), 'Term') : null,
         select(ui.status, Object.entries(QUESTION_STATUS), 'Any question', 'jstatus', (v) => set({ status: v }), 'Question status'),
       ]),
+      ], { open: roomy(), note: [NOTE_KINDS[ui.kind], ui.topic ? topicLabel(famOf(hub), ui.topic) : null, ui.term, QUESTION_STATUS[ui.status]].filter(Boolean).join(' · ') || 'Everything' }),
     ]),
     shown.length ? el('ul', { class: 'list panel', 'data-field': 'journal-list' }, shown.map((n) => el('li', { style: { alignItems: 'flex-start' } }, [
       el('a', { class: 'list__main', href: hub.href('entry', n.id), style: { color: 'inherit', textDecoration: 'none' } }, [

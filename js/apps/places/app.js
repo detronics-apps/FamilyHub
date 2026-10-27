@@ -1,7 +1,7 @@
 // Places to go: local outings with what each is good for. Screens: list (default), item, new, edit.
 
 import { el } from '../../ui/dom.js';
-import { confirmAction } from '../../ui/common.js';
+import { confirmAction, fold, roomy } from '../../ui/common.js';
 import { fmtDay } from '../../dates.js';
 import { loading, failure, recordForm, saveRecord } from '../kit.js';
 import { normalisePlace, placeSummary, placeText, filterPlaces, areasOf, KINDS, TAGS, STATUSES, VERDICTS } from './logic.js';
@@ -34,7 +34,7 @@ function listScreen(hub) {
       el('p', { class: 'muted', style: { margin: 0, flex: '1 1 260px' }, text: 'Places nearby you would like to go, or have been - for a free Saturday morning. Big trips with travel and packing are in Holidays.' }),
       el('a', { class: 'btn btn-primary', href: hub.href('new'), text: 'New place', 'data-field': 'add-place' }),
     ]),
-    list.data.length ? el('div', { class: 'panel stack' }, [
+    list.data.length ? fold('place-filters', 'Filters', [
       el('div', { class: 'row' }, [
         areas.length > 1 ? select('area', 'Where', areas.map((a) => [a, a]), 'Anywhere') : null,
         select('kind', 'Kind of place', Object.entries(KINDS), 'Any kind'),
@@ -45,7 +45,7 @@ function listScreen(hub) {
       ]),
       el('div', { class: 'chipset', role: 'group', 'aria-label': 'Good for' }, Object.entries(TAGS).map(([k, t]) => chip(ui.tags.includes(k), t, `place-tag:${k}`,
         () => set({ tags: ui.tags.includes(k) ? ui.tags.filter((x) => x !== k) : [...ui.tags, k] })))),
-    ]) : el('div', { class: 'panel empty' }, [el('p', { text: 'No places yet. Add the next one someone mentions - "that farm with the tractor rides" - and how it suits the family.' })]),
+    ], { open: roomy(), cls: 'panel', note: [ui.area, KINDS[ui.kind], STATUSES[ui.status], ...ui.tags.map((t) => TAGS[t])].filter(Boolean).join(' · ') || 'Everything' }) : el('div', { class: 'panel empty' }, [el('p', { text: 'No places yet. Add the next one someone mentions - "that farm with the tractor rides" - and how it suits the family.' })]),
     list.data.length ? (shown.length ? el('ul', { class: 'list panel', 'data-field': 'places' }, shown.map((p) => el('li', {}, [
       el('a', { class: 'list__main', href: hub.href('item', p.id), style: { color: 'inherit', textDecoration: 'none' } }, [
         el('strong', { text: p.title }),

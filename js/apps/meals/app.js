@@ -11,7 +11,7 @@
 // new version or into the original - only this app writes recipes.
 
 import { el } from '../../ui/dom.js';
-import { confirmAction } from '../../ui/common.js';
+import { confirmAction, fold, roomy } from '../../ui/common.js';
 import { loading, failure, recordForm, saveRecord } from '../kit.js';
 import {
   ALLERGENS, NUTRIENTS, normaliseRecipe, recipeSummary, recipeText, nutritionRows,
@@ -85,6 +85,7 @@ function recipesScreen(hub) {
       })]),
       el('a', { class: 'btn btn-primary', href: hub.href('new'), text: 'New item', 'data-field': 'add-recipe' }),
     ]),
+    fold('cookbook-filters', 'Filters', [
     el('div', { class: 'chipset', role: 'group', 'aria-label': 'Show' }, Object.entries(KINDS).map(([k, label]) => el('button', {
       class: 'chip', type: 'button', 'aria-pressed': String(ui.kind === k), text: label, 'data-field': `kind:${k}`,
       on: { click: () => { ui.kind = k; ui.limit = 50; hub.render(); } },
@@ -102,6 +103,7 @@ function recipesScreen(hub) {
       }))),
       el('p', { class: 'small muted', text: 'Only as reliable as the allergens marked on each item - always check the actual ingredients.' }),
     ]),
+    ], { open: roomy(), cls: 'panel', note: [ui.kind !== 'all' ? KINDS[ui.kind] : null, ui.maxMinutes !== null ? TIMES.find(([v]) => v === ui.maxMinutes)?.[1] : null, ui.avoid.length ? `without ${ui.avoid.join(', ')}` : null].filter(Boolean).join(' · ') || 'Everything' }),
     r.loading ? loading() : r.error ? failure(r.error) : r.data.total ? el('div', { class: 'stack' }, [
       el('p', { class: 'small muted', text: `${r.data.total} found` }),
       el('ul', { class: 'list panel' }, r.data.items.map((s) => el('li', {}, [
@@ -233,14 +235,14 @@ function editScreen(hub, id, param = null) {
       record: flat,
       fields: [
         { key: 'title', label: 'Name', required: true },
-        { key: 'type', label: 'This is', type: 'select', options: [['', 'an item (not decided yet)'], ...Object.keys(TYPES).map((k) => [k, aType(k)])], hint: 'Meal: what the family eats at one sitting. Recipe: making one thing, like a cake or a salad. Own ingredient: something you make to use in others, like mayo. Any of them can be used in another.' },
-        { key: 'servings', label: 'Serves', type: 'number' },
-        { key: 'mealTypes', label: 'Good for', type: 'choices', options: Object.entries(MEAL_TAGS), hint: 'Used by Meal Planner when looking for a breakfast, lunch, supper or snack.' },
-        { key: 'prepMinutes', label: 'Preparation (minutes)', type: 'number', hint: 'Prep plus cooking time lets you find quick meals when time is short.' },
-        { key: 'cookMinutes', label: 'Cooking (minutes)', type: 'number' },
-        { key: 'yield', label: 'One batch makes', type: 'custom', control: () => yieldControl(f.data ?? null) },
+        { key: 'type', group: 'About it', label: 'This is', type: 'select', options: [['', 'an item (not decided yet)'], ...Object.keys(TYPES).map((k) => [k, aType(k)])], hint: 'Meal: what the family eats at one sitting. Recipe: making one thing, like a cake or a salad. Own ingredient: something you make to use in others, like mayo. Any of them can be used in another.' },
+        { key: 'servings', group: 'About it', label: 'Serves', type: 'number' },
+        { key: 'mealTypes', group: 'About it', label: 'Good for', type: 'choices', options: Object.entries(MEAL_TAGS), hint: 'Used by Meal Planner when looking for a breakfast, lunch, supper or snack.' },
+        { key: 'prepMinutes', group: 'About it', label: 'Preparation (minutes)', type: 'number', hint: 'Prep plus cooking time lets you find quick meals when time is short.' },
+        { key: 'cookMinutes', group: 'About it', label: 'Cooking (minutes)', type: 'number' },
+        { key: 'yield', group: 'About it', label: 'One batch makes', type: 'custom', control: () => yieldControl(f.data ?? null) },
         {
-          key: 'ingredients', label: 'Ingredients', type: 'custom',
+          key: 'ingredients', group: 'Ingredients and method', label: 'Ingredients', type: 'custom',
           control: () => ({
             node: ingredientEditor({
               rows: ui.draft.rows, db: f.data ?? null, own: own.data ?? [], selfId: existing?.id ?? null, onChange: () => ui.yieldHint?.(),
@@ -251,7 +253,7 @@ function editScreen(hub, id, param = null) {
             get: () => ui.draft.rows.filter((x) => x.name.trim()),
           }),
         },
-        { key: 'instructions', label: 'Method', type: 'lines', rows: 6, hint: 'One step per line, now or later.' },
+        { key: 'instructions', group: 'Ingredients and method', label: 'Method', type: 'lines', rows: 6, hint: 'One step per line, now or later.' },
         { key: 'description', label: 'Description', type: 'textarea', more: true },
         { key: 'tags', label: 'Tags', more: true, hint: 'Separated by commas, e.g. quick, vegetarian, kids like it.' },
         { key: 'allergens', label: 'Contains', type: 'choices', options: ALLERGENS.map((a) => [a, a]), more: true },

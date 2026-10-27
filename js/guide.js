@@ -127,6 +127,7 @@ export const HOWTOS = [
   ] },
   { id: 'meals', title: 'Plan the meals and make the shopping list', steps: [
     'Open Meals, then Meal Planner. Step 1, gather: press "+ Add" and choose a meal - or just type one, like "Carrots" - or press "Suggest meals" for a mix of favourites and new ones. No need to decide which meal or which day yet.',
+    'Changed your mind about a meal? Drag it to the bin that shows at the right-hand edge while you drag - from the list or from a day. "Clear" under step 1 takes all planned meals off the list to start over (meals already on days stay). Both can be undone straight after.',
     'Rather cook them in any order? Press "To Shopping" right there under step 1: everything the planned meals need goes to the list, with no sorting or days. Each sent meal gets a ✓, and Cook today shows them under "Any day" - drag the one you feel like onto today.',
     'Step 2, sort: drag each gathered meal into Breakfasts, Lunches, Dinners or Snacks (on a phone, press and hold first). Or open a meal and choose its meal there. The little B, L, D and S circles on a meal say what it is good for - open the meal and press Change next to "Good for" to set them, for example after cooking it.',
     'Press Assign: the planned meals sit beside a calendar. Drag each one onto a day (on a phone, press and hold first) - a week at a time, or a whole month. It keeps the meal it was sorted into (a lunch stays lunch) unless you drop it on another meal’s row. Drag one back to the list to take it off its day.',
@@ -284,6 +285,7 @@ export const FEATURES = [
   { name: 'Portions and leftovers', where: 'Meals › Cookbook › an item', what: 'How much each person might eat, and how many servings to make with or without leftovers.' },
   { name: 'Projections with their assumptions', where: 'Finance › Goals', what: 'When a goal could be reached, or a debt paid off - and plainly when it never would at the current payment.' },
   { name: 'Avoid a room', where: 'Chores › Do something now', what: 'With "Anywhere" chosen, tap rooms under "Not today" to leave them out.' },
+  { name: 'Fold filters away', where: 'Cookbook, Meal Planner, Shopping, Faith, Places, Calorie Checker', what: 'Tap Filters (or Kinds, Browse) to fold them into one line that still says what is on. On a phone they start folded; this device remembers your choice. Long forms fold by part too, and Save stays at the bottom.' },
   { name: 'Undo', where: 'After pressing Done', what: 'The confirmation has an Undo button, in case it was pressed by mistake.' },
   { name: 'Your own dashboard', where: 'Settings › Your dashboard', what: 'Each profile has its own button order and hidden buttons on this device.' },
 ];

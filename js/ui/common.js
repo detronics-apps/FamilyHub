@@ -3,6 +3,7 @@
 import { el } from './dom.js';
 import { addDays, fmtAgo, fmtDay, fmtFrequency } from '../dates.js';
 import { personName, roomName, removeDemo } from '../model.js';
+import { KEYS } from '../storage.js';
 
 export const HOUSE_ICON = '<svg viewBox="0 0 64 64" width="32" height="32" aria-hidden="true">'
   + '<rect width="64" height="64" rx="12" fill="var(--accent)"/>'
@@ -10,6 +11,25 @@ export const HOUSE_ICON = '<svg viewBox="0 0 64 64" width="32" height="32" aria-
   + '<path d="M19 29 V49 H45 V29" fill="var(--panel)"/>'
   + '<path d="M32 45 c-6 -4 -9 -7 -9 -10.5 a4.5 4.5 0 0 1 9 -1.5 a4.5 4.5 0 0 1 9 1.5 c0 3.5 -3 6.5 -9 10.5 z" fill="var(--accent)"/>'
   + '</svg>';
+
+// Which sections are folded, by name - remembered on this device only.
+const folds = () => { try { return JSON.parse(localStorage.getItem(KEYS.folds) || '{}') ?? {}; } catch { return {}; } };
+const keepFold = (id, open) => { try { localStorage.setItem(KEYS.folds, JSON.stringify({ ...folds(), [id]: open })); } catch { /* remembered for this visit only */ } };
+
+/** A screen wide enough to show filters open by default; on a phone they start folded. */
+export const roomy = () => globalThis.matchMedia?.('(min-width: 720px)').matches ?? true;
+
+/**
+ * A section that can be folded away (D-062): filters, and the long parts of a form, which on a
+ * phone can fill the screen. `id` names it, and whether it is open is remembered on this device.
+ * `note` stays on the header when folded - so a folded filter still says what it is filtering.
+ */
+export function fold(id, title, children, { open = true, note = '', cls = '' } = {}) {
+  return el('details', { class: `fold ${cls}`.trim(), open: folds()[id] ?? open, 'data-fold': id, on: { toggle: (e) => keepFold(id, e.currentTarget.open) } }, [
+    el('summary', { class: 'fold__head' }, [el('span', { class: 'fold__title', text: title }), note ? el('span', { class: 'fold__note small muted', text: note }) : null]),
+    el('div', { class: 'stack fold__body' }, children),
+  ]);
+}
 
 const initials = (name) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
 

@@ -22,6 +22,7 @@ export const KEYS = {
   folderBase: 'familyhub.folder.base',
   registryBase: 'familyhub.registry.base',
   fileBase: 'familyhub.file.base',
+  folds: 'familyhub.folds',          // which sections are folded away, on this device (D-062)
 };
 
 export const EXPORT_KIND = 'family-hub-household';

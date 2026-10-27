@@ -11,8 +11,8 @@
 // month) · choose a meal · a planned meal · suggest meals · how the week looks
 // (with Optimise My Week) · add (from a recipe) · modify (from Meal Assistant).
 
-import { el } from '../../ui/dom.js';
-import { confirmAction } from '../../ui/common.js';
+import { el, svg } from '../../ui/dom.js';
+import { confirmAction, fold, roomy } from '../../ui/common.js';
 import { fmtDay, addDays, dayDiff } from '../../dates.js';
 import { draggable, dropTarget } from '../../ui/drag.js';
 import { loading, failure, saveRecord, tabs } from '../kit.js';
@@ -281,6 +281,25 @@ function poolPanel(hub, pool) {
   ]);
 }
 
+/**
+ * While a meal is being dragged, a bin shows at the right-hand edge: drop it there to take it
+ * off the plan - from the list or from its day. Undo puts it back (D-061).
+ */
+function bin(hub) {
+  const icon = svg('svg', { viewBox: '0 0 24 24', width: '26', height: '26', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.8', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' }, [
+    svg('path', { d: 'M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v5.5M14 11v5.5' }),
+  ]);
+  return dropTarget(el('div', { class: 'drag-bin', 'data-field': 'drag-bin', 'aria-label': 'Drop here to remove the meal' }, [icon, el('span', { class: 'small', text: 'Remove' })]), async (dd) => {
+    const before = await fetchPlan(hub, dd.key);
+    const gone = before.slots.find((s) => s.id === dd.id);
+    if (!gone) return;
+    const save = (slots) => saveRecord(hub, plans(hub), { ...before, id: planId(dd.key), week: dd.key, slots });
+    await save(before.slots.filter((s) => s.id !== dd.id));
+    hub.invalidate('plan:');
+    hub.ui.notice(`${gone.title} removed.`, 'ok', { label: 'Undo', onClick: async () => { await save([...(await fetchPlan(hub, dd.key)).slots, gone]); hub.invalidate('plan:'); } });
+  });
+}
+
 /** Plan, in three steps: gather the meals, sort them into breakfast, lunch, dinner or snacks, then assign them to days. */
 function planScreen(hub) {
   const pool = loadPool(hub);
@@ -290,7 +309,7 @@ function planScreen(hub) {
   const sorted = pool.data.slots.filter((s) => s.meal).length;
   const step = (num, title, hint) => el('div', { class: 'row step-head' }, [el('span', { class: 'step-num', text: String(num) }), el('div', {}, [el('h2', { text: title, style: { margin: 0 } }), el('p', { class: 'small muted', style: { margin: 0 }, text: hint })])]);
   return el('section', { class: 'stack', 'aria-label': 'Plan the meals' }, [
-    tabs(hub, VIEWS, null),
+    tabs(hub, VIEWS, null), bin(hub),
     el('div', { class: 'panel stack' }, [
       step(1, 'Gather meals', 'What are we in the mood for? Add meals or get suggestions - no need to decide which meal or which day yet.'),
       el('div', { class: 'row' }, [
@@ -301,6 +320,16 @@ function planScreen(hub) {
           class: 'btn', type: 'button', text: 'To Shopping', 'data-field': 'pool-shop',
           title: 'Send what all the planned meals need to the shopping list now - sorting and days can wait, or never happen',
           on: { click: () => sendPlanned(hub, pool.data.slots, 'Planned meals', 'pool', { [POOL]: pool.data.slots.map((s) => s.id) }) },
+        }) : null,
+        n ? el('button', {
+          class: 'btn btn-quiet', type: 'button', text: 'Clear', 'data-field': 'pool-clear',
+          title: 'Start over: take every planned meal off this list (meals already on days stay there)',
+          on: { click: async () => {
+            if (!(await confirmAction({ title: `Clear all ${n} planned meal${n === 1 ? '' : 's'}?`, text: 'They come off this list to start over. Meals already on days stay on the calendar, the saved meals stay in the Cookbook, and the shopping list is not changed.', confirmLabel: 'Clear' }))) return;
+            const before = pool.data;
+            await savePlan(hub, POOL, { ...before, slots: [] });
+            hub.ui.notice('Planned meals cleared.', 'ok', { label: 'Undo', onClick: () => savePlan(hub, POOL, before) });
+          } },
         }) : null,
       ]),
       poolGroup(hub, pool.data, '', { add: false }),
@@ -417,7 +446,7 @@ function assignScreen(hub, param) {
   if (pool.loading) return loading();
   if (pool.error) return failure(pool.error);
   return el('section', { class: 'stack', 'aria-label': 'Assign planned meals' }, [
-    tabs(hub, VIEWS, 'assign'),
+    tabs(hub, VIEWS, 'assign'), bin(hub),
     el('div', { class: 'planner-split' }, [poolPanel(hub, pool.data), calendar(hub, param)]),
   ]);
 }
@@ -425,7 +454,7 @@ function assignScreen(hub, param) {
 /** Calendar: everything planned, a week or a month at a time. Open a meal to see it, change it or rate it. */
 function weekScreen(hub, param) {
   return el('section', { class: 'stack', 'aria-label': 'Meal calendar' }, [
-    tabs(hub, VIEWS, 'week'),
+    tabs(hub, VIEWS, 'week'), bin(hub),
     calendar(hub, param),
     el('p', { class: 'small muted', text: 'Drag a meal to another day to swap them. Open a meal to change it, or say how it went and rate it. Leftovers are cooked with the meal they come from, so they are only bought once.' }),
   ]);
@@ -554,7 +583,7 @@ function chooseScreen(hub, monday, day, meal) {
       el('input', { class: 'input', type: 'search', value: ui.q, placeholder: 'Search by name or ingredient', 'aria-label': 'Search meals', 'data-field': 'choose-search', style: { flex: '1 1 220px' }, on: { change: (e) => { ui.q = e.target.value; hub.render(); } } }),
       current ? el('button', { class: 'btn btn-quiet', type: 'button', text: 'Remove', 'data-field': 'remove-slot', on: { click: async () => { if (await confirmAction({ title: `Remove ${current.title} from ${label(date, meal, today)}?`, text: 'The saved meal stays in the Cookbook. Leftovers set aside from it are cancelled.', confirmLabel: 'Remove' })) { await savePlan(hub, monday, setSlot(p.data, day, meal, null)); hub.open(back); } } } }) : null,
     ]),
-    filterPanel(ui.filters, set, people),
+    filterPanel(ui.filters, set, people, active.length ? `${active.length} on` : 'None on'),
     active.length ? el('div', { class: 'chipset', 'aria-label': 'Active filters' }, [
       ...active.map(([text, undo]) => el('button', { class: 'chip', type: 'button', 'aria-pressed': 'true', text: `${text} ×`, 'aria-label': `Remove filter: ${text}`, on: { click: () => set(undo) } })),
       el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Clear all', 'data-field': 'clear-filters', on: { click: () => { ui.filters = emptyFilters(); ui.q = ''; hub.render(); } } }),
@@ -583,7 +612,7 @@ function chooseScreen(hub, monday, day, meal) {
   ]);
 }
 
-function filterPanel(f, set, people) {
+function filterPanel(f, set, people, note) {
   const chips = (values, chosen, key) => el('div', { class: 'chipset' }, Object.entries(values).map(([k, t]) => el('button', {
     class: 'chip', type: 'button', 'aria-pressed': String(chosen.includes(k)), text: t, 'data-field': `f-${key}:${k}`,
     on: { click: () => set({ [key]: chosen.includes(k) ? chosen.filter((x) => x !== k) : [...chosen, k] }) },
@@ -591,9 +620,8 @@ function filterPanel(f, set, people) {
   const select = (id, text, value, options, onPick) => el('label', { class: 'small row', style: { gap: '4px' } }, [text, el('select', { class: 'select', id, style: { width: 'auto' }, 'data-field': id, on: { change: (e) => onPick(e.target.value || null) } },
     options.map(([v, t]) => el('option', { value: v ?? '', text: t, selected: String(value ?? '') === String(v ?? '') })))]);
   const person = [[null, 'anyone'], ...people.map((p) => [p.id, p.name])];
-  return el('details', { class: 'measures', open: true }, [
-    el('summary', {}, [el('strong', { text: 'Filters' })]),
-    el('div', { class: 'stack', style: { marginTop: 'var(--space-2)' } }, [
+  return fold('meal-filters', 'Filters', [
+    el('div', { class: 'stack' }, [
       el('div', {}, [el('div', { class: 'small muted', text: 'Protein' }), chips(PROTEIN, f.protein, 'protein')]),
       el('div', {}, [el('div', { class: 'small muted', text: 'Carbohydrate' }), chips(CARB, f.carb, 'carb')]),
       el('div', {}, [el('div', { class: 'small muted', text: 'Includes' }), chips(GROUP, f.includes, 'includes')]),
@@ -615,7 +643,7 @@ function filterPanel(f, set, people) {
       ]),
       el('p', { class: 'small muted', text: 'A filter that needs something a meal does not record (a time, say) leaves that meal out rather than guessing.' }),
     ]),
-  ]);
+  ], { open: roomy(), cls: 'panel', note });
 }
 
 function resultRow(hub, s, people, onPick, back) {

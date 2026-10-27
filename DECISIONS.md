@@ -445,6 +445,24 @@ day is not bought twice. A sent meal shows a ✓ on its chip. Cook today lists s
 on no day under "Any day", first in the strip, to drag onto today (a meal already there swaps back
 into the list); dragging one back to "Any day" takes it off its day.
 
+**D-061 Removing planned meals: a bin while dragging, and Clear (owner, 2026-10-27).** Removing a
+meal meant opening it and pressing Remove. Now, while a meal is dragged in Plan, Assign or
+Calendar, a bin shows at the right-hand edge; dropping it there takes it off the list or its day.
+"Clear" in step 1 empties the planned-meals list after a confirm (meals on days stay, the shopping
+list is not touched). Both offer Undo in the notice.
+
+**D-062 Filters and long forms fold away (owner, 2026-10-27).** On a phone, filters and the
+Cookbook's item form filled the screen. One helper (`fold` in js/ui/common.js) makes a section
+that folds into a single line; folded, its line still says what is on ("Recipe", "2 on",
+"Everything"). Filters start folded on a narrow screen and open on a wide one; after that, open or
+closed is remembered per section on this device (`familyhub.folds`, cleared with everything
+else). Folded now: the filters in Cookbook, Meal Planner (choosing a meal), Faith journal, Places,
+Shopping's kinds and Calorie Checker's browsing; the ingredient picker's "Search in"; and the
+item form's "About it" and "Ingredients and method". Any record form can group fields the same way
+(`group`). Record forms no longer use the browser's own check for required boxes (it cannot show
+one inside a folded part and would refuse to save without a word) - they say what is missing. The
+Save row stays at the bottom of the screen on a long form.
+
 **Not built (recorded so nobody looks for it):** recurring meal traditions (none existed before),
 a pantry (so no "use before it expires" or "what we have in stock" beyond a typed list), cost,
 equipment and difficulty filters (no data), and individual 1-10 ratings (preferences cover it).

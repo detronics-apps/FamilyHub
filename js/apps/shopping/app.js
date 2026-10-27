@@ -4,6 +4,7 @@
 // kept by the Cookbook before Shopping was its own mini-app is picked up.
 
 import { el } from '../../ui/dom.js';
+import { fold, roomy } from '../../ui/common.js';
 import { loading, failure, saveRecord } from '../kit.js';
 import { formatIngredient, combineIngredients, parseIngredient } from '../meals/logic.js';
 import { inSystem } from '../../units.js';
@@ -82,6 +83,7 @@ function finder(hub, list, save) {
   draw();
   return el('div', { class: 'panel stack no-print', 'aria-label': 'Find or add' }, [
     el('div', { class: 'row' }, [input]),
+    fold('shop-kinds', 'Kinds', [
     el('div', { class: 'chipset', role: 'group', 'aria-label': 'Kind' }, [
       chip(!st.kind, 'All', 'find-kind:all', () => { st.kind = ''; hub.render(); }),
       ...Object.entries(KINDS).map(([k, t]) => chip(st.kind === k, t, `find-kind:${k}`, () => { st.kind = k; hub.render(); })),
@@ -90,6 +92,7 @@ function finder(hub, list, save) {
       chip(st.ours, `Ours (${list.known.length})`, 'find-ours', () => { st.ours = true; hub.render(); }, 'What we have bought before or added'),
       chip(!st.ours, 'Everything', 'find-all', () => { st.ours = false; hub.render(); }, 'Also common things of each kind, for a first purchase'),
     ]),
+    ], { open: roomy(), note: `${st.kind ? KINDS[st.kind] : 'All'} · ${st.ours ? 'Ours' : 'Everything'}` }),
     results,
   ]);
 }

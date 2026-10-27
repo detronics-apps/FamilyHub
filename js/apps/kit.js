@@ -3,7 +3,7 @@
 // UI only - each app's rules live in its own logic.js (pure, tested).
 
 import { el } from '../ui/dom.js';
-import { modal } from '../ui/common.js';
+import { modal, fold } from '../ui/common.js';
 import { CollectionConflict } from '../collections.js';
 
 export function tabs(hub, list, current) {
@@ -36,7 +36,8 @@ const drafts = new Map();
 globalThis.addEventListener?.('hashchange', () => drafts.clear());
 
 /**
- * A form built from a field list. Fields marked `more` go under "More details".
+ * A form built from a field list. Fields marked `more` go under "More details"; fields with
+ * the same `group` next to each other share a section that can be folded away (D-062).
  * Field types: text, textarea, select, day, number, lines (one item per line),
  * people (tick boxes), check. Values are read only on Save.
  */
@@ -113,7 +114,17 @@ export function recordForm({ fields, record = {}, people = [], onSave, onCancel 
     return field(`${f.label}${f.required ? ' *' : ''}`, control, f.hint);
   };
 
-  const main = fields.filter((f) => !f.more).map(build);
+  const main = [];
+  for (const f of fields.filter((x) => !x.more)) {
+    const last = main[main.length - 1];
+    if (!f.group) main.push(build(f));
+    else if (last?.dataset.group === f.group) last.querySelector('.fold__body').append(build(f));
+    else {
+      const section = fold(`form:${f.group}`, f.group, [build(f)], { cls: 'fold--form' });
+      section.dataset.group = f.group;
+      main.push(section);
+    }
+  }
   const more = fields.filter((f) => f.more).map(build);
 
   const submit = (e) => {
@@ -126,11 +137,14 @@ export function recordForm({ fields, record = {}, people = [], onSave, onCancel 
   };
 
   const remember = () => drafts.set(draftKey, Object.fromEntries(fields.filter((f) => f.type !== 'custom' && getters[f.key]).map((f) => [f.key, getters[f.key]()])));
-  return el('form', { class: 'panel stack', on: { submit, input: remember, change: remember } }, [
+  // novalidate: a required box inside a folded section cannot be shown by the browser, so it
+  // would refuse to save without a word - the check above says what is missing instead.
+  return el('form', { class: 'panel stack', novalidate: true, on: { submit, input: remember, change: remember } }, [
     ...main,
     more.length ? el('details', { class: 'more' }, [el('summary', { text: 'More details' }), el('div', { class: 'stack' }, more)]) : null,
     errors,
-    el('div', { class: 'row row--end' }, [
+    // Save stays in reach at the bottom of the screen, however long the form (D-062).
+    el('div', { class: 'row row--end form-actions' }, [
       ...extra,
       onCancel ? el('button', { class: 'btn', type: 'button', text: 'Cancel', on: { click: onCancel } }) : null,
       el('button', { class: 'btn btn-primary', type: 'submit', text: saveLabel, 'data-field': 'record-save' }),

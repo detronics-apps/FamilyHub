@@ -4,6 +4,7 @@
 // items: the foods go over in the link). Nothing is logged - it is a lookup, not a diary.
 
 import { el } from '../../ui/dom.js';
+import { fold, roomy } from '../../ui/common.js';
 import { loading, failure, field } from '../kit.js';
 import { amounts, total, fmtAmount, browseFoods, FOOD_GROUPS, FOOD_COLOURS } from '../../food.js';
 import { portionShares, portionPlan, fmtShare } from '../../portions.js';
@@ -60,7 +61,7 @@ function browseControls(hub) {
     class: 'select', style: { width: 'auto' }, 'data-field': `browse-${key}`,
     on: { change: (e) => { ui[key] = e.target.value; ui.page = 0; hub.render(); } },
   }, [['', any], ...options].map(([v, t]) => el('option', { value: v, text: t, selected: ui[key] === v })))]);
-  return el('div', { class: 'stack' }, [
+  return fold('food-browse', 'Browse', [
     el('div', { class: 'chipset', role: 'group', 'aria-label': 'Browse in' }, [
       el('span', { class: 'small', text: 'Browse:' }),
       ...[['explore', `Everyday foods (${EVERYDAY.size})`], ['all', 'All foods']].map(([k, t]) => el('button', {
@@ -77,7 +78,7 @@ function browseControls(hub) {
       'Leave out dried and powdered foods',
     ]),
     ]),
-  ]);
+  ], { open: roomy(), note: [ui.scope === 'all' ? 'All foods' : 'Everyday foods', ui.group ? FOOD_GROUPS.find(([k]) => k === ui.group)?.[1] : null, FOOD_COLOURS[ui.colour], ui.sort ? `most ${SORTS[ui.sort].toLowerCase()} first` : null].filter(Boolean).join(' · ') });
 }
 
 function results(hub, db) {
