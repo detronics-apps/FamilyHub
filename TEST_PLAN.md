@@ -235,3 +235,7 @@ walkthrough with a screen reader, Safari/Firefox, a real phone.
   two tags, marked been and loved, found by "pet friendly"; Faith: an entry with a question
   (needs more reading), Ephesians 5:25-33 (NIV), two topics and a term; found by topic; listed in
   Questions; Ephesians' five Ws; Cook today shows tonight's batch and ingredients.
+- Spacing (0.7.1): a list shown as a panel ("list panel": Cookbook, Faith journal and questions,
+  Places, Shopping results...) had lost its side padding to the list reset, so text sat 1 px from
+  the edge; now 17 px. Browser audit of every screen (64 at desktop width, 63 at 375 px phone
+  width): no text, field or button within 6 px of its panel's left edge, and no sideways scroll.

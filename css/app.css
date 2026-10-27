@@ -52,6 +52,7 @@ p { margin: 0 0 var(--space-3); }
 /* A section's ways in: Plan, Check and note, Do - side by side when there is room. */
 .modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-3); align-items: start; }
 .mode--do { border-top: 3px solid var(--accent); }
+details > .modes { margin-top: var(--space-3); }
 
 main.app-main {
   flex: 1 0 auto;
@@ -223,6 +224,8 @@ details.more > summary, details.explain > summary {
 .later-menu { display: flex; gap: var(--space-2); flex-wrap: wrap; padding-top: var(--space-2); border-top: 1px dashed var(--border); }
 
 .list { list-style: none; margin: 0; padding: 0; }
+/* A list shown as a panel keeps the panel's side padding (the reset above would otherwise take it away). */
+.list.panel { padding: var(--space-1) var(--space-4); }
 .list > li { display: flex; gap: var(--space-3); align-items: center; padding: var(--space-3) 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .list > li:last-child { border-bottom: none; }
 .list__main { flex: 1 1 200px; min-width: 0; }

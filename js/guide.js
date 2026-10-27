@@ -217,7 +217,7 @@ export const HOWTOS = [
     'Look back in the Journal tab with filters, and go through your questions in the Questions tab. The Bible guide shows where to start reading on a topic.',
   ] },
   { id: 'modes', title: 'Plan, check and note, or do', steps: [
-    'Each section page groups what you can do by the time you have: Plan (time to sit and think), Check and note (a quick look, or jotting something down) and Do (20 minutes to an hour to get things done).',
+    'Under the mini-apps on each section page, open "Extra help". It groups what you can do by the time you have: Plan (time to sit and think), Check and note (a quick look, or jotting something down) and Do (20 minutes to an hour to get things done).',
     'For example in Meals: plan the next meals; check what is in a food or jot down a meal to try; cook today’s meals.',
   ] },
   { id: 'miniapps', title: 'Turn off, remove or add mini-apps', steps: [

@@ -8,6 +8,9 @@ import { setEnabled, MODES } from '../../miniapps.js';
 import { STARTERS } from '../../apps/catalogue.js';
 import { doInstall } from './library.js';
 
+// Whether the extra help is unfolded - kept while moving between sections.
+let waysOpen = false;
+
 export function sectionView(ctx, route) {
   const s = section(route.sub);
   if (!s) return el('section', { class: 'panel empty' }, [el('h1', { text: 'Not found' }), el('a', { class: 'btn', href: '#/', text: 'Back to home' })]);
@@ -23,14 +26,6 @@ export function sectionView(ctx, route) {
   return el('section', { class: 'stack', 'aria-labelledby': 'section-title' }, [
     el('h1', { id: 'section-title', text: s.name }),
     el('p', { class: 'muted', text: s.purpose }),
-    ways.length ? el('div', { class: 'modes' }, ways.map(([k, mode, list]) => el('div', { class: `panel stack mode mode--${k}`, 'data-field': `mode:${k}` }, [
-      el('div', {}, [el('h2', { text: mode.title, style: { margin: 0 } }), el('p', { class: 'small muted', style: { margin: 0 }, text: mode.when })]),
-      el('ul', { class: 'list' }, list.map((x) => el('li', {}, [el('a', { class: 'list__main', href: `#/${x.app.id}${x.screen ? `/${x.screen}` : ''}`, 'data-field': `way:${x.app.id}:${x.screen ?? ''}` }, [
-        el('strong', { text: x.label }),
-        el('div', { class: 'small muted', text: [x.hint, on.length > 1 ? x.app.name : null].filter(Boolean).join(' · ') }),
-      ])]))),
-    ]))) : null,
-    ways.length && installed.length ? el('h2', { text: `Everything in ${s.name}`, style: { margin: 'var(--space-2) 0 0' } }) : null,
     installed.length
       ? el('nav', { class: 'tiles', 'aria-label': `${s.name} mini-apps` }, installed.map((m) => {
         const on = reg.apps[m.id].enabled;
@@ -46,6 +41,17 @@ export function sectionView(ctx, route) {
           ]);
       }))
       : el('p', { class: 'panel', text: `No mini-apps are installed in ${s.name} yet.` }),
+    // Extra help, folded away under the mini-apps: the same ways in, grouped by the time you have.
+    ways.length ? el('details', { class: 'panel', open: waysOpen, 'data-field': 'ways', on: { toggle: (e) => { waysOpen = e.target.open; } } }, [
+      el('summary', { text: 'Extra help: Plan · Check and note · Do' }),
+      el('div', { class: 'modes' }, ways.map(([k, mode, list]) => el('div', { class: `panel stack mode mode--${k}`, 'data-field': `mode:${k}` }, [
+        el('div', {}, [el('h2', { text: mode.title, style: { margin: 0 } }), el('p', { class: 'small muted', style: { margin: 0 }, text: mode.when })]),
+        el('ul', { class: 'list' }, list.map((x) => el('li', {}, [el('a', { class: 'list__main', href: `#/${x.app.id}${x.screen ? `/${x.screen}` : ''}`, 'data-field': `way:${x.app.id}:${x.screen ?? ''}` }, [
+          el('strong', { text: x.label }),
+          el('div', { class: 'small muted', text: [x.hint, on.length > 1 ? x.app.name : null].filter(Boolean).join(' · ') }),
+        ])]))),
+      ]))),
+    ]) : null,
     offered.length ? el('div', { class: 'panel' }, [
       el('h2', { text: `Add to ${s.name}` }),
       el('ul', { class: 'list' }, offered.map((m) => el('li', {}, [

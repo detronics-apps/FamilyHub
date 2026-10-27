@@ -322,7 +322,8 @@ offers its ways in by the time you have - **Plan** (relaxed, time to think), **C
 quick look, or capturing something before it is forgotten) and **Do** (20 minutes to an hour,
 getting things done). Mini-app manifests name their ways in (`modes`: mode, screen, label, hint),
 validated like screens, and each section page groups them. New "Do" screens: Cook today (This
-Week) and At the shop (Shopping); Faith's study session is the reading plan.
+Week) and At the shop (Shopping); Faith's study session is the reading plan. On the section page
+the mini-apps come first; the three groups are folded under "Extra help" below them (owner).
 
 **D-046 Explore foods, not only find them (owner, 2026-10-26).** People cannot search for a food
 they have never heard of. Calorie Checker browses by type of food (13 plain groups over the
