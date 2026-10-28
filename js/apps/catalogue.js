@@ -238,7 +238,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'cars', section: 'finance', name: 'Cars', version: '1.0.0',
+      fhManifest: 1, id: 'cars', section: 'finance', name: 'Cars', version: '1.1.0',
       description: 'What a car really costs to own: instalments, interest, fees, running costs, and what it is worth - and still owed - when you sell.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'cost', title: 'True cost' }, { id: 'compare', title: 'Side by side', nav: false }],

@@ -5,7 +5,7 @@
 import { el } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
 import { loading, failure, saveRecord } from '../kit.js';
-import { levelBar, shows, stat, step, lineChart, chartPanel, crossing, whenLabel, rand, pct, months } from '../finance/pod.js';
+import { levelBar, shows, stat, step, lineChart, chartPanel, RULE, outOf, crossing, whenLabel, rand, pct, months } from '../finance/pod.js';
 import { carCost, homeCost, bond, CAR_DEFAULTS, HOME_DEFAULTS } from '../finance/maths.js';
 import { normaliseMonth, monthSummary, monthId, normaliseGoal as financeGoal } from '../finance/logic.js';
 import { normaliseTrip, budgetSummary } from '../holidays/logic.js';
@@ -310,11 +310,12 @@ function planStory(s, today) {
   const firstShort = s.short.length ? Math.min(...s.short.map((g) => g.firstShort)) : null;
   return chartPanel('Free against needed, month by month', lineChart([
     { name: 'Free each month', points: pts.map((x) => [x.m, x.avail]) },
-    { name: 'Needed each month', points: pts.map((x) => [x.m, x.needed]), dashed: true },
-  ], { label: 'Money free each month against what the goals need', xLabel: (m) => monthAt(today, m).slice(0, 4),
+    { name: 'Put aside for the goals each month', points: outOf(pts.map((x) => [x.m, x.needed])), dashed: true },
+    { name: 'Left over', points: pts.map((x) => [x.m, x.avail - x.needed]) },
+  ], { label: 'Money free each month, what the goals need, and what is left over', xLabel: (m) => monthAt(today, m).slice(0, 4),
     marks: [firstShort != null ? { x: firstShort, label: `First goal short: ${monthName(monthAt(today, firstShort))}` } : null,
       s.deficitFrom != null ? { x: s.deficitFrom, label: 'Commitments outgrow income' } : null],
-    story: 'Where the dashed line is above, the goals need more than is free that month - money put aside earlier, a goal moving, or a goal shrinking has to cover it.' }));
+    story: `${RULE} When "Left over" goes below zero, the goals need more than is free that month - money put aside earlier, a goal moving, or a goal shrinking has to cover it.` }));
 }
 
 function advanced(s, today) {

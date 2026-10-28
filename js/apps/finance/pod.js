@@ -221,8 +221,13 @@ export function lineChart(series, { label, marks = [], story = null, xLabel = nu
   ]);
 }
 
+/** The rule on every money graph (D-077): what grows your pocket is above zero, what comes out of it below. */
+export const RULE = 'Above zero: what grows your pocket. Below zero: what comes out of it.';
+/** Turn amounts that leave your pocket into the minus side of a graph. */
+export const outOf = (points) => points.map(([x, y]) => [x, -y]);
+
 /** A chart with its own heading, as a panel - the graphs that tell the story. */
-export const chartPanel = (title, chart) => el('div', { class: 'panel stack' }, [el('h2', { text: title, style: { margin: 0 } }), chart]);
+export const chartPanel = (title, ...charts) => el('div', { class: 'panel stack' }, [el('h2', { text: title, style: { margin: 0 } }), ...charts.filter(Boolean)]);
 
 /* ------------------------------------------------ saving and comparing */
 

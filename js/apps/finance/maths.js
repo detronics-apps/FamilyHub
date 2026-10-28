@@ -70,12 +70,57 @@ export const todaysMoney = (amount, inflationPct, years) => amount / (1 + (Numbe
 
 /* --------------------------------------------- car: true cost of owning */
 
+/**
+ * Fuel and electricity (D-076). Fuel: the official October 2026 prices (DMPR, as reported);
+ * they change on the first Wednesday of each month. Diesel is the wholesale price - pumps
+ * charge a little more. Electricity: typical figures reported in 2026.
+ */
+export const ENERGY = {
+  source: 'Official fuel prices, October 2026 (they change monthly)',
+  fuel: { petrol: { inland: 30.25, coastal: 29.38 }, diesel: { inland: 31.95, coastal: 31.08 } },
+  home: { value: 4.16, source: 'Typical home electricity, as reported September 2026' },
+  public: { value: 7.5, source: 'Typical public fast charging (R7 to R8 a kWh), 2026' },
+  elecRise: { value: 9, source: 'NERSA municipal increase for 2026/27 (9.01%)' },
+};
+export const POWER = { petrol: 'Petrol', diesel: 'Diesel', hybrid: 'Hybrid', plugin: 'Plug-in hybrid', electric: 'Electric' };
+const USES_FUEL = new Set(['petrol', 'diesel', 'hybrid', 'plugin']);
+const USES_POWER = new Set(['plugin', 'electric']);
+/** Typical consumption to start from - illustrative; the car's own figure, or yours, is better. */
+const TYPICAL = { petrol: { l: 7.5 }, diesel: { l: 6.5 }, hybrid: { l: 4.8 }, plugin: { l: 6, kwh: 20 }, electric: { kwh: 17 } };
+export const typicalLitres = (power) => TYPICAL[power]?.l ?? null;
+export const typicalKwh = (power) => TYPICAL[power]?.kwh ?? null;
+export const fuelPriceFor = (power, region) => ENERGY.fuel[power === 'diesel' ? 'diesel' : 'petrol'][region === 'coastal' ? 'coastal' : 'inland'];
+
 export const CAR_DEFAULTS = {
   price: null, deposit: 0, ratePct: Math.round((REFERENCE.prime.value + 1.5) * 100) / 100, termMonths: 60, keepYears: 5,
   balloonPct: 0, initiationFee: 1207.5, feeFinanced: true, serviceFee: 69,
   insurance: null, fuel: null, upkeep: null, licenceYearly: null, escalatePct: REFERENCE.cpi.value,
+  serviceYearly: null, oilYearly: null, tyresYearly: null,
+  power: 'petrol', region: 'inland', lPer100: null, kwhPer100: null, electricShare: 50, homeShare: 80,
+  fuelPrice: null, homeTariff: ENERGY.home.value, publicTariff: ENERGY.public.value, chargeLoss: 10, chargerInstall: null,
+  fuelRisePct: REFERENCE.cpi.value, elecRisePct: ENERGY.elecRise.value,
   resaleMode: 'depreciation', depreciationPct: 15, resaleAmount: null, kmYearly: null,
 };
+
+/**
+ * What the car's fuel and electricity cost a month in the first year, from the distance
+ * driven and the consumption. A plug-in hybrid drives part of the way on electricity;
+ * charging loses some power between the wall and the battery.
+ */
+export function energyCost(input) {
+  const v = { ...CAR_DEFAULTS, ...input };
+  const km = num(v.kmYearly) ?? 0;
+  const power = POWER[v.power] ? v.power : 'petrol';
+  const share = power === 'electric' ? 1 : power === 'plugin' ? Math.min(100, Math.max(0, num(v.electricShare) ?? 0)) / 100 : 0;
+  const litres = USES_FUEL.has(power) ? ((km * (1 - share)) * (num(v.lPer100) ?? typicalLitres(power) ?? 0)) / 100 : 0;
+  const kwh = USES_POWER.has(power) ? ((km * share) * (num(v.kwhPer100) ?? typicalKwh(power) ?? 0)) / 100 * (1 + (num(v.chargeLoss) ?? 0) / 100) : 0;
+  const home = Math.min(100, Math.max(0, num(v.homeShare) ?? 0)) / 100;
+  const tariff = home * (num(v.homeTariff) ?? 0) + (1 - home) * (num(v.publicTariff) ?? 0);
+  const price = num(v.fuelPrice) ?? fuelPriceFor(power, v.region);
+  const fuelMonth = (litres * price) / 12;
+  const elecMonth = (kwh * tariff) / 12;
+  return { power, km, litres, kwh, price, tariff, fuelMonth, elecMonth, perKm: km ? (fuelMonth + elecMonth) * 12 / km : null };
+}
 
 const num = (v) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
 
@@ -111,11 +156,21 @@ export function carCost(input) {
   const interest = pmt * paid + balloonPaid - (loan - owed);
   const fees = service * paid + initiation;
   const toBank = pmt * paid + service * paid + balloonPaid;
-  const upfront = deposit + (v.feeFinanced ? 0 : initiation);
+  const charger = USES_POWER.has(v.power) ? num(v.chargerInstall) ?? 0 : 0;
+  const upfront = deposit + (v.feeFinanced ? 0 : initiation) + charger;
 
+  // Running costs: the steady ones rise with inflation; fuel and electricity at their own rates.
+  // A monthly fuel figure of the family's own replaces the worked-out fuel and charging.
   const esc = (num(v.escalatePct) ?? 0) / 100;
-  const runMonth = ['insurance', 'fuel', 'upkeep'].reduce((s, k) => s + (num(v[k]) ?? 0), 0) + (num(v.licenceYearly) ?? 0) / 12;
-  const runningIn = (m) => runMonth * (1 + esc) ** Math.floor((m - 1) / 12);
+  const e = energyCost(v);
+  const ownFuel = num(v.fuel);
+  const fuelMonth = ownFuel ?? e.fuelMonth;
+  const elecMonth = ownFuel != null ? 0 : e.elecMonth;
+  const steady = (num(v.insurance) ?? 0) + (num(v.upkeep) ?? 0)
+    + ((num(v.licenceYearly) ?? 0) + (num(v.serviceYearly) ?? 0) + (num(v.tyresYearly) ?? 0) + (USES_FUEL.has(v.power) ? num(v.oilYearly) ?? 0 : 0)) / 12;
+  const runMonth = steady + fuelMonth + elecMonth;
+  const yr = (m) => Math.floor((m - 1) / 12);
+  const runningIn = (m) => steady * (1 + esc) ** yr(m) + fuelMonth * (1 + (num(v.fuelRisePct) ?? 0) / 100) ** yr(m) + elecMonth * (1 + (num(v.elecRisePct) ?? 0) / 100) ** yr(m);
 
   // Value over time: a steady yearly drop, either chosen or implied by an expected sale price.
   const resaleAmount = num(v.resaleAmount);
@@ -127,19 +182,21 @@ export function carCost(input) {
 
   let cashOut = upfront;
   let running = 0;
-  const timeline = [{ month: 0, cashOut, value: price, owed: owedAt(0), cost: cashOut - (price - owedAt(0)) }];
+  const timeline = [{ month: 0, cashOut, out: cashOut, value: price, owed: owedAt(0), cost: cashOut - (price - owedAt(0)) }];
   for (let m = 1; m <= keep; m += 1) {
     const run = runningIn(m);
     running += run;
-    cashOut += run + (financed && m <= n ? pmt + service : 0) + (financed && m === n ? balloon : 0);
-    timeline.push({ month: m, cashOut, value: valueAt(m), owed: owedAt(m), cost: cashOut - (valueAt(m) - owedAt(m)) });
+    const out = run + (financed && m <= n ? pmt + service : 0) + (financed && m === n ? balloon : 0);
+    cashOut += out;
+    timeline.push({ month: m, cashOut, out, value: valueAt(m), owed: owedAt(m), cost: cashOut - (valueAt(m) - owedAt(m)) });
   }
   const atSale = resale - owed;
   const total = upfront + toBank + running - atSale;
   return {
     price, deposit, loan, balloon, months: keep, termMonths: n, financed,
     instalment: financed ? pmt + service : 0, repayment: pmt, serviceFee: service,
-    interest, fees, toBank, upfront, running, runningFirstMonth: runMonth,
+    interest, fees, toBank, upfront, running, runningFirstMonth: runMonth, charger,
+    energy: { ...e, fuelMonth, elecMonth, own: ownFuel != null }, steadyFirstMonth: steady,
     resale, owed, atSale, total,
     depreciation: price - resale,
     perMonth: total / keep,
@@ -164,7 +221,9 @@ export const CAR_NUDGES = [
   { key: 'ratePct', what: 'interest rate 1 point higher', to: (x) => (Number(x) || 0) + 1 },
   { key: 'depreciationPct', what: 'value dropping 5 points faster a year', to: (x) => (Number(x) || 0) + 5 },
   { key: 'escalatePct', what: 'running costs rising 2 points faster a year', to: (x) => (Number(x) || 0) + 2 },
-  { key: 'fuel', what: 'fuel 20% dearer', to: (x) => (Number(x) || 0) * 1.2 },
+  { key: 'fuelRisePct', what: 'fuel prices rising 3 points faster a year', to: (x) => (Number(x) || 0) + 3 },
+  { key: 'elecRisePct', what: 'electricity rising 3 points faster a year', to: (x) => (Number(x) || 0) + 3 },
+  { key: 'kmYearly', what: 'driving 5 000 km more a year', to: (x) => (Number(x) || 0) + 5000 },
 ];
 
 /* ------------------------------------------------------- homes (D-067) */
@@ -247,13 +306,15 @@ export function homeCost(input) {
   const upfront = buy ? h.deposit + h.duty + h.fees + move : rentDeposit + move;
 
   let toBank = 0; let running = 0; let rent = 0; let travelMoney = 0; let hours = 0; let timeCost = 0;
-  const timeline = [{ month: 0, cost: upfront - (buy ? h.price * (1 - sell) - h.loan : rentDeposit) }];
+  const timeline = [{ month: 0, cost: upfront - (buy ? h.price * (1 - sell) - h.loan : rentDeposit), value: buy ? h.price : 0, owed: buy ? h.loan : 0, paid: upfront, out: upfront }];
   for (let m = 1; m <= S; m += 1) {
+    const before = toBank + running + rent + travelMoney;
     if (buy) { if (m <= h.n) toBank += h.pmt; running += h.runningIn(m); } else rent += h.rentIn(m);
     const t = travel(v, m);
     travelMoney += t.money; hours += t.hours; timeCost += t.time;
     const back = buy ? h.valueAt(m) * (1 - sell) - h.owedAt(m) : rentDeposit;
-    timeline.push({ month: m, cost: upfront + toBank + running + rent + travelMoney - back });
+    const paidSoFar = upfront + toBank + running + rent + travelMoney;
+    timeline.push({ month: m, cost: paidSoFar - back, value: buy ? h.valueAt(m) : 0, owed: buy ? h.owedAt(m) : 0, paid: paidSoFar, out: paidSoFar - upfront - before });
   }
   const value = buy ? h.valueAt(S) : 0;
   const sellCosts = value * sell;

@@ -4,8 +4,8 @@
 
 import { el } from '../../ui/dom.js';
 import { loading, failure } from '../kit.js';
-import { carCost, CAR_DEFAULTS, REFERENCE, sensitivity, CAR_NUDGES, monthlyRate } from '../finance/maths.js';
-import { levelBar, shows, draft, loadDraft, inputsPanel, assumed, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
+import { carCost, CAR_DEFAULTS, REFERENCE, sensitivity, CAR_NUDGES, monthlyRate, ENERGY, POWER, typicalLitres, typicalKwh, fuelPriceFor } from '../finance/maths.js';
+import { levelBar, shows, draft, loadDraft, inputsPanel, assumed, stat, sums, step, lineChart, chartPanel, RULE, outOf, crossing, whenLabel, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => r.title, prefix: 'car' });
 const KIND = 'car';
@@ -17,12 +17,30 @@ const FIELDS = [
   { key: 'ratePct', label: 'Interest rate', type: 'percent', level: 'simple', source: { ref: REFERENCE.prime, note: '+ 1.5 points (illustrative)' }, hint: 'The rate on your quote. Car loans are usually a little above prime, and move when prime moves.' },
   { key: 'termMonths', label: 'Pay it off over', type: 'choice', level: 'simple', choices: TERMS },
   { key: 'keepYears', label: 'Keep it for', type: 'years', level: 'simple', source: { kind: 'assumption' }, hint: 'When you expect to sell it. It can be before the loan is paid off.' },
-  { key: 'insurance', label: 'Insurance a month', type: 'money', level: 'simple', optional: true, group: 'running' },
-  { key: 'fuel', label: 'Fuel or charging a month', type: 'money', level: 'simple', optional: true, group: 'running' },
-  { key: 'upkeep', label: 'Services, tyres and repairs a month', type: 'money', level: 'simple', optional: true, group: 'running', hint: 'An average: a R6 000 service once a year is R500 a month.' },
-  { key: 'licenceYearly', label: 'Licence and other yearly costs', type: 'money', level: 'advanced', optional: true, group: 'running' },
-  { key: 'escalatePct', label: 'Running costs rise by', type: 'percent', level: 'advanced', source: { ref: REFERENCE.cpi }, group: 'running' },
-  { key: 'kmYearly', label: 'Distance driven', type: 'km', level: 'advanced', optional: true, group: 'running', hint: 'Only to show the cost per kilometre.' },
+  // Fuel and charging (D-076): worked out from distance and consumption.
+  { key: 'power', label: 'It runs on', type: 'choice', level: 'simple', redraw: true, group: 'energy', choices: Object.entries(POWER).map(([value, label]) => ({ value, label })) },
+  { key: 'kmYearly', label: 'Distance driven', type: 'km', level: 'simple', optional: true, group: 'energy', hint: 'From the odometer or your service book. 15 000 to 20 000 km a year is common.' },
+  { key: 'region', label: 'Fuel bought', type: 'choice', level: 'simple', group: 'energy', choices: [{ value: 'inland', label: 'Inland' }, { value: 'coastal', label: 'At the coast' }], when: (v) => v.power !== 'electric' },
+  { key: 'lPer100', label: 'Fuel use', type: 'number', unitText: 'litres per 100 km', level: 'simple', group: 'energy', estimate: (v) => typicalLitres(v.power), when: (v) => v.power !== 'electric', hint: 'From the car’s specifications, or your own (fill up, note the km, divide). Left empty: a typical figure.' },
+  { key: 'kwhPer100', label: 'Electricity use', type: 'number', unitText: 'kWh per 100 km', level: 'simple', group: 'energy', estimate: (v) => typicalKwh(v.power), when: (v) => v.power === 'electric' || v.power === 'plugin', hint: 'From the specifications. Left empty: a typical figure. Highway driving uses more.' },
+  { key: 'electricShare', label: 'Of the kilometres, on electricity', type: 'percent', unitText: '%', level: 'simple', group: 'energy', source: { kind: 'assumption' }, when: (v) => v.power === 'plugin', hint: 'Short daily trips, charged every night: most of them. Long trips: few.' },
+  { key: 'homeShare', label: 'Of the charging, done at home', type: 'percent', unitText: '%', level: 'simple', group: 'energy', source: { kind: 'assumption' }, when: (v) => v.power === 'electric' || v.power === 'plugin', hint: 'Home charging costs about half of public fast charging.' },
+  { key: 'chargerInstall', label: 'Home charger, installed', type: 'money', level: 'simple', optional: true, group: 'energy', when: (v) => v.power === 'electric' || v.power === 'plugin', hint: 'Once off. Get a quote - it depends on the distance from the board and the charger.' },
+  { key: 'fuelPrice', label: 'Fuel price', type: 'money', unitText: 'a litre', level: 'advanced', group: 'energy', source: { kind: 'reference', text: ENERGY.source }, estimate: (v) => fuelPriceFor(v.power, v.region), when: (v) => v.power !== 'electric', hint: 'Petrol 95, or diesel wholesale (the pump is a little more). New prices on the first Wednesday of each month.' },
+  { key: 'homeTariff', label: 'Home electricity', type: 'money', unitText: 'a kWh', level: 'advanced', group: 'energy', source: { kind: 'reference', text: ENERGY.home.source }, when: (v) => v.power === 'electric' || v.power === 'plugin', hint: 'On your municipal or Eskom bill. Prepaid and time-of-use tariffs differ.' },
+  { key: 'publicTariff', label: 'Public charging', type: 'money', unitText: 'a kWh', level: 'advanced', group: 'energy', source: { kind: 'reference', text: ENERGY.public.source }, when: (v) => v.power === 'electric' || v.power === 'plugin' },
+  { key: 'chargeLoss', label: 'Lost while charging', type: 'percent', unitText: '%', level: 'advanced', group: 'energy', source: { kind: 'illustrative' }, when: (v) => v.power === 'electric' || v.power === 'plugin', hint: 'Power that never reaches the battery - often 10 to 15%.' },
+  { key: 'fuelRisePct', label: 'Fuel prices rise by', type: 'percent', level: 'advanced', group: 'energy', source: { kind: 'assumption' }, when: (v) => v.power !== 'electric', hint: 'Fuel jumps about with oil and the rand; it rose sharply in 2026.' },
+  { key: 'elecRisePct', label: 'Electricity rises by', type: 'percent', level: 'advanced', group: 'energy', source: { kind: 'reference', text: ENERGY.elecRise.source }, when: (v) => v.power === 'electric' || v.power === 'plugin' },
+  { key: 'fuel', label: 'Or your own figure for fuel and charging, a month', type: 'money', level: 'advanced', optional: true, group: 'energy', hint: 'Replaces the worked-out figure above.' },
+  // Insurance, service and upkeep.
+  { key: 'insurance', label: 'Insurance a month', type: 'money', level: 'simple', optional: true, group: 'running', hint: 'Get a quote for the exact car. Electric cars often cost more to insure.' },
+  { key: 'serviceYearly', label: 'Service, a year', type: 'money', level: 'simple', optional: true, group: 'running', hint: 'Check the service plan. Electric cars need far less servicing - no oil, fewer parts.' },
+  { key: 'oilYearly', label: 'Oil between services, a year', type: 'money', level: 'simple', optional: true, group: 'running', when: (v) => v.power !== 'electric' },
+  { key: 'tyresYearly', label: 'Tyres, a year on average', type: 'money', level: 'simple', optional: true, group: 'running', hint: 'A set every 40 000 to 60 000 km, spread over the years. Heavier electric cars wear them sooner.' },
+  { key: 'licenceYearly', label: 'Licence and other yearly costs', type: 'money', level: 'simple', optional: true, group: 'running' },
+  { key: 'upkeep', label: 'Other repairs, a month on average', type: 'money', level: 'advanced', optional: true, group: 'running', hint: 'Brakes, batteries, wipers, the unexpected. More once the warranty ends.' },
+  { key: 'escalatePct', label: 'Insurance, service and repairs rise by', type: 'percent', level: 'advanced', source: { ref: REFERENCE.cpi }, group: 'running' },
   { key: 'balloonPct', label: 'Balloon (of the price)', type: 'percent', level: 'advanced', source: { kind: 'assumption' }, hint: 'Part of the price left to pay in one go at the end. Lower instalments, more interest.', group: 'loan' },
   { key: 'initiationFee', label: 'Initiation fee', type: 'money', level: 'advanced', source: { kind: 'illustrative' }, hint: 'A once-off fee for opening the loan.', group: 'loan' },
   { key: 'feeFinanced', label: 'Initiation fee added to the loan', type: 'check', level: 'advanced', source: { kind: 'assumption' }, group: 'loan' },
@@ -31,7 +49,7 @@ const FIELDS = [
   { key: 'depreciationPct', label: 'Drops in value by', type: 'percent', level: 'advanced', source: { kind: 'illustrative' }, hint: 'New cars often lose 15 to 20% a year at first. Look up what similar used cars sell for.', group: 'sale', when: (v) => v.resaleMode !== 'amount' },
   { key: 'resaleAmount', label: 'Expected sale price', type: 'money', level: 'advanced', optional: true, group: 'sale', when: (v) => v.resaleMode === 'amount' },
 ];
-const GROUPS = { running: 'Running costs (optional)', loan: 'Loan details', sale: 'Selling it' };
+const GROUPS = { energy: 'Fuel or charging', running: 'Insurance, service and upkeep (optional)', loan: 'Loan details', sale: 'Selling it' };
 
 export function render(hub, route) {
   if (route.sub === 'compare') return compareScreen(hub, route.rest[0] ?? '');
@@ -75,25 +93,27 @@ function results(d) {
       el('h2', { text: 'What it means', style: { margin: 0 } }),
       ...meaning(c, v).map((t) => el('p', { style: { margin: 0 }, text: t })),
       sums([
-        { label: 'Paid up front', value: c.upfront, note: 'Deposit, and the initiation fee if it is not in the loan' },
-        { label: 'Paid to the bank', value: c.toBank, note: c.financed ? `${Math.min(c.months, c.termMonths)} instalments${c.balloon && c.months >= c.termMonths ? ' and the balloon' : ''}` : null },
-        { label: 'Running costs', value: noRunning ? 'not entered' : c.running },
-        { label: 'Less the sale price', value: -c.resale, note: `What it fetches after ${kept}` },
-        { label: 'Still owed to the bank then', value: c.owed, note: c.owed > 0 ? 'Settled from the sale' : null },
-        { label: 'Total cost of owning it', value: c.total, total: true },
+        { label: 'Paid up front', value: -c.upfront, note: `Deposit${c.charger ? ', home charger' : ''}, and the initiation fee if it is not in the loan` },
+        { label: 'Paid to the bank', value: -c.toBank, note: c.financed ? `${Math.min(c.months, c.termMonths)} instalments${c.balloon && c.months >= c.termMonths ? ' and the balloon' : ''}` : null },
+        { label: 'Running costs', value: noRunning ? 'not entered' : -c.running },
+        { label: 'The sale price', value: c.resale, note: `What it fetches after ${kept}` },
+        { label: 'Still owed to the bank then', value: -c.owed, note: c.owed > 0 ? 'Settled from the sale' : null },
+        { label: `What owning it costs you over ${kept}`, value: -c.total, total: true },
       ]),
       el('h3', { text: 'Where the cost goes', style: { margin: 0 } }),
       sums([
-        { label: 'Drop in value', value: c.depreciation, note: `${rand(c.price)} new, about ${rand(c.resale)} when sold` },
-        { label: 'Interest', value: c.interest },
-        { label: 'Bank fees', value: c.fees },
-        { label: 'Running costs', value: noRunning ? 'not entered' : c.running },
-        { label: 'Total', value: c.total, total: true, note: 'The same total, counted the other way - repaying the loan is paying for the car, not a cost on top of it.' },
+        { label: 'Drop in value', value: -c.depreciation, note: `${rand(c.price)} new, about ${rand(c.resale)} when sold` },
+        { label: 'Interest', value: -c.interest },
+        { label: 'Bank fees', value: -c.fees },
+        c.charger ? { label: 'Home charger', value: -c.charger } : null,
+        { label: 'Running costs', value: noRunning ? 'not entered' : -c.running },
+        { label: 'Total', value: -c.total, total: true, note: 'The same total, counted the other way - repaying the loan is paying for the car, not a cost on top of it.' },
       ]),
     ]),
     carStory(c),
     assumed(FIELDS, d),
     levers(c, v),
+    carForgotten(v, c),
   ];
   if (shows('advanced')) out.push(advanced(c, v));
   if (shows('learn')) out.push(learn(c, v));
@@ -107,7 +127,15 @@ function meaning(c, v) {
     lines.push(`Selling after ${months(c.months)}, you would still owe the bank ${rand(c.owed)}. At about ${rand(c.resale)} for the car, ${c.atSale >= 0 ? `you keep ${rand(c.atSale)} after settling the loan` : `you would need to find ${rand(-c.atSale)} to settle the loan`}.`);
   } else lines.push(`Sold after ${months(c.months)} for about ${rand(c.resale)}, with nothing left owing.`);
   if (c.resale > c.price) lines.push(`Selling for more than you paid is not a profit here: interest, fees and running costs still make owning it cost ${rand(c.total)}.`);
-  if (c.runningFirstMonth === 0) lines.push('Running costs are not counted yet. Add insurance, fuel and upkeep for the full picture.');
+  const en = c.energy;
+  if (en.own) lines.push(`Fuel and charging: your own figure, ${rand(en.fuelMonth)} a month.`);
+  else if (en.km) {
+    const parts = [];
+    if (en.litres) parts.push(`${Math.round(en.litres).toLocaleString('en-ZA')} litres a year at ${rand(en.price)} - ${rand(en.fuelMonth)} a month`);
+    if (en.kwh) parts.push(`${Math.round(en.kwh).toLocaleString('en-ZA')} kWh a year at about ${rand(en.tariff)} a kWh (home and public charging, with what is lost charging) - ${rand(en.elecMonth)} a month`);
+    lines.push(`${POWER[en.power]}, ${Math.round(en.km).toLocaleString('en-ZA')} km a year: ${parts.join('; and ')}. That is ${rand(en.perKm * 100)} per 100 km.`);
+  } else lines.push('Fuel or charging is not counted yet - put in the distance driven a year.');
+  if (c.runningFirstMonth === 0) lines.push('Running costs are not counted yet. Add insurance, the service and tyres for the full picture.');
   return lines;
 }
 
@@ -116,13 +144,41 @@ function carStory(c) {
   if (!c.financed) return null;
   const value = c.timeline.map((t) => [t.month, t.value]); const owed = c.timeline.map((t) => [t.month, t.owed]);
   const turn = crossing(value, owed);
-  return chartPanel('What it is worth against what you owe', lineChart([
-    { name: 'What it is worth', points: value },
-    { name: 'Still owed on the loan', points: owed, dashed: true },
-  ], { label: 'The car’s value against the loan still owed, month by month',
-    marks: [turn != null && owed[1]?.[1] > value[1]?.[1] ? { x: turn, label: `Worth more than owed from ${whenLabel(turn)}` } : null,
-      c.termMonths <= c.months ? { x: c.termMonths, label: 'Loan paid off' } : { x: c.months, label: 'Sold' }],
-    story: 'While the line for what is owed is above the value, selling the car would not settle the loan.' }));
+  const end = c.termMonths <= c.months ? { x: c.termMonths, label: 'Loan paid off' } : { x: c.months, label: 'Sold' };
+  return chartPanel('Money in and out',
+    lineChart([
+      { name: 'What it is worth', points: value },
+      { name: 'Still owed on the loan', points: outOf(owed) },
+      { name: 'Paid out so far', points: outOf(c.timeline.map((t) => [t.month, t.cashOut])), dashed: true },
+    ], { label: 'What the car is worth, what is still owed, and what has been paid out so far',
+      marks: [turn != null && owed[1]?.[1] > value[1]?.[1] ? { x: turn, label: `Worth more than owed from ${whenLabel(turn)}` } : null, end],
+      story: `${RULE} The car is worth less each year; until it is worth more than is owed, selling it would not settle the loan. Paid out is the deposit, every instalment, and running it.` }),
+    lineChart([{ name: 'Paid out that month', points: outOf(c.timeline.filter((t) => t.month > 0).map((t) => [t.month, t.out])) }],
+      { label: 'What the car takes out of your pocket each month', marks: [end], story: 'The instalment and running costs each month. After the loan, only running it.' }));
+}
+
+/** What people forget about running a car - different for petrol, hybrids and electric cars. */
+function carForgotten(v, c) {
+  const n = (k) => Number(v[k]) || 0;
+  const ev = v.power === 'electric'; const plug = v.power === 'plugin'; const fuel = !ev;
+  const items = [
+    [n('kmYearly') > 0, n('kmYearly') ? `Fuel or charging from ${Math.round(n('kmYearly')).toLocaleString('en-ZA')} km a year` : 'Fuel or charging - put in the distance driven'],
+    [n('insurance') > 0, n('insurance') ? `Insurance: ${rand(n('insurance'))} a month${ev ? ' (electric cars often cost more to insure - compare quotes)' : ''}` : 'Insurance - not counted yet; get a quote for this exact car'],
+    [n('serviceYearly') > 0 || n('upkeep') > 0, n('serviceYearly') ? `Service: ${rand(n('serviceYearly'))} a year${ev ? ' - far less than a petrol car: no oil, filters or spark plugs' : ''}` : 'The yearly service - not counted yet (check what a service plan covers, and when it ends)'],
+    fuel ? [n('oilYearly') > 0, n('oilYearly') ? `Oil between services: ${rand(n('oilYearly'))} a year` : 'Oil top-ups between services - not counted yet'] : null,
+    [n('tyresYearly') > 0, n('tyresYearly') ? `Tyres: ${rand(n('tyresYearly'))} a year${ev ? ' - electric cars are heavier and wear them sooner' : ''}` : `Tyres - not counted yet${ev ? '; electric cars wear them sooner' : ''}`],
+    [n('licenceYearly') > 0, n('licenceYearly') ? `Licence: ${rand(n('licenceYearly'))} a year` : 'The licence disc - not counted yet'],
+    ev || plug ? [n('chargerInstall') > 0, n('chargerInstall') ? `A home charger: ${rand(n('chargerInstall'))} once` : 'A home charger - not counted yet'] : null,
+    ev || plug ? [true, 'Public fast charging costs about twice home charging - the more you charge at home, the cheaper it runs'] : null,
+    ev || plug ? [true, 'The battery: check the warranty (often 8 years). Used electric car prices in South Africa are less certain - consider a faster drop in value'] : null,
+    v.power === 'hybrid' ? [true, 'Hybrids save most in town traffic; on the open road they use about as much as a petrol car'] : null,
+    fuel ? [true, `Fuel prices change every month - the price used is ${rand(c.energy.price || 0)} a litre (${ENERGY.source})`] : null,
+    [n('upkeep') > 0, n('upkeep') ? `Other repairs: ${rand(n('upkeep'))} a month` : 'Repairs once the warranty ends - brakes, batteries, the unexpected (Advanced)'],
+  ].filter(Boolean);
+  return el('div', { class: 'panel stack', 'data-field': 'car-forgotten' }, [
+    el('h2', { text: 'Did you think of…', style: { margin: 0 } }),
+    el('ul', { style: { margin: 0, paddingLeft: 0, listStyle: 'none' } }, items.map(([ok, t]) => el('li', { class: ok ? null : 'muted', text: `${ok ? '✓' : '○'} ${t}` }))),
+  ]);
 }
 
 /** What would change the answer, worked out rather than guessed. */
@@ -152,10 +208,9 @@ function advanced(c, v) {
   return el('div', { class: 'panel stack' }, [
     el('h2', { text: 'Over time', style: { margin: 0 } }),
     lineChart([
-      { name: 'Money paid out so far', points: c.timeline.map((t) => [t.month, t.cashOut]) },
-      { name: 'Cost if sold that month', points: c.timeline.map((t) => [t.month, t.cost]), dashed: true },
-    ], { label: 'Money paid out, and the cost of owning it if sold that month' }),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: 'The gap between the lines is what selling would bring back after settling the loan.' }),
+      { name: 'Paid out so far', points: outOf(c.timeline.map((t) => [t.month, t.cashOut])) },
+      { name: 'Behind, if sold that month', points: outOf(c.timeline.map((t) => [t.month, t.cost])), dashed: true },
+    ], { label: 'Money paid out, and how far behind owning it leaves you if sold that month', story: `${RULE} The gap between the lines is what selling would bring back after settling the loan.` }),
     el('h3', { text: 'What moves the answer most', style: { margin: 0 } }),
     sens.length ? el('ul', { style: { margin: 0 } }, sens.map((x) => el('li', { text: `${x.what[0].toUpperCase()}${x.what.slice(1)}: ${x.change > 0 ? '+' : '−'}${rand(Math.abs(x.change))}` }))) : null,
     rateUp ? el('p', { style: { margin: 0 }, text: `If the rate rises 1 point (prime-linked loans move with prime), the instalment becomes ${rand(rateUp.instalment)}.` }) : null,
@@ -226,6 +281,9 @@ function compareScreen(hub, param) {
       { key: 1, label: 'Interest', get: (c) => c.interest, lower: true },
       { key: 1, label: 'Bank fees', get: (c) => c.fees, lower: true },
       { label: 'Paid to the bank', get: (c) => c.toBank, lower: true },
+      { label: 'Runs on', get: (c) => POWER[c.energy.power] },
+      { label: 'Fuel or charging, a month now', get: (c) => c.energy.fuelMonth + c.energy.elecMonth, lower: true },
+      { label: 'Insurance, service and upkeep, a month now', get: (c) => c.steadyFirstMonth, lower: true },
       { key: 1, label: 'Running costs', get: (c) => c.running, lower: true },
       { label: 'Sale price when sold', get: (c) => c.resale, lower: false },
       { label: 'Still owed then', get: (c) => c.owed, lower: true },

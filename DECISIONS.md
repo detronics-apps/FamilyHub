@@ -631,6 +631,34 @@ purpose (saved): show people what they have not thought of, and let them put the
   marked not counted), what moves the answer most, and year by year.
 - Tested: a home growing exactly as fast as after-tax investments, with no costs, comes out level.
 
+**D-077 Money in and out, one rule for every graph (owner, 2026-10-28).** "Show the growth of the
+house/car/investment over time, and my monthly expense; make all values going out of my pocket
+negative and all values growing my pocket positive." Every Finance graph and money table now follows
+that rule: what the home, car or savings are worth, and money coming back, above zero; what is paid,
+owed or spent below it. Each tool has a "Money in and out" panel - what it is worth against what is
+still owed and what has gone out so far, and a second graph of each month's spending (A home, Cars,
+Compound interest, Our bond; Own or rent's monthly comparison moved into plain view). Money plan
+shows free money above, what the goals take below, and what is left over.
+The owner also asked how the first month could "cost R51k": A home's graph spread the loss of selling
+early over the months lived there (R153k after 3 months = R51k a month). It is replaced by "If you
+sold after…": the whole amount ahead or behind, starting at what selling straight away would lose
+(duty, fees, the agent), with what the money up front could have earned counted, so it ends exactly
+where the table does.
+
+**D-076 Fuel and charging, worked out (owner, 2026-10-28).** Cars had one "fuel or charging a
+month" amount to type. Now: what it runs on (petrol, diesel, hybrid, plug-in hybrid, electric), the
+distance a year, and the consumption (litres or kWh per 100 km; a typical figure, labelled, when
+left empty). Fuel at the official October 2026 price, inland or coastal (petrol 95 R30.25/R29.38;
+diesel wholesale R31.95/R31.08 - the pump is a little more); prices change on the first Wednesday of
+each month, so the price shows its date and can be changed. Electric: home R4.16 and public R7.50 a
+kWh (typical, 2026), the share charged at home, 10% lost while charging, electricity rising 9% a year
+(NERSA's 2026/27 municipal increase); a plug-in hybrid splits its kilometres. A home charger counts
+once, up front. The owner added: insurance, a yearly service, oil, tyres and licence are now separate
+lines (oil not for electric cars); older saved cars keep their single upkeep figure. Your own monthly
+fuel figure still replaces the worked-out one. "Did you think of…" changes with the car (insurance
+quotes, cheaper servicing and faster tyre wear for electric cars, the battery warranty, uncertain
+used-EV prices, home against public charging). Compare shows fuel or charging and upkeep side by side.
+
 **D-075 Our bond, as it really went (owner, 2026-10-27).** The owner paid R12 000 a month for years
 when the instalment was about R9 800, then the minimum; took R100 000 out after 4 years for a car;
 and wanted to log that and see what it did. Homes › Our bond: the bond at the start (amount, month,

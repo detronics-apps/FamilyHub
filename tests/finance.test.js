@@ -210,3 +210,36 @@ test('D-073 break-even points: where a line crosses zero, or crosses another', a
   near(crossing([[0, 0], [12, 10]], [[0, 5], [12, 5]]), 6);
   assert.equal(whenLabel(30), 'year 3');
 });
+
+/* -------------------------------------------- D-076 fuel and charging */
+
+import { energyCost, fuelPriceFor, ENERGY } from '../js/apps/finance/maths.js';
+
+test('D-076 fuel and charging from distance and consumption', () => {
+  // 15 000 km at 7.5 l/100 km of petrol inland: 1 125 l a year at R30.25.
+  const p = energyCost({ power: 'petrol', kmYearly: 15000, lPer100: 7.5 });
+  near(p.litres, 1125); near(p.fuelMonth, (1125 * 30.25) / 12); assert.equal(p.elecMonth, 0);
+  near(fuelPriceFor('diesel', 'coastal'), ENERGY.fuel.diesel.coastal);
+  // An electric car: 17 kWh/100 km, 10% lost charging, 80% at home at R4.16 and 20% public at R7.50.
+  const e = energyCost({ power: 'electric', kmYearly: 15000, kwhPer100: 17, homeShare: 80 });
+  near(e.kwh, 15000 * 0.17 * 1.1); near(e.tariff, 0.8 * 4.16 + 0.2 * 7.5, 0.001); assert.equal(e.litres, 0);
+  // A plug-in hybrid half on electricity: half the kilometres each way.
+  const h = energyCost({ power: 'plugin', kmYearly: 20000, electricShare: 50, lPer100: 6, kwhPer100: 20 });
+  near(h.litres, 10000 * 0.06); near(h.kwh, 10000 * 0.2 * 1.1);
+  // No distance yet: nothing is guessed.
+  assert.equal(energyCost({ power: 'petrol' }).fuelMonth, 0);
+});
+
+test('D-076 cars: running costs split out, a home charger counted, petrol against electric', () => {
+  const base = { price: 450000, deposit: 45000, ratePct: 12, termMonths: 72, keepYears: 6, kmYearly: 20000, insurance: 1200, serviceYearly: 4500, tyresYearly: 3000, oilYearly: 600, licenceYearly: 800 };
+  const petrol = carCost({ ...base, power: 'petrol', lPer100: 7 });
+  const ev = carCost({ ...base, power: 'electric', kwhPer100: 16, chargerInstall: 20000, insurance: 1400, serviceYearly: 2000, oilYearly: 600 });
+  // Nothing counted twice: the charger is part of what was paid up front.
+  near(ev.total, ev.depreciation + ev.interest + ev.fees + ev.running + ev.charger);
+  near(petrol.total, petrol.depreciation + petrol.interest + petrol.fees + petrol.running);
+  // No oil in an electric car, even if a figure is left in.
+  near(ev.steadyFirstMonth, 1400 + (800 + 2000 + 3000) / 12);
+  assert.ok(ev.energy.elecMonth > 0 && ev.energy.fuelMonth === 0 && petrol.energy.fuelMonth > ev.energy.elecMonth);
+  // Your own monthly fuel figure replaces the worked-out one.
+  near(carCost({ ...base, power: 'petrol', fuel: 2500 }).energy.fuelMonth, 2500);
+});

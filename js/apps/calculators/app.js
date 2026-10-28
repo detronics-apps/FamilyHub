@@ -5,7 +5,7 @@
 import { el } from '../../ui/dom.js';
 import { loading, failure } from '../kit.js';
 import { growth, todaysMoney, effectiveYearly, REFERENCE } from '../finance/maths.js';
-import { levelBar, shows, draft, loadDraft, input, assumed, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, savedPanel, compareTable, rand, pct } from '../finance/pod.js';
+import { levelBar, shows, draft, loadDraft, input, assumed, stat, sums, step, lineChart, chartPanel, RULE, outOf, crossing, whenLabel, savedPanel, compareTable, rand, pct } from '../finance/pod.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => r.title, prefix: 'clc' });
 
@@ -81,11 +81,16 @@ function compoundResults(d) {
     (() => {
       const bal = [[0, v.start ?? 0], ...g.rows.map((r) => [r.month, r.balance])];
       const put = [[0, v.start ?? 0], ...g.rows.map((r) => [r.month, r.paidIn])];
+      const grew = [[0, 0], ...g.rows.map((r) => [r.month, r.growth])];
       const turn = crossing(g.rows.map((r) => [r.month, r.growth]), g.rows.map((r) => [r.month, r.paidIn]));
-      return chartPanel('Year by year', lineChart([{ name: 'Savings', points: bal }, { name: 'Put in', points: put, dashed: true }], {
-        label: 'Savings against what was put in, year by year',
-        marks: [turn != null ? { x: turn, label: `Growth bigger than all put in, ${whenLabel(turn)}` } : null],
-        story: 'The gap between the lines is growth. It widens faster every year - that is compounding.' }));
+      let prev = v.start ?? 0;
+      const monthly = g.rows.map((r) => { const m = (r.paidIn - prev) / 12; prev = r.paidIn; return [r.month, m]; });
+      return chartPanel('Money in and out',
+        lineChart([{ name: 'What the savings are worth', points: bal }, { name: 'Growth - money you did not put in', points: grew }, { name: 'Put in from your pocket so far', points: outOf(put), dashed: true }], {
+          label: 'What the savings are worth, the growth, and what was put in, year by year',
+          marks: [turn != null ? { x: turn, label: `Growth bigger than all put in, ${whenLabel(turn)}` } : null],
+          story: `${RULE} The growth line is money the savings made on their own. It rises faster every year - that is compounding.` }),
+        Number(v.monthly) ? lineChart([{ name: 'Put in each month', points: outOf(monthly) }], { label: 'What comes out of your pocket each month into the savings', story: 'What you put aside each month - rising if you raise it each year.' }) : null);
     })(),
     assumed(COMPOUND, d),
     compoundLevers(v, g),

@@ -6,7 +6,7 @@ import { el } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
 import { loading, failure, saveRecord } from '../kit.js';
 import { REFERENCE } from '../finance/maths.js';
-import { levelBar, shows, stat, step, lineChart, chartPanel, crossing, whenLabel, rand, pct, months } from '../finance/pod.js';
+import { levelBar, shows, stat, step, lineChart, chartPanel, RULE, outOf, crossing, whenLabel, rand, pct, months } from '../finance/pod.js';
 import { normalisePlan, schedule, family, savingAt, startingLater, exactAge } from './logic.js';
 
 const plans = (hub) => hub.data.collection('plans', { summary: (r) => ({ title: r.personId ?? 'settings' }), prefix: 'kid' });
@@ -95,10 +95,10 @@ function familyScreen(hub, data) {
         el('li', { text: 'Money already saved for a cost, or help expected (a bursary, grandparents), lowers the monthly amount - add it under Advanced on each child’s list.' }),
       ]),
     ]) : null,
-    known.length && f.rows.length ? chartPanel('What falls due each year', lineChart([{ name: 'All the children together', points: f.rows.map((y) => [(y.year - Number(today.slice(0, 4))) * 12, y.total]) }], {
+    known.length && f.rows.length ? chartPanel('What falls due each year', lineChart([{ name: 'All the children together', points: outOf(f.rows.map((y) => [(y.year - Number(today.slice(0, 4))) * 12, y.total])) }], {
       label: 'What falls due each year, all the children together', xLabel: (m) => String(Number(today.slice(0, 4)) + Math.round(m / 12)),
       marks: f.peak ? [{ x: (f.peak.year - Number(today.slice(0, 4))) * 12, label: `Biggest year: ${f.peak.year}` }] : [],
-      story: 'The peaks are the years to be ready for - often when two children’s schooling or studies overlap.' })) : null,
+      story: `${RULE} The deepest years are the ones to be ready for - often when two children’s schooling or studies overlap.` })) : null,
     known.length ? yearTable(f, known) : null,
     known.length && shows('advanced') ? advanced(hub, data, f, known, rate) : null,
     known.length && shows('learn') ? learn(rate) : null,
@@ -130,7 +130,7 @@ function advanced(hub, data, f, known, rate) {
     on: { change: (e) => saveRecord(hub, plans(hub), { ...(data.get(SETTINGS) ?? {}), id: SETTINGS, savingsPct: Number(e.target.value) || 0 }) } });
   return el('div', { class: 'panel stack' }, [
     el('h2', { text: 'Over the years', style: { margin: 0 } }),
-    lineChart([{ name: 'To put aside each month', points: pts }], { label: 'What to put aside each month, falling as each cost is paid' }),
+    lineChart([{ name: 'To put aside each month', points: outOf(pts) }], { label: 'What to put aside each month, getting smaller as each cost is paid', story: RULE }),
     el('div', { class: 'field' }, [
       el('label', { class: 'field__label', for: 'kids-rate' }, ['Savings grow by ', el('span', { class: 'fin-tag', text: Number(data.get(SETTINGS)?.savingsPct ?? NaN) ? 'Yours' : 'Illustrative - check your own' })]),
       el('div', { class: 'row', style: { gap: 'var(--space-2)' } }, [input, el('span', { class: 'small muted', text: '% a year' })]),
