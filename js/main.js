@@ -39,7 +39,7 @@ import { openDoc } from './ui/views/docs.js';
 import { syncChip, syncNotices, phoneButtons } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.9.21';
+export const APP_VERSION = '0.9.22';
 
 const store = createLocalStore(window.localStorage);
 
@@ -467,6 +467,11 @@ function renderNow() {
   if (changed) {
     window.scrollTo(0, 0);
     if (lastRouteKey !== null) dom.main.focus?.({ preventScroll: true });
+  } else if (app.ui.reveal) {
+    // Something asked to be seen (the timer, on Start) - instead of keeping the scroll.
+    const smooth = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    document.querySelector(app.ui.reveal)?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+    app.ui.reveal = null;
   } else {
     window.scrollTo(0, scrollY);
     requestAnimationFrame(() => window.scrollTo(0, scrollY));

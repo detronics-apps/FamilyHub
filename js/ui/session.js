@@ -74,6 +74,8 @@ export function createSession(ctx) {
       const prefs = ctx.app.device.music;
       if (prefs.offer === 'always') { s.musicAnswered = true; ctx.media.start(); }
       if (prefs.offer === 'never') s.musicAnswered = true;
+      // The panel sits at the top of the page: the next render brings it into view, wherever Start was pressed.
+      ctx.app.ui.reveal = '.session';
       ctx.render();
     },
     state: () => s,
