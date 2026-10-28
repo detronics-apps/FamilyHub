@@ -4,8 +4,9 @@
 
 import { el } from '../../ui/dom.js';
 import { loading, failure } from '../kit.js';
-import { carCost, CAR_DEFAULTS, REFERENCE, sensitivity, CAR_NUDGES, monthlyRate, ENERGY, POWER, typicalLitres, typicalKwh, fuelPriceFor } from '../finance/maths.js';
-import { levelBar, shows, draft, loadDraft, inputsPanel, assumed, stat, sums, step, lineChart, chartPanel, RULE, outOf, crossing, whenLabel, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
+import { carCost, CAR_SCENARIOS, CAR_DEFAULTS, REFERENCE, sensitivity, CAR_NUDGES, monthlyRate, ENERGY, POWER, typicalLitres, typicalKwh, fuelPriceFor } from '../finance/maths.js';
+import { CAR_HELP } from '../finance/help.js';
+import { levelBar, shows, draft, loadDraft, linesPanel, inputsPanel, assumed, stat, sums, step, lineChart, chartPanel, RULE, outOf, crossing, whenLabel, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => r.title, prefix: 'car' });
 const KIND = 'car';
@@ -49,7 +50,13 @@ const FIELDS = [
   { key: 'depreciationPct', label: 'Drops in value by', type: 'percent', level: 'advanced', source: { kind: 'illustrative' }, hint: 'New cars often lose 15 to 20% a year at first. Look up what similar used cars sell for.', group: 'sale', when: (v) => v.resaleMode !== 'amount' },
   { key: 'resaleAmount', label: 'Expected sale price', type: 'money', level: 'advanced', optional: true, group: 'sale', when: (v) => v.resaleMode === 'amount' },
 ];
-const GROUPS = { energy: 'Fuel or charging', running: 'Insurance, service and upkeep (optional)', loan: 'Loan details', sale: 'Selling it' };
+for (const f of FIELDS) f.info ??= CAR_HELP[f.key];
+const GROUPS = {
+  energy: { title: 'Fuel or charging', info: CAR_HELP.energy, tick: 'energy' },
+  running: { title: 'Insurance, service and upkeep', info: CAR_HELP.running, tick: 'running' },
+  loan: { title: 'Loan details', info: CAR_HELP.loan },
+  sale: 'Selling it',
+};
 
 export function render(hub, route) {
   if (route.sub === 'compare') return compareScreen(hub, route.rest[0] ?? '');
@@ -59,26 +66,30 @@ export function render(hub, route) {
 function mainScreen(hub) {
   const d = draft(KIND, CAR_DEFAULTS);
   const answer = el('div', { class: 'stack', 'aria-live': 'polite' });
-  const refresh = () => answer.replaceChildren(...results(d));
-  const changed = (key) => (FIELDS.find((f) => f.key === key)?.redraw ? hub.render() : refresh());
+  const today = hub.today();
+  const refresh = () => answer.replaceChildren(...results(d, today));
+  const changed = (key) => (key === 'on' || FIELDS.find((f) => f.key === key)?.redraw ? hub.render() : refresh());
   refresh();
   return el('section', { class: 'stack', 'aria-labelledby': 'cars-title' }, [
     el('h1', { id: 'cars-title', text: 'What will this car really cost?', style: { margin: 0 } }),
     el('p', { class: 'muted', style: { margin: 0 }, text: 'Not just the instalment: interest, fees, running costs, and what it is worth - and still owed - when you sell it.' }),
     levelBar(() => hub.render()),
     inputsPanel(FIELDS, d, GROUPS, changed),
+    linesPanel(d, refresh, 'scenarios', CAR_SCENARIOS, 'What if…', CAR_HELP.scenarios, true),
     answer,
     savedPanel(hub, {
       col: col(hub), kind: KIND, d, compareScreen: 'compare',
-      summary: () => { const c = carCost(d.values); return c.total == null ? {} : { headline: `${rand(c.total)} over ${months(c.months)} · ${rand(c.instalment)} a month`, total: c.total, instalment: c.instalment }; },
+      summary: () => { const c = carCost(d.values, today); return c.total == null ? {} : { headline: `${rand(c.total)} over ${months(c.months)} · ${rand(c.instalment)} a month`, total: c.total, instalment: c.instalment }; },
       onOpen: (rec) => { loadDraft(KIND, CAR_DEFAULTS, rec); hub.render(); },
     }),
   ]);
 }
 
-function results(d) {
+function results(d, today) {
   const v = d.values;
-  const c = carCost(v);
+  const c = carCost(v, today);
+  // The same car without the ticked what-ifs, for the with-and-without lines.
+  const c0 = c.scenarios ? carCost({ ...v, scenarios: [] }, today) : null;
   if (c.missing) return [el('p', { class: 'panel muted', text: `Fill in ${c.missing.join(' and ')} to see the answer.` })];
   if (c.error) return [el('p', { class: 'panel', role: 'alert', text: c.error })];
   const kept = months(c.months);
@@ -110,7 +121,8 @@ function results(d) {
         { label: 'Total', value: -c.total, total: true, note: 'The same total, counted the other way - repaying the loan is paying for the car, not a cost on top of it.' },
       ]),
     ]),
-    carStory(c),
+    c0 ? el('div', { class: 'panel stack' }, [el('h2', { text: 'With your what-ifs', style: { margin: 0 } }), el('p', { style: { margin: 0 }, text: `Loan paid off after ${months(c.loanMonths)} instead of ${months(c0.loanMonths)}${c.loanMonths < c0.loanMonths ? ` - ${months(c0.loanMonths - c.loanMonths)} sooner` : ''}, with ${rand(Math.abs(c0.interest - c.interest))} ${c.interest <= c0.interest ? 'less' : 'more'} interest. Owning it costs ${rand(Math.abs(c0.total - c.total))} ${c.total <= c0.total ? 'less' : 'more'} over ${months(c.months)}${c.taken ? `, counting the ${rand(c.taken)} taken back out` : ''}.` }), c.taken ? el('p', { class: 'small muted', style: { margin: 0 }, text: 'Most car finance cannot be drawn back out once paid - check with your bank before counting on it.' }) : null]) : null,
+    carStory(c, c0),
     assumed(FIELDS, d),
     levers(c, v),
     carForgotten(v, c),
@@ -140,20 +152,22 @@ function meaning(c, v) {
 }
 
 /** What the car is worth against what is still owed on it - and when that turns. */
-function carStory(c) {
+function carStory(c, c0 = null) {
   if (!c.financed) return null;
   const value = c.timeline.map((t) => [t.month, t.value]); const owed = c.timeline.map((t) => [t.month, t.owed]);
   const turn = crossing(value, owed);
-  const end = c.termMonths <= c.months ? { x: c.termMonths, label: 'Loan paid off' } : { x: c.months, label: 'Sold' };
+  const end = c.loanMonths <= c.months ? { x: c.loanMonths, label: 'Loan paid off' } : { x: c.months, label: 'Sold' };
   return chartPanel('Money in and out',
     lineChart([
       { name: 'What it is worth', points: value },
-      { name: 'Still owed on the loan', points: outOf(owed) },
-      { name: 'Paid out so far', points: outOf(c.timeline.map((t) => [t.month, t.cashOut])), dashed: true },
+      { name: c0 ? 'Still owed, with your what-ifs' : 'Still owed on the loan', points: outOf(owed) },
+      ...(c0 ? [{ name: 'Still owed, without', points: outOf(c0.timeline.map((t) => [t.month, t.owed])), dashed: true }] : []),
+      { name: 'Paid out so far', points: outOf(c.timeline.map((t) => [t.month, t.cashOut])), dashed: !c0 },
     ], { label: 'What the car is worth, what is still owed, and what has been paid out so far',
       marks: [turn != null && owed[1]?.[1] > value[1]?.[1] ? { x: turn, label: `Worth more than owed from ${whenLabel(turn)}` } : null, end],
       story: `${RULE} The car is worth less each year; until it is worth more than is owed, selling it would not settle the loan. Paid out is the deposit, every instalment, and running it.` }),
-    lineChart([{ name: 'Paid out that month', points: outOf(c.timeline.filter((t) => t.month > 0).map((t) => [t.month, t.out])) }],
+    lineChart([{ name: c0 ? 'Paid out that month, with your what-ifs' : 'Paid out that month', points: outOf(c.timeline.filter((t) => t.month > 0).map((t) => [t.month, t.out])) },
+      ...(c0 ? [{ name: 'Without them', points: outOf(c0.timeline.filter((t) => t.month > 0).map((t) => [t.month, t.out])), dashed: true }] : [])],
       { label: 'What the car takes out of your pocket each month', marks: [end], story: 'The instalment and running costs each month. After the loan, only running it.' }));
 }
 

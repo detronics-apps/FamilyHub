@@ -243,3 +243,23 @@ test('D-076 cars: running costs split out, a home charger counted, petrol agains
   // Your own monthly fuel figure replaces the worked-out one.
   near(carCost({ ...base, power: 'petrol', fuel: 2500 }).energy.fuelMonth, 2500);
 });
+
+test('D-078 car loans: what-ifs month by month, the balloon still due, sections left out', () => {
+  const v = { price: 400000, deposit: 40000, ratePct: 12, termMonths: 72, keepYears: 6, balloonPct: 20, insurance: 1200, kmYearly: 15000 };
+  const plain = carCost(v, '2026-10-28');
+  // The month-by-month path agrees with the formula when nothing is ticked.
+  near(plain.interest, carCost(v).interest, 1);
+  const more = carCost({ ...v, scenarios: [{ kind: 'more', from: '2026-11', to: null, amount: 2000, on: true }] }, '2026-10-28');
+  assert.ok(more.loanMonths < 72 && more.interest < plain.interest);
+  near(more.total, more.depreciation + more.interest + more.fees + more.running);
+  // An unticked line changes nothing; no start month, nothing either.
+  near(carCost({ ...v, scenarios: [{ kind: 'more', from: '2026-11', amount: 2000, on: false }] }, '2026-10-28').interest, plain.interest, 1);
+  near(carCost({ ...v, scenarios: [{ kind: 'more', from: '2026-11', amount: 2000 }] }).interest, carCost(v).interest, 1);
+  // Money taken back out comes into your pocket - and is paid back with interest.
+  const out = carCost({ ...v, scenarios: [{ kind: 'withdraw', from: '2028-01', amount: 30000 }] }, '2026-10-28');
+  near(out.taken, 30000); assert.ok(out.interest > plain.interest);
+  near(out.total, out.depreciation + out.interest + out.fees + out.running);
+  // Leaving out fuel, or insurance and upkeep.
+  assert.ok(carCost({ ...v, on: { energy: false } }).running < carCost(v).running);
+  assert.equal(carCost({ ...v, on: { energy: false, running: false } }).running, 0);
+});

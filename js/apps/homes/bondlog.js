@@ -11,6 +11,7 @@ import { monthlyRate, payment } from '../finance/maths.js';
 
 export const EVENT_KINDS = {
   pay: 'Paid each month',
+  more: 'Paid more each month',
   extra: 'Paid in once',
   withdraw: 'Took out',
   rate: 'Rate changed',
@@ -48,6 +49,8 @@ export function runBond({ loan, ratePct, termYears, start, events = [], fromMont
     const chosen = ev.filter((x) => x.kind === 'pay' && x.at <= m && (x.until == null || m <= x.until)).at(-1);
     let pay = chosen ? chosen.amount : minPmt;
     if (chosen && pay < minPmt - 0.5) { notes.push({ m, text: `${addMonthsYM(start, m)}: R${Math.round(pay)} is below the minimum of R${Math.round(minPmt)} - the minimum is used.` }); pay = minPmt; }
+    // "More each month": on top of whatever the payment is then, for the period (D-078).
+    pay += ev.filter((x) => x.kind === 'more' && x.at <= m && (x.until == null || m <= x.until)).reduce((s, x) => s + x.amount, 0);
     if (fromMonth != null && m >= fromMonth) pay += extraFrom;
     pay = Math.min(pay, bal + i);
     bal = bal + i - pay;

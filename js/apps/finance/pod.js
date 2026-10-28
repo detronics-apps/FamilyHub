@@ -73,6 +73,19 @@ function origin(f, d) {
  * One input. Types: money, percent, number, years, choice (chips), check.
  * Typing updates the answer straight away (`onInput`) without redrawing the inputs.
  */
+/**
+ * The (i) beside a heading or a figure (D-078): tap it to see what it is, where to find
+ * your own, and how to get the latest. Returns [button, the text box]; the box sits under
+ * the label and opens and closes in place.
+ */
+export function info(text, label = 'this') {
+  if (!text) return [null, null];
+  const box = el('div', { class: 'info-box', hidden: true, role: 'note', text });
+  const btn = el('button', { class: 'info-btn', type: 'button', 'aria-expanded': 'false', 'aria-label': `About ${label}`, title: `About ${label}`, text: 'i',
+    on: { click: (e) => { e.preventDefault(); e.stopPropagation(); box.hidden = !box.hidden; btn.setAttribute('aria-expanded', String(!box.hidden)); } } });
+  return [btn, box];
+}
+
 export function input(f, d, onInput) {
   const id = `fin-${f.key}`;
   const tag = el('span', { class: 'fin-tag', 'data-field': `origin:${f.key}`, text: origin(f, d) ?? '' });
@@ -89,7 +102,8 @@ export function input(f, d, onInput) {
     control = el('textarea', { class: 'input', id, rows: 3, text: d.values[f.key] ?? '', placeholder: f.placeholder ?? '', 'data-field': `in:${f.key}`, on: { input: (e) => set(e.target.value) } });
   } else if (f.type === 'check') {
     control = el('input', { type: 'checkbox', id, checked: !!d.values[f.key], on: { change: (e) => set(e.target.checked) } });
-    return el('label', { class: 'checkline' }, [control, el('span', {}, [f.label, ' ', tag])]);
+    const [ib, ix] = info(f.info, f.label);
+    return el('div', {}, [el('label', { class: 'checkline' }, [control, el('span', {}, [f.label, ' ', tag, ib])]), ix]);
   } else {
     control = el('input', {
       class: 'input', id, type: 'number', inputmode: 'decimal', step: 'any', min: f.min === null ? null : f.min ?? '0', value: d.values[f.key] ?? '',
@@ -98,8 +112,10 @@ export function input(f, d, onInput) {
     });
   }
   const unit = f.unitText ?? { money: 'R', percent: '% a year', years: 'years', months: 'months', km: 'km a year', kmOne: 'km', minutes: 'minutes' }[f.type];
+  const [ib, ix] = info(f.info, f.label);
   return el('div', { class: 'field' }, [
-    el('label', { class: 'field__label', for: f.type === 'choice' ? null : id }, [f.label, ' ', tag]),
+    el('label', { class: 'field__label', for: f.type === 'choice' ? null : id }, [f.label, ' ', tag, ib]),
+    ix,
     el('div', { class: 'row', style: { gap: 'var(--space-2)' } }, [unit === 'R' ? el('span', { class: 'muted', text: 'R' }) : null, control, unit && unit !== 'R' ? el('span', { class: 'small muted', text: unit }) : null]),
     f.hint ? el('div', { class: 'field__hint', text: f.hint }) : null,
   ]);
@@ -115,7 +131,14 @@ export function inputsPanel(fields, d, groups, onChange) {
     el('h2', { text: 'What we need', style: { margin: 0 } }),
     ...[...new Set(visible.map((f) => f.group))].map((g) => {
       const nodes = visible.filter((f) => f.group === g).map((f) => input(f, d, onChange));
-      return groups[g] ? el('fieldset', { class: 'stack fin-group' }, [el('legend', { text: groups[g] }), ...nodes]) : el('div', { class: 'stack' }, nodes);
+      const gt = typeof groups[g] === 'string' ? { title: groups[g] } : groups[g];
+      const [ib, ix] = info(gt?.info, gt?.title);
+      // A group with `tick` can be left out of the answer: its fields hide, and it counts nothing.
+      const on = !gt?.tick || d.values.on?.[gt.tick] !== false;
+      const tick = gt?.tick ? el('button', { class: 'chip', type: 'button', 'aria-pressed': String(on), 'data-field': `tick:${gt.tick}`, text: on ? 'Counted' : 'Left out', style: { marginLeft: '8px' },
+        title: on ? 'Counted in the answer - tap to leave it out' : 'Left out of the answer - tap to count it',
+        on: { click: () => { d.values.on = { ...(d.values.on ?? {}), [gt.tick]: !on }; d.mine.add('on'); onChange('on'); } } }) : null;
+      return gt ? el('fieldset', { class: `stack fin-group${on ? '' : ' fin-group--off'}` }, [el('legend', {}, [gt.title, ' ', ib, tick]), ix, ...(on ? nodes : [])]) : el('div', { class: 'stack' }, nodes);
     }),
   ]);
 }
@@ -228,6 +251,36 @@ export const outOf = (points) => points.map(([x, y]) => [x, -y]);
 
 /** A chart with its own heading, as a panel - the graphs that tell the story. */
 export const chartPanel = (title, ...charts) => el('div', { class: 'panel stack' }, [el('h2', { text: title, style: { margin: 0 } }), ...charts.filter(Boolean)]);
+
+/** A list of lines: what happened on the bond, or the "what if" scenarios (ticked to count). */
+export function linesPanel(d, refresh, key, kinds, title, help, tickable = false) {
+  const list = Array.isArray(d.values[key]) ? d.values[key] : (d.values[key] = []);
+  const box = el('div', { class: 'stack' });
+  const save = () => { d.mine.add(key); refresh(); };
+  const draw = () => box.replaceChildren(...list.map((e, i) => el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' }, 'data-field': `${key}:${i}` }, [
+    tickable ? el('input', { type: 'checkbox', checked: e.on !== false, 'aria-label': 'Count this what-if', on: { change: (x) => { e.on = x.target.checked; save(); } } }) : null,
+    el('select', { class: 'select', 'aria-label': 'What happens', style: { width: 'auto' }, on: { change: (x) => { e.kind = x.target.value; draw(); save(); } } },
+      Object.entries(kinds).map(([k, label]) => el('option', { value: k, text: label, selected: e.kind === k }))),
+    el('span', { class: 'small muted', text: e.kind === 'pay' || e.kind === 'more' ? 'from' : 'in' }),
+    el('input', { class: 'input', type: 'month', value: e.from ?? '', 'aria-label': 'From', style: { maxWidth: '170px' }, on: { change: (x) => { e.from = x.target.value || null; save(); } } }),
+    e.kind === 'pay' || e.kind === 'more' ? el('span', { class: 'small muted', text: 'to' }) : null,
+    e.kind === 'pay' || e.kind === 'more' ? el('input', { class: 'input', type: 'month', value: e.to ?? '', 'aria-label': 'To (empty: from then on)', style: { maxWidth: '170px' }, on: { change: (x) => { e.to = x.target.value || null; save(); } } }) : null,
+    el('span', { class: 'small muted', text: e.kind === 'rate' ? 'new rate' : e.kind === 'more' ? 'R more a month' : e.kind === 'pay' ? 'R a month' : 'R' }),
+    el('input', { class: 'input', type: 'number', min: '0', step: 'any', value: e.amount ?? '', 'aria-label': e.kind === 'rate' ? 'New rate, % a year' : 'Amount', style: { maxWidth: '130px' }, on: { change: (x) => { e.amount = Number(x.target.value) || 0; save(); } } }),
+    e.kind === 'rate' ? el('span', { class: 'small muted', text: '%' }) : null,
+    el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': 'Remove this line', on: { click: () => { list.splice(i, 1); draw(); save(); } } }),
+  ])));
+  draw();
+  const [ib, ix] = info(help, title);
+  const today = new Date().toISOString().slice(0, 7);
+  return el('section', { class: 'panel stack', 'data-field': `${key}-panel` }, [
+    el('h2', { style: { margin: 0 } }, [title, ' ', ib]),
+    ix,
+    tickable ? el('p', { class: 'small muted', style: { margin: 0 }, text: 'Ticked lines are shown on the graphs next to how things go without them.' }) : null,
+    box,
+    el('div', {}, [el('button', { class: 'btn btn-small', type: 'button', text: 'Add line', 'data-field': `${key}-add`, on: { click: () => { list.push({ kind: tickable ? 'more' : 'pay', from: tickable ? today : d.values.bondStart ?? null, to: null, amount: null, on: true }); draw(); } } })]),
+  ]);
+}
 
 /* ------------------------------------------------ saving and comparing */
 

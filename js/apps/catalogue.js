@@ -250,16 +250,13 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'homes', section: 'finance', name: 'Homes', version: '1.3.0',
-      description: 'A bond, renting against buying, and one home against another - the trip to work included.',
+      fhManifest: 1, id: 'homes', section: 'finance', name: 'Homes', version: '2.0.0',
+      description: 'Each home on one page - buying, owning or renting - with every cost, your bond’s history and what-ifs; then compare any of them.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
-      screens: [
-        { id: 'tools', title: 'Homes' }, { id: 'home', title: 'A home' }, { id: 'bond', title: 'Bond' },
-        { id: 'rentbuy', title: 'Own or rent' }, { id: 'selltobuy', title: 'Sell to buy' }, { id: 'ourbond', title: 'Our bond' }, { id: 'compare', title: 'Side by side', nav: false },
-      ],
+      screens: [{ id: 'homes', title: 'Our homes' }, { id: 'home', title: 'A home' }, { id: 'compare', title: 'Compare' }],
       modes: [
         { mode: 'plan', screen: 'home', label: 'Work out what a home really costs' },
-        { mode: 'plan', screen: 'rentbuy', label: 'Own or rent?' },
+        { mode: 'plan', screen: 'compare', label: 'Compare homes - buy, rent or keep ours' },
       ],
       data: { collections: [{ name: 'saved', schema: 1 }] },
       permissions: ['data:own', 'notify'],

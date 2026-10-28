@@ -1,652 +1,266 @@
-// Homes (D-067): a bond on its own, the true cost of living in one home (bought or
-// rented, with the trip to work), and renting against buying the same home. The
-// three share their inputs, so a price typed once is there in all of them.
+// Homes (D-078): one page per home - bought now, already ours, or rented - made of
+// sections that can each be counted or left out and folded away, the bond with its real
+// history, "what if" lines shown with and without, and one Compare for any saved homes.
+// Replaces the separate A home, Bond, Our bond, Sell to buy and Own or rent pages
+// (D-067, D-072, D-074, D-075); their saved work opens here.
 
 import { el } from '../../ui/dom.js';
 import { loading, failure } from '../kit.js';
-import { homeCost, bond, transferDuty, feesEstimate, buyingCosts, total, HOME_DEFAULTS, REFERENCE, sensitivity, monthlyRate, payment, SELL_DEFAULTS } from '../finance/maths.js';
-import { ownOrRent, evenAt, historyGrowth, OWN_RENT_DEFAULTS, CGT, sellToBuy } from './ownrent.js';
-import { runBond, bondNow, monthsFrom, EVENT_KINDS } from './bondlog.js';
-import { levelBar, shows, draft, loadDraft, inputsPanel, assumed, stat, sums, step, lineChart, chartPanel, RULE, outOf, crossing, whenLabel, short, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
+import { REFERENCE, total, sensitivity, SELL_DEFAULTS } from '../finance/maths.js';
+import { historyGrowth, CGT } from './ownrent.js';
+import { EVENT_KINDS } from './bondlog.js';
+import { homePlan, withAndWithout, sameMoney, kindOf, KINDS, SECTIONS, SECTIONS_ON, SCENARIO_KINDS, PLAN_DEFAULTS } from './home.js';
+import { levelBar, shows, draft, loadDraft, input, info, linesPanel as eventsPanel, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, RULE, outOf, savedPanel, rand, pct, months } from '../finance/pod.js';
+import { HOME_HELP as H } from '../finance/help.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => r.title, prefix: 'hom' });
-// Own or rent adds its own fields; where both have one (price, rent...) the home's default is kept, so they share it.
-const DEFAULTS = { ...SELL_DEFAULTS, ...OWN_RENT_DEFAULTS, ...HOME_DEFAULTS, extra: null, income: null, sellPrice: null, renovations: null, reserve: null, quoteTransfer: null, quoteBond: null, bondLoan: null, bondStart: null, bondYears: 20, bondRate: REFERENCE.prime.value, bondEvents: [], tryExtra: 2000 };
+const KIND = 'property';
+const DEFAULTS = { ...SELL_DEFAULTS, ...PLAN_DEFAULTS, sellPrice: null, renovations: null, reserve: null, quoteTransfer: null, quoteBond: null, moveCost: null };
 const D = () => draft('homes', DEFAULTS);
-const buying = (v) => v.mode !== 'rent';
-const renting = (v) => v.mode === 'rent';
-
-const F = {
-  mode: { key: 'mode', label: 'This home', type: 'choice', level: 'simple', redraw: true, choices: [{ value: 'buy', label: 'Buy' }, { value: 'rent', label: 'Rent' }] },
-  price: { key: 'price', label: 'Price', type: 'money', level: 'simple' },
-  deposit: { key: 'deposit', label: 'Deposit', type: 'money', level: 'simple', source: { kind: 'assumption' } },
-  ratePct: { key: 'ratePct', label: 'Interest rate', type: 'percent', level: 'simple', source: { ref: REFERENCE.prime }, hint: 'The rate the bank offers you. Home loans are often near prime, and move when prime moves.' },
-  termYears: { key: 'termYears', label: 'Bond over', type: 'years', level: 'simple', source: { kind: 'assumption' }, hint: 'Any number of years - 20 is common, but a bond can be 10, 14 or 30 years. Shorter costs more a month and far less interest.' },
-  rent: { key: 'rent', label: 'Rent a month', type: 'money', level: 'simple' },
-  rentDeposit: { key: 'rentDeposit', label: 'Rental deposit', type: 'money', level: 'simple', optional: true, hint: 'Usually one or two months’ rent. You get it back when you leave, so it is cash needed - not a cost.' },
-  stayYears: { key: 'stayYears', label: 'Live here for', type: 'years', level: 'simple', source: { kind: 'assumption' }, hint: 'How long you expect to stay - for example, while you work at this job.' },
-  ratesTaxes: { key: 'ratesTaxes', label: 'Rates and taxes a month', type: 'money', level: 'simple', optional: true },
-  levies: { key: 'levies', label: 'Levies a month', type: 'money', level: 'simple', optional: true, hint: 'In a complex or estate.' },
-  insurance: { key: 'insurance', label: 'Building insurance a month', type: 'money', level: 'simple', optional: true },
-  upkeepPct: { key: 'upkeepPct', label: 'Upkeep and repairs, of the value a year', type: 'percent', level: 'advanced', source: { kind: 'illustrative' }, hint: 'Roofs, geysers, paint, gardens. About 1% of the value a year is a common rule of thumb.' },
-  escalatePct: { key: 'escalatePct', label: 'Costs rise by', type: 'percent', level: 'advanced', source: { ref: REFERENCE.cpi }, hint: 'Rates, levies, insurance and travel, each year.' },
-  km: { key: 'km', label: 'Distance to work, one way', type: 'kmOne', level: 'simple', optional: true },
-  minutes: { key: 'minutes', label: 'Time to get there, one way', type: 'minutes', level: 'simple', optional: true },
-  days: { key: 'days', label: 'Days at work a month', type: 'number', level: 'advanced', source: { kind: 'assumption' } },
-  perKm: { key: 'perKm', label: 'Cost per km', type: 'money', level: 'advanced', source: { ref: REFERENCE.perKm }, hint: 'Covers fuel, wear and the car losing value. Fuel alone is less; use your own figure if you prefer.' },
-  travelExtra: { key: 'travelExtra', label: 'Tolls, parking or taxi fares a month', type: 'money', level: 'advanced', optional: true },
-  hourValue: { key: 'hourValue', label: 'What an hour of your time is worth', type: 'money', level: 'advanced', optional: true, hint: 'Optional. Shown beside the money, never added to it.' },
-  fees: { key: 'fees', label: 'Attorney, bond and deeds office fees', type: 'money', level: 'advanced', source: { kind: 'reference', text: 'Law Society guideline, Deeds Office and bank fees, 2026' }, estimate: (v) => feesEstimate(Number(v.price) || 0, (Number(v.price) || 0) - (Number(v.deposit) || 0)), hint: 'Left empty: worked out item by item from the attorney fee guideline, the Deeds Office fees and the bank’s initiation fee. A conveyancer’s quote replaces it.' },
-  moveCost: { key: 'moveCost', label: 'Moving in', type: 'money', level: 'advanced', optional: true, hint: 'Removals, connecting services, things the new place needs.' },
-  growthPct: { key: 'growthPct', label: 'House prices grow by', type: 'percent', level: 'advanced', source: { kind: 'illustrative' }, hint: 'Not a promise: prices can stall or fall, and differ by area.' },
-  sellPct: { key: 'sellPct', label: 'Selling costs, of the price', type: 'percent', level: 'advanced', source: { kind: 'illustrative' }, hint: 'Agent’s commission plus VAT and other costs of selling, as one share of the price. "Sell to buy" works them out item by item.' },
-  rentRisePct: { key: 'rentRisePct', label: 'Rent rises by', type: 'percent', level: 'advanced', source: { kind: 'illustrative' } },
-  otherRatePct: { key: 'otherRatePct', label: 'Money could earn elsewhere', type: 'percent', level: 'advanced', source: { kind: 'illustrative' }, hint: 'What money paid up front could have grown by if it had been saved instead.' },
-  income: { key: 'income', label: 'Household income a month, before tax', type: 'money', level: 'simple', optional: true },
-  extra: { key: 'extra', label: 'Pay extra each month', type: 'money', level: 'advanced', optional: true },
-};
-const pick = (keys, extra = {}) => keys.map((k) => ({ ...F[k], ...(extra[k] ?? {}) }));
+const valuesOf = (rec) => { const v = { ...DEFAULTS, ...(rec.values ?? {}) }; return { ...v, kind: kindOf(v, rec.kind) }; };
+const ymName = (ym) => (ym ? new Date(`${ym}-01T00:00:00Z`).toLocaleDateString('en-ZA', { month: 'short', year: 'numeric', timeZone: 'UTC' }) : '-');
+const n = (x) => Number(x) || 0;
+const yrs = (y) => `${y} year${y === 1 ? '' : 's'}`;
 
 export function render(hub, route) {
-  if (route.sub === 'home') return homeScreen(hub);
-  if (route.sub === 'bond') return bondScreen(hub);
-  if (route.sub === 'rentbuy') return rentBuyScreen(hub);
-  if (route.sub === 'selltobuy') return sellBuyScreen(hub);
-  if (route.sub === 'ourbond') return ourBondScreen(hub);
   if (route.sub === 'compare') return compareScreen(hub, route.rest[0] ?? '');
+  if (['home', 'bond', 'rentbuy', 'selltobuy', 'ourbond'].includes(route.sub)) return homeScreen(hub);
+  return listScreen(hub);
+}
+
+/* -------------------------------------------------------------- our homes */
+
+const loadAll = (hub) => hub.use('homes-all', async () => {
+  const c = col(hub);
+  const { items } = await c.list({ limit: 1000 });
+  return (await Promise.all(items.map((s) => c.get(s.id)))).filter(Boolean).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
+});
+
+function listScreen(hub) {
+  const all = loadAll(hub);
+  const start = (kind) => { loadDraft('homes', DEFAULTS, { values: { kind }, title: '', kind: KIND }); hub.go('home'); };
   return el('section', { class: 'stack', 'aria-labelledby': 'homes-title' }, [
     el('h1', { id: 'homes-title', text: 'Homes', style: { margin: 0 } }),
-    el('p', { class: 'muted', style: { margin: 0 }, text: 'Buying, renting, and one home against another. What you type in one is already there in the others.' }),
-    el('ul', { class: 'list panel' }, [
-      ['home', 'A home', 'What will living here really cost - the trip to work included? Save each one and compare.'],
-      ['bond', 'Bond', 'What will the bond cost each month, and in total - and what is needed up front?'],
-      ['ourbond', 'Our bond', 'Log what you really paid - more for a few years, extra paid in, money taken out - and see what it did, and what paying more would do.'],
-      ['selltobuy', 'Sell to buy', 'Selling our home to buy the next one: every cost item by item, what is left after the bond, and the deposit.'],
-      ['rentbuy', 'Own or rent', 'Buying against renting, or keeping our home against selling and renting - with what people forget.'],
-    ].map(([id, title, q]) => el('li', {}, [
-      el('a', { class: 'list__main', href: hub.href(id), 'data-field': `tool:${id}`, style: { color: 'inherit', textDecoration: 'none' } }, [el('strong', { text: title }), el('div', { class: 'small muted', text: q })]),
-      el('a', { class: 'btn btn-small', href: hub.href(id), text: 'Open' }),
-    ]))),
+    el('p', { class: 'muted', style: { margin: 0 }, text: 'Each home on one page - one you might buy, the one you own, or one you might rent - with everything it costs and what it leaves you. Save each one, then compare any of them.' }),
+    el('div', { class: 'panel stack' }, [
+      el('h2', { text: 'Add a home', style: { margin: 0 } }),
+      el('div', { class: 'row' }, Object.entries(KINDS).map(([k, label]) => el('button', { class: 'btn', type: 'button', text: label, 'data-field': `new:${k}`, title: { buy: 'A home you might buy', own: 'The home you own now', rent: 'A home you might rent' }[k], on: { click: () => start(k) } }))),
+    ]),
+    el('div', { class: 'panel stack' }, [
+      el('h2', { text: 'Our homes', style: { margin: 0 } }),
+      all.loading ? el('p', { class: 'muted', text: 'Loading…' }) : all.error ? failure(all.error) : all.data.length ? el('ul', { class: 'list' }, all.data.map((rec) => {
+        const v = valuesOf(rec);
+        return el('li', {}, [
+          el('div', { class: 'list__main' }, [el('strong', { text: rec.title || 'Untitled' }), el('div', { class: 'small muted', text: [KINDS[v.kind], rec.result?.headline, rec.savedAt ? `saved ${rec.savedAt.slice(0, 10)}` : null].filter(Boolean).join(' · ') })]),
+          el('button', { class: 'btn btn-small', type: 'button', text: 'Open', 'aria-label': `Open ${rec.title}`, 'data-field': `open:${rec.id}`, on: { click: () => { loadDraft('homes', DEFAULTS, { ...rec, values: v, kind: KIND }); hub.go('home'); } } }),
+        ]);
+      })) : el('p', { class: 'muted', style: { margin: 0 }, text: 'Nothing saved yet. Add a home above, fill it in, and save it with a name.' }),
+      all.data?.length > 1 ? el('a', { class: 'btn btn-primary', href: hub.href('compare'), text: 'Compare', 'data-field': 'go-compare', title: 'Compare any of these - buy against buy, against renting, or keeping ours' }) : null,
+    ]),
   ]);
 }
 
-/** One tool's page: the question, the level bar, the inputs, the answer, and saving. */
-function page(hub, { id, title, intro, fields, groups, kind, results, headline }) {
-  const d = D();
-  const answer = el('div', { class: 'stack', 'aria-live': 'polite' });
-  const refresh = () => answer.replaceChildren(...results(d).filter(Boolean));
-  const changed = (key) => (fields.find((f) => f.key === key)?.redraw ? hub.render() : refresh());
-  refresh();
-  return el('section', { class: 'stack', 'aria-labelledby': id }, [
-    el('h1', { id, text: title, style: { margin: 0 } }),
-    el('p', { class: 'muted', style: { margin: 0 }, text: intro }),
-    levelBar(() => hub.render()),
-    inputsPanel(fields, d, groups, changed),
-    answer,
-    savedPanel(hub, {
-      col: col(hub), kind, d, compareScreen: 'compare',
-      summary: () => ({ headline: headline(d.values) }),
-      onOpen: (rec) => { loadDraft('homes', DEFAULTS, rec); hub.go(rec.kind); },
-    }),
-  ]);
-}
+/* ------------------------------------------------------------------ a home */
 
-const nothing = (r) => (r.missing ? [el('p', { class: 'panel muted', text: `Fill in ${r.missing.join(' and ')} to see the answer.` })] : r.error ? [el('p', { class: 'panel', role: 'alert', text: r.error })] : null);
-const said = (title, lines) => el('div', { class: 'panel stack' }, [el('h2', { text: title, style: { margin: 0 } }), ...lines.filter(Boolean).map((t) => (typeof t === 'string' ? el('p', { style: { margin: 0 }, text: t }) : t))]);
-const list = (title, items) => (items.length ? el('div', { class: 'panel stack' }, [el('h2', { text: title, style: { margin: 0 } }), el('ul', { style: { margin: 0 } }, items.map((t) => el('li', { text: t })))]) : null);
-const leavesOut = (items) => [el('h3', { text: 'What this leaves out', style: { margin: 0 } }), el('ul', { class: 'small', style: { margin: 0 } }, items.map((t) => el('li', { text: t })))];
+const FOLDS = 'familyhub.homefolds';
+const folds = (() => { try { return new Set(JSON.parse(localStorage.getItem(FOLDS) || '[]')); } catch { return new Set(); } })();
+const keepFolds = () => { try { localStorage.setItem(FOLDS, JSON.stringify([...folds])); } catch { /* this device only */ } };
 
-/* --------------------------------------------------------------- a home */
+const f = (key, label, type, more = {}) => ({ key, label, type, level: 'simple', info: H[key], ...more });
+const isBuy = (v) => v.kind === 'buy'; const isOwn = (v) => v.kind === 'own'; const isRent = (v) => v.kind === 'rent';
+const hasHome = (v) => !isRent(v);
 
-const HOME_FIELDS = pick(['mode', 'price', 'deposit', 'ratePct', 'termYears', 'rent', 'rentDeposit', 'stayYears', 'km', 'minutes', 'days', 'perKm', 'travelExtra', 'hourValue',
-  'ratesTaxes', 'levies', 'insurance', 'upkeepPct', 'escalatePct', 'fees', 'moveCost', 'growthPct', 'sellPct', 'rentRisePct', 'otherRatePct'])
-  .map((f) => ({
-    ...f,
-    group: ['km', 'minutes', 'days', 'perKm', 'travelExtra', 'hourValue'].includes(f.key) ? 'travel'
-      : ['ratesTaxes', 'levies', 'insurance', 'upkeepPct', 'escalatePct'].includes(f.key) ? 'running'
-        : ['fees', 'moveCost', 'growthPct', 'sellPct', 'rentRisePct', 'otherRatePct'].includes(f.key) ? 'more' : undefined,
-    when: ['price', 'deposit', 'ratePct', 'termYears', 'ratesTaxes', 'levies', 'insurance', 'upkeepPct', 'fees', 'growthPct', 'sellPct'].includes(f.key) ? buying
-      : ['rent', 'rentDeposit', 'rentRisePct'].includes(f.key) ? renting : undefined,
-  }));
-const HOME_GROUPS = { travel: 'Getting to work', running: 'Owning it (optional)', more: 'Moving, selling and growth' };
-const homeHeadline = (v) => { const c = homeCost(v); return c.total == null ? '' : `${v.mode === 'rent' ? 'Rent' : 'Buy'} · ${rand(c.monthNow)} a month · ${rand(c.total)} over ${months(c.months)}`; };
+/** The page's sections, in the order a decision is made. `tick`: can be left out. */
+const SECS = [
+  { key: 'home', title: 'The home', when: hasHome, fields: [
+    f('price', 'Price', 'money', { when: isBuy }),
+    f('worthNow', 'What it would sell for now', 'money', { when: isOwn }),
+    f('boughtFor', 'We bought it for', 'money', { optional: true, when: isOwn }),
+    f('boughtWhen', 'In', 'month', { optional: true, when: isOwn }),
+    f('improvedSoFar', 'Spent on improvements so far', 'money', { optional: true, level: 'advanced', when: isOwn }),
+    f('growthPct', 'House prices grow by', 'percent', { source: { kind: 'illustrative' } }),
+  ], extra: (hub, d) => historyLine(hub, d) },
+  { key: 'rentSec', title: 'The rent', when: isRent, fields: [
+    f('rent', 'Rent a month', 'money'),
+    f('rentRisePct', 'Rent rises by', 'percent', { source: { kind: 'illustrative' } }),
+    f('rentDeposit', 'Rental deposit', 'money', { optional: true }),
+    f('rentMove', 'Moving in', 'money', { optional: true, level: 'advanced' }),
+  ] },
+  { key: 'sellFirst', title: SECTIONS.sellFirst, tick: true, when: (v) => !isOwn(v), fields: [
+    f('sellPrice', 'Our home will sell for', 'money'),
+    f('owedNow', 'Still owed on its bond', 'money', { source: { kind: 'assumption' } }),
+    f('agentPct', 'Agent’s commission', 'percent', { unitText: '% plus VAT', source: { kind: 'illustrative' } }),
+    f('coc', 'Electrical certificate', 'money', { source: { kind: 'illustrative' } }),
+    f('cancelFee', 'Bond cancellation attorney', 'money', { level: 'advanced', source: { kind: 'illustrative' } }),
+    f('noticeShort', 'Months of notice the bank will not get', 'number', { level: 'advanced', source: { kind: 'assumption' } }),
+    f('beetle', 'Beetle certificate', 'money', { level: 'advanced', optional: true }),
+    f('gas', 'Gas certificate', 'money', { level: 'advanced', optional: true }),
+    f('fence', 'Electric fence certificate', 'money', { level: 'advanced', optional: true }),
+    f('boughtFor', 'We bought it for', 'money', { level: 'advanced', optional: true, info: 'Only to check the tax on the gain: none on the first R3 million.' }),
+    f('renovations', 'Kept for renovations', 'money', { optional: true, when: isBuy }),
+    f('reserve', 'Kept free, just in case', 'money', { optional: true }),
+  ], extra: (hub, d, plan) => saleBox(plan) },
+  { key: 'buying', title: 'Buying it', when: isBuy, fields: [
+    f('deposit', 'Deposit', 'money', { source: { kind: 'assumption' }, when: (v) => !(v.on?.sellFirst) }),
+    f('moveCost', 'Moving in', 'money', { optional: true }),
+    f('quoteTransfer', 'Transfer attorney’s quote', 'money', { optional: true, level: 'advanced' }),
+    f('quoteBond', 'Bond attorney’s quote', 'money', { optional: true, level: 'advanced' }),
+  ], extra: (hub, d, plan) => buyingBox(plan) },
+  { key: 'bond', title: SECTIONS.bond, tick: true, when: hasHome, fields: [
+    f('ratePct', 'Interest rate', 'percent', { source: { ref: REFERENCE.prime }, when: isBuy }),
+    f('termYears', 'Over', 'years', { source: { kind: 'assumption' }, when: isBuy }),
+    f('income', 'Household income a month, before tax', 'money', { optional: true, when: isBuy }),
+    f('bondLoan', 'The bond when it started', 'money', { when: isOwn }),
+    f('bondStart', 'It started in', 'month', { when: isOwn }),
+    f('bondYears', 'Over', 'years', { source: { kind: 'assumption' }, when: isOwn }),
+    f('bondRate', 'Rate at the start', 'percent', { source: { ref: REFERENCE.prime }, when: isOwn }),
+  ], extra: (hub, d, plan, refresh) => [bondBox(d.values, plan), isOwn(d.values) ? eventsPanel(d, refresh, 'bondEvents', EVENT_KINDS, 'What happened, over the years', H.history) : null] },
+  { key: 'running', title: SECTIONS.running, tick: true, when: hasHome, fields: [
+    f('ratesTaxes', 'Rates and taxes a month', 'money', { optional: true }),
+    f('levies', 'Levies a month', 'money', { optional: true }),
+    f('insurance', 'Building insurance a month', 'money', { optional: true }),
+    f('maintYearly', 'Maintenance and repairs a year - what you really spend', 'money', { optional: true, when: (v) => v.maintMode !== 'percent' }),
+    f('maintMode', 'Maintenance as', 'choice', { level: 'advanced', redraw: true, choices: [{ value: 'amount', label: 'Our figure' }, { value: 'percent', label: 'Percentage' }] }),
+    f('upkeepPct', 'Upkeep, of the value a year', 'percent', { level: 'advanced', source: { kind: 'illustrative' }, when: (v) => v.maintMode === 'percent' }),
+    f('escalatePct', 'Costs rise by', 'percent', { level: 'advanced', source: { ref: REFERENCE.cpi } }),
+  ] },
+  { key: 'upgrades', title: SECTIONS.upgrades, tick: true, when: hasHome, fields: [], extra: (hub, d, plan, refresh) => upgradesPanel(d, refresh) },
+  { key: 'travel', title: SECTIONS.travel, tick: true, fields: [
+    f('km', 'Distance to work, one way', 'kmOne', { optional: true }),
+    f('minutes', 'Time to get there, one way', 'minutes', { optional: true }),
+    f('days', 'Days at work a month', 'number', { level: 'advanced', source: { kind: 'assumption' } }),
+    f('perKm', 'Cost per km', 'money', { level: 'advanced', source: { ref: REFERENCE.perKm } }),
+    f('travelExtra', 'Tolls, parking or taxi fares a month', 'money', { level: 'advanced', optional: true }),
+    f('hourValue', 'What an hour of your time is worth', 'money', { level: 'advanced', optional: true }),
+  ] },
+  { key: 'afterBond', title: SECTIONS.afterBond, tick: true, when: hasHome, fields: [
+    f('investPct', 'Investments grow by, before tax', 'percent', { source: { kind: 'illustrative' } }),
+    f('investTaxPct', 'Share of growth lost to tax', 'percent', { level: 'advanced', unitText: '%', source: { kind: 'illustrative' } }),
+  ] },
+  { key: 'selling', title: 'How long, and selling later', fields: [
+    f('stayYears', 'Live here for', 'years', { source: { kind: 'assumption' } }),
+    f('sellPct', 'Selling later costs, of the price', 'percent', { unitText: '%', level: 'advanced', source: { kind: 'illustrative' }, when: hasHome }),
+    f('marginalPct', 'Your income tax rate on the last rand', 'percent', { unitText: '%', level: 'advanced', source: { kind: 'illustrative' }, when: hasHome }),
+  ] },
+  { key: 'forgone', title: SECTIONS.forgone, tick: true, when: (v) => !isOwn(v), fields: [
+    f('otherRatePct', 'Money could earn elsewhere', 'percent', { source: { kind: 'illustrative' } }),
+  ] },
+];
+const ALL_FIELDS = SECS.flatMap((s) => s.fields);
 
 function homeScreen(hub) {
-  return page(hub, {
-    id: 'home-title', title: 'What will living here really cost?', kind: 'home', headline: homeHeadline,
-    intro: 'Bought or rented, with the trip to work counted. Save each home with a name - "Closer to work", "Bigger garden" - and compare them.',
-    fields: HOME_FIELDS, groups: HOME_GROUPS, results: homeResults,
-  });
-}
-
-function homeResults(d) {
-  const v = d.values;
-  const c = homeCost(v);
-  const stop = nothing(c);
-  if (stop) return stop;
-  const stay = months(c.months);
-  const trip = c.travel > 0 || c.hours > 0;
-  const lines = c.buy ? [
-    `Moving in takes ${rand(c.upfront)}: the ${rand(c.deposit)} deposit, ${rand(c.duty)} transfer duty, ${rand(c.fees)} attorney and bond fees${v.fees == null ? ' (a rough estimate)' : ''}${c.move ? ` and ${rand(c.move)} to move` : ''}.`,
-    c.loan > 0 ? `The bond is ${rand(c.instalment)} a month for ${months(c.termMonths)}.` : null,
-    `Leaving after ${stay}: the home might sell for about ${rand(c.value)}. After ${rand(c.sellCosts)} selling costs and the ${rand(c.owed)} still owed on the bond, about ${rand(c.back)} comes back.`,
-    c.months <= 36 ? `For a stay this short, transfer duty, fees and selling costs (${rand(c.duty + c.fees + c.sellCosts)}) are a big part of the cost. Rent or buy shows the same home rented.` : null,
-  ] : [
-    `Moving in takes ${rand(c.upfront)}${c.rentDeposit ? ` - the ${rand(c.rentDeposit)} deposit comes back when you leave` : ''}.`,
-    `Rent starts at ${rand(Number(v.rent))} a month and rises about ${pct(Number(v.rentRisePct) || 0)} a year: ${rand(c.rent)} over ${stay}.`,
-  ];
-  if (trip) lines.push(`Getting to work: about ${rand(c.travelNow)} a month${c.hoursMonth ? ` and ${Math.round(c.hoursMonth)} hours on the road` : ''}${c.timeCost ? ` (your time valued at ${rand(c.timeCost / c.months)} a month - shown, not added)` : ''}.`);
-  else lines.push('The trip to work is not counted yet. Add the distance to compare homes nearer and further from work.');
-
-  const out = [
-    el('div', { class: 'stats' }, [
-      stat(rand(c.monthNow), trip ? 'a month now, with travel' : 'a month now', 'r-month-now'),
-      c.total < 0 ? stat(rand(-c.total), `ahead after living here ${stay}`, 'r-total') : stat(rand(c.total), `total cost of living here for ${stay}`, 'r-total'),
-      stat(rand(c.upfront), 'cash needed to move in', 'r-upfront'),
-    ]),
-    said('What it means', [
-      ...lines,
-      sums([
-        { label: 'Paid up front', value: -c.upfront },
-        c.buy ? { label: 'Paid to the bank', value: -c.toBank } : null,
-        c.buy ? { label: 'Rates, levies, insurance and upkeep', value: -c.running } : { label: 'Rent', value: -c.rent },
-        { label: 'Getting to work', value: trip ? -c.travel : 'not entered' },
-        { label: c.buy ? 'What the sale brings back' : 'The deposit back', value: c.back },
-        { label: 'What the money up front could have earned instead', value: -c.forgone, note: `At ${pct(Number(v.otherRatePct) || 0)} a year` },
-        { label: `Where you end up after ${stay}`, value: -c.total, total: true, note: c.total < 0 ? `About ${rand(-c.total)} ahead - ${rand(-c.perMonth)} a month.` : `It costs you about ${rand(c.total)} - ${rand(c.perMonth)} a month, all in.` },
-      ]),
-      c.buy ? el('h3', { text: 'Where it comes from', style: { margin: 0 } }) : null,
-      c.buy ? sums([
-        { label: c.valueChange > 0 ? 'Drop in value' : 'Growth in value', value: -c.valueChange },
-        { label: 'Transfer duty', value: -c.duty, note: REFERENCE.transferDuty.source },
-        { label: 'Attorney, bond and deeds office fees', value: -c.fees },
-        c.move ? { label: 'Moving', value: -c.move } : null,
-        { label: 'Selling costs', value: -c.sellCosts },
-        { label: 'Bond interest', value: -c.interest },
-        { label: 'Rates, levies, insurance and upkeep', value: -c.running },
-        { label: 'Getting to work', value: -c.travel },
-        { label: 'What the money up front could have earned instead', value: -c.forgone },
-        { label: `Where you end up after ${stay}`, value: -c.total, total: true, note: 'The same answer, counted the other way. Repaying the bond’s capital is paying for the house, not a cost on top of it.' },
-      ]) : null,
-    ]),
-    (() => {
-      // How far ahead or behind you would be if you sold after this long - the whole amount, not an average a month.
-      // What the money up front could have earned is counted month by month, so the graph ends where the table does.
-      const o = (Number(v.otherRatePct) || 0) / 100;
-      const pts = c.timeline.map((t) => [t.month, -(t.cost + c.upfront * ((1 + o) ** (t.month / 12) - 1))]);
-      const even = crossing(pts);
-      const startLoss = c.buy ? c.duty + c.fees + c.move + c.price * ((Number(v.sellPct) || 0) / 100) : 0;
-      return chartPanel('If you sold after…', lineChart([
-        { name: 'Ahead (above zero) or behind (below), selling after that long', points: pts },
-      ], { label: 'How far ahead or behind you would be, if you sold after that long', marks: [even != null ? { x: even, label: `Ahead from ${whenLabel(even)}` } : null, { x: c.months, label: `You: ${stay}` }],
-        story: c.buy
-          ? `${RULE} Selling straight away you would be about ${rand(startLoss)} behind - transfer duty, attorney and bond fees${c.move ? ', moving' : ''} and the agent’s commission, paid however short the stay. Every month after that the home grows in value and the bond is paid down, so the line climbs${even != null ? `; from ${whenLabel(even)} selling would leave you ahead` : ''}. What the money paid up front could have earned elsewhere (${pct(Number(v.otherRatePct) || 0)} a year) is counted against it.`
-          : `${RULE} Renting goes further below zero with every month’s rent - none of it comes back.` }));
-    })(),
-    homeInOut(c),
-    assumed(HOME_FIELDS, d),
-    list('What would change it', homeLevers(v, c)),
-  ];
-  if (shows('advanced')) out.push(homeAdvanced(v, c));
-  if (shows('learn')) out.push(homeLearn(v, c));
-  return out;
-}
-
-/** What the home is worth against what has come out of your pocket, and each month's spending. */
-function homeInOut(c) {
-  const t = c.timeline;
-  return chartPanel('Money in and out',
-    lineChart([
-      ...(c.buy ? [{ name: 'What the home is worth', points: t.map((x) => [x.month, x.value]) }, { name: 'Still owed on the bond', points: outOf(t.map((x) => [x.month, x.owed])) }] : []),
-      { name: 'Paid out so far', points: outOf(t.map((x) => [x.month, x.paid])), dashed: true },
-    ], { label: 'What the home is worth, what is owed, and what has been paid out so far', story: `${RULE} ${c.buy ? 'The value grows your pocket; the bond and everything paid - deposit, duty, fees, the bond, rates, upkeep, travel - come out of it.' : 'Rent and travel only come out of it.'}` }),
-    lineChart([{ name: 'Paid out that month', points: outOf(t.filter((x) => x.month > 0).map((x) => [x.month, x.out])) }],
-      { label: 'What comes out of your pocket each month', story: c.buy ? 'Each month: the bond, rates, insurance, upkeep and travel. It drops when the bond is paid off.' : 'Each month: rent and travel, rising with the rent.' }));
-}
-
-function homeLevers(v, c) {
-  const tries = [];
-  const longer = homeCost({ ...v, stayYears: (Number(v.stayYears) || 0) + 3 });
-  const a = (x) => (x < 0 ? `${rand(-x)} a month ahead` : `${rand(x)} a month`);
-  tries.push(`Staying 3 years longer: ${a(longer.perMonth)} all in, against ${a(c.perMonth)}.`);
-  if (Number(v.km) > 0) {
-    const closer = homeCost({ ...v, km: Math.max(0, Number(v.km) - 10) });
-    tries.push(`Living 10 km closer to work: about ${rand((c.travel - closer.travel) / c.months)} a month less on travel${Number(v.minutes) > 0 ? ', and time back' : ''}.`);
-  }
-  if (c.buy && c.loan > 0) {
-    const more = Math.round(c.price * 0.1);
-    const t = homeCost({ ...v, deposit: (Number(v.deposit) || 0) + more });
-    tries.push(`${rand(more)} more deposit: the bond ${rand(c.instalment - t.instalment)} less a month.`);
-  }
-  return tries;
-}
-
-const HOME_NUDGES = [
-  { key: 'growthPct', what: 'house prices growing 2 points slower', to: (x) => (Number(x) || 0) - 2 },
-  { key: 'ratePct', what: 'the interest rate 1 point higher', to: (x) => (Number(x) || 0) + 1 },
-  { key: 'rentRisePct', what: 'rent rising 2 points faster', to: (x) => (Number(x) || 0) + 2 },
-  { key: 'perKm', what: 'travel costing 20% more', to: (x) => (Number(x) || 0) * 1.2 },
-  { key: 'sellPct', what: 'selling costs 2 points higher', to: (x) => (Number(x) || 0) + 2 },
-  { key: 'escalatePct', what: 'costs rising 2 points faster', to: (x) => (Number(x) || 0) + 2 },
-  { key: 'otherRatePct', what: 'money elsewhere earning 2 points more', to: (x) => (Number(x) || 0) + 2 },
-];
-
-function homeAdvanced(v, c) {
-  const sens = sensitivity(v, (x) => homeCost(x).total, HOME_NUDGES).filter((x) => Math.abs(x.change) >= 1);
-  return el('div', { class: 'panel stack' }, [
-    el('h2', { text: 'What moves the answer', style: { margin: 0 } }),
-    sens.length ? el('h3', { text: 'What moves the answer most', style: { margin: 0 } }) : null,
-    sens.length ? el('ul', { style: { margin: 0 } }, sens.map((x) => el('li', { text: `${x.what[0].toUpperCase()}${x.what.slice(1)}: ${x.change > 0 ? 'costs' : 'saves'} ${rand(Math.abs(x.change))} over the stay` }))) : null,
-  ]);
-}
-
-function homeLearn(v, c) {
-  const r = monthlyRate(v.ratePct);
-  return el('div', { class: 'panel stack fin-learn' }, [
-    el('h2', { text: 'How it is worked out', style: { margin: 0 } }),
-    c.buy ? step('Transfer duty', 'SARS bands: 0% up to R1 210 000, then 3%, 6%, 8%, 11% and 13% on the value in each band', `On ${rand(c.price)}: ${rand(transferDuty(c.price))}`, `${REFERENCE.transferDuty.source}. Paid by the buyer, in cash, before transfer.`) : null,
-    c.buy && c.loan > 0 ? step('The bond instalment', 'P = L × r ÷ (1 − (1+r)^−n)', `${rand(c.loan)} × ${(r * 100).toFixed(4)}% ÷ (1 − (1+${(r * 100).toFixed(4)}%)^−${c.termMonths}) = ${rand(c.instalment)}`, 'L is the bond, r the yearly rate ÷ 12, n the months.') : null,
-    c.buy ? step('The value when you leave', 'Value = price × (1 + growth)^years', `${rand(c.price)} × (1 + ${pct(Number(v.growthPct) || 0)})^${(c.months / 12).toFixed(2)} = ${rand(c.value)}`, 'The most uncertain number here: prices can stall or fall.') : null,
-    c.buy ? null : step('Rent', 'Rent each month in year y = first rent × (1 + rise)^(y − 1)', `${rand(Number(v.rent))} a month, rising ${pct(Number(v.rentRisePct) || 0)} a year: ${rand(c.rent)} over ${months(c.months)}`, 'The rental deposit is cash needed to move in, but it comes back - so it is not counted as a cost, only what it could have earned meanwhile.'),
-    step('Getting to work', 'Travel a month = 2 × distance × days × cost per km + tolls and parking', `2 × ${Number(v.km) || 0} km × ${Number(v.days) || 0} days × ${rand(Number(v.perKm) || 0)} = ${rand(c.travelNow)} this year, rising ${pct(Number(v.escalatePct) || 0)} a year`),
-    step('What the money up front could have earned', 'Up front × ((1 + rate)^years − 1)', `${rand(c.upfront)} × ((1 + ${pct(Number(v.otherRatePct) || 0)})^${(c.months / 12).toFixed(2)} − 1) = ${rand(c.forgone)}`, 'Money tied up in a deposit, duty and fees cannot grow elsewhere. Counting it keeps buying and renting, and a big deposit and a small one, fair to each other.'),
-    step('Total', 'Up front + bank + running costs (or rent) + travel − what comes back + earnings given up', `${rand(c.total)}`),
-    ...leavesOut([
-      'The rate is held steady; bonds linked to prime move when it does.',
-      'Money paid later is counted the same as money paid now, apart from the earnings given up on money paid up front.',
-      'Tax: capital gains on a home you live in are usually exempt up to a limit; nothing here counts tax.',
-      'Differences between the homes themselves - space, safety, schools - are yours to weigh. Note them in the name you save it under.',
-    ]),
-  ]);
-}
-
-/* ----------------------------------------------------------------- bond */
-
-const BOND_FIELDS = pick(['price', 'deposit', 'ratePct', 'termYears', 'income', 'fees', 'extra']).map((f) => ({ ...f, group: ['fees', 'extra'].includes(f.key) ? 'more' : undefined }));
-const bondHeadline = (v) => { const b = bond(v); return b.instalment == null ? '' : `${rand(b.instalment)} a month · ${rand(b.cashFirst)} up front`; };
-
-function bondScreen(hub) {
-  return page(hub, {
-    id: 'bond-title', title: 'What will the bond cost?', kind: 'bond', headline: bondHeadline,
-    intro: 'The instalment, the interest over the years, and the cash needed before you move in.',
-    fields: BOND_FIELDS, groups: { more: 'Fees and paying extra' }, results: bondResults,
-  });
-}
-
-function bondResults(d) {
-  const v = d.values;
-  const b = bond(v);
-  const stop = nothing(b);
-  if (stop) return stop;
-  const rates = [-1, 0, 1, 2].map((dp) => ({ dp, b: bond({ ...v, ratePct: (Number(v.ratePct) || 0) + dp }) }));
-  const out = [
-    el('div', { class: 'stats' }, [
-      stat(rand(b.instalment), 'instalment a month', 'r-instalment'),
-      stat(rand(b.cashFirst), 'cash needed first', 'r-cash'),
-      stat(rand(b.interest), `interest over ${months(b.termMonths)}`, 'r-interest'),
-    ]),
-    said('What it means', [
-      `Borrowing ${rand(b.loan)}, you pay back ${rand(b.totalPaid)} in all - ${rand(b.interest)} of it interest${b.loan ? `, about ${(b.totalPaid / b.loan).toFixed(1)} times what was borrowed` : ''}.`,
-      `Before the bond is registered you need ${rand(b.cashFirst)}: the ${rand(b.deposit)} deposit, ${rand(b.duty)} transfer duty and about ${rand(b.fees)} in attorney and bond fees${v.fees == null ? ' (a rough estimate - ask a conveyancer)' : ''}.`,
-      b.share != null ? `The instalment is ${Math.round(b.share * 100)}% of the household’s income before tax.` : null,
-      `Banks often look for the instalment to be no more than about 30% of gross income - here about ${rand(b.incomeGuide)} a month. Each bank decides for itself.`,
-      sums(rates.map(({ dp, b: x }) => ({ label: dp === 0 ? `At ${pct(Number(v.ratePct))} (now)` : `If the rate ${dp > 0 ? 'rises' : 'falls'} ${Math.abs(dp)} point${Math.abs(dp) === 1 ? '' : 's'}`, value: x.instalment, total: dp === 0 }))),
-    ]),
-    bondStory(b),
-    el('div', { class: 'panel stack' }, [
-      el('h2', { text: 'Buying costs, item by item', style: { margin: 0 } }),
-      (() => { const items = buyingCosts(b.price, b.loan); return sums([...items.map((x) => ({ label: x.label, value: -x.amount, note: [x.note, x.source].filter(Boolean).join(' · ') })), { label: 'Buying costs', value: -total(items), total: true }]); })(),
-      v.fees != null && v.fees !== '' ? el('p', { class: 'small muted', style: { margin: 0 }, text: `Your own figure for the fees (${rand(Number(v.fees))}) is used above instead of these.` }) : null,
-    ]),
-    assumed(BOND_FIELDS, d),
-    list('What would change it', [
-      ...[500, 1000, 2000].map((x) => { const e = bond({ ...v, extra: x }); return `Paying ${rand(x)} extra a month: paid off in ${months(e.monthsWithExtra)} instead of ${months(b.termMonths)}, ${rand(b.interest - e.interestWithExtra)} less interest.`; }),
-      ...[-5, 5].map((dy) => Math.max(1, (Number(v.termYears) || 0) + dy)).filter((y) => y !== Number(v.termYears)).map((y) => { const t = bond({ ...v, termYears: y }); return `Over ${months(t.termMonths)} instead: ${rand(t.instalment)} a month, ${rand(t.interest)} interest in all.`; }),
-    ]),
-  ];
-  if (shows('advanced')) {
-    out.push(el('div', { class: 'panel stack' }, [
-      el('h2', { text: 'What is still owed', style: { margin: 0 } }),
-      lineChart([
-        { name: 'Owed, as planned', points: outOf(bond({ ...v, extra: 0 }).yearly.map((y) => [y.month, y.balance])) },
-        ...(b.extra ? [{ name: `Owed, paying ${rand(b.extra)} extra`, points: outOf(b.yearly.map((y) => [y.month, y.balance])), dashed: true }] : []),
-      ], { label: 'The bond balance over the years', story: `${RULE} What is owed climbs back to zero as the bond is paid - slowly at first, because early on most of each instalment is interest.` }),
-      b.extra ? el('p', { style: { margin: 0 }, text: `With ${rand(b.extra)} extra a month: paid off in ${months(b.monthsWithExtra)}, ${rand(b.interest - b.interestWithExtra)} less interest.` }) : null,
-    ]));
-  }
-  if (shows('learn')) {
-    out.push(el('div', { class: 'panel stack fin-learn' }, [
-      el('h2', { text: 'How it is worked out', style: { margin: 0 } }),
-      step('The instalment', 'P = L × r ÷ (1 − (1+r)^−n)', `${rand(b.loan)} × ${(b.r * 100).toFixed(4)}% ÷ (1 − (1+${(b.r * 100).toFixed(4)}%)^−${b.termMonths}) = ${rand(b.instalment)}`, 'L is the bond, r the yearly rate ÷ 12, n the months. Each month the interest is worked out on what is still owed, and the rest of the instalment pays it down.'),
-      step('Interest', 'Interest = instalment × months − bond', `${rand(b.instalment)} × ${b.termMonths} − ${rand(b.loan)} = ${rand(b.interest)}`),
-      step('Transfer duty', '0% up to R1 210 000; then 3%, 6%, 8%, 11% and 13% on the value in each band', `${rand(b.duty)}`, REFERENCE.transferDuty.source),
-      step('Fees, when none are entered', 'Transfer attorney + bond attorney (Law Society guideline, plus VAT) + Deeds Office fees + attorneys’ extras + the bank’s initiation fee', `${rand(feesEstimate(b.price, b.loan))}`, 'Item by item under "Buying costs". A conveyancer’s quote replaces it.'),
-      step('Paying extra', 'Each month: owed = owed × (1 + r) − (instalment + extra), until nothing is owed', `${months(b.monthsWithExtra)}`, 'Every extra rand saves the interest it would have attracted for the rest of the bond. Some banks let you take extra payments back out; check yours.'),
-      ...leavesOut(['The rate is held steady for the whole bond.', 'Bond insurance, initiation and monthly bank fees are not included unless you add them to the fees.']),
-    ]));
-  }
-  return out;
-}
-
-/** Each instalment split into interest and paying off the bond - and when the split turns. */
-function bondStory(b) {
-  if (!b.loan) return null;
-  let bal = b.loan; const interest = []; const capital = [];
-  for (let m = 1; m <= b.termMonths; m += 1) {
-    const i = bal * b.r; bal -= b.instalment - i;
-    if (m % 12 === 0 || m === 1) { interest.push([m, i]); capital.push([m, b.instalment - i]); }
-  }
-  const turn = crossing(capital, interest);
-  return chartPanel('Each instalment: interest or paying it off', lineChart([
-    { name: 'Interest, a month', points: outOf(interest) },
-    { name: 'Paying off the bond, a month', points: outOf(capital), dashed: true },
-  ], { label: 'How each instalment splits between interest and the bond itself',
-    marks: [turn != null && capital[0][1] < interest[0][1] ? { x: turn, label: `More pays off the bond from ${whenLabel(turn)}` } : null],
-    story: `${RULE} At first most of each instalment is interest. Paying extra early cuts the interest most.` }));
-}
-
-/* ------------------------------------------------------------- our bond */
-
-// Our bond as it really went (D-075): payments over different periods, money paid in,
-// money taken out again, rate changes - where it stands, and what paying extra would do.
-const OB_FIELDS = [
-  { key: 'bondLoan', label: 'The bond when it started', type: 'money', level: 'simple', hint: 'The amount registered - not the price of the house.' },
-  { key: 'bondStart', label: 'It started in', type: 'month', level: 'simple' },
-  { key: 'bondYears', label: 'Over', type: 'years', level: 'simple', source: { kind: 'assumption' } },
-  { key: 'bondRate', label: 'Interest rate at the start', type: 'percent', level: 'simple', source: { ref: REFERENCE.prime }, hint: 'Rates changed since? Add each change below as "Rate changed".' },
-  { key: 'tryExtra', label: 'What if we paid this much more a month, from now', type: 'money', level: 'simple', source: { kind: 'assumption' } },
-];
-const ymName = (ym) => (ym ? new Date(`${ym}-01T00:00:00Z`).toLocaleDateString('en-ZA', { month: 'short', year: 'numeric', timeZone: 'UTC' }) : '-');
-const obInput = (v) => ({ loan: v.bondLoan, ratePct: v.bondRate, termYears: v.bondYears, start: v.bondStart, events: v.bondEvents ?? [] });
-const obHeadline = (v) => { const b = bondNow(obInput(v), new Date().toISOString().slice(0, 10)); return b.missing ? '' : `${rand(b.owedNow)} owed · paid off ${ymName(b.actual.paidOff)}`; };
-
-function ourBondScreen(hub) {
   const d = D();
-  const answer = el('div', { class: 'stack', 'aria-live': 'polite' });
-  const refresh = () => answer.replaceChildren(...obResults(hub, d).filter(Boolean));
-  refresh();
-  return el('section', { class: 'stack', 'aria-labelledby': 'ob-title' }, [
-    el('h1', { id: 'ob-title', text: 'Our bond, as it really went', style: { margin: 0 } }),
-    el('p', { class: 'muted', style: { margin: 0 }, text: 'Log what you actually paid - more for a few years, then the minimum; extra amounts paid in; money taken out again - and see what it did, and what paying more from now would do.' }),
-    levelBar(() => hub.render()),
-    inputsPanel(OB_FIELDS, d, {}, () => refresh()),
-    eventsPanel(d, refresh),
-    answer,
-    savedPanel(hub, {
-      col: col(hub), kind: 'ourbond', d, compareScreen: 'compare',
-      summary: () => ({ headline: obHeadline(d.values) }),
-      onOpen: (rec) => { loadDraft('homes', DEFAULTS, rec); hub.go('ourbond'); },
-    }),
-  ]);
-}
-
-/** The log: each line a period of payments, an amount paid in or taken out, or a rate change. */
-function eventsPanel(d, refresh) {
-  const list = Array.isArray(d.values.bondEvents) ? d.values.bondEvents : (d.values.bondEvents = []);
-  const box = el('div', { class: 'stack' });
-  const save = () => { d.mine.add('bondEvents'); refresh(); };
-  const draw = () => box.replaceChildren(...list.map((e, i) => el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' }, 'data-field': `event:${i}` }, [
-    el('select', { class: 'select', 'aria-label': 'What happened', style: { width: 'auto' }, on: { change: (x) => { e.kind = x.target.value; draw(); save(); } } },
-      Object.entries(EVENT_KINDS).map(([k, label]) => el('option', { value: k, text: label, selected: e.kind === k }))),
-    el('span', { class: 'small muted', text: e.kind === 'pay' ? 'from' : 'in' }),
-    el('input', { class: 'input', type: 'month', value: e.from ?? '', 'aria-label': 'From', style: { maxWidth: '170px' }, on: { change: (x) => { e.from = x.target.value || null; save(); } } }),
-    e.kind === 'pay' ? el('span', { class: 'small muted', text: 'to' }) : null,
-    e.kind === 'pay' ? el('input', { class: 'input', type: 'month', value: e.to ?? '', 'aria-label': 'To (empty: still going)', style: { maxWidth: '170px' }, on: { change: (x) => { e.to = x.target.value || null; save(); } } }) : null,
-    el('span', { class: 'small muted', text: e.kind === 'rate' ? 'new rate' : e.kind === 'pay' ? 'R a month' : 'R' }),
-    el('input', { class: 'input', type: 'number', min: '0', step: 'any', value: e.amount ?? '', 'aria-label': e.kind === 'rate' ? 'New rate, % a year' : 'Amount', style: { maxWidth: '130px' }, on: { change: (x) => { e.amount = Number(x.target.value) || 0; save(); } } }),
-    e.kind === 'rate' ? el('span', { class: 'small muted', text: '%' }) : null,
-    el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': 'Remove this line', on: { click: () => { list.splice(i, 1); draw(); save(); } } }),
-  ])));
-  draw();
-  return el('div', { class: 'panel stack' }, [
-    el('h2', { text: 'What happened, over the years', style: { margin: 0 } }),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: '"Paid each month" for a period (leave "to" empty if it is still going); "Paid in once" for a lump sum; "Took out" for money drawn from the bond again; "Rate changed" when the bank’s rate moved. Outside any period, the minimum is paid.' }),
-    box,
-    el('div', {}, [el('button', { class: 'btn btn-small', type: 'button', text: 'Add line', 'data-field': 'event-add', on: { click: () => { list.push({ kind: 'pay', from: d.values.bondStart ?? null, to: null, amount: null }); draw(); } } })]),
-  ]);
-}
-
-function obResults(hub, d) {
   const v = d.values;
+  v.kind = kindOf(v);
   const today = hub.today();
-  const b = bondNow(obInput(v), today);
-  if (b.missing) return [el('p', { class: 'panel muted', text: 'Fill in the bond when it started, and the month it started, to see the answer.' })];
-  const a = b.actual; const p = b.plain;
-  const sooner = p.months - a.months;
-  const noTakeOut = runBond({ ...obInput(v), events: (v.bondEvents ?? []).filter((e) => e.kind !== 'withdraw') });
-  const extra = Number(v.tryExtra) || 0;
-  const more = extra > 0 && b.owedNow > 0 ? b.withExtra(extra) : null;
-  const yearly = (run) => run.rows.filter((r) => r.m % 12 === 0 || r.m === run.months).map((r) => [r.m, r.balance]);
-  const lines = [
-    `It started at ${rand(Number(v.bondLoan))} in ${ymName(v.bondStart)} over ${months(p.plannedMonths)}: a minimum of ${rand(p.rows[1]?.minPmt ?? 0)} a month, ending ${ymName(p.paidOff)}.`,
-    (v.bondEvents ?? []).length ? `With what you logged, it ends ${a.paidOff ? ymName(a.paidOff) : 'after more than 60 years'} - ${sooner > 0 ? `${months(sooner)} sooner` : sooner < 0 ? `${months(-sooner)} later` : 'the same time'} - with ${rand(Math.abs(p.interest - a.interest))} ${a.interest <= p.interest ? 'less' : 'more'} interest in all.` : 'Log what you really paid below the bond details, and see what it did.',
-    b.owedNow > 0 ? `Today (${ymName(today.slice(0, 7))}): ${rand(b.owedNow)} still owed, a minimum of ${rand(b.minNow)} a month, ${months(Math.max(0, a.months - b.now))} to go at the minimum.` : 'It is paid off.',
-    a.taken > 0 ? `The ${rand(a.taken)} taken out again costs about ${rand(a.interest - noTakeOut.interest)} in bond interest over the years it is paid back - a cost of whatever it bought (a car, say) that is easy to miss.` : null,
-    more ? `Paying ${rand(extra)} more a month from now: paid off ${ymName(more.paidOff)}, ${months(a.months - more.months)} sooner, saving about ${rand(a.interest - more.interest)} interest.` : null,
-    ...a.notes.map((x) => x.text),
-  ];
-  const marks = [
-    ...(v.bondEvents ?? []).filter((e) => e.from && e.kind !== 'pay').map((e) => ({ x: monthsFrom(v.bondStart, e.from), label: `${EVENT_KINDS[e.kind]}${e.kind === 'rate' ? ` ${e.amount}%` : ` ${short(e.amount)}`}` })),
-    b.owedNow > 0 ? { x: b.now, label: 'Today' } : null,
-  ];
-  const out = [
-    el('div', { class: 'stats' }, [
-      stat(rand(b.owedNow), 'still owed today', 'r-owed'),
-      stat(ymName(a.paidOff), 'paid off', 'r-paidoff'),
-      stat(rand(Math.abs(p.interest - a.interest)), a.interest <= p.interest ? 'less interest than the minimum all along' : 'more interest than the minimum all along', 'r-interest'),
-    ]),
-    chartPanel('The bond over the years', lineChart([
-      { name: 'Owed, as it really went', points: outOf(yearly(a)) },
-      { name: 'Owed, paying only the minimum', points: outOf(yearly(p)) },
-      ...(more ? [{ name: `Owed, paying ${short(extra)} more a month from now`, points: outOf([[b.now, b.owedNow], ...yearly(more).filter(([m]) => m > b.now)]), dashed: true }] : []),
-    ], { label: 'What is owed on the bond, year by year', marks, xLabel: (m) => String(Number(v.bondStart.slice(0, 4)) + Math.round(m / 12)), story: `${RULE} What is owed climbs back to zero as the bond is paid. Where your line is above the minimum-only line, you are ahead of the bank’s plan; a step down is money taken out again.` }),
-      lineChart([
-        { name: 'Paid that month', points: outOf(a.rows.filter((r) => r.m > 0 && r.m % 3 === 0).map((r) => [r.m, r.paidThis])) },
-        { name: 'The minimum', points: outOf(a.rows.filter((r) => r.m > 0 && r.m % 3 === 0).map((r) => [r.m, r.minPmt])), dashed: true },
-      ], { label: 'What came out of your pocket each month, against the minimum', marks: b.owedNow > 0 ? [{ x: b.now, label: 'Today' }] : [], xLabel: (m) => String(Number(v.bondStart.slice(0, 4)) + Math.round(m / 12)), story: 'Each month’s payment. Below the minimum line is paying more than you have to - that is what shortens the bond.' })),
-    el('div', { class: 'panel stack' }, [
-      el('h2', { text: 'What it means', style: { margin: 0 } }),
-      ...lines.filter(Boolean).map((t) => el('p', { style: { margin: 0 }, text: t })),
-    ]),
-    list('Paying more from now', b.owedNow > 0 ? [1000, 2000, 5000].map((x) => { const r = b.withExtra(x); return `${rand(x)} more a month: paid off ${ymName(r.paidOff)}, ${months(a.months - r.months)} sooner, about ${rand(a.interest - r.interest)} less interest.`; }) : []),
-  ];
-  if (shows('learn')) {
-    out.push(el('div', { class: 'panel stack fin-learn' }, [
-      el('h2', { text: 'How it is worked out', style: { margin: 0 } }),
-      step('Each month', 'Owed = owed × (1 + r) − what was paid', `r = the yearly rate ÷ 12; paid = your amount for that period, or the minimum`, 'Interest is worked out on what is still owed, so every rand paid early saves the interest it would have attracted for the rest of the bond.'),
-      step('The minimum', 'Minimum = owed × r ÷ (1 − (1 + r)^−months left)', null, 'Paying more does not lower the minimum - it shortens the bond, as most South African access bonds work. Taking money out, or a rate change, makes the bank work the minimum out again over the months that are left. Check how your own bank does it.'),
-      step('Money taken out', 'Owed goes up by the amount; it is then paid back at the bond rate over the months left', null, 'Cheap compared with a car loan or a credit card, but not free: the interest over the remaining years is a cost of what it bought.'),
-      el('h3', { text: 'What this leaves out', style: { margin: 0 } }),
-      el('ul', { class: 'small', style: { margin: 0 } }, ['The bank’s monthly service fee and bond insurance, unless they are in what you logged.', 'Interest worked out daily: banks do, this works monthly - close, not exact. Your bond statement is the true figure.'].map((t) => el('li', { text: t }))),
-    ]));
-  }
-  return out;
-}
-
-/* ----------------------------------------------------------- sell to buy */
-
-// Selling our home to buy the next one (D-074): what the sale really leaves after
-// every selling cost and the bond, then the new home's buying costs, money kept for
-// renovations and a reserve - and what is left is the deposit.
-const S2B_FIELDS = [
-  { key: 'sellPrice', label: 'What our home will sell for', type: 'money', level: 'simple', group: 'sell', hint: 'Ask two or three agents, and look at what similar homes nearby sold for.' },
-  { key: 'owedNow', label: 'Still owed on our bond', type: 'money', level: 'simple', group: 'sell', source: { kind: 'assumption' }, hint: 'From your latest bond statement, or ask the bank for a settlement figure.' },
-  { key: 'agentPct', label: 'Agent’s commission', type: 'percent', level: 'simple', group: 'sell', source: { kind: 'illustrative' }, hint: 'Agents ask different rates - often 5 to 7.5% - and VAT is added on top. It can be negotiated.', unitText: '% of the price, plus VAT' },
-  { key: 'coc', label: 'Electrical certificate', type: 'money', level: 'simple', group: 'sell', source: { kind: 'illustrative' }, hint: 'Needed by law to sell. Repairs it finds are extra.' },
-  { key: 'cancelFee', label: 'Bond cancellation attorney', type: 'money', level: 'advanced', group: 'sell', source: { kind: 'illustrative' } },
-  { key: 'noticeShort', label: 'Months of notice the bank will not get', type: 'number', level: 'advanced', group: 'sell', source: { kind: 'assumption' }, hint: 'Banks usually want 90 days’ notice to cancel a bond. Give it early and this is 0.' },
-  { key: 'beetle', label: 'Beetle certificate', type: 'money', level: 'advanced', optional: true, group: 'sell', hint: 'Usually at the coast, if the sale agreement asks for one.' },
-  { key: 'gas', label: 'Gas certificate', type: 'money', level: 'advanced', optional: true, group: 'sell' },
-  { key: 'fence', label: 'Electric fence certificate', type: 'money', level: 'advanced', optional: true, group: 'sell' },
-  { key: 'otherSell', label: 'Other selling costs', type: 'money', level: 'advanced', optional: true, group: 'sell', hint: 'Repairs before selling, a plumbing certificate (Cape Town), staging…' },
-  { key: 'boughtFor', label: 'We bought it for', type: 'money', level: 'advanced', optional: true, group: 'sell', hint: 'Only to check the tax on the gain: none on the first R3 million.' },
-  { key: 'improvedSoFar', label: 'Spent on improvements so far', type: 'money', level: 'advanced', optional: true, group: 'sell' },
-  { ...F.price, label: 'Price of the new home', group: 'buy' },
-  { ...F.ratePct, label: 'Bond interest rate', group: 'buy' },
-  { ...F.termYears, group: 'buy' },
-  { key: 'quoteTransfer', label: 'Transfer attorney’s quote', type: 'money', level: 'advanced', optional: true, group: 'buy', hint: 'Including VAT. Left empty: the Law Society guideline.' },
-  { key: 'quoteBond', label: 'Bond attorney’s quote', type: 'money', level: 'advanced', optional: true, group: 'buy' },
-  { key: 'moveCost', label: 'Moving', type: 'money', level: 'simple', optional: true, group: 'keep' },
-  { key: 'renovations', label: 'Kept for renovations', type: 'money', level: 'simple', optional: true, group: 'keep' },
-  { key: 'reserve', label: 'Kept free, just in case', type: 'money', level: 'simple', optional: true, group: 'keep', hint: 'Something always comes up after a move.' },
-];
-const S2B_GROUPS = { sell: 'Selling our home', buy: 'The new home', keep: 'Kept back' };
-const s2bValues = (v) => ({ ...v, renovations: (Number(v.renovations) || 0) + (Number(v.moveCost) || 0), own: { transferAttorney: v.quoteTransfer, bondAttorney: v.quoteBond } });
-const s2bHeadline = (v) => { const r = sellToBuy(s2bValues(v)); return r.missing ? '' : `${rand(r.cash)} from the sale · ${rand(r.deposit)} deposit`; };
-
-function sellBuyScreen(hub) {
-  return page(hub, {
-    id: 's2b-title', title: 'Selling our home to buy the next one', kind: 'selltobuy', headline: s2bHeadline,
-    intro: 'What the sale really leaves - after the agent, the certificates, the bond and the rest - and how much of it can go into the next home as a deposit.',
-    fields: S2B_FIELDS, groups: S2B_GROUPS, results: (d) => s2bResults(hub, d),
-  });
-}
-
-/** Where the money goes, as a falling staircase: each step a cost or what is kept, the last the deposit. */
-function moneySteps(steps) {
-  const top = Math.max(...steps.map((x) => Math.max(x.from, x.to))) || 1;
-  return el('div', { class: 'money-steps', role: 'list' }, steps.map((x) => {
-    const lo = Math.min(x.from, x.to); const w = Math.abs(x.to - x.from);
-    return el('div', { class: 'money-steps__row', role: 'listitem' }, [
-      el('span', { class: 'money-steps__label', text: x.label }),
-      el('span', { class: 'money-steps__track' }, [el('span', { class: `money-steps__bar money-steps__bar--${x.kind}`, style: { marginLeft: `${(lo / top) * 100}%`, width: `${Math.max(0.6, (w / top) * 100)}%` } })]),
-      el('span', { class: 'money-steps__amount', text: `${x.kind === 'cost' || x.kind === 'kept' ? '−' : ''}${rand(w)}` }),
-    ]);
-  }));
-}
-
-function s2bResults(hub, d) {
-  const v = d.values;
-  const r = sellToBuy(s2bValues(v));
-  if (r.missing) return [el('p', { class: 'panel muted', text: `Fill in ${r.missing.join(' and ')} to see the answer.` })];
-  let at = r.sale;
-  const step = (label, amount, kind) => { const s = { label, from: at, to: kind === 'total' ? amount : at - amount, kind }; if (kind === 'total') s.from = 0; at = kind === 'total' ? amount : at - amount; return s; };
-  const steps = [
-    { label: 'Sale price', from: 0, to: r.sale, kind: 'total' },
-    step('Selling costs', r.sellTotal, 'cost'),
-    r.tax.tax ? step('Tax on the gain', r.tax.tax, 'cost') : null,
-    r.owed ? step('Bond settled', r.owed, 'cost') : null,
-    step('Cash from the sale', r.cash, 'total'),
-    r.price ? step('Buying costs', r.buyTotal, 'cost') : null,
-    r.keep ? step('Kept back', r.keep, 'kept') : null,
-    r.price ? step('Deposit', r.deposit, 'deposit') : null,
-  ].filter(Boolean);
-  const n = r.loan > 0 ? Math.round((Number(v.termYears) || 0) * 12) : 0;
-  const pmt = r.loan > 0 && n ? payment(r.loan, monthlyRate(v.ratePct), n) : 0;
-  const lines = [
-    `Selling for ${rand(r.sale)} leaves ${rand(r.cash)}: ${rand(r.sellTotal)} in selling costs${r.tax.tax ? `, ${rand(r.tax.tax)} tax on the gain` : ''}${r.owed ? ` and the ${rand(r.owed)} bond settled` : ''}.`,
-    r.tax.gain > 0 && Number(v.boughtFor) ? `The gain is about ${rand(r.tax.gain)} - ${r.tax.gain > 3000000 ? `more than the R3 million SARS leaves untaxed on the home you live in` : 'under the R3 million SARS leaves untaxed on the home you live in: no tax'}.` : null,
-    r.price ? (r.short > 0
-      ? `That is ${rand(r.short)} short of the buying costs and what you want to keep back - before any deposit. Something has to give: a lower price, less kept back, or more cash.`
-      : `The new home’s buying costs come first, in cash: ${rand(r.buyTotal)}. Then ${rand(r.keep)} kept back. That leaves a ${rand(r.deposit)} deposit${r.leftOver > 0 ? `, with ${rand(r.leftOver)} over even after paying the whole price` : ''}.`) : 'Put in the price of the new home to see the deposit.',
-    r.loan > 0 ? `The new bond: ${rand(r.loan)} over ${months(n)} at ${pct(Number(v.ratePct) || 0)} - about ${rand(pmt)} a month.` : r.price ? 'No bond needed.' : null,
-  ];
-  const take = (screen) => { v.deposit = Math.round(r.deposit); d.mine.add('deposit'); hub.go(screen); };
-  return [
-    el('div', { class: 'stats' }, [
-      stat(rand(r.cash), 'cash from the sale', 'r-cash'),
-      r.price ? stat(rand(r.deposit), 'for the deposit', 'r-deposit') : null,
-      r.loan > 0 ? stat(rand(pmt), `a month on the new bond of ${rand(r.loan)}`, 'r-newbond') : null,
-    ]),
-    chartPanel('Where the sale money goes', el('div', { class: 'stack' }, [
-      moneySteps(steps),
-      el('p', { class: 'small', style: { margin: 0 }, text: 'From the sale price down: each step is a cost or money kept back, and what is left at the bottom is the deposit.' }),
-    ])),
-    el('div', { class: 'panel stack' }, [
-      el('h2', { text: 'What it means', style: { margin: 0 } }),
-      ...lines.filter(Boolean).map((t) => el('p', { style: { margin: 0 }, text: t })),
-      r.price && r.deposit > 0 ? el('div', { class: 'row' }, [
-        el('span', { class: 'small', text: `Take the ${rand(r.deposit)} deposit to:` }),
-        el('button', { class: 'btn btn-small', type: 'button', text: 'Bond', title: 'Open Bond with this price and deposit', 'data-field': 's2b-bond', on: { click: () => take('bond') } }),
-        el('button', { class: 'btn btn-small', type: 'button', text: 'Compare', title: 'Open Own or rent with this price and deposit', 'data-field': 's2b-ownrent', on: { click: () => { v.rbMode = 'buy'; take('rentbuy'); } } }),
-      ]) : null,
-    ]),
-    el('div', { class: 'panel stack' }, [
-      el('h2', { text: 'Selling costs', style: { margin: 0 } }),
-      sums([...r.selling.map((x) => ({ label: x.label, value: -x.amount, note: [x.note, x.source].filter(Boolean).join(' · ') })), { label: 'Selling costs', value: -r.sellTotal, total: true }]),
-      r.price ? el('h2', { text: 'Buying costs', style: { margin: 0 } }) : null,
-      r.price ? sums([...r.buying.map((x) => ({ label: x.label, value: -x.amount, note: [x.note, x.source].filter(Boolean).join(' · ') })), { label: 'Buying costs', value: -r.buyTotal, total: true }]) : null,
-    ]),
-    el('div', { class: 'panel stack' }, [
-      el('h2', { text: 'Did you think of…', style: { margin: 0 } }),
-      el('ul', { style: { margin: 0 } }, [
-        'Giving the bank 90 days’ notice to cancel the bond, as soon as the sale is likely - short notice costs interest.',
-        'Repairs the electrical inspection finds, before the certificate is issued.',
-        'Rates and levies paid ahead for the clearance certificate - most of it comes back after transfer.',
-        'Buying before the sale goes through: bridging finance, or two bonds at once for a while. Not counted here.',
-        'Occupational rent if you stay in the old home after transfer, or move into the new one before.',
-        'The bank’s initiation fee can be added to the new bond instead of paid in cash - then interest is charged on it.',
-        'Moving, and what a new home always needs in the first months.',
-      ].map((t) => el('li', { text: t }))),
-    ]),
-  ];
-}
-
-/* ---------------------------------------------------------- rent or buy */
-
-// Own or rent (D-072): buying against renting, or keeping the home we own against
-// selling it and renting - with the family's own figures and what people forget.
-const buyingRB = (v) => v.rbMode !== 'keep';
-const keepingRB = (v) => v.rbMode === 'keep';
-const RB_FIELDS = [
-  { key: 'rbMode', label: 'We are', type: 'choice', level: 'simple', redraw: true, choices: [{ value: 'buy', label: 'Buying' }, { value: 'keep', label: 'Owners already' }] },
-  { ...F.price, label: 'Price of the home', when: buyingRB },
-  { ...F.deposit, when: buyingRB },
-  { key: 'worthNow', label: 'What our home would sell for now', type: 'money', level: 'simple', when: keepingRB, hint: 'Ask an agent, or look at what similar homes nearby sold for.' },
-  { key: 'owedNow', label: 'Still owed on the bond', type: 'money', level: 'simple', when: keepingRB, source: { kind: 'assumption' } },
-  { key: 'yearsLeft', label: 'Years left on the bond', type: 'years', level: 'simple', when: keepingRB, source: { kind: 'assumption' } },
-  { ...F.ratePct, label: 'Bond interest rate' },
-  { ...F.termYears, when: buyingRB },
-  { ...F.rent, label: 'Rent for the place we would rent, a month' },
-  { key: 'rentRisePct', label: 'Rent rises by', type: 'percent', level: 'simple', source: { kind: 'illustrative' }, hint: 'Look at what the rent did over the last few years - many rents rise faster than inflation.' },
-  { ...F.stayYears, label: 'Compare after', hint: 'How long you expect to live there. Who comes out ahead often changes with time.' },
-  { key: 'growthPct', label: 'House prices grow by', type: 'percent', level: 'simple', group: 'own', source: { kind: 'illustrative' }, hint: 'Not a promise: prices can stall or fall, and differ by area and street. Fill in "Our own home" below to see what yours has done.' },
-  { key: 'maintYearly', label: 'Maintenance and repairs a year - what you really spend', type: 'money', level: 'simple', optional: true, group: 'own', when: (v) => v.maintMode !== 'percent', hint: 'Not upgrades - those are below. Many calculators assume 1 to 2% of the value a year; your own figure is better.' },
-  { key: 'maintMode', label: 'Maintenance as', type: 'choice', level: 'advanced', redraw: true, group: 'own', choices: [{ value: 'amount', label: 'Our figure' }, { value: 'percent', label: 'Percentage' }] },
-  { ...F.upkeepPct, group: 'own', when: (v) => v.maintMode === 'percent' },
-  { ...F.ratesTaxes, group: 'own' }, { ...F.levies, group: 'own' }, { ...F.insurance, group: 'own' },
-  { ...F.sellPct, group: 'own' },
-  { ...F.fees, group: 'own', when: buyingRB },
-  { ...F.moveCost, label: 'Moving in', group: 'own', when: buyingRB },
-  { key: 'improvedSoFar', label: 'Spent on improvements so far', type: 'money', level: 'advanced', optional: true, group: 'own', when: keepingRB, hint: 'Upgrades already done (not repairs). They count against the gain when you sell.' },
-  { key: 'marginalPct', label: 'Your income tax rate on the last rand', type: 'percent', level: 'advanced', group: 'own', source: { kind: 'illustrative' }, hint: 'Only used if the gain on the home is above R3 million.' },
-  { key: 'boughtFor', label: 'We bought our home for', type: 'money', level: 'simple', optional: true, group: 'history' },
-  { key: 'boughtWhen', label: 'In', type: 'month', level: 'simple', optional: true, group: 'history' },
-  { key: 'worthNow', label: 'It would sell for now', type: 'money', level: 'simple', optional: true, group: 'history', when: buyingRB },
-  { ...F.rentDeposit, group: 'rentside' },
-  { key: 'rentMove', label: 'Moving into the rented place', type: 'money', level: 'advanced', optional: true, group: 'rentside' },
-  { key: 'travelOwn', label: 'Getting to work from the home we own or buy, a month', type: 'money', level: 'advanced', optional: true, group: 'travel', hint: 'Homes › A home works this out from the distance.' },
-  { key: 'travelRent', label: 'Getting to work from the rented place, a month', type: 'money', level: 'advanced', optional: true, group: 'travel' },
-  { key: 'investPct', label: 'Investments grow by, before tax', type: 'percent', level: 'simple', group: 'money', source: { kind: 'illustrative' }, hint: 'After fees. A money-market account pays less; shares have averaged more, with bad years in between.' },
-  { key: 'investShare', label: 'Of the money saved each month, really invested', type: 'percent', level: 'simple', group: 'money', source: { kind: 'assumption' }, hint: 'Renting only builds wealth if the difference is invested, every month. Be honest: 100% is rare.' },
-  { key: 'investTaxPct', label: 'Share of investment growth lost to tax', type: 'percent', level: 'advanced', group: 'money', source: { kind: 'illustrative' }, hint: 'Interest is taxed as income; gains and dividends less. A tax-free savings account loses none, up to its limits.' },
-  { ...F.escalatePct, group: 'money' },
-];
-const RB_GROUPS = { own: 'Owning', history: 'Our own home - what has it done?', rentside: 'Renting', travel: 'Getting to work', money: 'Investing the difference' };
-const rbHeadline = (v) => { const r = ownOrRent(v); return r.ahead == null ? '' : `After ${r.year} years ${r.ahead >= 0 ? 'owning' : 'renting'} ahead by ${rand(Math.abs(r.ahead))}`; };
-
-function rentBuyScreen(hub) {
-  const d = D();
   const answer = el('div', { class: 'stack', 'aria-live': 'polite' });
-  const refresh = () => answer.replaceChildren(...rbResults(hub, d).filter(Boolean));
-  const changed = (key) => (RB_FIELDS.find((f) => f.key === key)?.redraw ? hub.render() : refresh());
+  const boxes = [];      // section extras that follow what is typed
+  const refresh = () => {
+    const plan = homePlan(v, today);
+    for (const b of boxes) b.box.replaceChildren(...[b.make(plan)].flat().filter(Boolean));
+    answer.replaceChildren(...results(hub, d).filter(Boolean));
+  };
+  const changed = (key) => (ALL_FIELDS.find((x) => x.key === key)?.redraw ? hub.render() : refresh());
+  const plan0 = homePlan(v, today);
+  const sections = SECS.filter((s) => !s.when || s.when(v)).map((s) => sectionPanel(hub, d, s, plan0, refresh, changed, boxes));
   refresh();
-  return el('section', { class: 'stack', 'aria-labelledby': 'rb-title' }, [
-    el('h1', { id: 'rb-title', text: 'Own or rent?', style: { margin: 0 } }),
-    el('p', { class: 'muted', style: { margin: 0 }, text: 'It depends on the situation - so put in yours. Buying a home against renting one, or keeping the home you own against selling it and renting. Both sides have the same money each month; whoever pays less invests the difference.' }),
+  return el('section', { class: 'stack', 'aria-labelledby': 'home-title' }, [
+    el('h1', { id: 'home-title', text: d.title || 'A home', style: { margin: 0 } }),
+    el('p', { class: 'muted', style: { margin: 0 }, text: 'Everything about one home, in sections. Tick a section off to leave it out, fold away what you do not need, and tap (i) for what a figure is and where to find yours.' }),
     levelBar(() => hub.render()),
-    inputsPanel(RB_FIELDS, d, RB_GROUPS, changed),
-    upgradesPanel(d, refresh),
+    el('div', { class: 'panel stack' }, [
+      el('div', { class: 'chipset', role: 'group', 'aria-label': 'This home' }, Object.entries(KINDS).map(([k, label]) => el('button', {
+        class: 'chip', type: 'button', 'aria-pressed': String(v.kind === k), 'data-field': `kind:${k}`, text: label,
+        on: { click: () => { v.kind = k; d.mine.add('kind'); hub.render(); } },
+      }))),
+    ]),
+    ...sections,
+    hasHome(v) && (v.on?.bond ?? true) ? eventsPanel(d, refresh, 'scenarios', SCENARIO_KINDS, 'What if…', H.scenarios, true) : null,
     answer,
     savedPanel(hub, {
-      col: col(hub), kind: 'rentbuy', d, compareScreen: 'compare',
-      summary: () => ({ headline: rbHeadline(d.values) }),
-      onOpen: (rec) => { loadDraft('homes', DEFAULTS, rec); hub.go('rentbuy'); },
+      col: col(hub), kind: KIND, d, compareScreen: 'compare',
+      summary: () => { const p = homePlan(v, today); return p.missing ? {} : { headline: `${rand(p.monthNow)} a month · ${p.ahead >= 0 ? `${rand(p.ahead)} ahead` : `${rand(-p.ahead)} behind`} after ${yrs(Math.round(p.stay / 12))}` }; },
+      onOpen: (rec) => { loadDraft('homes', DEFAULTS, { ...rec, values: valuesOf(rec) }); hub.render(); },
     }),
   ]);
 }
 
-/** Upgrades the owner plans: what each costs, when, and what it adds to the selling price. */
+/** One section: its heading with (i), a tick to count it or leave it out, and folding away. */
+function sectionPanel(hub, d, s, plan, refresh, changed, boxes) {
+  const on = s.tick ? ({ ...SECTIONS_ON, ...(d.values.on ?? {}) })[s.key] : true;
+  const foldKey = `${s.key}`;
+  const folded = folds.has(foldKey) || !on;
+  const [ib, ix] = info(H[s.key], s.title);
+  const body = el('div', { class: 'home-sec__body stack', hidden: folded });
+  const fields = s.fields.filter((x) => shows(x.level) && (!x.when || x.when(d.values)));
+  body.append(...fields.map((x) => input(x, d, changed)));
+  if (s.extra) { const box = el('div', { class: 'stack' }); boxes.push({ box, make: (p) => s.extra(hub, d, p, refresh) }); body.append(box); }
+  const foldBtn = el('button', { class: 'home-sec__fold', type: 'button', 'aria-expanded': String(!folded), 'aria-label': `${folded ? 'Open' : 'Fold away'} ${s.title}`, text: folded ? '▸' : '▾',
+    on: { click: () => { const open = body.hidden; body.hidden = !open; foldBtn.textContent = open ? '▾' : '▸'; foldBtn.setAttribute('aria-expanded', String(open)); if (open) folds.delete(foldKey); else folds.add(foldKey); keepFolds(); } } });
+  return el('section', { class: `panel home-sec${on ? '' : ' home-sec--off'}`, 'data-field': `sec:${s.key}` }, [
+    el('div', { class: 'home-sec__head' }, [
+      foldBtn,
+      el('h2', {}, [s.title, ' ', ib]),
+      s.tick ? el('button', { class: 'chip', type: 'button', 'aria-pressed': String(on), 'data-field': `tick:${s.key}`, text: on ? 'Counted' : 'Left out', title: on ? 'Counted in the answer - tap to leave it out' : 'Left out of the answer - tap to count it',
+        on: { click: () => { d.values.on = { ...SECTIONS_ON, ...(d.values.on ?? {}), [s.key]: !on }; d.mine.add('on'); if (!on) folds.delete(foldKey); keepFolds(); hub.render(); } } }) : null,
+    ]),
+    ix ? el('div', { class: 'home-sec__body' }, [ix]) : null,
+    body,
+  ]);
+}
+
+/** What our own home has grown by, with "Use it" to grow prices at that rate. */
+function historyLine(hub, d) {
+  const v = d.values;
+  const h = historyGrowth(v.boughtFor, v.boughtWhen, isOwn(v) ? v.worthNow : v.worthNow, hub.today());
+  if (!isOwn(v)) return el('p', { class: 'small muted', style: { margin: 0 }, text: 'Own a home already? Fill it in as "Ours already" to see what it has grown by - and use that here.' });
+  if (!h) return el('p', { class: 'small muted', style: { margin: 0 }, text: 'Fill in what you paid and when, to see what your home has grown by each year.' });
+  const same = Math.abs(h.pct - n(v.growthPct)) < 0.05;
+  return el('div', { class: 'row' }, [
+    el('p', { class: 'small', style: { margin: 0, flex: '1 1 240px' }, text: `${rand(n(v.boughtFor))} in ${v.boughtWhen.slice(0, 4)} to ${rand(n(v.worthNow))} now is about ${pct(h.pct, 1)} a year over ${h.years.toFixed(1)} years${same ? ' - and that is what is used.' : '.'} The past is not a promise.` }),
+    same ? null : el('button', { class: 'btn btn-small', type: 'button', text: 'Use it', 'data-field': 'use-history', title: 'Grow prices at our own home’s rate', on: { click: () => { v.growthPct = Math.round(h.pct * 10) / 10; d.mine.add('growthPct'); hub.render(); } } }),
+  ]);
+}
+
+/** Buying costs, item by item - money out, so below zero. */
+function buyingBox(plan) {
+  if (plan.missing || !plan.buyItems?.length) return null;
+  return [
+    sums([
+      { label: 'Deposit', value: -plan.deposit, note: plan.funding ? 'From selling our home' : null },
+      ...plan.buyItems.map((x) => ({ label: x.label, value: -x.amount, note: [x.note, x.source].filter(Boolean).join(' · ') })),
+      { label: 'Cash needed to buy', value: -(plan.deposit + total(plan.buyItems)), total: true },
+    ]),
+  ];
+}
+
+/** Selling our current home first: from the sale price down to what is left. */
+function saleBox(plan) {
+  const r = plan.funding;
+  if (!r) return el('p', { class: 'small muted', style: { margin: 0 }, text: 'Fill in what your home will sell for.' });
+  return [
+    sums([
+      { label: 'Sale price', value: r.sale },
+      ...r.selling.map((x) => ({ label: x.label, value: -x.amount, note: [x.note, x.source].filter(Boolean).join(' · ') })),
+      r.tax.tax ? { label: 'Tax on the gain', value: -r.tax.tax } : null,
+      r.owed ? { label: 'Bond settled', value: -r.owed } : null,
+      { label: 'Cash from the sale', value: r.cash, total: true, note: r.short > 0 ? `${rand(r.short)} short of the buying costs and what is kept back.` : plan.kind === 'rent' ? 'Invested while renting.' : `Pays the deposit (${rand(r.deposit)}) and buying costs; the rest stays invested.` },
+    ]),
+  ];
+}
+
+/** The bond in a few lines: the instalment, what it means against income, and what is still owed. */
+function bondBox(v, plan) {
+  if (plan.missing || !plan.bond) return null;
+  const b = plan.bond;
+  const lines = isOwn(v)
+    ? [`Today: ${rand(b.owedNow)} owed, a minimum of ${rand(b.minNow)} a month, paid off ${ymName(b.paidOff)} at the minimum (${months(b.monthsLeft)}).`, ...b.notes.map((x) => x.text)]
+    : [`${rand(plan.loan)} at ${pct(n(v.ratePct))} over ${yrs(n(v.termYears))}: ${rand(b.minNow)} a month, paid off ${ymName(b.paidOff)}, about ${rand(b.interestFromNow)} interest in all.`,
+      n(v.income) ? `That is ${Math.round((b.minNow / n(v.income)) * 100)}% of the household’s income before tax. Banks often look for no more than about 30% - here about ${rand(b.minNow / 0.3)} a month. Each bank decides for itself.` : null];
+  return el('div', { class: 'stack' }, lines.filter(Boolean).map((t) => el('p', { class: 'small', style: { margin: 0 }, text: t })));
+}
+
+/** Upgrades: what each costs, when, and what it adds to the selling price. */
 function upgradesPanel(d, refresh) {
   const list = Array.isArray(d.values.upgrades) ? d.values.upgrades : (d.values.upgrades = []);
   const box = el('div', { class: 'stack' });
@@ -659,240 +273,188 @@ function upgradesPanel(d, refresh) {
     el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': `Remove ${u.name || 'upgrade'}`, on: { click: () => { list.splice(i, 1); draw(); save(); } } }),
   ])));
   draw();
-  return el('div', { class: 'panel stack' }, [
-    el('h2', { text: 'Upgrades (owning only)', style: { margin: 0 } }),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: 'A new bathroom or kitchen can add more to the selling price than it costs - something a renter cannot do. Put in what an agent says it would add; if unsure, the same as it costs.' }),
+  return [
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'Put in what an agent says it would add to the selling price; if unsure, the same as it costs.' }),
     box,
     el('div', {}, [el('button', { class: 'btn btn-small', type: 'button', text: 'Add upgrade', 'data-field': 'upgrade-add', on: { click: () => { list.push({ name: '', inYears: 1, cost: null, adds: null }); draw(); } } })]),
-  ]);
+  ];
 }
 
-function rbResults(hub, d) {
+/* ----------------------------------------------------------------- results */
+
+function results(hub, d) {
   const v = d.values;
   const today = hub.today();
-  const r = ownOrRent(v);
-  const hist = historyGrowth(v.boughtFor, v.boughtWhen, v.worthNow, today);
-  const histLine = hist ? el('div', { class: 'panel panel--soft row', 'data-field': 'history' }, [
-    el('p', { style: { margin: 0, flex: '1 1 260px' }, text: `Our own home: ${rand(Number(v.boughtFor))} in ${v.boughtWhen.slice(0, 4)} to ${rand(Number(v.worthNow))} now is about ${pct(hist.pct, 1)} a year over ${hist.years.toFixed(1)} years${Math.abs(hist.pct - Number(v.growthPct)) > 0.05 ? ` - the calculation is using ${pct(Number(v.growthPct), 1)}.` : ' - and the calculation is using it.'} The past is not a promise.` }),
-    Math.abs(hist.pct - Number(v.growthPct)) > 0.05 ? el('button', { class: 'btn btn-small', type: 'button', text: 'Use it', title: 'Use our own home’s growth for house prices', 'data-field': 'use-history', on: { click: () => { v.growthPct = Math.round(hist.pct * 10) / 10; d.mine.add('growthPct'); hub.render(); } } }) : null,
-  ]) : null;
-  if (r.missing) return [histLine, el('p', { class: 'panel muted', text: `Fill in ${r.missing.join(' and ')} to see the answer.` })];
-  if (r.error) return [histLine, el('p', { class: 'panel', role: 'alert', text: r.error })];
-  const who = r.ahead >= 0 ? 'Owning' : 'Renting';
-  const yrs = (n) => `${n} year${n === 1 ? '' : 's'}`;
-  const ownSide = r.keep ? 'keeping it' : 'buying';
-  const lines = [
-    r.keep
-      ? `Selling now would bring about ${rand(r.saleNow.cash)}: ${rand(r.saleNow.price)} less ${rand(r.saleNow.costs)} selling costs${r.saleNow.owed ? `, the ${rand(r.saleNow.owed)} still owed` : ''}${r.saleNow.tax ? ` and ${rand(r.saleNow.tax)} tax` : ''}. ${Number(v.boughtFor) ? `The gain of about ${rand(r.saleNow.gain)} is ${r.saleNow.gain > 3000000 ? 'more than' : 'under'} the R3 million SARS does not tax on the home you live in.` : 'Add what you paid for it to check the tax on the gain.'} Renting, that money is invested.`
-      : `Buying takes ${rand(r.ownerUp)} up front: the deposit, ${rand(r.duty)} transfer duty and about ${rand(r.fees)} in fees${Number(v.moveCost) ? ' and moving' : ''}. Renting, it stays invested.`,
-    `Each month now, owning costs about ${rand(r.monthOwn)}${r.pmt ? ` (the bond is ${rand(r.pmt)})` : ''} and renting ${rand(r.monthRent)}. Whoever pays less invests ${Number(v.investShare) >= 100 ? 'the difference' : `${pct(Number(v.investShare), 0)} of the difference`}, growing ${pct(r.afterTaxPct, 1)} a year after tax.`,
-    r.bondEnds ? `The bond ends in ${today.slice(0, 4) * 1 + Math.ceil(r.bondEnds)}; from then owning costs only the running costs, and the owner invests the rent they are not paying.` : null,
-    `After ${yrs(r.year)}: ${ownSide}, the home would bring about ${rand(r.home)} once sold (after selling costs${r.tax ? `, ${rand(r.tax)} tax` : ''} and any bond)${r.invOwner > 1 ? `, plus ${rand(r.invOwner)} invested` : ''} - ${rand(r.owner)}. Renting: ${rand(r.renter)}.`,
-    r.flips.length ? `Who is ahead changes in year ${r.flips.join(' and ')} - so how long you stay matters.` : null,
-  ];
-  const evens = [
-    ['growthPct', 'house prices grow', -10, 30, '% a year'],
-    ['rentRisePct', 'rent rises', -5, 30, '% a year'],
-    ['investPct', 'investments grow (before tax)', -5, 40, '% a year'],
-  ].map(([k, what, lo, hi]) => ({ k, what, at: evenAt(v, k, lo, hi), now: Number(v[k]) || 0 })).filter((x) => x.at != null);
+  const w = withAndWithout(v, today);
+  if (w.missing) return [el('p', { class: 'panel muted', text: `Fill in ${w.missing.join(' and ')} to see the answer.` })];
+  const p = w.with; const p0 = w.without;
+  const stay = Math.round(p.stay / 12);
+  const at = p.at;
+  const lines = [];
+  if (p.kind === 'buy') lines.push(p.funding ? `Selling our home leaves ${rand(p.funding.cash)}; it pays the ${rand(p.deposit)} deposit and ${rand(total(p.buyItems))} in buying costs${p.inv0 ? `, and ${rand(p.inv0)} stays invested` : ''}${p.fromPocket ? `. ${rand(p.fromPocket)} more comes from savings` : ''}.` : `Moving in takes ${rand(p.fromPocket)} from savings: the ${rand(p.deposit)} deposit, ${rand(total(p.buyItems))} in duty and fees${n(v.moveCost) ? ' and moving' : ''}.`);
+  if (p.kind === 'own') lines.push(`Selling today would leave about ${rand(p.start)}, after the agent${p.owed0 ? `, the ${rand(p.owed0)} still owed` : ''} and any tax - that is where this starts from.`);
+  if (p.kind === 'rent') lines.push(`Rent starts at ${rand(n(v.rent))} a month and rises about ${pct(n(v.rentRisePct))} a year${p.funding ? `; the ${rand(p.inv0)} left from selling our home is invested meanwhile` : ''}.`);
+  if (w.any && p.bond && p0.bond) lines.push(`With your ticked what-ifs: paid off ${ymName(p.bond.paidOff)} instead of ${ymName(p0.bond.paidOff)} - ${w.sooner > 0 ? `${months(w.sooner)} sooner` : w.sooner < 0 ? `${months(-w.sooner)} later` : 'the same time'} - with ${rand(Math.abs(w.interestSaved))} ${w.interestSaved >= 0 ? 'less' : 'more'} interest, and ${rand(Math.abs(w.better))} ${w.better >= 0 ? 'better' : 'worse'} off after ${yrs(stay)}.`);
+  if (p.on.afterBond && at.inv > 0) lines.push(`After the bond, investing what the instalment was grows to about ${rand(at.inv)} by year ${stay}.`);
+  if (p.on.travel && n(v.km)) lines.push(`Getting to work: about ${rand(p.months[0].trip)} a month${n(v.minutes) ? ` and ${Math.round((2 * n(v.minutes) * n(v.days || 21)) / 60)} hours on the road` : ''}.`);
+  lines.push(`After ${yrs(stay)}: ${p.kind === 'rent' ? `the deposit back${at.inv ? ` and ${rand(at.inv)} invested` : ''}` : `the home would bring about ${rand(at.homeNet)} once sold (after selling costs, any bond still owed and tax)${at.inv ? `, plus ${rand(at.inv)} invested` : ''}`}. ${at.ahead >= 0 ? `You would be about ${rand(at.ahead)} ahead` : `It would have cost you about ${rand(-at.ahead)}`}${p.kind === 'own' ? ', compared with selling today' : ''}${p.on.forgone && p.fromPocket ? ', counting what the money up front could have earned' : ''}.`);
+  const off = Object.entries(SECTIONS).filter(([k]) => !({ ...SECTIONS_ON, ...(v.on ?? {}) })[k] && SECS.find((s) => s.key === k && (!s.when || s.when(v)))).map(([, t]) => t.toLowerCase());
+  if (off.length) lines.push(`Left out: ${off.join(', ')}.`);
+
+  const span = Math.min(360, Math.max(p.stay + 24, 120, p.bond?.paidOff ? (p.bond.monthsLeft + 24) : 0));
+  const pts = (plan, k, sign = 1) => [[0, k === 'ahead' ? 0 : sign * (k === 'value' ? plan.value0 : k === 'owed' ? plan.owed0 || plan.loan : 0)], ...plan.months.slice(0, span).filter((m) => m.t % 3 === 0).map((m) => [m.t, sign * m[k]])];
+  const aheadW = pts(p, 'ahead'); const aheadO = pts(p0, 'ahead');
+  // Mark where it turns only when it starts behind - owning already, it starts at zero (selling today).
+  const even = aheadW[1]?.[1] < 0 ? crossing(aheadW.slice(1)) : null;
+  const payoff = p.bond?.paidOff ? { x: p.bond.monthsLeft, label: 'Bond paid off' } : null;
   const out = [
-    histLine,
     el('div', { class: 'stats' }, [
-      stat(rand(Math.abs(r.ahead)), `${who.toLowerCase()} ahead after ${yrs(r.year)}`, 'r-ahead'),
-      stat(r.breakeven == null ? 'Not in 30 years' : r.breakeven === 1 && r.series[0].ahead > 0 ? 'From the start' : yrs(r.breakeven), 'until owning is ahead', 'r-breakeven'),
-      stat(`${rand(r.monthOwn)} · ${rand(r.monthRent)}`, 'a month now: owning · renting', 'r-monthly'),
+      stat(rand(p.monthNow), 'a month now, all counted', 'r-month'),
+      stat(rand(Math.abs(at.ahead)), at.ahead >= 0 ? `ahead after ${yrs(stay)}` : `what it costs you over ${yrs(stay)}`, 'r-ahead'),
+      p.bond ? stat(ymName(p.bond.paidOff), 'bond paid off', 'r-paidoff') : stat(rand(p.fromPocket), 'from savings up front', 'r-upfront'),
     ]),
-    el('div', { class: 'panel stack' }, [
-      el('h2', { text: 'What it means', style: { margin: 0 } }),
-      ...lines.filter(Boolean).map((t) => el('p', { style: { margin: 0 }, text: t })),
-      el('p', { class: 'small muted', style: { margin: 0 }, text: 'A projection from the figures above, not a prediction. The parts that matter most are below.' }),
-    ]),
-    ...rbStory(r),
-    evens.length ? el('div', { class: 'panel stack' }, [
-      el('h2', { text: 'What it hangs on', style: { margin: 0 } }),
-      el('ul', { style: { margin: 0 } }, evens.map((x) => el('li', { text: `They come out level if ${x.what} ${pct(x.at, 1)} a year - you have ${pct(x.now, 1)}.` }))),
-      el('p', { class: 'small muted', style: { margin: 0 }, text: 'If someone swears renting (or owning) is better, these are the numbers they are assuming without saying.' }),
-    ]) : null,
-    forgotten(v, r),
+    el('div', { class: 'panel stack' }, [el('h2', { text: 'What it means', style: { margin: 0 } }), ...lines.map((t) => el('p', { style: { margin: 0 }, text: t }))]),
+    chartPanel('If you left after…', lineChart([
+      { name: w.any ? 'With your what-ifs' : 'Ahead (above zero) or behind (below)', points: aheadW },
+      ...(w.any ? [{ name: 'Without them', points: aheadO, dashed: true }] : []),
+    ], { label: 'How far ahead or behind you would be, if you sold or left after that long',
+      marks: [even != null ? { x: even, label: `Ahead from ${whenLabel(even)}` } : null, { x: p.stay, label: `You: ${yrs(stay)}` }, payoff],
+      story: `${RULE} ${p.kind === 'buy' ? 'It starts below zero: duty, fees and the agent are paid however short the stay.' : p.kind === 'own' ? 'Zero is selling today.' : 'Rent goes further below zero every month - none of it comes back.'}` })),
+    chartPanel('Money in and out',
+      lineChart([
+        ...(p.kind !== 'rent' ? [{ name: 'What the home is worth', points: pts(p, 'value') }] : []),
+        ...(p.bond ? [{ name: w.any ? 'Still owed, with your what-ifs' : 'Still owed on the bond', points: pts(p, 'owed', -1) }] : []),
+        ...(p.bond && w.any ? [{ name: 'Still owed, without', points: pts(p0, 'owed', -1), dashed: true }] : []),
+        { name: 'Paid out so far', points: pts(p, 'paid', -1), dashed: !w.any },
+        ...(at.inv > 0 ? [{ name: 'Invested', points: pts(p, 'inv') }] : []),
+      ], { label: 'What the home is worth, what is owed, and what has been paid out', marks: [payoff], story: RULE }),
+      lineChart([
+        { name: w.any ? 'Paid out that month, with your what-ifs' : 'Paid out that month', points: outOf(p.months.slice(0, span).map((m) => [m.t, m.out])) },
+        ...(w.any ? [{ name: 'Without them', points: outOf(p0.months.slice(0, span).map((m) => [m.t, m.out])), dashed: true }] : []),
+      ], { label: 'What comes out of your pocket each month', marks: [payoff], story: 'The bond, rates, insurance, upkeep, travel - or rent. It drops when the bond is paid off.' })),
+    forgotten(v, p),
   ];
   if (shows('advanced')) {
     const nudges = [
-      { key: 'growthPct', what: 'house prices growing 2 points slower', to: (x) => (Number(x) || 0) - 2 },
-      { key: 'rentRisePct', what: 'rent rising 2 points faster', to: (x) => (Number(x) || 0) + 2 },
-      { key: 'investPct', what: 'investments growing 2 points faster', to: (x) => (Number(x) || 0) + 2 },
-      { key: 'investShare', what: 'only half the difference really invested', to: () => 50 },
-      { key: 'ratePct', what: 'the bond rate 1 point higher', to: (x) => (Number(x) || 0) + 1 },
-      { key: 'maintYearly', what: 'maintenance costing twice as much', to: (x) => (Number(x) || 0) * 2 },
+      { key: 'growthPct', what: 'house prices growing 2 points slower', to: (x) => n(x) - 2 },
+      { key: 'ratePct', what: 'the bond rate 1 point higher', to: (x) => n(x) + 1 },
+      { key: 'bondRate', what: 'the bond rate 1 point higher', to: (x) => n(x) + 1 },
+      { key: 'rentRisePct', what: 'rent rising 2 points faster', to: (x) => n(x) + 2 },
+      { key: 'escalatePct', what: 'costs rising 2 points faster', to: (x) => n(x) + 2 },
+      { key: 'investPct', what: 'investments growing 2 points faster', to: (x) => n(x) + 2 },
     ];
+    const sens = sensitivity(v, (x) => homePlan(x, today).ahead, nudges).filter((x) => Math.abs(x.change) >= 1);
     out.push(el('div', { class: 'panel stack' }, [
-      el('h2', { text: 'Year by year', style: { margin: 0 } }),
-      lineChart([
-        { name: r.keep ? 'Keeping our home' : 'Buying', points: r.series.map((s) => [s.year * 12, s.owner]) },
-        { name: r.keep ? 'Selling and renting' : 'Renting', points: r.series.map((s) => [s.year * 12, s.renter]), dashed: true },
-      ], { label: 'What each side would have, year by year' }),
+      el('h2', { text: 'What moves the answer most', style: { margin: 0 } }),
+      sens.length ? el('ul', { style: { margin: 0 } }, sens.map((x) => el('li', { text: `${x.what[0].toUpperCase()}${x.what.slice(1)}: ${x.change >= 0 ? 'better' : 'worse'} off by ${rand(Math.abs(x.change))}` }))) : el('p', { class: 'muted', text: 'Nothing here moves it much.' }),
+      el('h3', { text: 'Year by year', style: { margin: 0 } }),
       el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums' }, [
-        el('thead', {}, [el('tr', {}, ['After', 'Owning', 'Renting', 'Ahead', 'Month: own · rent'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
-        el('tbody', {}, r.series.filter((s) => [1, 2, 3, 5, 7, 10, 15, 20, 25, 30].includes(s.year)).map((s) => el('tr', {}, [
-          el('td', { text: yrs(s.year) }), el('td', { class: 'num', text: rand(s.owner) }), el('td', { class: 'num', text: rand(s.renter) }),
-          el('td', { class: `num ${s.ahead >= 0 ? 'fin-better' : 'fin-worse'}`, text: `${s.ahead >= 0 ? 'own' : 'rent'} ${rand(Math.abs(s.ahead))}` }),
-          el('td', { class: 'num', text: `${rand(s.own)} · ${rand(s.rent)}` }),
+        el('thead', {}, [el('tr', {}, ['After', 'Worth', 'Owed', 'Paid out so far', 'Ahead or behind'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
+        el('tbody', {}, [1, 2, 3, 5, 7, 10, 15, 20, 25, 30].map((y) => p.months[y * 12 - 1]).map((m) => el('tr', {}, [
+          el('td', { text: yrs(m.t / 12) }), el('td', { class: 'num', text: rand(m.value) }), el('td', { class: 'num', text: rand(-m.owed) }), el('td', { class: 'num', text: rand(-m.paid) }),
+          el('td', { class: `num ${m.ahead >= 0 ? 'fin-better' : 'fin-worse'}`, text: rand(m.ahead) }),
         ]))),
       ])]),
-      el('h3', { text: 'What moves the answer most', style: { margin: 0 } }),
-      el('ul', { style: { margin: 0 } }, sensitivity(v, (x) => ownOrRent(x).ahead, nudges).filter((x) => Math.abs(x.change) >= 1)
-        .map((x) => el('li', { text: `${x.what[0].toUpperCase()}${x.what.slice(1)}: owning ${x.change > 0 ? 'better' : 'worse'} off by ${rand(Math.abs(x.change))}.` }))),
     ]));
   }
   if (shows('learn')) {
     out.push(el('div', { class: 'panel stack fin-learn' }, [
       el('h2', { text: 'How it is worked out', style: { margin: 0 } }),
-      step('Same money, both sides', 'Each month the side that pays less invests the difference × the share really invested', `Now: owning ${rand(r.monthOwn)}, renting ${rand(r.monthRent)}`, 'Comparing rent with a bond alone is unfair both ways. Owning also costs rates, maintenance, duty and selling costs; renting leaves the deposit free to grow - but only if it is invested.'),
-      step('Day one', r.keep ? 'Selling now: price − selling costs − bond owed − tax on the gain, invested' : 'The renter invests what the buyer pays up front: deposit + transfer duty + fees + moving − the rental deposit', r.keep ? rand(r.saleNow.cash) : rand(r.ownerUp)),
-      step('Investments', 'Growth after tax = growth before tax × (1 − share lost to tax)', `${pct(Number(v.investPct) || 0, 1)} × (1 − ${pct(Number(v.investTaxPct) || 0, 0)}) = ${pct(r.afterTaxPct, 2)} a year`),
-      step('The home', 'Value = today’s value × (1 + growth)^years + each upgrade’s added value, growing from when it is done', `After ${yrs(r.year)}: ${rand(r.value)}`, 'Upgrades are paid when done (the renter invests the same amount); repairs and maintenance are a cost and add nothing.'),
-      step('Tax on selling your home', 'Taxed = gain − R3 000 000 − R50 000; tax = 40% of that × your tax rate', `Gain = sale price after costs − what it cost (purchase, duty, fees, improvements). ${CGT.source}.`),
-      step('Who is ahead', 'Owner = home sold, less selling costs, bond and tax + investments. Renter = investments + deposit back', `${rand(r.owner)} against ${rand(r.renter)}`),
+      step('Month by month', 'Each month: what comes out of your pocket (bond, rates, upkeep, travel - or rent), and what the home is worth', null, 'Every section that is ticked is counted; one that is left out counts nothing.'),
+      step('The bond', 'Owed = owed × (1 + rate ÷ 12) − what is paid', null, 'Paying more does not lower the minimum - it shortens the bond. Taking money out, or a rate change, makes the minimum be worked out again over the months left.'),
+      step('Ahead or behind', 'What the home would bring (value − selling costs − bond − tax) + investments + money taken out − everything paid − what the money up front could have earned', null, p.kind === 'own' ? 'Owning already, it is measured against selling today.' : 'Buying or renting, against keeping your money.'),
+      step('Tax on selling your home', 'Taxed = gain − R3 000 000 − R50 000; tax = 40% of that × your rate', null, CGT.source),
       el('h3', { text: 'What this leaves out', style: { margin: 0 } }),
-      el('ul', { class: 'small', style: { margin: 0 } }, [
-        'Prices, rents and returns move steadily here; real ones jump about, and the order of good and bad years matters.',
-        'Bond rates are held steady; a bond linked to prime changes when prime does.',
-        'Security, being able to stay, making a place your own - and the freedom to move - are real but not money. Weigh them yourselves.',
-      ].map((t) => el('li', { text: t }))),
+      el('ul', { class: 'small', style: { margin: 0 } }, ['Prices, rents and returns move steadily here; real ones jump about.', 'Interest worked out monthly; banks work daily - close, not exact.', 'Security, staying put, the freedom to move - real, not money.'].map((t) => el('li', { text: t }))),
     ]));
   }
   return out;
 }
 
-/**
- * The two graphs that tell the story: who comes out ahead by how long you stay (with the
- * break-even marked), and the home itself - its value, the bond, and what owning has cost.
- */
-function rbStory(r) {
-  // Only as many years as the story needs: the break-even, and well past the stay chosen.
-  const full = r.series.map((s) => [s.year * 12, s.ahead]);
-  const first = crossing(full);
-  const span = Math.min(30, Math.max(15, r.horizon * 2, first == null ? 0 : Math.ceil(first / 12) + 5));
-  const ahead = full.slice(0, span);
-  const cross = crossing(ahead);
-  const endsAhead = ahead.at(-1)[1] >= 0;
-  const flip = cross == null ? null : { x: cross, label: `${ahead.at(-1)[1] >= 0 && ahead[0][1] < 0 ? 'Owning' : 'Renting'} ahead from ${whenLabel(cross)}` };
-  const story = cross == null
-    ? (endsAhead ? 'Owning is ahead whenever you leave, with these figures.' : 'Renting stays ahead for all 30 years, with these figures.')
-    : ahead[0][1] < 0
-      ? `Leave within about ${Math.ceil(cross / 12)} years and renting comes out ahead - duty, fees and selling costs have not been earned back. Stay longer and owning does.`
-      : `Owning is ahead at first, but renting overtakes it in ${whenLabel(cross)} with these figures.`;
-  return [
-    chartPanel('Ahead or behind, by how long you stay', lineChart([
-      { name: 'Owning ahead (above the line) or behind (below)', points: ahead },
-    ], { label: 'How far owning is ahead of renting, by the year you would leave', marks: [flip, { x: r.horizon * 12, label: `You: ${r.horizon} years` }], story })),
-    chartPanel('The home over time', lineChart([
-      { name: 'What it is worth', points: r.series.map((s) => [s.year * 12, s.value]) },
-      { name: 'Still owed on the bond', points: outOf(r.series.map((s) => [s.year * 12, s.owed])) },
-      { name: 'Paid out on owning so far', points: outOf(r.series.map((s) => [s.year * 12, s.spentOwn])), dashed: true },
-    ], { label: 'The home’s value, the bond still owed, and what owning has cost so far',
-      marks: [r.bondEnds ? { x: r.bondEnds * 12, label: 'Bond paid off' } : null, (() => {
-        const v = r.series.map((s) => [s.year * 12, s.value]); const x = crossing(v, r.series.map((s) => [s.year * 12, s.spentOwn]));
-        return x != null && v[0][1] < r.series[0].spentOwn ? { x, label: `Worth more than spent from ${whenLabel(x)}` } : null;
-      })()],
-      story: `${RULE} What it is worth less what is still owed is yours, before selling costs. Paid out includes ${r.keep ? '' : 'the deposit, duty and fees, '}the bond, rates, maintenance and upgrades.` })),
-    (() => {
-      const ownPts = r.series.map((s) => [s.year * 12, s.own]); const rentPts = r.series.map((s) => [s.year * 12, s.rent]);
-      const dearer = crossing(rentPts, ownPts);
-      return chartPanel('Each month: owning against renting', lineChart([
-        { name: 'Owning, a month', points: outOf(ownPts) },
-        { name: 'Renting, a month', points: outOf(rentPts), dashed: true },
-      ], { label: 'What owning and renting take out of your pocket each month, year by year',
-        marks: [r.bondEnds ? { x: r.bondEnds * 12, label: 'Bond paid off' } : null, dearer != null ? { x: dearer, label: `Rent dearer from ${whenLabel(dearer)}` } : null],
-        story: `${RULE} A bond stays the same and then ends; rent keeps rising. Whoever pays less in a month invests the difference.` }));
-    })(),
-  ];
-}
-
-/** The things people forget - each either counted, with its value, or plainly not counted yet. */
-function forgotten(v, r) {
-  const n = (k) => Number(v[k]) || 0;
+/** The things people forget - counted (with their value) or plainly not counted yet. */
+function forgotten(v, p) {
+  const on = p.on;
   const items = [
-    [n('rentRisePct') > 0, `Rent rising every year (${pct(n('rentRisePct'), 1)}) while a bond instalment stays the same`],
-    [r.bondEnds > 0, r.bondEnds > 0 ? `The bond ending in ${Math.ceil(r.bondEnds)} years - then owning costs only rates, insurance and upkeep` : 'No bond to pay'],
-    [v.maintMode !== 'percent' && n('maintYearly') > 0, v.maintMode === 'percent' ? `Maintenance as ${pct(n('upkeepPct'), 1)} of the value - a rule of thumb; your own figure is better` : n('maintYearly') ? `Your own maintenance: ${rand(n('maintYearly'))} a year` : 'Maintenance - not counted yet'],
-    [(v.upgrades ?? []).length > 0, (v.upgrades ?? []).length ? `Upgrades that add value: ${(v.upgrades ?? []).map((u) => u.name || 'an upgrade').join(', ')}` : 'Upgrades that add value - none planned'],
-    [true, r.keep ? 'Transfer duty and fees - already paid on the home you own' : `Transfer duty ${rand(r.duty)} and fees ${rand(r.fees)}, paid however short the stay`],
-    [n('sellPct') > 0, `Selling costs: ${pct(n('sellPct'), 1)} of the price when you sell`],
-    [n('ratesTaxes') + n('levies') + n('insurance') > 0, n('ratesTaxes') + n('levies') + n('insurance') > 0 ? `Rates, levies and insurance: ${rand(n('ratesTaxes') + n('levies') + n('insurance'))} a month` : 'Rates, levies and building insurance - not counted yet'],
-    [n('investTaxPct') > 0, `Tax on the investments: ${pct(n('investTaxPct'), 0)} of their growth`],
-    [n('investShare') < 100, n('investShare') < 100 ? `How much of the difference really gets invested: ${pct(n('investShare'), 0)}` : 'How much of the difference really gets invested - assumed all of it, every month. Is that realistic?'],
-    [true, `Tax on selling your home: none on the first R3 million of gain${r.keep && r.saleNow?.tax ? ` - here ${rand(r.saleNow.tax)}` : ''}`],
-    [n('rentDeposit') > 0, n('rentDeposit') ? `The rental deposit (${rand(n('rentDeposit'))}) - cash needed, but it comes back` : 'The rental deposit - not counted yet'],
-    [n('travelOwn') + n('travelRent') > 0, n('travelOwn') + n('travelRent') > 0 ? 'Getting to work from each place' : 'Getting to work from each place - not counted yet (Advanced)'],
-    [n('moveCost') + n('rentMove') > 0, n('moveCost') + n('rentMove') > 0 ? 'Moving costs' : 'Moving costs - not counted yet (Advanced)'],
-  ];
+    p.kind === 'buy' ? [true, `Transfer duty ${rand(p.buyItems.find((x) => x.key === 'duty')?.amount ?? 0)} and attorneys’, Deeds Office and bank fees, paid however short the stay`] : null,
+    p.kind !== 'rent' ? [n(v.sellPct) > 0, `Selling later costs ${pct(n(v.sellPct), 1)} of the price - mostly the agent, with VAT`] : null,
+    p.kind === 'rent' ? [n(v.rentRisePct) > 0, `Rent rising ${pct(n(v.rentRisePct), 1)} a year, while a bond instalment stays the same`] : null,
+    p.kind !== 'rent' ? [on.running && (n(v.maintYearly) > 0 || v.maintMode === 'percent'), on.running ? (v.maintMode === 'percent' ? `Maintenance as ${pct(n(v.upkeepPct), 1)} of the value - a rule of thumb; your own figure is better` : n(v.maintYearly) ? `Your own maintenance: ${rand(n(v.maintYearly))} a year` : 'Maintenance - not counted yet') : 'Running costs - left out'] : null,
+    p.kind !== 'rent' ? [on.upgrades && (v.upgrades ?? []).length > 0, (v.upgrades ?? []).length ? 'Upgrades that add value' : 'Upgrades that add value - none planned'] : null,
+    [on.travel && n(v.km) > 0, on.travel ? (n(v.km) ? 'Getting to work, every month' : 'Getting to work - not counted yet') : 'Getting to work - left out'],
+    p.kind !== 'rent' ? [on.afterBond, on.afterBond ? 'Investing the instalment once the bond is paid off' : 'Investing the instalment once the bond is paid off - tick "After the bond"'] : null,
+    p.kind !== 'own' ? [on.forgone, on.forgone ? 'What the money up front could have earned' : 'What the money up front could have earned - left out'] : null,
+    [true, 'Tax on selling the home you live in: none on the first R3 million of gain'],
+    [scenarioCount(v) > 0, scenarioCount(v) ? `${scenarioCount(v)} what-if${scenarioCount(v) === 1 ? '' : 's'} ticked - shown with and without` : 'What if you paid more, or took money out? Add a line under "What if…"'],
+  ].filter(Boolean);
   return el('div', { class: 'panel stack', 'data-field': 'forgotten' }, [
     el('h2', { text: 'Did you think of…', style: { margin: 0 } }),
-    el('ul', { class: 'checklist', style: { margin: 0, paddingLeft: 0, listStyle: 'none' } }, items.map(([ok, t]) => el('li', { class: ok ? null : 'muted', text: `${ok ? '✓' : '○'} ${t}` }))),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: 'And what is not money: being able to stay, making the place your own, the freedom to move. Weigh those yourselves.' }),
+    el('ul', { style: { margin: 0, paddingLeft: 0, listStyle: 'none' } }, items.map(([ok, t]) => el('li', { class: ok ? null : 'muted', text: `${ok ? '✓' : '○'} ${t}` }))),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'And what is not money: being able to stay, making the place your own, the freedom to move.' }),
   ]);
 }
+const scenarioCount = (v) => (v.scenarios ?? []).filter((s) => s && s.on !== false && s.from).length;
 
-/* ------------------------------------------------------------- compare */
+/* ----------------------------------------------------------------- compare */
+
+const cmp = { picked: null, years: 10 };
 
 function compareScreen(hub, param) {
-  const ids = param.split(',').filter(Boolean);
-  const res = hub.use(`compare:${param}`, async () => (await Promise.all(ids.map((id) => col(hub).get(id)))).filter(Boolean));
-  if (res.loading) return loading();
-  if (res.error) return failure(res.error);
-  const kind = res.data[0]?.kind;
-  const recs = res.data.filter((rec) => rec.kind === kind);
-  const v = (rec) => ({ ...DEFAULTS, ...rec.values });
-  let table;
-  if (kind === 'home') {
-    const items = recs.map((rec) => ({ title: rec.title, out: homeCost(v(rec)) })).filter((x) => x.out.total != null);
-    const stays = new Set(items.map((x) => x.out.months));
-    table = compareTable(items, [
-      { label: 'Bought or rented', get: (c) => (c.buy ? 'Bought' : 'Rented') },
-      { label: 'Living there for', get: (c) => months(c.months) },
-      { key: 1, label: 'Cash needed to move in', get: (c) => c.upfront, lower: true },
-      { label: 'A month now, all in', get: (c) => c.monthNow, lower: true },
-      { key: 1, label: 'Travel to work', get: (c) => c.travel, lower: true },
-      { label: 'Hours on the road a month', get: (c) => (c.hoursMonth ? `${Math.round(c.hoursMonth)} h` : '-') },
-      { label: 'What comes back when leaving', get: (c) => c.back, lower: false },
-      { key: 1, label: 'Total cost', get: (c) => c.total, lower: true, total: true },
-      { label: 'Cost a month, all in', get: (c) => c.perMonth, lower: true },
-    ], { unitNote: stays.size > 1 ? 'These are for different lengths of stay, so their totals are not like for like - compare the cost a month, or save them again with the same "live here for".' : null });
-  } else if (kind === 'bond') {
-    table = compareTable(recs.map((rec) => ({ title: rec.title, out: bond(v(rec)) })), [
-      { label: 'Instalment a month', get: (b) => b.instalment, lower: true },
-      { key: 1, label: 'Cash needed first', get: (b) => b.cashFirst, lower: true },
-      { key: 1, label: 'Interest', get: (b) => b.interest, lower: true, total: true },
-      { label: 'Paid in all', get: (b) => b.totalPaid, lower: true },
-    ]);
-  } else if (kind === 'ourbond') {
-    table = compareTable(recs.map((rec) => ({ title: rec.title, out: bondNow(obInput(v(rec)), hub.today()) })).filter((x) => !x.out.missing), [
-      { label: 'Still owed today', get: (b) => b.owedNow, lower: true },
-      { label: 'Paid off', get: (b) => ymName(b.actual.paidOff) },
-      { key: 1, label: 'Interest in all', get: (b) => b.actual.interest, lower: true, total: true },
-    ]);
-  } else if (kind === 'selltobuy') {
-    table = compareTable(recs.map((rec) => ({ title: rec.title, out: sellToBuy(s2bValues(v(rec))) })).filter((x) => !x.out.missing), [
-      { label: 'Sale price', get: (r) => r.sale, lower: false },
-      { key: 1, label: 'Selling costs', get: (r) => r.sellTotal, lower: true },
-      { label: 'Cash from the sale', get: (r) => r.cash, lower: false },
-      { key: 1, label: 'Buying costs', get: (r) => r.buyTotal, lower: true },
-      { label: 'Kept back', get: (r) => r.keep },
-      { key: 1, label: 'Deposit', get: (r) => r.deposit, lower: false, total: true },
-      { label: 'New bond', get: (r) => r.loan, lower: true },
-    ]);
-  } else {
-    table = compareTable(recs.map((rec) => ({ title: rec.title, out: ownOrRent(v(rec)) })).filter((x) => x.out.ahead != null), [
-      { label: 'Compared after', get: (r) => `${r.year} years` },
-      { label: 'Owning would have', get: (r) => r.owner, lower: false },
-      { label: 'Renting would have', get: (r) => r.renter, lower: false },
-      { key: 1, label: 'Owning ahead by', get: (r) => r.ahead, lower: false, total: true },
-      { label: 'Owning gets ahead after', get: (r) => (r.breakeven ? `${r.breakeven} years` : 'not in 30 years') },
-    ]);
-  }
+  const all = loadAll(hub);
+  if (all.loading) return loading();
+  if (all.error) return failure(all.error);
+  const today = hub.today();
+  if (cmp.picked == null) cmp.picked = new Set(param ? param.split(',') : all.data.slice(0, 2).map((r) => r.id));
+  const recs = all.data.filter((r) => cmp.picked.has(r.id));
+  const items = recs.map((rec) => ({ rec, v: valuesOf(rec) })).map((x) => ({ ...x, plan: homePlan(x.v, today) })).filter((x) => !x.plan.missing);
+  const pickList = el('div', { class: 'panel stack' }, [
+    el('h2', { text: 'Which homes', style: { margin: 0 } }),
+    el('ul', { class: 'list' }, all.data.map((rec) => el('li', {}, [
+      el('label', { class: 'checkline' }, [
+        el('input', { type: 'checkbox', checked: cmp.picked.has(rec.id), 'data-field': `pick:${rec.id}`, on: { change: (e) => { if (e.target.checked) cmp.picked.add(rec.id); else cmp.picked.delete(rec.id); hub.render(); } } }),
+        el('span', {}, [el('strong', { text: rec.title || 'Untitled' }), el('span', { class: 'small muted', text: ` · ${KINDS[valuesOf(rec).kind]}` })]),
+      ]),
+    ]))),
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Compare after' }, [1, 3, 5, 10, 15, 20, 30].map((y) => el('button', {
+      class: 'chip', type: 'button', 'aria-pressed': String(cmp.years === y), text: yrs(y), on: { click: () => { cmp.years = y; hub.render(); } },
+    }))),
+  ]);
+  const head = [
+    el('h1', { id: 'cmp-title', text: 'Compare homes', style: { margin: 0 } }),
+    el('p', { class: 'muted', style: { margin: 0 }, text: 'Any of your saved homes, side by side: buying against buying, against renting, or keeping the one you own. Each has the same money every month - whoever needs less that month invests the difference - so different things compare fairly.' }),
+    pickList,
+  ];
+  if (items.length < 2) return el('section', { class: 'stack', 'aria-labelledby': 'cmp-title' }, [...head, el('p', { class: 'panel muted', text: 'Tick two or more homes.' })]);
+  const v0 = items[0].v;
+  const sm = sameMoney(items.map((x) => x.plan), { investPct: n(v0.investPct) || 9, investTaxPct: n(v0.investTaxPct) || 15, investShare: v0.investShare ?? 100 });
+  const H = cmp.years * 12;
+  const wealth = sm.series.map((s) => s[H - 1].wealth);
+  const best = wealth.indexOf(Math.max(...wealth));
+  const words = items.map((x, i) => (i === best ? null : `${x.rec.title}: ${rand(wealth[best] - wealth[i])} behind ${items[best].rec.title} after ${yrs(cmp.years)}.`)).filter(Boolean);
+  const flips = items.map((x, i) => {
+    if (i === best) return null;
+    const c = crossing(sm.series[best].map((s) => [s.t, s.wealth]), sm.series[i].map((s) => [s.t, s.wealth]));
+    return c != null && c < 360 ? `${items[best].rec.title} gets ahead of ${x.rec.title} in ${whenLabel(c)}${c > H ? ' - after the time you chose' : ''}.` : null;
+  }).filter(Boolean);
   return el('section', { class: 'stack', 'aria-labelledby': 'cmp-title' }, [
-    el('h1', { id: 'cmp-title', text: 'Side by side', style: { margin: 0 } }),
-    el('p', { class: 'muted', style: { margin: 0 }, text: `Worked out with today’s maths from what was saved. Green is better than ${recs[0]?.title ?? 'the first'}, orange worse.` }),
-    recs.length < 2 ? el('p', { class: 'panel', text: 'Tick two or more of the same kind to compare.' }) : table,
+    ...head,
+    el('div', { class: 'stats' }, [stat(items[best].rec.title || 'Untitled', `furthest ahead after ${yrs(cmp.years)}`, 'r-best')]),
+    el('div', { class: 'panel stack' }, [el('h2', { text: 'In plain words', style: { margin: 0 } }), ...[...words, ...flips].map((t) => el('p', { style: { margin: 0 }, text: t })),
+      el('p', { class: 'small muted', style: { margin: 0 }, text: 'Each home is worked out with its own ticks and what-ifs, as saved. Change one by opening it.' })]),
+    chartPanel('Where each would leave you', lineChart(items.map((x, i) => ({ name: x.rec.title || `Home ${i + 1}`, points: sm.series[i].filter((s) => s.t % 6 === 0).map((s) => [s.t, s.wealth]) })), {
+      label: 'What each household would have, year by year, on the same money', marks: [{ x: H, label: `${yrs(cmp.years)}` }],
+      story: `${RULE} Each line is what that choice would leave you if you stopped then: the home sold (or the deposit back), plus everything invested.` })),
+    el('div', { class: 'panel stack' }, [
+      el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums fin-compare' }, [
+        el('thead', {}, [el('tr', {}, [el('th', { text: '' }), ...items.map((x) => el('th', { class: 'num', text: x.rec.title || 'Untitled' }))])]),
+        el('tbody', {}, [
+          ['Kind', (x) => KINDS[x.plan.kind]],
+          ['From savings on day one', (x) => rand(-x.plan.fromPocket)],
+          ['A month now', (x) => rand(-x.plan.monthNow)],
+          ['Bond paid off', (x) => (x.plan.bond ? ymName(x.plan.bond.paidOff) : '-')],
+          [`Would leave you, after ${yrs(cmp.years)}`, (x, i) => rand(wealth[i])],
+          ['Against the best', (x, i) => (i === best ? 'best' : rand(wealth[i] - wealth[best]))],
+        ].map(([label, get]) => el('tr', {}, [el('td', { text: label }), ...items.map((x, i) => el('td', { class: 'num', text: get(x, i) }))]))),
+      ])]),
+    ]),
   ]);
 }

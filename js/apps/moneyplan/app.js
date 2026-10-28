@@ -11,6 +11,7 @@ import { normaliseMonth, monthSummary, monthId, normaliseGoal as financeGoal } f
 import { normaliseTrip, budgetSummary } from '../holidays/logic.js';
 import { normalisePlan as childPlan, schedule } from '../children/logic.js';
 import { OFFER_DEFAULTS, versus, moveCash } from '../jobs/logic.js';
+import { homePlan } from '../homes/home.js';
 import { normalisePlan, simulate, extraToFit, postponeToFit, monthAt, monthsTo, freeEachMonth } from './logic.js';
 
 const col = (hub) => hub.data.collection('plan', { summary: () => ({ title: 'Money plan' }), prefix: 'mpl' });
@@ -66,7 +67,13 @@ async function gather(hub) {
   }
   for (const r of await read('homes', 'saved').catch(() => [])) {
     const v = { ...HOME_DEFAULTS, ...r.values };
-    if (r.kind === 'home') {
+    if (r.kind === 'property') {
+      // A home from the Homes page (D-078): cash from savings to move in, then what it costs each month.
+      // The home you already own is part of today's commitments, so it is not brought in.
+      const p = homePlan(r.values, today);
+      if (p.missing || p.kind === 'own') continue;
+      add('homes', 'Homes', { id: `property-${r.id}`, title: r.title, payments: p.fromPocket > 0 ? [{ month: monthAt(today, 6), amount: p.fromPocket }] : [], monthly: [{ from: monthAt(today, 7), amount: p.monthNow }], note: p.kind === 'rent' ? 'The rent and travel each month. If it replaces your rent or bond now, take that off.' : 'Cash from savings to move in, then the monthly cost of living there. If it replaces your rent or bond now, take that off.' });
+    } else if (r.kind === 'home') {
       const c = homeCost(v);
       if (c.total == null) continue;
       add('homes', 'Homes', { id: `home-${r.id}`, title: r.title, payments: [{ month: monthAt(today, 6), amount: c.upfront }], monthly: [{ from: monthAt(today, 7), amount: c.monthNow }], note: 'Cash to move in, then the monthly cost of living there. If it replaces your rent or bond now, take that off.' });

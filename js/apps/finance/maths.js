@@ -131,7 +131,41 @@ const num = (v) => (v === null || v === undefined || v === '' || !Number.isFinit
  * of the price - it is paying for the car - so the total cost is the drop in
  * value plus interest, fees and running costs, and the sums below prove it.
  */
-export function carCost(input) {
+const ymDiff = (a, b) => (Number(b.slice(0, 4)) - Number(a.slice(0, 4))) * 12 + Number(b.slice(5, 7)) - Number(a.slice(5, 7));
+export const CAR_SCENARIOS = { more: 'Pay more each month', extra: 'Pay in once', withdraw: 'Take out', rate: 'Rate changes' };
+
+/**
+ * A car loan month by month with "what if" lines (D-078): more each month for a period,
+ * a lump sum, money taken back out (only if the bank allows it), a rate change. Paying
+ * more shortens the loan; the balloon stays due at the end.
+ */
+function loanRun(loan, ratePct, n, balloon, events, start) {
+  let r = monthlyRate(ratePct);
+  let bal = loan;
+  let minPmt = payment(loan, r, n, balloon);
+  const ev = events.map((e) => ({ ...e, at: ymDiff(start, e.from), until: e.to ? ymDiff(start, e.to) : null, amount: Number(e.amount) || 0 }));
+  const rows = [{ balance: loan, paid: 0, interest: 0, taken: 0 }];
+  for (let m = 1; m <= MAX_MONTHS && bal > 0.005; m += 1) {
+    for (const e of ev.filter((x) => x.kind === 'rate' && x.at === m)) { r = monthlyRate(e.amount); minPmt = payment(bal, r, Math.max(1, n - m + 1), balloon); }
+    const i = bal * r;
+    let pay = minPmt + ev.filter((x) => x.kind === 'more' && x.at <= m && (x.until == null || m <= x.until)).reduce((t, x) => t + x.amount, 0);
+    if (m >= n) pay = bal + i;                                  // the last instalment, with the balloon
+    pay = Math.min(pay, bal + i);
+    bal = bal + i - pay;
+    let extra = 0; let taken = 0;
+    for (const e of ev.filter((x) => x.at === m)) {
+      if (e.kind === 'extra') { const x = Math.min(e.amount, bal); bal -= x; extra += x; }
+      if (e.kind === 'withdraw') { bal += e.amount; taken += e.amount; minPmt = payment(bal, r, Math.max(1, n - m), balloon); }
+    }
+    rows.push({ balance: Math.max(0, bal), paid: pay + extra, interest: i, taken });
+  }
+  return rows;
+}
+
+/** Ticked "what if" lines that apply to a car loan. */
+export const carScenarios = (v) => (Array.isArray(v.scenarios) ? v.scenarios : []).filter((x) => x && x.on !== false && CAR_SCENARIOS[x.kind] && /^\d{4}-\d{2}$/.test(x.from ?? ''));
+
+export function carCost(input, today = null) {
   const v = { ...CAR_DEFAULTS, ...input };
   const price = num(v.price);
   if (price == null || price <= 0) return { missing: ['the price'] };
@@ -148,14 +182,20 @@ export function carCost(input) {
   const r = monthlyRate(v.ratePct);
   const financed = loan > 0 && n > 0;
   const pmt = financed ? payment(loan, r, n, balloon) : 0;
-  const owedAt = (m) => (!financed || m >= n ? 0 : balanceAfter(loan, r, pmt, m));
-  const paid = Math.min(keep, financed ? n : 0);
-  const balloonPaid = financed && keep >= n ? balloon : 0;
+  // The loan as planned, or - with ticked "what ifs" and a start month - run month by month.
+  const evs = today && financed ? carScenarios(v) : [];
+  const sched = evs.length ? loanRun(loan, v.ratePct, n, balloon, evs, today.slice(0, 7)) : null;
+  const owedAt = (m) => (sched ? sched[m]?.balance ?? 0 : (!financed || m >= n ? 0 : balanceAfter(loan, r, pmt, m)));
+  const bankAt = (m) => (sched ? sched[m]?.paid ?? 0 : (financed && m <= n ? pmt : 0) + (financed && m === n ? balloon : 0));
+  const activeAt = (m) => (sched ? m < sched.length : financed && m <= n);
+  const takenAt = (m) => (sched ? sched[m]?.taken ?? 0 : 0);
+  let paidSum = 0; let serviceSum = 0; let takenSum = 0;
+  for (let m = 1; m <= keep; m += 1) { paidSum += bankAt(m); if (activeAt(m)) serviceSum += service; takenSum += takenAt(m); }
   const owed = owedAt(keep);
-
-  const interest = pmt * paid + balloonPaid - (loan - owed);
-  const fees = service * paid + initiation;
-  const toBank = pmt * paid + service * paid + balloonPaid;
+  const interest = paidSum - (loan + takenSum - owed);
+  const fees = serviceSum + initiation;
+  const toBank = paidSum + serviceSum;
+  const loanMonths = sched ? sched.length - 1 : financed ? n : 0;
   const charger = USES_POWER.has(v.power) ? num(v.chargerInstall) ?? 0 : 0;
   const upfront = deposit + (v.feeFinanced ? 0 : initiation) + charger;
 
@@ -163,10 +203,12 @@ export function carCost(input) {
   // A monthly fuel figure of the family's own replaces the worked-out fuel and charging.
   const esc = (num(v.escalatePct) ?? 0) / 100;
   const e = energyCost(v);
+  // Sections can be left out (D-078): fuel and charging, or insurance, service and upkeep.
+  const energyOn = v.on?.energy !== false; const runningOn = v.on?.running !== false;
   const ownFuel = num(v.fuel);
-  const fuelMonth = ownFuel ?? e.fuelMonth;
-  const elecMonth = ownFuel != null ? 0 : e.elecMonth;
-  const steady = (num(v.insurance) ?? 0) + (num(v.upkeep) ?? 0)
+  const fuelMonth = energyOn ? ownFuel ?? e.fuelMonth : 0;
+  const elecMonth = energyOn && ownFuel == null ? e.elecMonth : 0;
+  const steady = !runningOn ? 0 : (num(v.insurance) ?? 0) + (num(v.upkeep) ?? 0)
     + ((num(v.licenceYearly) ?? 0) + (num(v.serviceYearly) ?? 0) + (num(v.tyresYearly) ?? 0) + (USES_FUEL.has(v.power) ? num(v.oilYearly) ?? 0 : 0)) / 12;
   const runMonth = steady + fuelMonth + elecMonth;
   const yr = (m) => Math.floor((m - 1) / 12);
@@ -181,23 +223,24 @@ export function carCost(input) {
   const resale = valueAt(keep);
 
   let cashOut = upfront;
-  let running = 0;
+  let running = 0; let takenSoFar = 0;
   const timeline = [{ month: 0, cashOut, out: cashOut, value: price, owed: owedAt(0), cost: cashOut - (price - owedAt(0)) }];
   for (let m = 1; m <= keep; m += 1) {
     const run = runningIn(m);
     running += run;
-    const out = run + (financed && m <= n ? pmt + service : 0) + (financed && m === n ? balloon : 0);
-    cashOut += out;
-    timeline.push({ month: m, cashOut, out, value: valueAt(m), owed: owedAt(m), cost: cashOut - (valueAt(m) - owedAt(m)) });
+    const out = run + bankAt(m) + (activeAt(m) ? service : 0);
+    cashOut += out; takenSoFar += takenAt(m);
+    timeline.push({ month: m, cashOut, out, taken: takenAt(m), value: valueAt(m), owed: owedAt(m), cost: cashOut - takenSoFar - (valueAt(m) - owedAt(m)) });
   }
   const atSale = resale - owed;
-  const total = upfront + toBank + running - atSale;
+  // Money taken back out of the loan came into your pocket.
+  const total = upfront + toBank + running - atSale - takenSum;
   return {
     price, deposit, loan, balloon, months: keep, termMonths: n, financed,
     instalment: financed ? pmt + service : 0, repayment: pmt, serviceFee: service,
     interest, fees, toBank, upfront, running, runningFirstMonth: runMonth, charger,
     energy: { ...e, fuelMonth, elecMonth, own: ownFuel != null }, steadyFirstMonth: steady,
-    resale, owed, atSale, total,
+    resale, owed, atSale, total, taken: takenSum, loanMonths, scenarios: evs.length,
     depreciation: price - resale,
     perMonth: total / keep,
     perKm: num(v.kmYearly) ? total / ((num(v.kmYearly) * keep) / 12) : null,

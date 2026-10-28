@@ -631,6 +631,32 @@ purpose (saved): show people what they have not thought of, and let them put the
   marked not counted), what moves the answer most, and year by year.
 - Tested: a home growing exactly as fast as after-tax investments, with no costs, comes out level.
 
+**D-078 One page per home; scenarios with and without; one Compare; the (i) (owner, 2026-10-28).**
+The owner pointed out that Homes had five tools - A home, Bond, Our bond, Sell to buy, Own or rent -
+the first four much alike, and asked whether there was a reason they were separate. There was not:
+they were built one question at a time. Now:
+- **One Home page per home**, of three kinds - Buying, Ours already, Renting - in sections, in the
+  order a decision is made: the home (and what our own has grown by), the rent, selling our current
+  home first, buying it (every cost item by item), the bond (a new one, or ours with its history),
+  running it, upgrades, getting to work, after the bond is paid off (invest what the instalment was),
+  how long and selling later, and what the money up front could have earned. Each can be ticked
+  "Left out" (it then counts nothing) and folded away; the fold is remembered on the device.
+- **What if…**: lines to tick - pay more each month for a period (on top of the minimum, which then
+  shortens the bond), pay in once, take money out, a rate change. Every graph shows the home with and
+  without them; the page says how many months sooner, the interest saved, and how much better off.
+- **Compare** takes any saved homes - buy against buy, against renting, or keeping ours - on the same
+  money: each month every household has as much as the dearest needs, whoever needs less invests the
+  difference, and day-one cash one needs less of is invested too. Keeping ours starts from what it
+  would sell for today; renting after selling ours starts with the sale's cash invested. Tested: a
+  home growing as fast as investments, with no costs, comes out level with selling and renting.
+- **Cars** get the same: tick fuel or upkeep out, and what-ifs on the loan (the balloon stays due;
+  money taken back out is allowed but flagged - most car finance cannot be redrawn).
+- **The (i)** beside every heading and figure in Homes and Cars: what it is, where to find your own
+  (bond statement, municipal account, the lease, a quote) and how to get the latest (prime after each
+  Reserve Bank meeting, fuel on the first Wednesday of the month). The words are in finance/help.js.
+- Saved work from the five old tools opens on the new page as the right kind; the Money plan brings
+  in the new homes (cash to move in, then the monthly cost; the home already owned is left out).
+
 **D-077 Money in and out, one rule for every graph (owner, 2026-10-28).** "Show the growth of the
 house/car/investment over time, and my monthly expense; make all values going out of my pocket
 negative and all values growing my pocket positive." Every Finance graph and money table now follows
