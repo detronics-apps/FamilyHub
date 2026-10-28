@@ -179,3 +179,15 @@ test('D-071 variations: one sauce, three ways - leave out, add, swap and extra s
   assert.deepEqual(slotAsVariation(sauce, null), { variationId: null, title: 'White sauce', ingredients: null });
   assert.equal(variationSays(sauce.variations[1]), 'leaves out milk; adds 250 ml cream, 1 tbsp black pepper');
 });
+
+test('cooking time adds each planned meal per day and for the week', async () => {
+  const { cookingTime } = await import('../js/apps/meals/logic.js');
+  const mins = { soup: 45, toast: 10 };
+  const t = cookingTime([
+    { day: 0, recipeId: 'soup' }, { day: 0, recipeId: 'toast' }, { day: 2, recipeId: 'soup' },
+    { day: 3, recipeId: 'new' }, { day: 4, recipeId: null },
+  ], (id) => mins[id] ?? null);
+  assert.deepEqual(t.days, [55, 0, 45, 0, 0, 0, 0]);
+  assert.equal(t.week, 100);
+  assert.equal(t.unknown, 2);
+});

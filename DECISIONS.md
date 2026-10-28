@@ -631,6 +631,38 @@ purpose (saved): show people what they have not thought of, and let them put the
   marked not counted), what moves the answer most, and year by year.
 - Tested: a home growing exactly as fast as after-tax investments, with no costs, comes out level.
 
+**D-080 Nothing is put off; the timer ring (owner, 2026-10-28).**
+The owner: "Not now" should not exist. A chore that is not done today is simply still there
+tomorrow; a weekly one carries over day by day until it is done. Putting it off to a date hid it
+on days when there was time for it.
+- **No putting off.** Tomorrow, Next week, Move date and Skip are gone; a card has Start and Done.
+  A chore shows when it is due (one cycle after it was last done) and stays until it is done -
+  still only one of it, so nothing piles up. Put-offs recorded before this are ignored. A one-off
+  that is no longer needed is deleted under Plan › Edit. Waiting two whole cycles still asks for a
+  review of the plan (being put off no longer can).
+- **The ring** around the clock fills to the expected time; past it, it turns honey and fills a
+  second lap as long as the first, and the clock counts up ("+4:10 over"). Taking longer is
+  allowed - it may just be more work than expected.
+- **Cancel** (was "Stop timer") ends it with nothing recorded.
+- **Done** records the minutes it really took (paused time left out) on the chore's history.
+- **Not running for hours.** At three times the expected time (at least half an hour; an hour
+  with no expected time) it asks "Still on it?". "Still going" asks again as far on, so a really
+  long job is still timed. Unanswered for half an hour, it stops and records nothing; Done on the
+  chore still works, without a time.
+
+**D-079 Time to set aside: chores and meals (owner, 2026-10-28).**
+The owner wanted to know how much time the house and the meals take, so they can prepare for it
+("plan for an hour a day of cleaning if needed").
+- **Chores** (Plan and Progress): every chore counted as often as it comes round - daily 7 times a
+  week, weekly once, monthly 12/52, yearly 1/52 - added up for the week and divided by 7. One-off
+  jobs are left out; optional improvements are shown apart; a chore with no time is counted as
+  unknown, not guessed. "By room" shows where the time goes.
+- **Meals** (Calendar, week view): each planned meal's preparation plus cooking, from its recipe,
+  under each day's date, with the week's total and the average a day. Every meal planned that week
+  counts, shown or not; leftovers take none (they are cooked with the meal they come from). A meal
+  with no time is counted as unknown. The recipe's time is used as it stands, not scaled for
+  servings.
+
 **D-078 One page per home; scenarios with and without; one Compare; the (i) (owner, 2026-10-28).**
 The owner pointed out that Homes had five tools - A home, Bond, Our bond, Sell to buy, Own or rent -
 the first four much alike, and asked whether there was a reason they were separate. There was not:

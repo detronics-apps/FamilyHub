@@ -7,7 +7,7 @@ import { hasDemo, roomName } from '../../model.js';
 import { householdProgress, activity } from '../../progress.js';
 import { fmtDay } from '../../dates.js';
 import { choreCard, demoNotice } from '../../ui/common.js';
-import { planView, openSamples } from './plan.js';
+import { planView, openSamples, loadPanel } from './plan.js';
 
 const TABS = [
   { sub: null, label: 'Do something now', hash: '#/chores' },
@@ -217,6 +217,7 @@ function progressView(ctx) {
 
   return el('div', { class: 'stack' }, [
     el('p', { class: 'muted', text: 'What the household has looked after - together. No scores, no rankings, no one compared with anyone.' }),
+    loadPanel(h),
     el('div', { class: 'stats' }, [
       stat(p.doneCount, `taken care of in the last ${p.days} days`),
       stat(p.readyCount, 'ready now'),
@@ -247,7 +248,7 @@ function progressView(ctx) {
       log.length
         ? el('ul', { class: 'list' }, log.map((a) => el('li', {}, [
           el('span', { class: 'list__main' }, [el('strong', { text: a.what }), el('span', { class: 'small muted', text: a.room ? ` · ${a.room}` : '' })]),
-          el('span', { class: 'small', text: `${a.action}${a.until ? ` to ${fmtDay(a.until, today)}` : ''} · ${a.who} · ${fmtDay(a.day, today)}` }),
+          el('span', { class: 'small', text: `${a.action}${a.until ? ` to ${fmtDay(a.until, today)}` : ''}${a.minutes ? ` in ${a.minutes} min` : ''} · ${a.who} · ${fmtDay(a.day, today)}` }),
         ])))
         : el('p', { class: 'muted', text: 'Nothing recorded yet. When a chore is done it appears here.' }),
     ]),

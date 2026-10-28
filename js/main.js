@@ -39,7 +39,7 @@ import { openDoc } from './ui/views/docs.js';
 import { syncChip, syncNotices, phoneButtons } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.9.19';
+export const APP_VERSION = '0.9.20';
 
 const store = createLocalStore(window.localStorage);
 
@@ -52,7 +52,7 @@ const app = {
   flash: [],                // short-lived notices (with Undo) shown until the next navigation
   storageError: null,
   execute: { filters: defaultFilters(), phase: 'choose', justDone: null, showAll: false },
-  ui: { openLater: null },
+  ui: {},
 };
 
 const dom = {};
@@ -106,21 +106,20 @@ function flash(notice) {
 }
 
 /** Record done / skipped / deferred / rescheduled / dropped, with an Undo. */
-function act(choreId, type, until = null) {
+function act(choreId, type, until = null, minutes = null) {
   const chore = app.household.chores.find((c) => c.id === choreId);
   if (!chore) return null;
   const occ = occurrence(chore, app.household.events, today());
   const { household, event } = recordEvent(app.household, {
-    choreId, type, until, by: currentPerson()?.id ?? null, dueDay: occ.dueDay,
+    choreId, type, until, by: currentPerson()?.id ?? null, dueDay: occ.dueDay, minutes,
   });
   const text = {
-    done: `Done: ${chore.name}.`,
+    done: `Done: ${chore.name}${minutes ? ` - ${minutes} min` : ''}.`,
     skipped: `Skipped this time: ${chore.name}. It comes round again on its normal cycle.`,
     deferred: `${chore.name} will be back ${until ? fmtDay(until, today()) : 'later'}.`,
     rescheduled: `${chore.name} moved to ${until ? fmtDay(until, today()) : 'later'}.`,
     dropped: `${chore.name} closed - no longer needed.`,
   }[type];
-  app.ui.openLater = null;
   flash({ id: `act:${event.id}`, level: 'ok', text, action: { label: 'Undo', onClick: () => undo(event.id) } });
   commit(household);
   return event;

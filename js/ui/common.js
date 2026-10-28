@@ -1,7 +1,7 @@
 // Shared UI pieces: avatars, dialogs, and the chore card used by every chore screen.
 
 import { el } from './dom.js';
-import { addDays, fmtAgo, fmtDay, fmtFrequency } from '../dates.js';
+import { fmtAgo, fmtDay, fmtFrequency } from '../dates.js';
 import { personName, roomName, removeDemo } from '../model.js';
 import { KEYS } from '../storage.js';
 
@@ -105,13 +105,12 @@ export function statusLine(h, occ, today) {
 }
 
 /**
- * One chore with Done and "Not now". `label` heads the card (momentum picks),
+ * One chore with Start and Done - nothing is put off (D-080). `label` heads the card (momentum picks),
  * `reasons` become pills (why it was suggested).
  */
 export function choreCard(ctx, chore, occ, { label = null, reasons = [], onDone = null, showRoom = true } = {}) {
   const h = ctx.app.household;
   const today = ctx.today();
-  const open = ctx.app.ui.openLater === chore.id;
   const details = [chore.description, chore.instructions && `How: ${chore.instructions}`, chore.easier && `Makes it easier: ${chore.easier}`].filter(Boolean);
 
   const pillClass = (r) => (r === 'Important' ? 'pill pill--important' : r === 'Optional improvement' ? 'pill pill--optional' : 'pill');
@@ -128,11 +127,6 @@ export function choreCard(ctx, chore, occ, { label = null, reasons = [], onDone 
     reasons.length ? el('div', { class: 'pills' }, reasons.map((r) => el('span', { class: pillClass(r), text: r }))) : null,
     details.length ? el('details', { class: 'more' }, [el('summary', { text: 'Details' }), ...details.map((t) => el('p', { class: 'small', text: t }))]) : null,
     occ.state === 'closed' ? null : el('div', { class: 'card__actions' }, [
-      el('button', {
-        class: 'btn', type: 'button', 'aria-expanded': String(open), 'data-field': `later:${chore.id}`,
-        text: 'Not now',
-        on: { click: () => { ctx.app.ui.openLater = open ? null : chore.id; ctx.render(); } },
-      }),
       ctx.session && ctx.session.state()?.id !== chore.id ? el('button', {
         class: 'btn', type: 'button', 'data-field': `start:${chore.id}`, text: 'Start',
         title: 'Start a timer for this chore (with optional music)',
@@ -141,7 +135,7 @@ export function choreCard(ctx, chore, occ, { label = null, reasons = [], onDone 
             id: chore.id,
             title: chore.name,
             minutes: chore.minutes ?? ctx.app.execute.filters.minutes ?? null,
-            onDone: () => { const ev = ctx.act(chore.id, 'done'); onDone?.(ev); },
+            onDone: (minutes) => { const ev = ctx.act(chore.id, 'done', null, minutes); onDone?.(ev); },
           }),
         },
       }) : null,
@@ -149,30 +143,13 @@ export function choreCard(ctx, chore, occ, { label = null, reasons = [], onDone 
         class: 'btn btn-primary', type: 'button', 'data-field': `done:${chore.id}`, text: 'Done',
         on: {
           click: () => {
-            if (ctx.session?.state()?.id === chore.id) ctx.session.stop();
+            if (ctx.session?.state()?.id === chore.id) { ctx.session.done(); return; }
             const ev = ctx.act(chore.id, 'done');
             onDone?.(ev);
           },
         },
       }),
     ]),
-    open ? laterMenu(ctx, chore, today) : null,
-  ]);
-}
-
-function laterMenu(ctx, chore, today) {
-  const once = chore.frequency.unit === 'once';
-  const date = el('input', { class: 'input', type: 'date', min: addDays(today, 1), value: addDays(today, 3), 'data-field': `date:${chore.id}`, 'aria-label': 'Move to this date', style: { width: 'auto' } });
-  return el('div', { class: 'later-menu', role: 'group', 'aria-label': `Put off ${chore.name}` }, [
-    el('button', { class: 'btn btn-small', type: 'button', text: 'Tomorrow', on: { click: () => ctx.act(chore.id, 'deferred', addDays(today, 1)) } }),
-    el('button', { class: 'btn btn-small', type: 'button', text: 'Next week', on: { click: () => ctx.act(chore.id, 'deferred', addDays(today, 7)) } }),
-    el('span', { class: 'row' }, [
-      date,
-      el('button', { class: 'btn btn-small', type: 'button', text: 'Move date', on: { click: () => { if (date.value) ctx.act(chore.id, 'rescheduled', date.value); } } }),
-    ]),
-    once
-      ? el('button', { class: 'btn btn-small', type: 'button', text: 'Not needed', on: { click: () => ctx.act(chore.id, 'dropped') } })
-      : el('button', { class: 'btn btn-small', type: 'button', text: 'Skip', title: 'Let this round go. It comes back on its normal cycle.', on: { click: () => ctx.act(chore.id, 'skipped') } }),
   ]);
 }
 

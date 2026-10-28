@@ -788,3 +788,19 @@ export const IMPORTER = {
     };
   },
 };
+
+/**
+ * Time in the kitchen for a week's planned meals: each meal's prep plus cooking, per day
+ * and for the week. Leftovers are not slots, so they take no time. A meal with no
+ * time yet is counted in `unknown`, not guessed.
+ */
+export function cookingTime(slots, minutesOf) {
+  const days = Array(7).fill(0);
+  let unknown = 0;
+  for (const s of slots) {
+    const m = s.recipeId ? minutesOf(s.recipeId) : null;
+    if (m) days[s.day] += m; else unknown += 1;
+  }
+  const week = days.reduce((a, b) => a + b, 0);
+  return { days, week, day: week / 7, unknown };
+}

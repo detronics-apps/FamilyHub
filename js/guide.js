@@ -3,11 +3,10 @@
 
 // Each app term carries the everyday words a person might search with instead.
 export const SEARCH_ALIASES = {
+  later: ['postpone', 'not now', 'put off', 'snooze', 'defer', 'missed', 'skip'],
   'do something now': ['five minutes', 'spare time', 'what should i do', 'quick job', 'suggest', 'find a task', 'execute'],
   chore: ['housework', 'cleaning', 'job', 'tidy'],
   plan: ['add a chore', 'create', 'new chore', 'set up', 'schedule', 'how often', 'sample', 'examples', 'ideas', 'which chores', 'starter'],
-  later: ['postpone', 'not now', 'tomorrow', 'defer', 'put off', 'snooze'],
-  skip: ['miss', 'missed', 'not this time', 'skip it'],
   'drive folder': ['google drive', 'sync', 'cloud', 'save to drive', 'lost', 'safe', 'other laptop', 'another computer', 'backup', 'back up'],
   'family file': ['phone', 'mobile', 'iphone', 'android', 'export', 'import', 'transfer', 'move to another device', 'save a copy', 'download'],
   backup: ['restore', 'undo everything', 'go back', 'old version', 'recover'],
@@ -67,7 +66,7 @@ export const HOWTOS = [
   { id: 'quick', title: 'Find something to do right now', steps: [
     'On the home screen, press Chores. It opens on "Do something now".',
     'Optionally say how much time you have, how your energy is, and where you want to be.',
-    'Pick any suggestion and press Done when it is finished - or Start, for a timer and optional music.',
+    'Pick any suggestion and press Done when it is finished - or Start, for a timer and optional music. The ring fills to the expected time and turns honey if it takes longer; Done records how long it took, Cancel records nothing.',
     'Do another one if you like, or press "Finish". Stopping is always fine.',
   ] },
   { id: 'drive', title: 'Keep everything safe in your Google Drive folder (computer)', steps: [
@@ -106,10 +105,10 @@ export const HOWTOS = [
     'Choose how often, roughly how long, and how much effort it takes, if you know.',
     'Open "More details" for instructions, who can do it, and what it depends on.',
   ] },
-  { id: 'later', title: 'Put a chore off without guilt', steps: [
-    'On any chore, press "Not now".',
-    'Choose Tomorrow, Next week, or a date of your own - it comes back later, on that day. For a repeating chore you can also Skip this time.',
-    'A routine chore that is skipped simply comes round again on its normal cycle.',
+  { id: 'later', title: 'A chore I could not get to', steps: [
+    'Leave it for later. A chore shows when it is due and stays on the list until it is done - a daily one is there tomorrow, a weekly one carries on day by day.',
+    'Missing it never doubles it up: there is only ever one of each chore waiting.',
+    'A one-off job that is no longer needed: open it under Plan, press Edit, then Delete.',
   ] },
   { id: 'music', title: 'Play music while you work', steps: [
     'Put music files in your Drive folder under Data, Media, Music (or, on a phone, choose files in Settings, Music).',
@@ -405,7 +404,7 @@ export const FAQS = [
   { q: 'Does the phone sync with Google Drive?', a: 'Half by itself. Phone browsers cannot keep a live link to a folder, and the only other way would be signing in to a Google app run by a publisher, which Family Hub deliberately avoids. So laptops keep FamilyHub › Phone › "Family Hub.json" up to date for phones, and add in whatever a phone sends back into that Phone folder. On the phone it is two buttons at the top of every page, Get and Send - one tap each, because a phone’s browser may only open or save a Drive file when you pick it.' },
   { q: 'What happens if two of us change something at the same time?', a: 'Different things are combined automatically - two chores ticked off on two laptops are both kept. Only when the very same detail was changed differently does Family Hub ask which to keep, showing both. Nothing is overwritten silently.' },
   { q: 'What happens when we miss a chore?', a: 'Nothing piles up. A repeating chore has one current turn: if it is missed, it simply stays ready until someone does it or skips it, then its normal cycle carries on. Missed chores are information about how much the week can hold, not extra work for tomorrow.' },
-  { q: 'Why is a chore asking for a review?', a: 'If a chore has been put off three times in a row, or has waited two whole cycles, the Plan tab gently asks whether the plan still fits. Nothing is added or changed unless you change it.' },
+  { q: 'Why is a chore asking for a review?', a: 'If a chore has waited two whole cycles, the Plan tab gently asks whether the plan still fits. Nothing is added or changed unless you change it.' },
   { q: 'How are suggestions chosen?', a: 'Your filters remove what does not fit. What is left is ordered: ready chores before optional ones, important before ordinary, then whatever has waited longest for its own cycle, then the quickest. "Why these suggestions?" shows this with your current choices.' },
   { q: 'Does uninstalling a mini-app delete its data?', a: 'No. Uninstalling keeps its records in your folder, and reinstalling brings them back. Deleting the records is a separate step that asks first.' },
   { q: 'Is it safe to add someone else’s mini-app?', a: 'Family Hub runs it sealed off: no internet, no access to your other data, and only the permissions you approve when installing. But anything you let it see, it could misuse - so only install mini-apps from people you trust. If its files change later, it stops until you review the change.' },
@@ -447,6 +446,9 @@ export const FEATURES = [
   { name: 'True cost of a car', where: 'Finance › Cars', what: 'The instalment, interest, fees, running costs, and what is still owed when you sell - saved by name and compared side by side.' },
   { name: 'Simple, Advanced, Learn', where: 'Finance calculators', what: 'The quick answer, every cost and assumption, or each sum worked out step by step - switch any time without losing what you typed.' },
   { name: 'Projections with their assumptions', where: 'Finance › Goals', what: 'When a goal could be reached, or a debt paid off - and plainly when it never would at the current payment.' },
+  { name: 'Time a day for chores', where: 'Chores › Plan and Progress', what: 'All the chores together, a week and on average a day - so you can plan for, say, an hour a day.' },
+  { name: 'The timer ring', where: 'Chores › Start', what: 'Fills to the time a chore should take, then turns honey and counts what is over. Done records the minutes; Cancel records nothing; left running, it asks "Still on it?" and stops if nobody answers.' },
+  { name: 'Time in the kitchen', where: 'Meal Planner › Calendar', what: 'Each day’s preparation and cooking under its date, and the week’s planned meals together - a week and on average a day.' },
   { name: 'Sample chores', where: 'Chores › Plan › Samples', what: 'Ready-made chores for each room - kitchen, bathrooms, bedroom, baby room, laundry - to tick and add. They become your own to change or remove.' },
   { name: 'Avoid a room', where: 'Chores › Do something now', what: 'With "Anywhere" chosen, tap rooms under "Not today" to leave them out.' },
   { name: 'Phone and laptop', where: 'Bottom of every page', what: 'Every step to put the family in your Google Drive, onto a phone and its home screen - and what to do when something goes wrong.' },

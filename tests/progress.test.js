@@ -40,3 +40,23 @@ test('activity is newest first and names who did it', () => {
   assert.equal(list[0].action, 'Skipped this time');
   assert.equal(list[1].who, 'Ann');
 });
+
+test('weekly load: minutes a week and a day, how often each comes round, the unknowns counted', async () => {
+  const { weeklyLoad, fmtMinutes } = await import('../js/progress.js');
+  const h = {
+    rooms: [{ id: 'r1', name: 'Kitchen' }], events: [],
+    chores: [
+      { id: 'a', roomId: 'r1', minutes: 10, frequency: { unit: 'day', every: 1 } },     // 70 a week
+      { id: 'b', roomId: null, minutes: 30, frequency: { unit: 'week', every: 2 } },    // 15
+      { id: 'c', roomId: null, minutes: 52, frequency: { unit: 'month', every: 1 } },   // 12
+      { id: 'd', roomId: null, minutes: 60, frequency: { unit: 'once', every: 1 } },    // left out
+      { id: 'e', roomId: null, minutes: null, frequency: { unit: 'week', every: 1 } },  // unknown
+      { id: 'f', roomId: null, minutes: 14, frequency: { unit: 'week', every: 1 }, optional: true },
+    ],
+  };
+  const w = weeklyLoad(h);
+  assert.equal(Math.round(w.week), 97); assert.equal(Math.round(w.day), 14);
+  assert.equal(w.unknown, 1); assert.equal(w.optional, 14);
+  assert.equal(w.rooms[0].room, 'Kitchen');
+  assert.equal(fmtMinutes(85), '1 h 25 min'); assert.equal(fmtMinutes(40), '40 min');
+});

@@ -21,8 +21,9 @@ import {
   weekStart, weekDays, normalisePlan, slotAt, setSlot, updateSlot, copyPlan, planId, planShopping, slotNeeds,
   prepared, reserved, leftoverMeals, setReservation, addReservation, SUMMARY_VERSION, slotBatch, collectRecipes,
   POOL, normalisePool, addToPool, moveMeal, addSlot, mealsBetween, mondaysBetween, goodFor, stillToBuy, sentAs,
-  slotAsVariation, variationOf,
+  slotAsVariation, variationOf, cookingTime,
 } from '../meals/logic.js';
+import { fmtMinutes } from '../../progress.js';
 import { ingredientEditor } from '../../ui/ingredient-editor.js';
 import { recipeFacts, passes, emptyFilters, describeFilters, PROTEIN, CARB, GROUP, TRIAL, MEAL_TAGS } from '../meals/facts.js';
 import { MIX, proposeWeek, analyseWeek, optimiseWeek, additionFor, applyIdea } from './logic.js';
@@ -374,6 +375,9 @@ function calendar(hub, param) {
   const go = (a, v = view) => { ui.calAnchor = a; ui.calView = v; hub.render(); };
   const all = r.mondays.flatMap((m) => plan[m].slots.map((s) => ({ m, s })));
   const later = leftoverMeals(loaded.map(([, x]) => x.data), r.mondays[0]);
+  const summaries = view === 'week' ? loadSummaries(hub) : null;
+  const minutesOf = (id) => summaries?.data?.find((s) => s.id === id)?.minutes ?? null;
+  const time = view === 'week' && !summaries.loading ? cookingTime(plan[r.mondays[0]].slots, minutesOf) : null;
 
   const head = el('div', { class: 'row cal-head' }, [
     el('button', { class: 'btn btn-small', type: 'button', 'aria-label': view === 'month' ? 'Previous month' : 'Previous week', text: '‹', 'data-field': 'cal-prev', on: { click: () => go(r.prev) } }),
@@ -394,7 +398,8 @@ function calendar(hub, param) {
     const meals = ui.showAllMeals ? MEALS : ['dinner'];
     const shown = MEALS.filter((meal) => meals.includes(meal) || p.slots.some((s) => s.meal === meal) || later.some((l) => l.meal === meal));
     body = el('div', { class: 'panel' }, [el('ul', { class: 'list cal-week' }, weekDays(monday).map((d, i) => el('li', { style: { alignItems: 'flex-start' }, class: d === today ? 'cal-today' : null }, [
-      el('div', { style: { minWidth: '64px' } }, [el('strong', { text: WEEKDAYS[i] }), el('div', { class: 'small muted', text: d === today ? 'today' : d.slice(5).replace('-', '/') })]),
+      el('div', { style: { minWidth: '64px' } }, [el('strong', { text: WEEKDAYS[i] }), el('div', { class: 'small muted', text: d === today ? 'today' : d.slice(5).replace('-', '/') }),
+        time?.days[i] ? el('div', { class: 'small muted', 'data-field': `cook-time:${i}`, title: 'Preparation and cooking for this day’s meals', text: fmtMinutes(time.days[i]) }) : null]),
       el('div', { class: 'list__main stack', style: { gap: '4px' } }, shown.map((meal) => {
         const here = p.slots.filter((s) => s.day === i && s.meal === meal);
         const lo = later.filter((l) => l.day === i && l.meal === meal);
@@ -428,7 +433,7 @@ function calendar(hub, param) {
 
   const monday = r.mondays[0];
   return el('div', { class: 'stack' }, [
-    head, switcher, body,
+    head, switcher, timePanel(time), body,
     el('div', { class: 'row' }, [
       view === 'week' && plan[monday].slots.length ? el('a', { class: 'btn', href: hub.href('review', monday), text: 'Overview', title: 'How the week looks', 'data-field': 'review-week' }) : null,
       view === 'week' && !plan[monday].slots.length && plan[addDays(monday, -7)].slots.length ? el('button', { class: 'btn', type: 'button', text: 'Repeat week', title: 'Copy last week’s plan', on: { click: () => savePlan(hub, monday, copyPlan(plan[addDays(monday, -7)], monday)) } }) : null,
@@ -438,6 +443,21 @@ function calendar(hub, param) {
       }) : null,
     ]),
     ui.shopFor ? shopPanel(hub) : null,
+  ]);
+}
+
+/** The week's time in the kitchen: what to set aside, a day and in all (D-079). */
+function timePanel(t) {
+  if (!t || (!t.week && !t.unknown)) return null;
+  return el('div', { class: 'panel stack', 'data-field': 'cook-time' }, [
+    el('div', { class: 'stats' }, [
+      el('div', { class: 'stat' }, [el('div', { class: 'stat__value', text: fmtMinutes(t.day) }), el('div', { class: 'stat__label', text: 'a day in the kitchen, on average' })]),
+      el('div', { class: 'stat' }, [el('div', { class: 'stat__value', text: fmtMinutes(t.week) }), el('div', { class: 'stat__label', text: 'this week, all the planned meals' })]),
+    ]),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: [
+      'Each meal’s preparation plus cooking, as its recipe says - every meal planned this week, shown or not. Each day’s time is under its date. Leftovers take none.',
+      t.unknown ? `${t.unknown} meal${t.unknown === 1 ? ' has' : 's have'} no time yet and ${t.unknown === 1 ? 'is' : 'are'} not counted - add the minutes on the meal for the full picture.` : null,
+    ].filter(Boolean).join(' ') }),
   ]);
 }
 

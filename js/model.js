@@ -230,6 +230,7 @@ export function normaliseEvent(e) {
     dueDay: isDay(e.dueDay) ? e.dueDay : null,
     until: isDay(e.until) ? e.until : null,
     note: str(e.note, 1000),
+    minutes: Number.isFinite(e.minutes) && e.minutes > 0 ? Math.round(e.minutes) : null,   // timed: how long it really took
   };
 }
 

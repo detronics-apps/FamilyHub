@@ -25,7 +25,7 @@ publisher or anyone else.
   separately. Other people's mini-apps are added by copying a folder into `MiniApps/ThirdParty`;
   they are reviewed before installing and run sealed off. See [MINIAPPS.md](MINIAPPS.md).
 - **Chores**: plan; "Do something now" by time, energy and room; Start for a timer with optional
-  music from your own files; Done / Not now / Undo; next suggestions; Rooms; neutral Progress.
+  music from your own files; Start / Done / Undo; next suggestions; Rooms; neutral Progress.
 - **Tasks**: one-off jobs and projects with steps and dependencies.
 - **Tickets**: capture in seconds; the weekly family meeting; turn into a decision or task.
 - **Principles**: values and agreements with reasons, exceptions and review triggers.

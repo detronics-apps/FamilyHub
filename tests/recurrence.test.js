@@ -51,14 +51,14 @@ test('skipping lets a routine resume its normal cycle', () => {
   assert.equal(o.lastDone, null, 'a skip is not a completion');
 });
 
-test('later and move-to-date set the due day of the current turn only', () => {
+test('nothing is put off: old put-offs are ignored, a chore stays until done', () => {
   let { h, ids, ann } = fixture();
+  const before = occ(h, ids.floor);
   ({ household: h } = recordEvent(h, { choreId: ids.floor, type: 'deferred', until: '2026-10-27' }, at(TODAY)));
-  assert.equal(occ(h, ids.floor).dueDay, '2026-10-27');
   ({ household: h } = recordEvent(h, { choreId: ids.floor, type: 'rescheduled', until: '2026-10-29' }, at(TODAY)));
-  assert.equal(occ(h, ids.floor).dueDay, '2026-10-29');
+  assert.deepEqual([occ(h, ids.floor).dueDay, occ(h, ids.floor).state], [before.dueDay, before.state]);
   ({ household: h } = recordEvent(h, { choreId: ids.floor, type: 'done', by: ann }, at('2026-10-29')));
-  assert.equal(occ(h, ids.floor, '2026-10-29').dueDay, '2026-11-05', 'done clears the move');
+  assert.equal(occ(h, ids.floor, '2026-10-29').dueDay, '2026-11-05', 'next time counts from when it was done');
 });
 
 test('one-off chores stay ready until done or dropped', () => {
@@ -71,14 +71,9 @@ test('one-off chores stay ready until done or dropped', () => {
   assert.equal(occ(done, ids.mystery).state, 'closed');
 });
 
-test('repeatedly put off, or two whole cycles waiting, asks for a review', () => {
-  let { h, ids } = fixture();
+test('two whole cycles waiting asks for a review', () => {
+  const { h, ids } = fixture();
   assert.equal(occ(h, ids.floor).needsReview, false);
-  for (let i = 0; i < 3; i += 1) {
-    ({ household: h } = recordEvent(h, { choreId: ids.floor, type: 'deferred', until: '2026-10-26' }, at(TODAY)));
-  }
-  assert.equal(occ(h, ids.floor).putOffCount, 3);
-  assert.equal(occ(h, ids.floor).needsReview, true);
   // Weekly chore ready since 20 Oct: two whole weeks later it asks too, not before.
   const fresh = fixture();
   assert.equal(occ(fresh.h, fresh.ids.basin, '2026-11-03').needsReview, true);

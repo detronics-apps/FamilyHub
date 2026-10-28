@@ -40,3 +40,30 @@ export function fmtClock(ms) {
   const sec = String(s % 60).padStart(2, '0');
   return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
 }
+
+/* Checking in (D-080). A chore taking much longer than expected still counts -
+ * but a timer left running when someone wandered off should not run for hours.
+ * At the check-in it asks "Still on it?"; left unanswered for ANSWER_MS, it stops
+ * and nothing is recorded. "Still going" sets the next check-in as far again. */
+const MIN = 60000;
+export const ANSWER_MS = 30 * MIN;
+
+/** When to ask: three times the expected time, at least half an hour (an hour if open-ended). */
+export const checkInMs = (t) => (t.durationMs == null ? 60 * MIN : Math.max(30 * MIN, 3 * t.durationMs));
+
+/** 'running' | 'ask' | 'stop', given the next check-in and when the question was first shown (elapsed ms). */
+export function checkState(t, now, nextCheckMs, askedAtMs = null) {
+  const e = elapsedMs(t, now);
+  if (askedAtMs != null && e - askedAtMs >= ANSWER_MS) return 'stop';
+  return e >= nextCheckMs ? 'ask' : 'running';
+}
+
+/** Time past the expected, 0 until then (and for an open-ended timer). */
+export const overMs = (t, now) => (t.durationMs == null ? 0 : Math.max(0, elapsedMs(t, now) - t.durationMs));
+
+/** The ring: how full (0..1) and whether it is past the expected time - a second lap, as long as the first. */
+export function ringOf(t, now) {
+  if (t.durationMs == null) return { fill: 0, over: false };
+  const over = overMs(t, now);
+  return over ? { fill: Math.min(1, over / t.durationMs), over: true } : { fill: elapsedMs(t, now) / t.durationMs, over: false };
+}

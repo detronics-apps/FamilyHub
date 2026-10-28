@@ -54,3 +54,20 @@ test('preferences are repaired; fade goes to silence', () => {
   const f = fadeSteps(0.8, 4);
   assert.deepEqual(f, [0.6, 0.4, 0.2, 0]);
 });
+
+test('a long chore still counts; an abandoned timer asks, then stops', async () => {
+  const { checkInMs, checkState, ringOf, ANSWER_MS } = await import('../js/timer.js');
+  const MIN = 60000;
+  const t = startTimer(5, 0);                               // unpack the dishwasher, 5 min
+  assert.deepEqual(ringOf(t, 2.5 * MIN), { fill: 0.5, over: false });
+  assert.deepEqual(ringOf(t, 7.5 * MIN), { fill: 0.5, over: true }, 'past 5 min: a second lap');
+  assert.equal(ringOf(t, 60 * MIN).fill, 1);
+  assert.equal(checkInMs(t), 30 * MIN, 'at least half an hour');
+  assert.equal(checkInMs(startTimer(45, 0)), 135 * MIN, 'three times the expected');
+  assert.equal(checkInMs(startTimer(null, 0)), 60 * MIN);
+  assert.equal(checkState(t, 29 * MIN, 30 * MIN), 'running');
+  assert.equal(checkState(t, 30 * MIN, 30 * MIN), 'ask');
+  assert.equal(checkState(t, 30 * MIN + ANSWER_MS - 1, 30 * MIN, 30 * MIN), 'ask');
+  assert.equal(checkState(t, 30 * MIN + ANSWER_MS, 30 * MIN, 30 * MIN), 'stop', 'nobody answered');
+  assert.equal(checkState(t, 50 * MIN, 60 * MIN, null), 'running', 'after "Still going" the next check-in is further on');
+});

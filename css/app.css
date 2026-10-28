@@ -234,7 +234,6 @@ details.more > summary, details.explain > summary {
 .pill { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--panel-2); color: var(--text-dim); border: 1px solid var(--border); }
 .pill--important { background: var(--accent-soft); color: var(--accent-strong); border-color: var(--accent); }
 .pill--optional { background: var(--ok-soft); color: var(--ok); border-color: var(--ok); }
-.later-menu { display: flex; gap: var(--space-2); flex-wrap: wrap; padding-top: var(--space-2); border-top: 1px dashed var(--border); }
 
 .list { list-style: none; margin: 0; padding: 0; }
 /* A list shown as a panel keeps the panel's side padding (the reset above would otherwise take it away). */
@@ -356,6 +355,14 @@ dialog.modal::backdrop { background: rgb(40 25 15 / 45%); }
 .session { border-color: var(--accent); background: var(--accent-soft); display: flex; flex-direction: column; gap: var(--space-2); }
 .session__top { display: flex; gap: var(--space-3); align-items: center; }
 .session__clock { font: 700 28px/1 var(--font-mono); color: var(--text); white-space: nowrap; }
+.session__ring { flex: none; }
+.session__ring circle { fill: none; stroke-width: 5; }
+.session__ring-track { stroke: var(--border); }
+.session__ring-full { stroke: var(--accent); }
+.session__ring-fill { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset .5s linear; }
+.session__ring--over .session__ring-fill { stroke: var(--warn); }
+.session__ask { gap: var(--space-2); align-items: center; padding: var(--space-2); border-radius: var(--radius-sm, 8px); background: var(--warn-soft); }
+@media (prefers-reduced-motion: reduce) { .session__ring-fill { transition: none; } }
 .session__music { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; padding: var(--space-2) 0; border-top: 1px dashed var(--border-strong); }
 .session__music .checkline { min-height: 34px; }
 

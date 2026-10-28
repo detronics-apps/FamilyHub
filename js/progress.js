@@ -45,6 +45,37 @@ export function activity(household, limit = 30) {
       action: LABEL[e.type],
       who: personName(household, e.by),
       until: e.until,
+      minutes: e.minutes,
     };
   });
 }
+
+/**
+ * How much time the household's chores take, a week and on average a day - so the
+ * work can be planned for ("about an hour a day"). Each repeating chore counts its
+ * minutes as often as it comes round in a week (a monthly one counts 12/52 of a time).
+ * One-off jobs and finished chores are left out; chores without a time are counted,
+ * not guessed. Optional improvements are shown on their own.
+ */
+const PER_WEEK = { day: 7, week: 1, month: 12 / 52, year: 1 / 52 };
+export function weeklyLoad(household) {
+  let minutes = 0; let optional = 0; let unknown = 0; let counted = 0;
+  const byRoom = new Map();
+  for (const c of household.chores) {
+    const per = PER_WEEK[c.frequency.unit];
+    if (!per) continue;                          // one-off jobs
+    if (household.events.some((e) => e.choreId === c.id && e.type === 'dropped')) continue;
+    if (c.minutes == null) { unknown += 1; continue; }
+    const m = (c.minutes * per) / Math.max(1, c.frequency.every);
+    if (c.optional) { optional += m; continue; }
+    minutes += m; counted += 1;
+    byRoom.set(c.roomId, (byRoom.get(c.roomId) ?? 0) + m);
+  }
+  return {
+    week: minutes, day: minutes / 7, optional, unknown, counted,
+    rooms: [...byRoom].map(([id, m]) => ({ room: roomName(household, id), week: m })).sort((a, b) => b.week - a.week),
+  };
+}
+
+/** "1 h 25 min", "40 min". */
+export const fmtMinutes = (m) => { const r = Math.round(m); return r >= 60 ? `${Math.floor(r / 60)} h${r % 60 ? ` ${r % 60} min` : ''}` : `${r} min`; };

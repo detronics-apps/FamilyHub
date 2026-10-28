@@ -7,6 +7,26 @@ import { addChore, updateChore, deleteChore, addRoom, renameRoom, removeRoom, no
 import { sendHref } from '../shopping/logic.js';
 import { fmtFrequency } from '../../dates.js';
 import { SAMPLE_ROOMS, defaultInto, alreadyIn, addSamples } from './samples.js';
+import { weeklyLoad, fmtMinutes } from '../../progress.js';
+
+/** How much time the chores take, a week and a day on average - to plan for. */
+export function loadPanel(h) {
+  const w = weeklyLoad(h);
+  if (!w.counted && !w.unknown) return null;
+  return el('div', { class: 'panel stack', 'data-field': 'chore-load' }, [
+    el('div', { class: 'stats' }, [
+      el('div', { class: 'stat' }, [el('div', { class: 'stat__value', text: fmtMinutes(w.day) }), el('div', { class: 'stat__label', text: 'a day, on average' })]),
+      el('div', { class: 'stat' }, [el('div', { class: 'stat__value', text: fmtMinutes(w.week) }), el('div', { class: 'stat__label', text: 'a week, all the chores together' })]),
+    ]),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: [
+      'Each chore counted as often as it comes round: a daily one 7 times a week, a monthly one about once in 4 weeks. One-off jobs are not included.',
+      w.optional ? `Optional improvements add about ${fmtMinutes(w.optional)} a week.` : null,
+      w.unknown ? `${w.unknown} chore${w.unknown === 1 ? ' has' : 's have'} no time yet and ${w.unknown === 1 ? 'is' : 'are'} not counted - give ${w.unknown === 1 ? 'it' : 'them'} a time for the full picture.` : null,
+      'Shared between everyone who helps.',
+    ].filter(Boolean).join(' ') }),
+    w.rooms.length > 1 ? el('details', { class: 'more' }, [el('summary', { text: 'By room' }), el('ul', { class: 'list' }, w.rooms.map((r) => el('li', {}, [el('span', { class: 'list__main', text: r.room }), el('span', { class: 'small muted', text: `${fmtMinutes(r.week)} a week · ${fmtMinutes(r.week / 7)} a day` })])))]) : null,
+  ]);
+}
 
 /** Shopping owns the list; chores send supplies over in a link, confirmed there. */
 const shoppingOn = (ctx) => Boolean(ctx.app.registry.apps.shopping?.enabled);
@@ -22,9 +42,7 @@ export function planView(ctx, notices) {
     notices.push({
       id: `review:${c.id}`,
       level: 'warn',
-      text: o.putOffCount >= 3
-        ? `"${c.name}" has been put off ${o.putOffCount} times in a row. Worth a look at whether the plan fits?`
-        : `"${c.name}" has waited about ${o.missedCycles} whole cycles. Worth a look at whether the plan fits?`,
+      text: `"${c.name}" has waited about ${o.missedCycles} whole cycles. Worth a look at whether the plan fits?`,
       action: { label: 'Review', onClick: () => openEditor(ctx, c.id) },
     });
   }
@@ -34,6 +52,7 @@ export function planView(ctx, notices) {
     .filter((g) => g.chores.length);
 
   return el('div', { class: 'stack' }, [
+    loadPanel(h),
     el('div', { class: 'row' }, [
       el('p', { class: 'muted', style: { margin: 0, flex: '1 1 240px' }, text: 'Decide what needs doing and roughly how often. Only a name is needed - the rest can come later.' }),
       el('button', { class: 'btn btn-primary', type: 'button', text: 'New chore', 'data-field': 'add-chore', on: { click: () => openEditor(ctx, null) } }),

@@ -3,7 +3,7 @@
 // It is only ever added by an explicit click - never mixed into real data.
 //
 // Dates are relative to "today", so the example always looks lived-in:
-// some chores ready now, some coming up, one that keeps getting put off.
+// some chores ready now, some coming up, one waiting a while.
 
 import { addDays } from './dates.js';
 import { normaliseHousehold } from './model.js';
@@ -47,7 +47,6 @@ export function demoHousehold(today, name = 'The Example family') {
   ];
 
   const done = (id, n, by) => ({ choreId: `c_demo_${id}`, type: 'done', day: ago(n), at: `${ago(n)}T18:00:00.000Z`, by });
-  const putOff = (id, n, until) => ({ choreId: `c_demo_${id}`, type: 'deferred', day: ago(n), at: `${ago(n)}T19:00:00.000Z`, until });
   const events = [
     done('kfloor', 9, 'p_demo_sam'),
     done('cupboards', 12, 'p_demo_alex'),
@@ -60,10 +59,8 @@ export function demoHousehold(today, name = 'The Example family') {
     done('dishwasher', 1, 'p_demo_sam'),
     done('counters', 0, 'p_demo_alex'),
     done('bin', 1, 'p_demo_mia'),
-    // The oven keeps not fitting in - the review prompt shows what that looks like.
-    putOff('oven', 21, ago(14)),
-    putOff('oven', 14, ago(7)),
-    putOff('oven', 7, ago(1)),
+    // The oven has not fitted in for months - the review prompt shows what that looks like.
+    done('oven', 280, 'p_demo_alex'),
   ].map((e, i) => ({ id: `e_demo_${i}`, ...e }));
 
   const flag = (r) => ({ ...r, demo: true });
