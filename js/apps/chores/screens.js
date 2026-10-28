@@ -3,8 +3,8 @@
 import { el } from '../../ui/dom.js';
 import { findTasks, momentum, TIME_CHOICES, ENERGY_CHOICES, ORDER_RULES, defaultFilters } from '../../matching.js';
 import { occurrences, occurrence } from '../../recurrence.js';
-import { hasDemo, roomName } from '../../model.js';
-import { householdProgress, activity } from '../../progress.js';
+import { hasDemo, roomName, updateChore } from '../../model.js';
+import { householdProgress, activity, timeSuggestions } from '../../progress.js';
 import { fmtDay } from '../../dates.js';
 import { choreCard, demoNotice } from '../../ui/common.js';
 import { planView, openSamples, loadPanel } from './plan.js';
@@ -19,6 +19,15 @@ const TABS = [
 export function choresView(ctx, route, notices) {
   const h = ctx.app.household;
   if (hasDemo(h)) notices.push(demoNotice(ctx));
+  // Keeps taking longer than planned: offer the real time (D-081). Keyed on the minutes, so new runs ask again.
+  for (const { chore, minutes, runs } of timeSuggestions(h)) {
+    notices.push({
+      id: `time:${chore.id}:${minutes}`,
+      level: 'info',
+      text: `"${chore.name}" took ${runs.join(', ')} minutes the last ${runs.length} times you timed it${chore.minutes ? ` - you planned ${chore.minutes}` : ''}. Make it ${minutes} minutes?`,
+      action: { label: `Use ${minutes} min`, onClick: () => ctx.commit(updateChore(h, chore.id, { minutes })) },
+    });
+  }
   const sub = TABS.some((t) => t.sub === route.sub) ? route.sub : null;
   const body = { rooms: roomsView, plan: planView, progress: progressView }[sub] || executeView;
 

@@ -60,3 +60,15 @@ test('weekly load: minutes a week and a day, how often each comes round, the unk
   assert.equal(w.rooms[0].room, 'Kitchen');
   assert.equal(fmtMinutes(85), '1 h 25 min'); assert.equal(fmtMinutes(40), '40 min');
 });
+
+test('three timed Dones over the plan suggest their average', async () => {
+  const { timeSuggestions } = await import('../js/progress.js');
+  const chore = { id: 'trash', name: 'Take out the trash', minutes: 5 };
+  const runs = (...m) => ({ chores: [chore], events: m.map((minutes) => ({ choreId: 'trash', type: 'done', minutes })) });
+  assert.deepEqual(timeSuggestions(runs(7, 10)), [], 'two is not yet a pattern');
+  assert.equal(timeSuggestions(runs(7, 10, 7))[0].minutes, 8);
+  assert.deepEqual(timeSuggestions(runs(7, 10, 4)), [], 'the last one was within the plan');
+  assert.equal(timeSuggestions(runs(3, 4, 7, 10, 7, 9))[0].minutes, 7, 'the last five runs');
+  assert.equal(timeSuggestions({ chores: [{ ...chore, minutes: 8 }], events: runs(7, 10, 7).events }).length, 0, 'once raised, it stops asking');
+  assert.equal(timeSuggestions({ chores: [{ ...chore, minutes: null }], events: runs(7, 10, 7).events })[0].minutes, 8, 'no time set yet');
+});

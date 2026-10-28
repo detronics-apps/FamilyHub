@@ -79,3 +79,19 @@ export function weeklyLoad(household) {
 
 /** "1 h 25 min", "40 min". */
 export const fmtMinutes = (m) => { const r = Math.round(m); return r >= 60 ? `${Math.floor(r / 60)} h${r % 60 ? ` ${r % 60} min` : ''}` : `${r} min`; };
+
+/**
+ * Chores that keep taking longer than planned (D-081): the last three timed Dones
+ * all over the expected time (or no time set yet). Suggests the average of the last
+ * five timed runs, rounded - only when that is more than what is planned.
+ */
+export function timeSuggestions(household) {
+  const out = [];
+  for (const chore of household.chores) {
+    const runs = household.events.filter((e) => e.choreId === chore.id && e.type === 'done' && e.minutes).map((e) => e.minutes).slice(-5);
+    if (runs.length < 3 || !runs.slice(-3).every((m) => chore.minutes == null || m > chore.minutes)) continue;
+    const minutes = Math.round(runs.reduce((a, b) => a + b, 0) / runs.length);
+    if (chore.minutes == null || minutes > chore.minutes) out.push({ chore, minutes, runs });
+  }
+  return out;
+}

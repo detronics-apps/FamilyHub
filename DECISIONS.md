@@ -631,6 +631,12 @@ purpose (saved): show people what they have not thought of, and let them put the
   marked not counted), what moves the answer most, and year by year.
 - Tested: a home growing exactly as fast as after-tax investments, with no costs, comes out level.
 
+**D-081 Suggest the real time (owner, 2026-10-28).**
+When a chore's last three timed Dones all took longer than its expected time (or it has no time
+yet), the Chores tabs offer the average of its last five timed runs, rounded to a minute - "took 7,
+10, 7 minutes... you planned 5. Make it 8 minutes?" with "Use 8 min". Only upward, as asked; the
+notice closes, and comes back only when new runs change the suggestion. Untimed Dones do not count.
+
 **D-080 Nothing is put off; the timer ring (owner, 2026-10-28).**
 The owner: "Not now" should not exist. A chore that is not done today is simply still there
 tomorrow; a weekly one carries over day by day until it is done. Putting it off to a date hid it
