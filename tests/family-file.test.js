@@ -94,3 +94,26 @@ test('registries from two laptops merge per app', () => {
   assert.deepEqual(Object.keys(registry.retained).sort(), ['tasks', 'tickets']);
   assert.deepEqual(conflicts, []);
 });
+
+test('D-082 two phones change the same shopping list: the laptop keeps both', async () => {
+  const lists = (s) => createCollection(s, { app: 'shopping', name: 'lists', summary: (r) => ({ title: r.title }) });
+  const item = (id, name) => ({ id, name, checked: false });
+  const laptop = createMemoryStore();
+  const l = await lists(laptop).put({ title: 'Groceries', items: [item('a', 'eggs')] });
+  const got = await collectAppFiles(laptop);                       // both phones Get the same copy
+  const me = createMemoryStore(got);
+  const wife = createMemoryStore(got);
+  await lists(me).put({ ...(await lists(me).get(l.id)), items: [item('a', 'eggs'), item('b', 'milk')] });
+  await lists(wife).put({ ...(await lists(wife).get(l.id)), items: [item('a', 'eggs'), item('c', 'bread')] });
+  const send = async (phone) => parseFamilyFile(buildFamilyFile({ household: demoHousehold(TODAY), registry: emptyRegistry(), files: await collectAppFiles(phone), base: demoHousehold(TODAY), baseFiles: got }));
+  for (const phone of [me, wife]) { const p = await send(phone); await copyAppData(filesAsStore(p), laptop, createMemoryStore(p.baseFiles)); }
+  const after = lists(laptop);
+  assert.deepEqual((await after.get(l.id)).items.map((i) => i.name), ['eggs', 'milk', 'bread']);
+  const { items } = await after.list();
+  assert.equal(items[0].rev, (await after.get(l.id)).rev, 'the index knows the merged copy is the newest');
+  // Without the starting copy (an older phone): newer wins, as before.
+  const old = createMemoryStore(got);
+  await copyAppData(me, old);
+  await copyAppData(wife, old);
+  assert.deepEqual((await lists(old).get(l.id)).items.map((i) => i.name), ['eggs', 'milk']);
+});

@@ -11,7 +11,7 @@
 // Records always carry: id, rev (counts edits), createdAt, updatedAt, schema.
 
 import { stableStringify, walk } from './folder-store.js';
-import { mergeRecord3 } from './merge.js';
+import { mergeRecord3, mergeDeep3 } from './merge.js';
 
 export const INDEX_KIND = 'family-hub-index';
 
@@ -225,13 +225,17 @@ export function createCollection(store, spec) {
  * Moving mini-app data between stores - this device <-> the Drive folder -
  * without losing anything: a record is copied only where the target has no
  * copy or an older one (lower rev); indexes are merged entry by entry.
+ * Given `base` (a store with the copy the sender started from - a phone's file,
+ * D-082), a record changed on both sides is merged item by item instead, so
+ * neither side's changes are lost; real clashes come back in `report.conflicts`.
  * The household and chores files are not touched here (folder-sync.js owns them).
  * ------------------------------------------------------------------ */
 
 const OWNED_ELSEWHERE = [/^Data\/household\//, /^Data\/chores\/(chores\.json|events\/)/, /^Data\/Media\//];
 
-export async function copyAppData(from, to) {
-  const report = { copied: 0, merged: 0, kept: 0, skipped: [] };
+export async function copyAppData(from, to, base = null) {
+  const report = { copied: 0, merged: 0, kept: 0, skipped: [], conflicts: [] };
+  const remerged = new Map();   // record path -> merged record, its index entry fixed below
   const paths = (await walk(from, 'Data')).filter((p) => !OWNED_ELSEWHERE.some((re) => re.test(p)));
   for (const path of paths) {
     const src = await from.read(path);
@@ -249,6 +253,13 @@ export async function copyAppData(from, to) {
         }
         await to.write(path, stableStringify(merged));
         report.merged += 1;
+      } else if (path.includes('/records/') && a.rev != null && b.rev != null && a.rev !== b.rev && await base?.read(path) != null) {
+        const r = mergeDeep3(JSON.parse(await base.read(path)), b, a);
+        const merged = { ...r.merged, rev: Math.max(a.rev, b.rev) + 1, updatedAt: [a.updatedAt, b.updatedAt].filter(Boolean).sort().at(-1) };
+        await to.write(path, stableStringify(merged));
+        remerged.set(path, merged);
+        for (const c of r.conflicts) report.conflicts.push({ file: path, ...c });   // c.path: where in the record
+        report.merged += 1;
       } else if ((a.rev ?? 0) > (b.rev ?? 0)) {
         await to.write(path, src);
         report.copied += 1;
@@ -258,6 +269,19 @@ export async function copyAppData(from, to) {
     } catch {
       report.skipped.push(path);
     }
+  }
+  // A merged record outranks both copies, so its index entry must too - or a
+  // later copy would think the older one newer.
+  // ponytail: the summary is the newer side's, not rebuilt (copyAppData has no summary function); the app's next save refreshes it.
+  for (const [path, r] of remerged) {
+    const indexPath = path.replace(/\/records\/[^/]+$/, '/index.json');
+    const text = await to.read(indexPath);
+    if (!text) continue;
+    const ix = JSON.parse(text);
+    const e = ix.entries?.[r.id];
+    if (!e || e.deleted) continue;
+    ix.entries[r.id] = { ...e, rev: r.rev, updatedAt: r.updatedAt };
+    await to.write(indexPath, stableStringify(ix));
   }
   return report;
 }

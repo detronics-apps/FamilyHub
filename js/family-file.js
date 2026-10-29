@@ -33,7 +33,7 @@ export async function collectAppFiles(store) {
   return files;
 }
 
-export function buildFamilyFile({ household, registry, files = {}, base = null, now = new Date() }) {
+export function buildFamilyFile({ household, registry, files = {}, base = null, baseFiles = null, now = new Date() }) {
   return JSON.stringify({
     kind: FAMILY_FILE_KIND,
     format: FAMILY_FILE_FORMAT,
@@ -41,6 +41,7 @@ export function buildFamilyFile({ household, registry, files = {}, base = null, 
     household,
     registry: normaliseRegistry(registry),
     ...(base ? { base } : {}),
+    ...(base && baseFiles ? { baseFiles } : {}),   // the mini-app records it started from (D-082)
     files,
   });
 }
@@ -87,7 +88,11 @@ export function parseFamilyFile(text) {
   if (errors.length) return { ok: false, errors };
   let base = null;
   try { base = raw.base ? migrate(raw.base) : null; } catch { base = null; }   // a bad base only loses the deletions it would have told us about
-  return { ok: true, household, registry: raw.registry ? normaliseRegistry(raw.registry) : null, files, base, exportedAt: raw.exportedAt ?? null, legacy: false };
+  // Only well-formed entries; a bad one just means that record falls back to newer-wins.
+  const baseFiles = base && raw.baseFiles && typeof raw.baseFiles === 'object'
+    ? new Map(Object.entries(raw.baseFiles).filter(([p, t]) => APP_DATA(p) && !/(^|\/)\.\.(\/|$)/.test(p) && typeof t === 'string'))
+    : null;
+  return { ok: true, household, registry: raw.registry ? normaliseRegistry(raw.registry) : null, files, base, baseFiles, exportedAt: raw.exportedAt ?? null, legacy: false };
 }
 
 /** The mini-app files of a parsed family file, as a store copyAppData can read. */

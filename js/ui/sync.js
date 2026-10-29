@@ -8,7 +8,7 @@
 // Status is never optimistic: "Saved to your Drive folder" only after the files
 // were written there; otherwise "On this device only" or what is needed.
 
-import { createFolderStore, FolderError } from '../folder-store.js';
+import { createFolderStore, FolderError, createMemoryStore } from '../folder-store.js';
 import { syncHousehold, writeHousehold, fingerprint, PATHS } from '../folder-sync.js';
 import { mergeHousehold, resolveConflicts } from '../merge.js';
 import { copyAppData } from '../collections.js';
@@ -22,6 +22,7 @@ import { KEYS } from '../storage.js';
 const BASE_KEY = KEYS.folderBase;
 const REG_BASE_KEY = KEYS.registryBase;
 const FILE_BASE_KEY = KEYS.fileBase;
+const FILE_BASE_FILES = 'fileBaseFiles';   // IndexedDB: the mini-app records this phone last agreed on (D-082)
 const HANDLE_KEY = 'folder';
 const DEBOUNCE_MS = 1000;
 const PHONE_COPY_MS = 120000;   // the copy for phones is rebuilt at most every two minutes
@@ -237,6 +238,8 @@ them in by itself and moves the file to "Brought in".
    * then moved to "Brought in" so the same file is never added twice. True when a
    * question about something changed in both places is now waiting.
    */
+  const shown = (v) => (v == null || v === '' ? '(empty)' : typeof v === 'object' ? JSON.stringify(v).slice(0, 40) : String(v));
+  const appName = (file) => { const id = file.split('/')[1]; return ctx.app.registry.apps[id]?.name ?? id; };   // Data/<app>/...
   async function bringInPhoneFiles() {
     const files = ((await folder.list(PHONE_DIR)) ?? []).filter((e) => e.kind === 'file' && isFromPhone(e.name));
     const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ').replace(':', '.');
@@ -251,7 +254,11 @@ them in by itself and moves the file to "Brought in".
       if (ours) {
         const r = await importFamilyFile(parsed, 'merge', { quiet: true });
         waiting ||= r.conflicts > 0;
-        ctx.flash({ id: `phone:${f.name}`, level: 'ok', text: r.conflicts ? `Changes from a phone were added in - ${r.conflicts === 1 ? 'one thing was' : `${r.conflicts} things were`} changed in both places, so choose which to keep.` : 'Changes from a phone were added in.' });
+        const clashes = r.report.conflicts.map((c) => `${c.path.at(-1)} in ${appName(c.file)}: kept ${shown(c.mine)}, the phone had ${shown(c.theirs)}`);
+        ctx.flash({ id: `phone:${f.name}`, level: r.conflicts || clashes.length ? 'warn' : 'ok', text: [
+          r.conflicts ? `Changes from a phone were added in - ${r.conflicts === 1 ? 'one thing was' : `${r.conflicts} things were`} changed in both places, so choose which to keep.` : 'Changes from a phone were added in.',
+          clashes.length ? `Changed differently on both, so this laptop's was kept (change it by hand if the phone was right): ${clashes.join('; ')}.` : null,
+        ].filter(Boolean).join(' ') });
       } else {
         const why = parsed.ok ? `it holds ${parsed.household.household.name}, not ${ctx.app.household.household.name}` : parsed.errors[0];
         ctx.flash({ id: `phone:${f.name}`, level: 'warn', text: `"${f.name}" in the Phone folder was not added in: ${why}. It was moved to Phone/Not brought in.` });
@@ -332,7 +339,7 @@ them in by itself and moves the file to "Brought in".
         await writeHousehold(folder, resolved);
         writeJson(BASE_KEY, resolved);
       }
-      if (c.fromFile) writeJson(FILE_BASE_KEY, resolved);
+      if (c.fromFile) await rememberFileBase(resolved);
       ctx.replaceHousehold(resolved, 'Your choices are saved.');
       if (folder) await run(); else set({ state: s.mode === 'folder' ? 'reconnect' : 'device' });
     } catch (err) { fail(err); }
@@ -345,7 +352,8 @@ them in by itself and moves the file to "Brought in".
     const store = appStore() ?? deviceStore;
     const base = withBase ? readJson(FILE_BASE_KEY) : null;
     const sameFamily = base?.household?.id === ctx.app.household.household.id;
-    return buildFamilyFile({ household: ctx.app.household, registry: ctx.app.registry, files: await collectAppFiles(store), base: sameFamily ? base : null });
+    const baseFiles = withBase && sameFamily ? await idbGet(FILE_BASE_FILES).catch(() => null) : null;
+    return buildFamilyFile({ household: ctx.app.household, registry: ctx.app.registry, files: await collectAppFiles(store), base: sameFamily ? base : null, baseFiles });
   }
 
   async function backupNow() {
@@ -378,20 +386,26 @@ them in by itself and moves the file to "Brought in".
     if (mode === 'merge') {
       ({ household, conflicts } = mergeHousehold(id === ctx.app.household.household.id ? base : null, ctx.app.household, parsed.household));
     }
-    const report = await copyAppData(filesAsStore(parsed), appStore() ?? deviceStore);
+    // The records both sides started from: the sender's (a phone's file), else what this phone last agreed on.
+    const baseFiles = parsed.base?.household?.id === id && parsed.baseFiles ? parsed.baseFiles
+      : readJson(FILE_BASE_KEY)?.household?.id === id ? await idbGet(FILE_BASE_FILES).catch(() => null) : null;
+    const report = await copyAppData(filesAsStore(parsed), appStore() ?? deviceStore, baseFiles ? createMemoryStore(baseFiles) : null);
     if (parsed.registry) ctx.replaceRegistry(mergeRegistry(null, ctx.app.registry, parsed.registry).registry);
     if (conflicts.length) {
       set({ state: 'decision', conflict: { household, conflicts, theirs: parsed.household, fromFile: true, mineAtDetection: ctx.app.household } });
       return { conflicts: conflicts.length, report };
     }
     ctx.replaceHousehold(household, quiet ? null : 'The family file was brought in.');
-    if (s.mode !== 'folder') writeJson(FILE_BASE_KEY, household);   // a phone remembers what it now agrees with
+    if (s.mode !== 'folder') await rememberFileBase(household);   // a phone remembers what it now agrees with
     schedule();
     return { conflicts: 0, report };
   }
 
   /** After saving a family file, remember it as the base for the next exchange. */
-  function rememberFileBase() { writeJson(FILE_BASE_KEY, ctx.app.household); }
+  async function rememberFileBase(household = ctx.app.household) {
+    writeJson(FILE_BASE_KEY, household);
+    if (!folderSupported()) await idbSet(FILE_BASE_FILES, await collectAppFiles(deviceStore)).catch(() => {});
+  }
 
   // Coming back to the window: another laptop may have changed the folder.
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') run(); });

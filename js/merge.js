@@ -41,6 +41,56 @@ export function mergeRecord3(base, mine, theirs) {
 }
 
 /**
+ * A mini-app record merged all the way down (D-082), for a phone's file brought in:
+ * a list of items with ids (a shopping list, a week's meals) is merged item by item,
+ * a list of plain values (tags) keeps what either side added and drops what either
+ * removed, and only a value changed differently on both sides is a clash - "mine"
+ * is kept and the clash reported with where it is (`path`).
+ */
+export function mergeDeep3(base, mine, theirs, path = []) {
+  const conflicts = [];
+  const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
+  const withIds = (v) => Array.isArray(v) && v.every((x) => isObj(x) && x.id != null);
+  function go(b, m, t, at) {
+    if (same(m, t)) return m;
+    if (same(m, b)) return t;
+    if (same(t, b)) return m;
+    if (isObj(m) && isObj(t)) {
+      const out = {};
+      for (const k of new Set([...Object.keys(b ?? {}), ...Object.keys(m), ...Object.keys(t)])) {
+        const v = go(isObj(b) ? b[k] : undefined, m[k], t[k], [...at, k]);
+        if (v !== undefined) out[k] = v;
+      }
+      return out;
+    }
+    if (withIds(m) && withIds(t) && (b === undefined || withIds(b))) {
+      const B = new Map((b ?? []).map((x) => [x.id, x]));
+      const T = new Map(t.map((x) => [x.id, x]));
+      const out = [];
+      for (const x of m) {
+        const y = T.get(x.id);
+        if (y) out.push(go(B.get(x.id), x, y, [...at, x.id]));
+        else if (!B.has(x.id) || !same(x, B.get(x.id))) out.push(x);   // I added it, or edited what they removed
+      }
+      const M = new Set(m.map((x) => x.id));
+      for (const y of t) if (!M.has(y.id) && (!B.has(y.id) || !same(y, B.get(y.id)))) out.push(y);   // they added it
+      return out;
+    }
+    if (Array.isArray(m) && Array.isArray(t) && (b === undefined || Array.isArray(b))) {
+      const key = (x) => JSON.stringify(x);
+      const B = new Set((b ?? []).map(key));
+      const M = new Set(m.map(key));
+      const T = new Set(t.map(key));
+      return [...m.filter((x) => T.has(key(x)) || !B.has(key(x))), ...t.filter((x) => !M.has(key(x)) && !B.has(key(x)))];
+    }
+    conflicts.push({ path: at, mine: m, theirs: t });
+    return m;
+  }
+  const merged = go(base, mine, theirs, path);
+  return { merged, conflicts: conflicts.filter((c) => !['rev', 'updatedAt'].includes(c.path.at(-1))) };
+}
+
+/**
  * Merge two lists of records by id.
  * @returns {{ list: Array, conflicts: Array<{id, kind: 'field'|'edit-delete', field?, mine, theirs}> }}
  */

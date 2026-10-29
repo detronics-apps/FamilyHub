@@ -92,7 +92,7 @@ workstreams W1-W3. This file records status only.
 
 ## Test results
 
-`npm test`: **317 tests, 317 pass** (Node 24). Browser checks: see TEST_PLAN.md.
+`npm test`: **319 tests, 319 pass** (Node 24). Browser checks: see TEST_PLAN.md.
 
 ## Known limitations
 

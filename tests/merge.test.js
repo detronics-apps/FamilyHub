@@ -85,3 +85,17 @@ test('two-way (no base): everything new on both sides is kept', () => {
   assert.deepEqual(conflicts, []);
   assert.equal(household.events.length, 2);
 });
+
+test('D-082 mini-app records from two phones: items from both kept, removals kept, a real clash reported', async () => {
+  const { mergeDeep3 } = await import('../js/merge.js');
+  const item = (id, name, qty = 1) => ({ id, name, qty, checked: false });
+  const base = { id: 'l', rev: 5, title: 'Groceries', tags: ['week'], items: [item('a', 'eggs'), item('b', 'rice')] };
+  const me = { ...base, rev: 6, items: [item('a', 'eggs'), item('b', 'rice'), item('c', 'milk')] };
+  const wife = { ...base, rev: 6, tags: ['week', 'braai'], items: [item('a', 'eggs', 12), item('d', 'bread')] };   // rice bought and removed
+  const r = mergeDeep3(base, me, wife);
+  assert.deepEqual(r.merged.items.map((i) => `${i.name}${i.qty}`), ['eggs12', 'milk1', 'bread1']);
+  assert.deepEqual(r.merged.tags, ['week', 'braai']);
+  assert.deepEqual(r.conflicts, []);
+  const clash = mergeDeep3(base, { ...base, items: [item('a', 'eggs', 6), base.items[1]] }, { ...base, items: [item('a', 'eggs', 12), base.items[1]] });
+  assert.deepEqual(clash.conflicts.map((c) => [c.path.join('.'), c.mine, c.theirs]), [['items.a.qty', 6, 12]]);
+});

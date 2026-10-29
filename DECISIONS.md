@@ -631,6 +631,22 @@ purpose (saved): show people what they have not thought of, and let them put the
   marked not counted), what moves the answer most, and year by year.
 - Tested: a home growing exactly as fast as after-tax investments, with no costs, comes out level.
 
+**D-082 Two phones sending back: both kept, in every mini-app (owner, 2026-10-29).**
+The owner asked: I send from my phone, my wife gets latest (without a laptop opening in between)
+and sends from hers - are my changes lost? Chores were safe (three-way merge with the phone's base,
+D-052), but mini-app records (the shopping list, a week's meals, a meal) were copied newer-wins by
+rev: tested, two phones adding "milk" and "bread" to the same list left only "milk".
+- A phone now remembers the mini-app records it last agreed on (IndexedDB, `fileBaseFiles`, set on
+  every Get latest and Send back) and its file carries them as `baseFiles` beside `base`.
+- Bringing a phone's file in, a record changed on both sides is merged against that copy
+  (`mergeDeep3`): items with ids (shopping items, planned meals) one by one - both sides' additions
+  kept, a removal on one side kept, an item edited on both merged field by field; plain lists
+  (tags) keep both sides' additions; the same value changed differently on both keeps this laptop's
+  and says so in the notice, with both values, to change by hand. The merged record's rev is above
+  both, and its index entry follows.
+- The same applies when a phone gets latest: its own unsent changes are merged in, not replaced.
+- Files from phones on an older version (no `baseFiles`) are brought in as before, newer wins.
+
 **D-081 Suggest the real time (owner, 2026-10-28).**
 When a chore's last three timed Dones all took longer than its expected time (or it has no time
 yet), the Chores tabs offer the average of its last five timed runs, rounded to a minute - "took 7,
