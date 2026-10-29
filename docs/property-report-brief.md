@@ -1,6 +1,6 @@
 # Property report brief (owner, 2026-10-29) - to plan and build later
 
-Queued by the owner "once the usage has reset". Built in v0.9.25 (D-084), except: the monthly cost split by part, a fuller reordering of the home page, and editing the central value inside the range panel.
+Queued by the owner "once the usage has reset". Built in v0.9.25 (D-084) and v0.9.26 (D-085): all of it, including the monthly cost split by part, the page order, and your own figure inside the range panel.
 
 ## Small fixes noted the same day
 1. **Buying in** should default to the current month and year (it shows blank), still changeable.

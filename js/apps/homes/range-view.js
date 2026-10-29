@@ -14,12 +14,26 @@ const signed = (x, unit) => `${x > 0 ? '+' : x < 0 ? '−' : ''}${Math.abs(x)}${
  * @param names   [A, B] for two homes; [name] for one
  * @param H       months at which the answer is read (the years chosen, or the stay)
  */
-export function rangePanel({ values, today, state, names, H, opts = {}, xLabel = null }) {
-  const host = el('div', { class: 'stack', 'data-field': 'range-panel' });
+export function rangePanel(args) {
+  const p = rangeParts(args);
+  return el('div', { class: 'stack', 'data-field': 'range-panel' }, [p.chart, p.says, p.moves, p.controls]);
+}
+
+/**
+ * The same, in four parts a page can place apart (D-085): the graph, what it says, what
+ * moves it most, and the controls. One home can pass `onCentral(field, value)`, which
+ * puts a "Your figure" box beside each slider that changes the home itself.
+ */
+export function rangeParts({ values, today, state, names, H, opts = {}, xLabel = null, onCentral = null }) {
+  const parts = { chart: el('div', { class: 'stack', 'data-field': 'range-chart' }), says: el('div', { class: 'stack' }), moves: el('div', { class: 'stack' }), controls: el('div', { class: 'stack' }) };
   const keys = relevant(values).map((x) => x.key).join();
   if (!state.ranges || state.keys !== keys) { state.ranges = defaultRanges(values); state.keys = keys; }
   const two = names.length > 1;
-  const draw = () => host.replaceChildren(...build());
+  const draw = () => {
+    const [chart, says, moves, controls] = build();
+    parts.chart.replaceChildren(chart); parts.says.replaceChildren(...[says].filter(Boolean));
+    parts.moves.replaceChildren(...[moves].filter(Boolean)); parts.controls.replaceChildren(...[controls].filter(Boolean));
+  };
 
   function build() {
     const r = scenarioRange(values, today, state.ranges, H, opts);
@@ -66,11 +80,24 @@ export function rangePanel({ values, today, state, names, H, opts = {}, xLabel =
     ];
   }
 
+  // The central figure is the home's own value: changing it here changes the home.
+  function central(x) {
+    if (!onCentral || values.length !== 1) return null;
+    const key = x.field(values[0]);
+    const money = key === 'maintYearly';
+    return el('label', { class: 'row small', style: { gap: 'var(--space-1)' } }, [
+      el('span', { class: 'muted', text: 'Your figure' }),
+      el('input', { type: 'number', inputmode: 'decimal', step: money ? 1000 : 0.25, value: values[0][key] ?? '', style: { width: '7em' }, 'aria-label': `${x.label}: your figure`, 'data-field': `range-central:${x.key}`,
+        on: { change: (e) => { if (e.target.value !== '' && Number.isFinite(Number(e.target.value))) onCentral(key, Number(e.target.value)); } } }),
+      el('span', { class: 'muted', text: money ? 'a year' : '% a year' }),
+    ]);
+  }
+
   function sliders() {
     const vars = relevant(values).filter((x, i) => shows('advanced') || i < 3);
     return el('details', { class: 'panel more', 'data-field': 'range-sliders' }, [
       el('summary', { text: 'Change the range' }),
-      el('p', { class: 'small muted', text: `How far below and above your own figure each assumption is tested. Your own figure stays the central line - change it in the home itself.${shows('advanced') ? '' : ' More assumptions in Advanced.'}` }),
+      el('p', { class: 'small muted', text: `How far below and above your own figure each assumption is tested. Your own figure is the central line${onCentral && values.length === 1 ? ' - change it here or in the home itself' : ' - change it in the home itself'}.${shows('advanced') ? '' : ' More assumptions in Advanced.'}` }),
       ...vars.map((x) => {
         const r = state.ranges[x.key];
         const out = el('span', { class: 'small', text: `${signed(r.low, x.unit)} to ${signed(r.high, x.unit)}` });
@@ -78,6 +105,7 @@ export function rangePanel({ values, today, state, names, H, opts = {}, xLabel =
           on: { input: (e) => { r[side] = Number(e.target.value); out.textContent = `${signed(r.low, x.unit)} to ${signed(r.high, x.unit)}`; }, change: draw } });
         return el('fieldset', { class: 'stack', style: { gap: 'var(--space-1)', border: 0, padding: 0 } }, [
           el('label', { class: 'checkline' }, [el('input', { type: 'checkbox', checked: r.on !== false, 'data-field': `range-on:${x.key}`, on: { change: (e) => { r.on = e.target.checked; draw(); } } }), el('strong', { text: x.label }), ' ', out]),
+          central(x),
           el('div', { class: 'row' }, [el('span', { class: 'small muted', text: 'below' }), slider('low', -x.max, 0), slider('high', 0, x.max), el('span', { class: 'small muted', text: 'above' })]),
         ]);
       }),
@@ -85,7 +113,7 @@ export function rangePanel({ values, today, state, names, H, opts = {}, xLabel =
   }
 
   draw();
-  return host;
+  return parts;
 }
 
 function scenarioWords(d) {

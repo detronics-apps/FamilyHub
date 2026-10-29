@@ -168,7 +168,7 @@ export function homePlan(input, today, { withScenarios = true } = {}) {
     const homeNet = kind === 'rent' ? num(v.rentDeposit) : value * (1 - sell) - owed - tax;
     const forgone = on.forgone ? fromPocket * ((1 + o) ** (t / 12) - 1) : 0;
     const ahead = homeNet + inv + cashIn - paid - invPut - forgone - start;
-    months.push({ t, ym: addMonthsYM(ym, t), out, bondPaid, running, rent, trip, upgradeNow, taken, owed, value, inv, put, paid, homeNet, ahead, minPmt: r?.minPmt ?? 0 });
+    months.push({ t, ym: addMonthsYM(ym, t), out, bondPaid, running, upkeep: maint, rent, trip, upgradeNow, taken, owed, value, inv, put, paid, homeNet, ahead, minPmt: r?.minPmt ?? 0 });
   }
   // How long you live there counts from today when it started earlier, else from its start.
   const N = Math.max(0, now);

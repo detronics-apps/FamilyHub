@@ -631,6 +631,21 @@ purpose (saved): show people what they have not thought of, and let them put the
   marked not counted), what moves the answer most, and year by year.
 - Tested: a home growing exactly as fast as after-tax investments, with no costs, comes out level.
 
+**D-085 The rest of the property report: cost by part, the order, your figure in the range (owner, 2026-10-30).**
+- **What it costs a month, by part** (a home's page): the bond, rates/levies/insurance, upkeep and
+  repairs, rent, getting to work - now, in 5 years, when you leave, and after the bond - with "All
+  of it", a graph of each part over time, and up front against every month over the stay. A
+  paid-off bond is not free: what stays is said; when running costs are empty or left out it says
+  so instead of showing R0. The month record carries `upkeep` (part of `running`); tested that the
+  parts add up to what goes out. It replaces the single "paid out that month" graph.
+- **The order** follows the brief: summary and what it means; ahead or behind; the range and what it
+  says; what moves the answer most; cost by part; money in and out; can you carry it; did you think
+  of; then the range's controls and the year-by-year table. The range panel comes in parts
+  (`rangeParts`) so a page can place them apart; Compare keeps it in one piece.
+- **Your figure** beside each range slider on a home's page: the central value is the home's own
+  figure (each assumption names it - `field(v)`), so changing it there changes the home, and the
+  range is then tested around it. Not in Compare, which works on saved homes.
+
 **D-084 The scenario range, a plain answer, and "Can you carry it?" (owner, 2026-10-29).**
 From the owner's property report brief (docs/property-report-brief.md), built on the existing Homes
 report rather than rebuilt:
@@ -667,8 +682,7 @@ report rather than rebuilt:
 - **Buying in / Renting from** show this month when empty ("This month"), still changeable.
 - **The chore timer**: Pause/Resume also on the chore's own card while it runs, and the clock says
   "Paused".
-Not yet from the brief: the monthly cost split into bond, running, upkeep and rent; a fuller
-reordering of the home page; ranges with an editable central value inside the panel.
+The three parts left then were built in D-085.
 
 **D-083 Homes from any month; Remove everywhere; Print and CSV (owner, 2026-10-29).**
 The owner: start from today, but changeable - "I bought my house in 2019 and still want the full

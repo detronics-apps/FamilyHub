@@ -11,9 +11,9 @@ import { REFERENCE, total, SELL_DEFAULTS } from '../finance/maths.js';
 import { historyGrowth, CGT } from './ownrent.js';
 import { EVENT_KINDS } from './bondlog.js';
 import { homePlan, withAndWithout, sameMoney, kindOf, KINDS, SECTIONS, SECTIONS_ON, SCENARIO_KINDS, PLAN_DEFAULTS } from './home.js';
-import { levelBar, shows, draft, loadDraft, input, info, linesPanel as eventsPanel, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, RULE, outOf, savedPanel, exportBar, rand, pct, months } from '../finance/pod.js';
+import { levelBar, shows, draft, loadDraft, input, info, linesPanel as eventsPanel, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, RULE, savedPanel, exportBar, rand, pct, months } from '../finance/pod.js';
 import { HOME_HELP as H } from '../finance/help.js';
-import { rangePanel } from './range-view.js';
+import { rangePanel, rangeParts } from './range-view.js';
 import { scenarioRange, defaultRanges } from './scenarios.js';
 import { carryIt, COMFORT } from './risk.js';
 
@@ -337,6 +337,10 @@ function results(hub, d) {
   const todayMark = p.now > 0 ? { x: p.now, label: 'Today' } : null;
   // Calendar years under the graphs when it does not start this month.
   const xLabel = startsNow ? null : (x) => String(Number(p.startYM.slice(0, 4)) + Math.floor((Number(p.startYM.slice(5)) - 1 + x) / 12));
+  // The scenario range, in parts placed down the page: graph and reading, what moves it, the controls.
+  const range = rangeParts({ values: [v], today, state: homeRange, names: [d.title || 'This home'], H: p.stay - N,
+    xLabel: startsNow ? null : (x) => { const s0 = p.now > 0 ? today.slice(0, 7) : p.startYM; return String(Number(s0.slice(0, 4)) + Math.floor((Number(s0.slice(5)) - 1 + x) / 12)); },
+    onCentral: (key, val) => { v[key] = val; d.mine.add(key); hub.render(); } });
   const out = [
     el('div', { class: 'stats' }, [
       stat(rand(p.monthNow), 'a month now, all counted', 'r-month'),
@@ -350,8 +354,10 @@ function results(hub, d) {
     ], { label: 'How far ahead or behind you would be, if you sold or left after that long',
       marks: [even != null ? { x: even, label: startsNow ? `Ahead from ${whenLabel(even)}` : `Ahead from ${xLabel(even)}` } : null, { x: p.stay, label: startsNow ? `You: ${yrs(stay)}` : `You: ${p.at.ym.slice(0, 4)}` }, payoff, todayMark], xLabel,
       story: `${RULE} ${p.kind === 'buy' ? 'It starts below zero: duty, fees and the agent are paid however short the stay.' : p.kind === 'own' ? 'Zero is selling today.' : 'Rent goes further below zero every month - none of it comes back.'}` })),
-    rangePanel({ values: [v], today, state: homeRange, names: [d.title || 'This home'], H: p.stay - N,
-      xLabel: startsNow ? null : (x) => { const s0 = p.now > 0 ? today.slice(0, 7) : p.startYM; return String(Number(s0.slice(0, 4)) + Math.floor((Number(s0.slice(5)) - 1 + x) / 12)); } }),
+    range.chart,
+    range.says,
+    range.moves,
+    costSplit(p, N, span, xLabel, [payoff, todayMark]),
     chartPanel('Money in and out',
       lineChart([
         ...(p.kind !== 'rent' ? [{ name: 'What the home is worth', points: pts(p, 'value') }] : []),
@@ -359,13 +365,10 @@ function results(hub, d) {
         ...(p.bond && w.any ? [{ name: 'Still owed, without', points: pts(p0, 'owed', -1), dashed: true }] : []),
         { name: 'Paid out so far', points: pts(p, 'paid', -1), dashed: !w.any },
         ...(at.inv > 0 ? [{ name: 'Invested', points: pts(p, 'inv') }] : []),
-      ], { label: 'What the home is worth, what is owed, and what has been paid out', marks: [payoff, todayMark], xLabel, story: RULE }),
-      lineChart([
-        { name: w.any ? 'Paid out that month, with your what-ifs' : 'Paid out that month', points: outOf(p.months.slice(0, span).map((m) => [m.t, m.out])) },
-        ...(w.any ? [{ name: 'Without them', points: outOf(p0.months.slice(0, span).map((m) => [m.t, m.out])), dashed: true }] : []),
-      ], { label: 'What comes out of your pocket each month', marks: [payoff, todayMark], xLabel, story: 'The bond, rates, insurance, upkeep, travel - or rent. It drops when the bond is paid off.' })),
+      ], { label: 'What the home is worth, what is owed, and what has been paid out', marks: [payoff, todayMark], xLabel, story: RULE })),
     carryPanel(v, p, today, homeRange, p.stay - N),
     forgotten(v, p),
+    range.controls,
   ];
   // Year by year, folded away: the detail behind the graphs, the same numbers.
   out.push(el('details', { class: 'panel more', 'data-field': 'year-by-year' }, [
@@ -393,6 +396,46 @@ function results(hub, d) {
 }
 
 const homeRange = {};   // this page's scenario range settings
+
+// A month's cost, part by part (D-085). Improvements are one-off, so they are left to the totals.
+const PARTS = [
+  ['bondPaid', 'The bond'],
+  ['fixed', 'Rates, levies and insurance'],
+  ['upkeep', 'Upkeep and repairs'],
+  ['rent', 'Rent'],
+  ['trip', 'Getting to work'],
+];
+const partOf = (m, k) => (k === 'fixed' ? m.running - m.upkeep : m[k]);
+
+/** "What it costs a month, by part" (D-085): now, later and after the bond - and up front against every month. */
+function costSplit(p, N, span, xLabel, marks) {
+  const parts = PARTS.filter(([k]) => p.months.slice(N, span).some((m) => partOf(m, k) > 0.5));
+  if (!parts.length) return null;
+  const after = p.bond && p.bond.monthsLeft > 0 && N + p.bond.monthsLeft < p.months.length ? N + p.bond.monthsLeft : null;
+  const cols = [[N, 'Now'], N + 60 < p.stay - 1 ? [N + 60, 'In 5 years'] : null, [p.stay - 1, `When you leave (${p.at.ym.slice(0, 4)})`], after != null && after > p.stay ? [after, 'After the bond'] : null].filter(Boolean);
+  const monthly = p.months.slice(N, p.stay).reduce((s, m) => s + m.out - m.upgradeNow, 0);
+  const stayYrs = yrs(Math.round((p.stay - N) / 12));
+  const afterBond = after != null ? p.months[after] : null;
+  const lines = [
+    `${(p.kind === 'own' && !p.story) || p.fromPocket < 1 ? '' : `Up front: ${rand(p.fromPocket)} once${p.kind === 'rent' ? '' : ' - the deposit, duty and fees'}. `}Every month: ${rand(p.months[N].out)} now, about ${rand(monthly)} in all over the ${stayYrs} you plan to stay.`,
+    !afterBond ? null : afterBond.running > 0.5 ? `A paid-off home is not free: rates, insurance and upkeep stay - about ${rand(afterBond.out - afterBond.upgradeNow)} a month once the bond is done in ${afterBond.ym.slice(0, 4)}, still rising with costs.`
+      : `After the bond is done in ${afterBond.ym.slice(0, 4)} nothing more is counted, because rates, insurance and upkeep are ${p.on.running ? 'not filled in' : 'left out'} - a paid-off home still has those.`,
+    p.kind === 'rent' ? 'Rent has no rates, levies or upkeep - the landlord pays those out of it - but it rises every year and none of it comes back.' : null,
+  ].filter(Boolean);
+  return el('div', { class: 'panel stack', 'data-field': 'cost-split' }, [
+    el('h2', { text: 'What it costs a month, by part', style: { margin: 0 } }),
+    ...lines.map((t) => el('p', { style: { margin: 0 }, text: t })),
+    el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums' }, [
+      el('thead', {}, [el('tr', {}, ['A month', ...cols.map(([, h]) => h)].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
+      el('tbody', {}, [
+        ...parts.map(([k, label]) => el('tr', {}, [el('td', { text: label }), ...cols.map(([t]) => el('td', { class: 'num', text: rand(partOf(p.months[t], k)) }))])),
+        el('tr', {}, [el('th', { text: 'All of it' }), ...cols.map(([t]) => el('th', { class: 'num', text: rand(p.months[t].out - p.months[t].upgradeNow) }))]),
+      ]),
+    ])]),
+    lineChart(parts.map(([k, label]) => ({ name: label, points: p.months.slice(0, span).filter((m) => m.t % 3 === 0).map((m) => [m.t, partOf(m, k)]) })),
+      { label: 'Each part of the monthly cost over time', marks, xLabel, story: p.kind === 'rent' ? 'Rent rises every year.' : `Rates, insurance and upkeep rise with costs${p.bond ? '; the bond instalment stays level unless the rate changes, then stops' : ''}.` }),
+  ]);
+}
 
 /** "Can you carry it?" (D-084): the home's own risks and the household's room to absorb them. */
 function carryPanel(v, p, today, state, H) {

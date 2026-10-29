@@ -9,25 +9,26 @@ import { homePlan, sameMoney, PLAN_DEFAULTS } from './home.js';
 /**
  * What can be varied. `apply(v, d)` returns the home's values moved by d (points, or
  * percent for `scale`). `spread`: the default distance from the central value each way.
+ * `field(v)`: the home's own value that is the central figure.
  */
 export const VARS = [
   { key: 'growth', label: 'House prices grow', unit: 'points', spread: 2, step: 0.5, max: 6,
-    why: 'What the home is worth later. Nobody knows it: the past is a guide only.',
+    why: 'What the home is worth later. Nobody knows it: the past is a guide only.', field: () => 'growthPct',
     apply: (v, d) => ({ ...v, growthPct: n(v.growthPct, PLAN_DEFAULTS.growthPct) + d }) },
   { key: 'invest', label: 'Investments grow', unit: 'points', spread: 2, step: 0.5, max: 6,
-    why: 'What money not tied up in a home could earn - the deposit, and what is saved each month.',
+    why: 'What money not tied up in a home could earn - the deposit, and what is saved each month.', field: () => 'investPct',
     apply: (v, d) => ({ ...v, investPct: n(v.investPct, PLAN_DEFAULTS.investPct) + d }) },
   { key: 'rate', label: 'The bond rate', unit: 'points', spread: 2, step: 0.25, max: 5,
-    why: 'A higher rate means a bigger instalment and more interest in all.',
+    why: 'A higher rate means a bigger instalment and more interest in all.', field: (v) => (v.kind === 'own' ? 'bondRate' : 'ratePct'),
     apply: (v, d) => ({ ...v, ratePct: n(v.ratePct, PLAN_DEFAULTS.ratePct) + d, bondRate: n(v.bondRate, PLAN_DEFAULTS.bondRate) + d }) },
   { key: 'rent', label: 'Rent rises', unit: 'points', spread: 2, step: 0.5, max: 6,
-    why: 'Rent usually goes up every year; how fast decides what renting costs later.',
+    why: 'Rent usually goes up every year; how fast decides what renting costs later.', field: () => 'rentRisePct',
     apply: (v, d) => ({ ...v, rentRisePct: n(v.rentRisePct, PLAN_DEFAULTS.rentRisePct) + d }) },
   { key: 'costs', label: 'Running costs rise', unit: 'points', spread: 2, step: 0.5, max: 6,
-    why: 'Rates, levies, insurance and repairs rise with inflation - sometimes faster.',
+    why: 'Rates, levies, insurance and repairs rise with inflation - sometimes faster.', field: () => 'escalatePct',
     apply: (v, d) => ({ ...v, escalatePct: n(v.escalatePct, PLAN_DEFAULTS.escalatePct) + d }) },
   { key: 'repairs', label: 'Repairs and upkeep', unit: 'percent', spread: 50, step: 10, max: 200,
-    why: 'Maintenance comes in lumps - a roof, a geyser. More than planned is common.',
+    why: 'Maintenance comes in lumps - a roof, a geyser. More than planned is common.', field: (v) => (v.maintMode === 'percent' ? 'upkeepPct' : 'maintYearly'),
     apply: (v, d) => ({ ...v, maintYearly: n(v.maintYearly, 0) * (1 + d / 100), upkeepPct: n(v.upkeepPct, PLAN_DEFAULTS.upkeepPct) * (1 + d / 100) }) },
 ];
 
