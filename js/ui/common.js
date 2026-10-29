@@ -127,6 +127,12 @@ export function choreCard(ctx, chore, occ, { label = null, reasons = [], onDone 
     reasons.length ? el('div', { class: 'pills' }, reasons.map((r) => el('span', { class: pillClass(r), text: r }))) : null,
     details.length ? el('details', { class: 'more' }, [el('summary', { text: 'Details' }), ...details.map((t) => el('p', { class: 'small', text: t }))]) : null,
     occ.state === 'closed' ? null : el('div', { class: 'card__actions' }, [
+      // Its timer running: pause and carry on from the card too, not only from the panel at the top.
+      ctx.session?.state()?.id === chore.id ? el('button', {
+        class: 'btn', type: 'button', 'data-field': `pause:${chore.id}`,
+        text: ctx.session.state().timer.pausedAt != null ? 'Resume' : 'Pause',
+        on: { click: () => (ctx.session.state().timer.pausedAt != null ? ctx.session.resume() : ctx.session.pause()) },
+      }) : null,
       ctx.session && ctx.session.state()?.id !== chore.id ? el('button', {
         class: 'btn', type: 'button', 'data-field': `start:${chore.id}`, text: 'Start',
         title: 'Start a timer for this chore (with optional music)',

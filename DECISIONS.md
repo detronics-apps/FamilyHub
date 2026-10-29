@@ -631,6 +631,45 @@ purpose (saved): show people what they have not thought of, and let them put the
   marked not counted), what moves the answer most, and year by year.
 - Tested: a home growing exactly as fast as after-tax investments, with no costs, comes out level.
 
+**D-084 The scenario range, a plain answer, and "Can you carry it?" (owner, 2026-10-29).**
+From the owner's property report brief (docs/property-report-brief.md), built on the existing Homes
+report rather than rebuilt:
+- **Scenario range** (homes/scenarios.js): favourable, central and unfavourable, each worked out
+  again through homePlan and sameMoney with its own assumptions - never a band drawn around the
+  line (tested: the gap to the central line grows over time). Variables: house prices, investments,
+  the bond rate, rent rises, running costs, repairs - only those that apply. Each is tried low and
+  high on its own at the chosen year; the favourable scenario takes each one's better side, the
+  unfavourable its worse, and the page lists which way each went (all at once is unlikely - said
+  so). Called a range of tested scenarios, not a probability. Read in words from the results: all
+  on one side, crosses zero, wide or narrow, and which single assumption can change the answer.
+  Sliders set how far below and above your own figure each is tested (three in Simple, all in
+  Advanced); your own figure stays the central line.
+- **Compare** opens with "Which would leave you better off?": what each of two homes would leave
+  you after the years chosen, the difference, the main assumptions, and that it can change; close
+  results (within 2% or R20 000) are called about the same, not forced into a winner. With more
+  than two, "This … against …" picks the pair. The range follows for that pair.
+- **A home's page**: the range on "how far ahead or behind", read as the cost of living there
+  against keeping your money (pointing to Compare for the real choice); the old "What moves the
+  answer most" list is replaced by the range's; the year-by-year table folds away in every mode.
+- **Your situation** (all optional): income, everything else spent, cash and savings, one or two
+  incomes, dependants, years until the money is needed, comfort with uncertainty. **Can you carry
+  it?** (homes/risk.js) lists factors, each saying what it is based on: the month against income
+  (banks' ~30% as context), a 2-point rate rise, cash left after moving in in months of spending, a
+  big repair (2% of the value), leaving sooner than costs are earned back, how sure the answer is,
+  and the personal ones given. No score; anything without its figures is "not assessed". Room to
+  absorb (capacity) and comfort (tolerance) are explained as different things. Options to consider,
+  never instructions.
+- **Estimated, not "Not counted"** (pod.js): an empty field that is worked out until you type your
+  own (the attorneys' quotes - the fee guideline; a car's fuel use and price) now says "Estimated -
+  type yours to replace it"; "Not counted" stays for what really counts as nothing. "Did you think
+  of…" marks ✓ counted, ≈ estimated, ○ not counted or left out, and asks about the cash buffer and
+  whether a rent is what comparable homes rent for.
+- **Buying in / Renting from** show this month when empty ("This month"), still changeable.
+- **The chore timer**: Pause/Resume also on the chore's own card while it runs, and the clock says
+  "Paused".
+Not yet from the brief: the monthly cost split into bond, running, upkeep and rent; a fuller
+reordering of the home page; ranges with an editable central value inside the panel.
+
 **D-083 Homes from any month; Remove everywhere; Print and CSV (owner, 2026-10-29).**
 The owner: start from today, but changeable - "I bought my house in 2019 and still want the full
 calculation, compared with a new house or a rental now; or I might buy in a year". And: delete saved

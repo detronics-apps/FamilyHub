@@ -57,7 +57,9 @@ export function createSession(ctx) {
     if (!s) return '';
     const left = remainingMs(s.timer, now());
     const over = overMs(s.timer, now());
-    if (over) return `+${fmtClock(over)} over`;
+    const paused = s.timer.pausedAt != null ? 'Paused · ' : '';
+    if (over) return `${paused}+${fmtClock(over)} over`;
+    if (paused) return `${paused}${left == null ? fmtClock(elapsedMs(s.timer, now())) : `${fmtClock(left)} left`}`;
     return left == null ? `${fmtClock(elapsedMs(s.timer, now()))} so far` : `${fmtClock(left)} left`;
   }
 

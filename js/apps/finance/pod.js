@@ -61,7 +61,11 @@ export function loadDraft(key, defaults, record) {
 /** Where a value came from, in words. */
 function origin(f, d) {
   if (d.mine.has(f.key)) return 'Yours';
-  if (f.optional && (d.values[f.key] === null || d.values[f.key] === '')) return 'Not counted';
+  const empty = d.values[f.key] === null || d.values[f.key] === undefined || d.values[f.key] === '';
+  // Empty is not always "left out": some are worked out until you type your own (D-084).
+  if (empty && f.fallback) return f.fallbackLabel ?? 'Default';
+  if (empty && f.estimate) return 'Estimated - type yours to replace it';
+  if (empty && f.optional) return 'Not counted';
   const s = f.source;
   if (!s) return null;
   if (s.ref) return `${s.ref.label}, ${s.ref.source}${s.note ? ` ${s.note}` : ''}`;
@@ -97,7 +101,7 @@ export function input(f, d, onInput) {
       on: { click: (e) => { for (const b of e.currentTarget.parentNode.children) b.setAttribute('aria-pressed', String(b === e.currentTarget)); set(c.value); } },
     })));
   } else if (f.type === 'month') {
-    control = el('input', { class: 'input', id, type: 'month', value: d.values[f.key] ?? '', 'data-field': `in:${f.key}`, style: { maxWidth: '200px' }, on: { change: (e) => set(e.target.value || null) } });
+    control = el('input', { class: 'input', id, type: 'month', value: d.values[f.key] ?? f.fallback?.() ?? '', 'data-field': `in:${f.key}`, style: { maxWidth: '200px' }, on: { change: (e) => set(e.target.value || null) } });
   } else if (f.type === 'text') {
     control = el('textarea', { class: 'input', id, rows: 3, text: d.values[f.key] ?? '', placeholder: f.placeholder ?? '', 'data-field': `in:${f.key}`, on: { input: (e) => set(e.target.value) } });
   } else if (f.type === 'check') {
@@ -149,7 +153,7 @@ export function assumed(fields, d) {
   if (!hidden.length) return null;
   return el('p', { class: 'small muted', 'data-field': 'assumed' }, [
     el('strong', { text: 'Also counted: ' }),
-    hidden.map((f) => `${f.label.toLowerCase()} ${f.type === 'money' ? rand(d.values[f.key] ?? f.estimate?.(d.values)) : f.type === 'percent' ? pct(d.values[f.key]) : f.type === 'check' ? (d.values[f.key] ? 'yes' : 'no') : `${d.values[f.key]}${{ months: ' months', years: ' years' }[f.type] ?? ''}`} (${origin(f, d)})`).join('; '),
+    hidden.map((f) => `${f.label.toLowerCase()} ${f.type === 'money' ? rand(d.values[f.key] ?? (typeof f.estimate === 'function' ? f.estimate(d.values) : null)) : f.type === 'percent' ? pct(d.values[f.key]) : f.type === 'check' ? (d.values[f.key] ? 'yes' : 'no') : `${d.values[f.key]}${{ months: ' months', years: ' years' }[f.type] ?? ''}`} (${origin(f, d)})`).join('; '),
     '. Change them under Advanced.',
   ]);
 }
@@ -204,14 +208,16 @@ export const whenLabel = (m) => (m >= 12 ? `year ${Math.ceil(m / 12)}` : `month 
 export function lineChart(series, opts) {
   const figure = drawChart(series, opts);
   figure.dataset.chart = '';
-  figure.chartData = { label: opts.label, series, xLabel: opts.xLabel ?? null };
+  // A shaded range goes to CSV as its two edges.
+  const edges = opts.band ? [{ name: `${opts.band.name} - low edge`, points: opts.band.points.map(([x, lo]) => [x, lo]) }, { name: `${opts.band.name} - high edge`, points: opts.band.points.map(([x, , hi]) => [x, hi]) }] : [];
+  figure.chartData = { label: opts.label, series: [...series, ...edges], xLabel: opts.xLabel ?? null };
   return figure;
 }
 
-function drawChart(series, { label, marks = [], story = null, xLabel = null }) {
+function drawChart(series, { label, marks = [], story = null, xLabel = null, band = null }) {
   const W = 640; const H = 240; const L = 64; const B = 26; const T = 14; const R = 12;
   const xs = series.flatMap((s) => s.points.map((p) => p[0]));
-  const ys = series.flatMap((s) => s.points.map((p) => p[1]));
+  const ys = [...series.flatMap((s) => s.points.map((p) => p[1])), ...(band ? band.points.flatMap((p) => [p[1], p[2]]) : [])];
   const x0 = Math.min(...xs); const x1 = Math.max(...xs) || 1;
   const y0 = Math.min(0, ...ys); const y1 = Math.max(0, ...ys) || 1;
   const X = (x) => L + ((x - x0) / (x1 - x0 || 1)) * (W - L - R);
@@ -230,6 +236,8 @@ function drawChart(series, { label, marks = [], story = null, xLabel = null }) {
         svg('text', { x: L - 6, y: Y(t) + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--text-dim)' }, [short(t)]),
       ])),
       ...years.filter((x, i) => years.length < 14 || i % Math.ceil(years.length / 10) === 0).map((x) => svg('text', { x: X(x), y: H - 8, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--text-dim)' }, [xLabel ? xLabel(x) : x % 12 === 0 ? `${x / 12}y` : `${x}m`])),
+      // The scenario range (D-084): shaded between its low and high edges, under the lines.
+      band ? svg('polygon', { points: [...band.points.map(([x, lo]) => `${X(x).toFixed(1)},${Y(lo).toFixed(1)}`), ...band.points.slice().reverse().map(([x, , hi]) => `${X(x).toFixed(1)},${Y(hi).toFixed(1)}`)].join(' '), fill: 'var(--accent-soft)', stroke: 'none', opacity: 0.9 }) : null,
       ...series.map((s, i) => svg('polyline', {
         points: s.points.map(([x, y]) => `${X(x).toFixed(1)},${Y(y).toFixed(1)}`).join(' '),
         fill: 'none', stroke: colours[i % colours.length], 'stroke-width': 2.5, 'stroke-dasharray': s.dashed ? '6 4' : null,
@@ -244,9 +252,9 @@ function drawChart(series, { label, marks = [], story = null, xLabel = null }) {
       }),
     ]),
     el('figcaption', { class: 'stack', style: { gap: 'var(--space-1)' } }, [
-      el('div', { class: 'row small', style: { gap: 'var(--space-3)' } }, series.map((s, i) => el('span', {}, [
+      el('div', { class: 'row small', style: { gap: 'var(--space-3)' } }, [...series.map((s, i) => el('span', {}, [
         el('span', { class: 'fin-key', style: { background: colours[i % colours.length] } }), s.name,
-      ]))),
+      ])), band ? el('span', {}, [el('span', { class: 'fin-key', style: { background: 'var(--accent-soft)', outline: '1px solid var(--border-strong)' } }), band.name]) : null]),
       story ? el('p', { class: 'small', style: { margin: 0 }, text: story }) : null,
     ]),
   ]);

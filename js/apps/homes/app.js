@@ -7,12 +7,15 @@
 import { el } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
 import { loading, failure } from '../kit.js';
-import { REFERENCE, total, sensitivity, SELL_DEFAULTS } from '../finance/maths.js';
+import { REFERENCE, total, SELL_DEFAULTS } from '../finance/maths.js';
 import { historyGrowth, CGT } from './ownrent.js';
 import { EVENT_KINDS } from './bondlog.js';
 import { homePlan, withAndWithout, sameMoney, kindOf, KINDS, SECTIONS, SECTIONS_ON, SCENARIO_KINDS, PLAN_DEFAULTS } from './home.js';
 import { levelBar, shows, draft, loadDraft, input, info, linesPanel as eventsPanel, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, RULE, outOf, savedPanel, exportBar, rand, pct, months } from '../finance/pod.js';
 import { HOME_HELP as H } from '../finance/help.js';
+import { rangePanel } from './range-view.js';
+import { scenarioRange, defaultRanges } from './scenarios.js';
+import { carryIt, COMFORT } from './risk.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => r.title, prefix: 'hom' });
 const KIND = 'property';
@@ -71,6 +74,7 @@ const FOLDS = 'familyhub.homefolds';
 const folds = (() => { try { return new Set(JSON.parse(localStorage.getItem(FOLDS) || '[]')); } catch { return new Set(); } })();
 const keepFolds = () => { try { localStorage.setItem(FOLDS, JSON.stringify([...folds])); } catch { /* this device only */ } };
 
+const thisMonth = () => new Date().toISOString().slice(0, 7);
 const f = (key, label, type, more = {}) => ({ key, label, type, level: 'simple', info: H[key], ...more });
 const isBuy = (v) => v.kind === 'buy'; const isOwn = (v) => v.kind === 'own'; const isRent = (v) => v.kind === 'rent';
 const hasHome = (v) => !isRent(v);
@@ -78,7 +82,7 @@ const hasHome = (v) => !isRent(v);
 /** The page's sections, in the order a decision is made. `tick`: can be left out. */
 const SECS = [
   { key: 'home', title: 'The home', when: hasHome, fields: [
-    f('fromMonth', 'Buying in', 'month', { optional: true, when: isBuy }),
+    f('fromMonth', 'Buying in', 'month', { fallback: thisMonth, fallbackLabel: 'This month', when: isBuy }),
     f('price', 'Price', 'money', { when: isBuy }),
     f('worthNow', 'What it would sell for now', 'money', { when: isOwn }),
     f('boughtFor', 'We bought it for', 'money', { optional: true, when: isOwn }),
@@ -88,7 +92,7 @@ const SECS = [
     f('growthPct', 'House prices grow by', 'percent', { source: { kind: 'illustrative' } }),
   ], extra: (hub, d) => historyLine(hub, d) },
   { key: 'rentSec', title: 'The rent', when: isRent, fields: [
-    f('fromMonth', 'Renting from', 'month', { optional: true }),
+    f('fromMonth', 'Renting from', 'month', { fallback: thisMonth, fallbackLabel: 'This month' }),
     f('rent', 'Rent a month', 'money'),
     f('rentRisePct', 'Rent rises by', 'percent', { source: { kind: 'illustrative' } }),
     f('rentDeposit', 'Rental deposit', 'money', { optional: true }),
@@ -111,8 +115,8 @@ const SECS = [
   { key: 'buying', title: 'Buying it', when: isBuy, fields: [
     f('deposit', 'Deposit', 'money', { source: { kind: 'assumption' }, when: (v) => !(v.on?.sellFirst) }),
     f('moveCost', 'Moving in', 'money', { optional: true }),
-    f('quoteTransfer', 'Transfer attorney’s quote', 'money', { optional: true, level: 'advanced' }),
-    f('quoteBond', 'Bond attorney’s quote', 'money', { optional: true, level: 'advanced' }),
+    f('quoteTransfer', 'Transfer attorney’s quote', 'money', { estimate: true, level: 'advanced' }),
+    f('quoteBond', 'Bond attorney’s quote', 'money', { estimate: true, level: 'advanced' }),
   ], extra: (hub, d, plan) => buyingBox(plan) },
   { key: 'bond', title: SECTIONS.bond, tick: true, when: hasHome, fields: [
     f('ratePct', 'Interest rate', 'percent', { source: { ref: REFERENCE.prime }, when: isBuy }),
@@ -149,6 +153,15 @@ const SECS = [
     f('stayYears', 'Live here for', 'years', { source: { kind: 'assumption' } }),
     f('sellPct', 'Selling later costs, of the price', 'percent', { unitText: '%', level: 'advanced', source: { kind: 'illustrative' }, when: hasHome }),
     f('marginalPct', 'Your income tax rate on the last rand', 'percent', { unitText: '%', level: 'advanced', source: { kind: 'illustrative' }, when: hasHome }),
+  ] },
+  { key: 'situation', title: 'Your situation', fields: [
+    f('income', 'Household income a month, before tax', 'money', { optional: true, when: (v) => !isBuy(v) }),
+    f('otherCosts', 'Everything else you spend a month', 'money', { optional: true }),
+    f('cashNow', 'Cash and savings you have now', 'money', { optional: true }),
+    f('incomes', 'Incomes in the household', 'choice', { optional: true, choices: [{ value: 'one', label: 'One' }, { value: 'two', label: 'Two or more' }] }),
+    f('dependants', 'People who depend on that income', 'number', { optional: true, level: 'advanced' }),
+    f('yearsToGoal', 'Years until you need this money (retirement, a goal)', 'years', { optional: true, level: 'advanced' }),
+    f('comfort', 'How you feel about uncertainty', 'choice', { optional: true, choices: Object.entries(COMFORT).map(([value, label]) => ({ value, label })) }),
   ] },
   { key: 'forgone', title: SECTIONS.forgone, tick: true, when: (v) => !isOwn(v) || v.ownFrom === 'bought', fields: [
     f('otherRatePct', 'Money could earn elsewhere', 'percent', { source: { kind: 'illustrative' } }),
@@ -337,6 +350,8 @@ function results(hub, d) {
     ], { label: 'How far ahead or behind you would be, if you sold or left after that long',
       marks: [even != null ? { x: even, label: startsNow ? `Ahead from ${whenLabel(even)}` : `Ahead from ${xLabel(even)}` } : null, { x: p.stay, label: startsNow ? `You: ${yrs(stay)}` : `You: ${p.at.ym.slice(0, 4)}` }, payoff, todayMark], xLabel,
       story: `${RULE} ${p.kind === 'buy' ? 'It starts below zero: duty, fees and the agent are paid however short the stay.' : p.kind === 'own' ? 'Zero is selling today.' : 'Rent goes further below zero every month - none of it comes back.'}` })),
+    rangePanel({ values: [v], today, state: homeRange, names: [d.title || 'This home'], H: p.stay - N,
+      xLabel: startsNow ? null : (x) => { const s0 = p.now > 0 ? today.slice(0, 7) : p.startYM; return String(Number(s0.slice(0, 4)) + Math.floor((Number(s0.slice(5)) - 1 + x) / 12)); } }),
     chartPanel('Money in and out',
       lineChart([
         ...(p.kind !== 'rent' ? [{ name: 'What the home is worth', points: pts(p, 'value') }] : []),
@@ -349,31 +364,20 @@ function results(hub, d) {
         { name: w.any ? 'Paid out that month, with your what-ifs' : 'Paid out that month', points: outOf(p.months.slice(0, span).map((m) => [m.t, m.out])) },
         ...(w.any ? [{ name: 'Without them', points: outOf(p0.months.slice(0, span).map((m) => [m.t, m.out])), dashed: true }] : []),
       ], { label: 'What comes out of your pocket each month', marks: [payoff, todayMark], xLabel, story: 'The bond, rates, insurance, upkeep, travel - or rent. It drops when the bond is paid off.' })),
+    carryPanel(v, p, today, homeRange, p.stay - N),
     forgotten(v, p),
   ];
-  if (shows('advanced')) {
-    const nudges = [
-      { key: 'growthPct', what: 'house prices growing 2 points slower', to: (x) => n(x) - 2 },
-      { key: 'ratePct', what: 'the bond rate 1 point higher', to: (x) => n(x) + 1 },
-      { key: 'bondRate', what: 'the bond rate 1 point higher', to: (x) => n(x) + 1 },
-      { key: 'rentRisePct', what: 'rent rising 2 points faster', to: (x) => n(x) + 2 },
-      { key: 'escalatePct', what: 'costs rising 2 points faster', to: (x) => n(x) + 2 },
-      { key: 'investPct', what: 'investments growing 2 points faster', to: (x) => n(x) + 2 },
-    ];
-    const sens = sensitivity(v, (x) => homePlan(x, today).ahead, nudges).filter((x) => Math.abs(x.change) >= 1);
-    out.push(el('div', { class: 'panel stack' }, [
-      el('h2', { text: 'What moves the answer most', style: { margin: 0 } }),
-      sens.length ? el('ul', { style: { margin: 0 } }, sens.map((x) => el('li', { text: `${x.what[0].toUpperCase()}${x.what.slice(1)}: ${x.change >= 0 ? 'better' : 'worse'} off by ${rand(Math.abs(x.change))}` }))) : el('p', { class: 'muted', text: 'Nothing here moves it much.' }),
-      el('h3', { text: 'Year by year', style: { margin: 0 } }),
-      el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums' }, [
-        el('thead', {}, [el('tr', {}, ['After', 'Worth', 'Owed', 'Paid out so far', 'Ahead or behind'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
-        el('tbody', {}, [1, 2, 3, 5, 7, 10, 15, 20, 25, 30].map((y) => p.months[y * 12 - 1]).map((m) => el('tr', {}, [
-          el('td', { text: yrs(m.t / 12) }), el('td', { class: 'num', text: rand(m.value) }), el('td', { class: 'num', text: rand(-m.owed) }), el('td', { class: 'num', text: rand(-m.paid) }),
-          el('td', { class: `num ${m.ahead >= 0 ? 'fin-better' : 'fin-worse'}`, text: rand(m.ahead) }),
-        ]))),
-      ])]),
-    ]));
-  }
+  // Year by year, folded away: the detail behind the graphs, the same numbers.
+  out.push(el('details', { class: 'panel more', 'data-field': 'year-by-year' }, [
+    el('summary', { text: 'Year by year' }),
+    el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums' }, [
+      el('thead', {}, [el('tr', {}, [startsNow ? 'After' : 'Year', 'Worth', 'Owed', 'Paid out so far', 'Ahead or behind'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
+      el('tbody', {}, [1, 2, 3, 5, 7, 10, 15, 20, 25, 30].map((y) => p.months[N + y * 12 - 1]).filter(Boolean).map((m) => el('tr', {}, [
+        el('td', { text: startsNow ? yrs(m.t / 12) : m.ym.slice(0, 4) }), el('td', { class: 'num', text: rand(m.value) }), el('td', { class: 'num', text: rand(-m.owed) }), el('td', { class: 'num', text: rand(-m.paid) }),
+        el('td', { class: `num ${m.ahead >= 0 ? 'fin-better' : 'fin-worse'}`, text: rand(m.ahead) }),
+      ]))),
+    ])]),
+  ]));
   if (shows('learn')) {
     out.push(el('div', { class: 'panel stack fin-learn' }, [
       el('h2', { text: 'How it is worked out', style: { margin: 0 } }),
@@ -388,14 +392,36 @@ function results(hub, d) {
   return out;
 }
 
+const homeRange = {};   // this page's scenario range settings
+
+/** "Can you carry it?" (D-084): the home's own risks and the household's room to absorb them. */
+function carryPanel(v, p, today, state, H) {
+  const range = scenarioRange([v], today, state.ranges ?? defaultRanges([v]), H);
+  const { factors, options } = carryIt(v, p, today, range);
+  const mark = { ok: ['fin-better', 'Fine'], watch: ['', 'Worth a look'], strain: ['fin-worse', 'Tight'], unknown: ['muted', 'Not assessed'] };
+  return el('div', { class: 'panel stack', 'data-field': 'carry' }, [
+    el('h2', { text: 'Can you carry it?', style: { margin: 0 } }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'Your ability to handle an unexpected expense or a lost income can matter as much as the projected numbers. No score - each line says what it is based on. Fill in "Your situation" above for more of them.' }),
+    el('ul', { class: 'list' }, factors.map((f) => el('li', {}, [el('div', { class: 'list__main' }, [
+      el('strong', { text: f.title }), ' ', el('span', { class: `small ${mark[f.level][0]}`, text: `· ${mark[f.level][1]}` }),
+      el('div', { class: 'small', text: f.text }),
+    ])]))),
+    options.length ? el('div', { class: 'stack', style: { gap: 'var(--space-1)' } }, [el('strong', { class: 'small', text: 'Options to consider' }), el('ul', { class: 'small', style: { margin: 0 } }, options.map((t) => el('li', { text: t })))]) : null,
+    el('details', { class: 'more' }, [el('summary', { text: 'Room to absorb, and comfort with risk' }),
+      el('p', { class: 'small', text: 'Two different things. Room to absorb (risk capacity) is whether you could actually get through a loss or a bad patch - cash, income, other commitments. Comfort (risk tolerance) is how you feel about uncertainty. Someone can be comfortable with risk but have little room, or have plenty of room but prefer a predictable outcome. Both are yours to weigh; this only shows what the figures say.' })]),
+  ]);
+}
+
 /** The things people forget - counted (with their value) or plainly not counted yet. */
 function forgotten(v, p) {
   const on = p.on;
   const items = [
-    p.kind === 'buy' ? [true, `Transfer duty ${rand(p.buyItems.find((x) => x.key === 'duty')?.amount ?? 0)} and attorneys’, Deeds Office and bank fees, paid however short the stay`] : null,
+    p.kind === 'buy' ? [n(v.quoteTransfer) && n(v.quoteBond) ? true : 'est', `Transfer duty ${rand(p.buyItems.find((x) => x.key === 'duty')?.amount ?? 0)} and attorneys’, Deeds Office and bank fees, paid however short the stay${n(v.quoteTransfer) && n(v.quoteBond) ? ' - from your quotes' : ' - attorneys estimated from the fee guideline until you add quotes'}`] : null,
+    p.kind === 'rent' ? [true, 'Is the rent what a comparable home really rents for? Check a few listings nearby'] : null,
+    [n(v.cashNow) ? true : false, n(v.cashNow) ? 'The cash buffer left after moving in - see "Can you carry it?"' : 'Would moving in eat into your emergency savings? Add your cash under "Your situation"'],
     p.kind !== 'rent' ? [n(v.sellPct) > 0, `Selling later costs ${pct(n(v.sellPct), 1)} of the price - mostly the agent, with VAT`] : null,
     p.kind === 'rent' ? [n(v.rentRisePct) > 0, `Rent rising ${pct(n(v.rentRisePct), 1)} a year, while a bond instalment stays the same`] : null,
-    p.kind !== 'rent' ? [on.running && (n(v.maintYearly) > 0 || v.maintMode === 'percent'), on.running ? (v.maintMode === 'percent' ? `Maintenance as ${pct(n(v.upkeepPct), 1)} of the value - a rule of thumb; your own figure is better` : n(v.maintYearly) ? `Your own maintenance: ${rand(n(v.maintYearly))} a year` : 'Maintenance - not counted yet') : 'Running costs - left out'] : null,
+    p.kind !== 'rent' ? [on.running && v.maintMode === 'percent' ? 'est' : on.running && n(v.maintYearly) > 0, on.running ? (v.maintMode === 'percent' ? `Maintenance as ${pct(n(v.upkeepPct), 1)} of the value - estimated with a rule of thumb; your own figure is better` : n(v.maintYearly) ? `Your own maintenance: ${rand(n(v.maintYearly))} a year` : 'Maintenance - not counted yet') : 'Running costs - left out'] : null,
     p.kind !== 'rent' ? [on.upgrades && (v.upgrades ?? []).length > 0, (v.upgrades ?? []).length ? 'Upgrades that add value' : 'Upgrades that add value - none planned'] : null,
     [on.travel && n(v.km) > 0, on.travel ? (n(v.km) ? 'Getting to work, every month' : 'Getting to work - not counted yet') : 'Getting to work - left out'],
     p.kind !== 'rent' ? [on.afterBond, on.afterBond ? 'Investing the instalment once the bond is paid off' : 'Investing the instalment once the bond is paid off - tick "After the bond"'] : null,
@@ -405,7 +431,9 @@ function forgotten(v, p) {
   ].filter(Boolean);
   return el('div', { class: 'panel stack', 'data-field': 'forgotten' }, [
     el('h2', { text: 'Did you think of…', style: { margin: 0 } }),
-    el('ul', { style: { margin: 0, paddingLeft: 0, listStyle: 'none' } }, items.map(([ok, t]) => el('li', { class: ok ? null : 'muted', text: `${ok ? '✓' : '○'} ${t}` }))),
+    // Counted (✓), estimated until you give your own (≈), or not counted / left out (○) - never an unknown quietly taken as zero.
+    el('ul', { style: { margin: 0, paddingLeft: 0, listStyle: 'none' } }, items.map(([ok, t]) => el('li', { class: ok ? null : 'muted', text: `${ok === 'est' ? '≈' : ok ? '✓' : '○'} ${t}` }))),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: '✓ counted · ≈ estimated - your own figure replaces it · ○ not counted or left out' }),
     el('p', { class: 'small muted', style: { margin: 0 }, text: 'And what is not money: being able to stay, making the place your own, the freedom to move.' }),
   ]);
 }
@@ -413,7 +441,8 @@ const scenarioCount = (v) => (v.scenarios ?? []).filter((s) => s && s.on !== fal
 
 /* ----------------------------------------------------------------- compare */
 
-const cmp = { picked: null, years: 10 };
+const cmp = { picked: null, years: 10, a: null, b: null };
+const cmpRange = {};   // the scenario range's settings, kept while you move around
 
 function compareScreen(hub, param) {
   const all = loadAll(hub);
@@ -453,9 +482,41 @@ function compareScreen(hub, param) {
     const c = crossing(sm.series[best].map((s) => [s.t, s.wealth]), sm.series[i].map((s) => [s.t, s.wealth]));
     return c != null && c < 360 ? `${items[best].rec.title} gets ahead of ${x.rec.title} in ${whenLabel(c)}${c > H ? ' - after the time you chose' : ''}.` : null;
   }).filter(Boolean);
+  // The two being weighed up (D-084): the one you are looking at, and its alternative.
+  const ids = items.map((x) => x.rec.id);
+  if (!ids.includes(cmp.a)) cmp.a = items.find((x) => x.plan.kind === 'buy')?.rec.id ?? ids[0];
+  if (!ids.includes(cmp.b) || cmp.b === cmp.a) cmp.b = ids.find((id) => id !== cmp.a);
+  const ia = ids.indexOf(cmp.a); const ib = ids.indexOf(cmp.b);
+  const nameOf = (i) => items[i].rec.title || `Home ${i + 1}`;
+  const after = fromLater ? `by ${Number(sm.align.slice(0, 4)) + cmp.years}` : `after ${yrs(cmp.years)}`;
+  const diff = wealth[ia] - wealth[ib];
+  const close = Math.abs(diff) < Math.max(20000, 0.02 * Math.max(Math.abs(wealth[ia]), Math.abs(wealth[ib])));
+  const pickOne = (key, label) => items.length > 2 ? el('label', { class: 'small row', style: { gap: '6px' } }, [label, el('select', { class: 'select', style: { width: 'auto' }, 'data-field': `cmp-${key}`, on: { change: (e) => { cmp[key] = e.target.value; hub.render(); } } },
+    items.map((x, i) => el('option', { value: x.rec.id, selected: x.rec.id === cmp[key], text: nameOf(i) })))]) : null;
+  const ka = items[ia].v; const kinds = items.map((x) => x.plan.kind);
+  const assumptions = [
+    kinds.some((k) => k !== 'rent') ? `house prices growing ${pct(n(ka.growthPct ?? PLAN_DEFAULTS.growthPct))} a year` : null,
+    `investments growing ${pct(n(v0.investPct ?? PLAN_DEFAULTS.investPct))} a year before tax`,
+    kinds.includes('rent') ? `rent rising ${pct(n(items.find((x) => x.plan.kind === 'rent').v.rentRisePct ?? PLAN_DEFAULTS.rentRisePct))} a year` : null,
+    kinds.includes('buy') ? `a bond rate of ${pct(n(items.find((x) => x.plan.kind === 'buy').v.ratePct ?? PLAN_DEFAULTS.ratePct))}` : null,
+  ].filter(Boolean);
+  const answer = close
+    ? `${nameOf(ia)} and ${nameOf(ib)} come out about the same ${after} (within ${rand(Math.abs(diff))}). With money this close, the choice may rest more on what you can comfortably carry, flexibility, and what you would rather live in.`
+    : `Under these assumptions, ${diff > 0 ? nameOf(ia) : nameOf(ib)} could leave you with about ${rand(Math.abs(diff))} more ${after} than ${diff > 0 ? nameOf(ib) : nameOf(ia)}.`;
   return el('section', { class: 'stack', 'aria-labelledby': 'cmp-title' }, [
     ...head,
-    el('div', { class: 'stats' }, [stat(items[best].rec.title || 'Untitled', `furthest ahead after ${yrs(cmp.years)}`, 'r-best')]),
+    el('div', { class: 'panel stack', 'data-field': 'cmp-answer' }, [
+      el('h2', { text: 'Which would leave you better off?', style: { margin: 0 } }),
+      items.length > 2 ? el('div', { class: 'row' }, [pickOne('a', 'This'), pickOne('b', 'against')]) : null,
+      el('div', { class: 'stats' }, [
+        stat(rand(wealth[ia]), `${nameOf(ia)}: what you would have ${after}`, 'r-a'),
+        stat(rand(wealth[ib]), `${nameOf(ib)}: what you would have ${after}`, 'r-b'),
+        stat(rand(Math.abs(diff)), close ? 'about the same' : `more with ${diff > 0 ? nameOf(ia) : nameOf(ib)}`, 'r-diff'),
+      ]),
+      el('p', { style: { margin: 0, fontWeight: 600 }, text: answer }),
+      el('p', { class: 'small', style: { margin: 0 }, text: `Mainly assuming ${assumptions.join(', ')}. If these turn out differently, so can the answer - the range below shows how much.` }),
+      el('p', { class: 'small muted', style: { margin: 0 }, text: '"What you would have" is the home sold (or the deposit back) plus everything invested, on the same money each month. It is about money only: whether a home gains value, whether you can carry it, and what you would prefer to live in are separate questions - each home\'s own page has "Can you carry it?".' }),
+    ]),
     el('div', { class: 'panel stack' }, [el('h2', { text: 'In plain words', style: { margin: 0 } }), ...[...words, ...flips].map((t) => el('p', { style: { margin: 0 }, text: t })),
       fromLater ? el('p', { style: { margin: 0 }, text: `Compared from ${ymName(sm.align)}, when the last of them starts - until then nothing differs between them.` }) : null,
       el('p', { class: 'small muted', style: { margin: 0 }, text: 'Each home is worked out with its own ticks and what-ifs, as saved. Change one by opening it. A home started earlier (ours, since we bought it) joins with what it has by then - what it cost before is the same whichever you choose.' })]),
@@ -463,6 +524,7 @@ function compareScreen(hub, param) {
       label: 'What each household would have, year by year, on the same money', marks: [{ x: H, label: `${yrs(cmp.years)}` }],
       xLabel: fromLater ? (x) => String(Number(sm.align.slice(0, 4)) + Math.floor((Number(sm.align.slice(5)) - 1 + x) / 12)) : null,
       story: `${RULE} Each line is what that choice would leave you if you stopped then: the home sold (or the deposit back), plus everything invested.` })),
+    rangePanel({ values: items.map((x) => x.v), today, state: cmpRange, names: [nameOf(ia), nameOf(ib)], H, opts: { a: ia, b: ib }, xLabel: fromLater ? (x) => String(Number(sm.align.slice(0, 4)) + Math.floor((Number(sm.align.slice(5)) - 1 + x) / 12)) : null }),
     el('div', { class: 'panel stack' }, [
       el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums fin-compare' }, [
         el('thead', {}, [el('tr', {}, [el('th', { text: '' }), ...items.map((x) => el('th', { class: 'num', text: x.rec.title || 'Untitled' }))])]),
