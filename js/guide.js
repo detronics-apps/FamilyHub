@@ -448,6 +448,8 @@ export const FEATURES = [
   { name: 'Projections with their assumptions', where: 'Finance › Goals', what: 'When a goal could be reached, or a debt paid off - and plainly when it never would at the current payment.' },
   { name: 'Time a day for chores', where: 'Chores › Plan and Progress', what: 'All the chores together, a week and on average a day - so you can plan for, say, an hour a day.' },
   { name: 'The timer ring', where: 'Chores › Start', what: 'Fills to the time a chore should take, then turns honey and counts what is over. Done records the minutes; Cancel records nothing; left running, it asks "Still on it?" and stops if nobody answers.' },
+  { name: 'From when', where: 'Finance › Homes', what: 'A home starts this month - or later ("Buying in", "Renting from"), or, for ours, from when we bought it, counting the whole story with today marked. Compare lines them up from when the last one starts.' },
+  { name: 'Print, PDF and CSV', where: 'Finance › any tool', what: 'Print (or Save as PDF) the page with every graph; CSV for Excel or Google Sheets with your figures, the results, the tables and each graph’s numbers.' },
   { name: 'Real times, suggested', where: 'Chores', what: 'Time a chore with Start. When the last three timed runs all took longer than planned, it offers the average of the last five - one press to use it.' },
   { name: 'Time in the kitchen', where: 'Meal Planner › Calendar', what: 'Each day’s preparation and cooking under its date, and the week’s planned meals together - a week and on average a day.' },
   { name: 'Sample chores', where: 'Chores › Plan › Samples', what: 'Ready-made chores for each room - kitchen, bathrooms, bedroom, baby room, laundry - to tick and add. They become your own to change or remove.' },

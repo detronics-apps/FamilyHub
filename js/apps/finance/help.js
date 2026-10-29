@@ -64,6 +64,8 @@ export const HOME_HELP = {
   investPct: 'What investments may grow by a year, before tax and after fees. A money-market account pays less; shares have averaged more, with bad years between.',
   investTaxPct: 'Part of investment growth goes to tax: interest at your income tax rate, gains and dividends less. A tax-free savings account loses none, up to its limits.',
   investShare: 'How much of the money saved each month really gets invested. Be honest: 100% every month is rare.',
+  fromMonth: 'Empty: from this month. A later month if you would buy or rent later - until then nothing changes, and costs are taken as that much further on. Compare starts from the month the last of the homes starts.',
+  ownFrom: 'Today: what selling it today would leave is where it starts - best for deciding what to do from now on. When we bought it: the whole story since you bought, from the deposit on (fill in what you paid and when).',
   stayYears: 'How long you expect to live there - for example, as long as you are at this job.',
   sellPct: 'Selling later costs the agent’s commission (with VAT) and a few certificates, as a share of the price.',
   marginalPct: 'Your income tax rate on the last rand earned (your payslip or tax assessment shows it). Only used if the gain on the home is above R3 million.',

@@ -631,6 +631,31 @@ purpose (saved): show people what they have not thought of, and let them put the
   marked not counted), what moves the answer most, and year by year.
 - Tested: a home growing exactly as fast as after-tax investments, with no costs, comes out level.
 
+**D-083 Homes from any month; Remove everywhere; Print and CSV (owner, 2026-10-29).**
+The owner: start from today, but changeable - "I bought my house in 2019 and still want the full
+calculation, compared with a new house or a rental now; or I might buy in a year". And: delete saved
+items anywhere in Finance; export as PDF or CSV, with the graphs.
+- **Buying in / Renting from** (a month; empty is this month): the plan starts then. Costs are typed
+  in today's money and rise from today, so a later start meets them further on; the price and rent
+  are as typed (what it would be then).
+- **Ours already, "Work it out from"**: Today (as before: what selling today would leave) or When we
+  bought it - the whole story from what we paid: the deposit and buying costs from savings (at
+  today's duty and fees, so roughly), the bond from its real start with its history, the value
+  growing from what we paid to what it is worth now (the rate that implies) and as assumed after,
+  and "what the money up front could have earned" available. It runs 30 years on from today; the
+  graphs show calendar years with Today marked; "how long you live there" counts from today.
+  Tested: from today on it lands exactly where the Today version is.
+- **Compare** puts them on one calendar from the month the last one starts - until then nothing
+  differs; a home started earlier joins with what it has then (its earlier costs are the same
+  whichever is chosen). Day-one savings count only for homes starting then.
+- **Cars and Job offers** keep counting from their own start in years: their answers do not depend
+  on the calendar month (no bond history or price growth to line up), so no From was added.
+- **Remove** (with a confirm step) is now on the Homes list too; the other saved lists had it.
+- **Print** opens every folded section and prints the page without buttons or menus (choose
+  "Save as PDF" to keep it); **CSV** writes your figures (each label's own words), the results,
+  every table and every graph's numbers (each graph keeps its series for this). On every tool's
+  "Save and compare" panel and under every comparison.
+
 **D-082 Two phones sending back: both kept, in every mini-app (owner, 2026-10-29).**
 The owner asked: I send from my phone, my wife gets latest (without a laptop opening in between)
 and sends from hers - are my changes lost? Chores were safe (three-way merge with the phone's base,

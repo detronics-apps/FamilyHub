@@ -450,6 +450,8 @@ body:has(.player:not([hidden])) .app-footer { padding-bottom: 72px; }
 @media print {
   .app-header, .app-footer, .slot-crumbs, .notices-host, .no-print, .tabs { display: none !important; }
   .panel { box-shadow: none; border: 0; }
+  .app-main button, .app-main .chipset, .app-main [data-field="saved-panel"] { display: none !important; }
+  .fin-chart, table { break-inside: avoid; }
 }
 
 /* Ingredient editor (js/ui/ingredient-editor.js) */

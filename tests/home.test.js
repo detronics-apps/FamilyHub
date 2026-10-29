@@ -72,3 +72,35 @@ test('D-078 older saves open as the right kind', () => {
   assert.equal(kindOf({}, 'bond'), 'buy');
   assert.deepEqual(homePlan({ kind: 'rent' }, TODAY).missing, ['the rent']);
 });
+
+test('D-083 buying later: the plan starts then, and costs are a year further on', () => {
+  const now = homePlan(buy, TODAY);
+  const later = homePlan({ ...buy, fromMonth: '2027-10' }, TODAY);
+  assert.equal(later.startYM, '2027-10');
+  assert.equal(later.now, -12);
+  assert.equal(later.months[0].ym, '2027-11');
+  near(later.months[0].bondPaid, now.months[0].bondPaid, 0.01);
+  assert.ok(later.months[0].running > now.months[0].running, 'rates and insurance have risen by then');
+  near(later.stay, 120, 0);
+});
+
+test('D-083 ours from when we bought it: the whole story, landing on today as before', () => {
+  const own = { kind: 'own', worthNow: 3200000, boughtFor: 1500000, boughtWhen: '2019-12', growthPct: 5, sellPct: 7.5, stayYears: 10, ratesTaxes: 1500,
+    bondLoan: 900000, bondStart: '2019-12', bondYears: 20, bondRate: 10 };
+  const today = homePlan(own, TODAY);
+  const story = homePlan({ ...own, ownFrom: 'bought' }, TODAY);
+  assert.equal(story.startYM, '2019-12');
+  assert.equal(story.now, 82);
+  near(story.fromPocket, 600000 + story.buyItems.reduce((s, i) => s + i.amount, 0), 1);
+  near(story.months[story.now - 1].value, 3200000, 1);
+  for (const t of [1, 12, 120]) near(story.months[story.now + t - 1].homeNet, today.months[t - 1].homeNet, 1);
+  near(story.monthNow, today.monthNow, 0.01);
+  near(story.bond.owedNow, today.bond.owedNow, 0.01);
+  assert.equal(story.months.length, 360 + 82, '30 years on from today');
+  // Compared with buying now: on one calendar from today; what ours cost before is behind it.
+  const sm = sameMoney([story, homePlan(buy, TODAY)]);
+  assert.equal(sm.align, '2026-10');
+  assert.deepEqual(sm.day1.map((x) => x > 0), [false, true]);
+  const smToday = sameMoney([today, homePlan(buy, TODAY)]);
+  near(sm.series[0][119].wealth, smToday.series[0][119].wealth, 5);
+});

@@ -1,7 +1,8 @@
 // One home, whole (D-078): bought now, already ours, or rented - made of sections that
 // can each be counted or left out, a bond with its real history, and "what if" scenarios
-// worked out with and without. Every month from today, so homes can be compared on the
-// same footing. Replaces the separate A home / Bond / Our bond / Sell to buy sums.
+// worked out with and without. Month by month from its own start (D-083): this month by
+// default, a later month for buying or renting later, or - for the home we own - the month
+// we bought it, so the whole story is counted. Compare lines them up on one calendar. Replaces the separate A home / Bond / Our bond / Sell to buy sums.
 // Pure - no DOM.
 
 import { REFERENCE, buyingCosts, total, travel, HOME_DEFAULTS } from '../finance/maths.js';
@@ -29,6 +30,8 @@ export const PLAN_DEFAULTS = {
   kind: 'buy', on: {}, scenarios: [],
   bondLoan: null, bondStart: null, bondYears: 20, bondRate: REFERENCE.prime.value, bondEvents: [],
   income: null,
+  fromMonth: null,     // buying or renting: the month it starts (empty: this month)
+  ownFrom: 'today',    // ours already: 'today' (as if selling today) or 'bought' (the whole story)
 };
 
 const num = (v) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? 0 : Number(v));
@@ -64,12 +67,18 @@ export function homePlan(input, today, { withScenarios = true } = {}) {
   const v = { ...PLAN_DEFAULTS, ...input };
   const kind = kindOf(v);
   const on = { ...SECTIONS_ON, ...(v.on ?? {}) };
-  const ym = today.slice(0, 7);
-  const M = 360;
+  const nowYM = today.slice(0, 7);
+  // The whole story of the home we own: from the month we bought it, at what we paid.
+  const story = kind === 'own' && v.ownFrom === 'bought' && num(v.boughtFor) > 0 && isMonth(v.boughtWhen) && v.boughtWhen < nowYM;
+  const ym = story ? v.boughtWhen : kind !== 'own' && isMonth(v.fromMonth) ? v.fromMonth : nowYM;
+  const now = monthsFrom(ym, nowYM);           // months from the start to today (negative: it starts later)
+  const M = 360 + Math.max(0, now);            // always 30 years on from today
   const g = num(v.growthPct) / 100;
   const esc = num(v.escalatePct) / 100;
   const sell = num(v.sellPct) / 100;
   const yr = (t) => Math.floor((t - 1) / 12);
+  // Costs are typed in today's money: rising from today, smaller before it.
+  const costYr = (t) => Math.floor((t - now - 1) / 12);
 
   if (kind === 'rent' && !(num(v.rent) > 0)) return { missing: ['the rent'] };
   if (kind === 'buy' && !(num(v.price) > 0)) return { missing: ['the price'] };
@@ -92,13 +101,20 @@ export function homePlan(input, today, { withScenarios = true } = {}) {
     bondEvents = scen;
     if (loan > 0) run = runBond({ loan, ratePct: v.ratePct, termYears: v.termYears, start: ym, events: bondEvents });
   } else if (kind === 'own') {
-    value0 = num(v.worthNow);
+    value0 = story ? num(v.boughtFor) : num(v.worthNow);
     baseCost = num(v.boughtFor || v.worthNow) + num(v.improvedSoFar);
     if (on.bond && num(v.bondLoan) > 0 && isMonth(v.bondStart)) {
       bondStart = v.bondStart;
       bondEvents = [...normaliseEvents(v.bondEvents), ...scen];
       run = runBond({ loan: v.bondLoan, ratePct: v.bondRate, termYears: v.bondYears, start: bondStart, events: bondEvents });
-      k = Math.max(0, monthsFrom(bondStart, ym));
+      k = story ? monthsFrom(bondStart, ym) : Math.max(0, monthsFrom(bondStart, ym));
+    }
+    if (story) {
+      // Bought then: the deposit and the costs of buying came from savings (at today's duty and fees).
+      loan = run ? num(v.bondLoan) : 0;
+      deposit = Math.max(0, value0 - loan);
+      buyItems = buyingCosts(value0, loan, {});
+      upfront = deposit + total(buyItems);
     }
   } else {
     upfront = num(v.rentDeposit) + num(v.rentMove);
@@ -106,7 +122,7 @@ export function homePlan(input, today, { withScenarios = true } = {}) {
   // Where the money on day one comes from. Selling our home first: the sale pays (deposit,
   // costs, renovations), and what is left is invested; only a shortfall comes from savings.
   // Owning already: nothing is paid; what the home would sell for today is the starting point.
-  let fromPocket = kind === 'own' ? 0 : upfront;
+  let fromPocket = kind === 'own' && !story ? 0 : upfront;
   let start = 0;
   const renov = kind === 'buy' ? num(v.renovations) : 0;
   if (funding) {
@@ -115,24 +131,27 @@ export function homePlan(input, today, { withScenarios = true } = {}) {
     start = funding.cash;
   }
   if (run?.missing) run = null;
-  const row = (t) => (run ? run.rows[k + t] ?? null : null);
+  const row = (t) => (run && k + t >= 0 ? run.rows[k + t] ?? null : null);
   const eventsAt = (kindName, t) => (run ? bondEvents.filter((e) => e.kind === kindName && monthsFrom(bondStart, e.from) === k + t).reduce((s, e) => s + num(e.amount), 0) : 0);
   const upgrades = on.upgrades && kind !== 'rent' ? (Array.isArray(v.upgrades) ? v.upgrades : []).map((u) => ({ name: u.name, m: Math.max(1, Math.round(num(u.inYears) * 12) || 1), cost: num(u.cost), adds: num(u.adds) })) : [];
   const ir = investRate(v);
   const o = num(v.otherRatePct) / 100;
   const owed0 = row(0)?.balance ?? 0;
-  if (kind === 'own') start = value0 * (1 - sell) - owed0 - homeGainTax(value0 * (1 - sell), baseCost, v.marginalPct).tax;
+  if (kind === 'own' && !story) start = value0 * (1 - sell) - owed0 - homeGainTax(value0 * (1 - sell), baseCost, v.marginalPct).tax;
+  // The whole story: from what we paid to what it is worth now, then growing as assumed.
+  const gNow = story ? (num(v.worthNow) > 0 ? (num(v.worthNow) / value0) ** (12 / Math.max(1, now)) - 1 : g) : g;
+  const homeValue = (t) => (!story ? value0 * (1 + g) ** (t / 12) : t <= now ? value0 * (1 + gNow) ** (t / 12) : value0 * (1 + gNow) ** (now / 12) * (1 + g) ** ((t - now) / 12));
 
   const months = [];
   let paid = fromPocket; let cashIn = 0; let inv = inv0; let invPut = 0; let upgradesSpent = 0; let interest = 0;
   let lastMin = row(0)?.minPmt ?? 0;
   for (let t = 1; t <= M; t += 1) {
-    const e = (1 + esc) ** yr(t);
+    const e = (1 + esc) ** costYr(t);
     const r = row(t);
-    if (r) { lastMin = r.minPmt; interest += r.interestThis; }
+    if (r) { lastMin = r.minPmt; if (t > now) interest += r.interestThis; }
     const bondPaid = r ? r.paidThis + eventsAt('extra', t) : 0;
     const taken = r ? eventsAt('withdraw', t) : 0;
-    const value = kind === 'rent' ? 0 : value0 * (1 + g) ** (t / 12) + upgrades.filter((u) => u.m <= t).reduce((s, u) => s + u.adds * (1 + g) ** ((t - u.m) / 12), 0);
+    const value = kind === 'rent' ? 0 : homeValue(t) + upgrades.filter((u) => u.m <= t).reduce((s, u) => s + u.adds * (1 + g) ** ((t - u.m) / 12), 0);
     const upgradeNow = upgrades.filter((u) => u.m === t).reduce((s, u) => s + u.cost * (1 + esc) ** (t / 12), 0);
     upgradesSpent += upgradeNow;
     const maint = !on.running || kind === 'rent' ? 0 : v.maintMode === 'percent' ? (value * num(v.upkeepPct)) / 1200 : (num(v.maintYearly) / 12) * e;
@@ -151,11 +170,13 @@ export function homePlan(input, today, { withScenarios = true } = {}) {
     const ahead = homeNet + inv + cashIn - paid - invPut - forgone - start;
     months.push({ t, ym: addMonthsYM(ym, t), out, bondPaid, running, rent, trip, upgradeNow, taken, owed, value, inv, put, paid, homeNet, ahead, minPmt: r?.minPmt ?? 0 });
   }
-  const S = Math.max(1, Math.min(M, Math.round(num(v.stayYears) * 12) || 120));
+  // How long you live there counts from today when it started earlier, else from its start.
+  const N = Math.max(0, now);
+  const S = Math.max(1, Math.min(M, N + (Math.round(num(v.stayYears) * 12) || 120)));
   return {
-    kind, on, months, stay: S, at: months[S - 1], ahead: months[S - 1].ahead, monthNow: months[0].out,
-    upfront, fromPocket, inv0, deposit, loan, buyItems, funding, value0, start, owed0,
-    bond: run ? { paidOff: run.paidOff, owedNow: owed0, minNow: row(0)?.minPmt ?? 0, monthsLeft: Math.max(0, run.months - k), interestFromNow: interest, notes: run.notes } : null,
+    kind, on, months, stay: S, at: months[S - 1], ahead: months[S - 1].ahead, monthNow: months[N].out,
+    upfront, fromPocket, inv0, deposit, loan, buyItems, funding, value0, start, owed0, startYM: ym, now, story,
+    bond: run ? { paidOff: run.paidOff, owedNow: row(N)?.balance ?? owed0, minNow: row(N)?.minPmt ?? 0, monthsLeft: Math.max(0, run.months - k - N), interestFromNow: interest, notes: run.notes } : null,
   };
 }
 
@@ -182,18 +203,25 @@ export function withAndWithout(input, today) {
 export function sameMoney(plans, v = {}) {
   const r = investRate({ investPct: v.investPct ?? 9, investTaxPct: v.investTaxPct ?? 15 });
   const s = Math.min(100, Math.max(0, v.investShare ?? 100)) / 100;
+  // One calendar (D-083): compared from the month the last of them starts - until then
+  // nothing differs. A home that started earlier (ours, since we bought it) joins with
+  // what it has then; what it cost before is behind it whichever is chosen.
+  const align = plans.map((p) => p.startYM).sort().at(-1);
+  const off = plans.map((p) => monthsFrom(p.startYM, align));
+  const rowOf = (p, i, t) => p.months[off[i] + t - 1] ?? p.months.at(-1);
   // Day one: each starts from the same savings; whoever takes less from them keeps the rest invested.
-  const up = Math.max(...plans.map((p) => p.fromPocket));
-  const side = plans.map((p) => up - p.fromPocket);
+  const day1 = plans.map((p, i) => (off[i] === 0 ? p.fromPocket : 0));
+  const up = Math.max(...day1);
+  const side = day1.map((x) => up - x);
   const series = plans.map(() => []);
   for (let t = 1; t <= 360; t += 1) {
-    const need = plans.map((p) => { const m = p.months[t - 1]; return m.out + m.put - m.taken; });
+    const need = plans.map((p, i) => { const m = rowOf(p, i, t); return m.out + m.put - m.taken; });
     const top = Math.max(...need);
     plans.forEach((p, i) => {
       side[i] = side[i] * (1 + r) + (top - need[i]) * s;
-      const m = p.months[t - 1];
+      const m = rowOf(p, i, t);
       series[i].push({ t, wealth: m.homeNet + m.inv + side[i] });
     });
   }
-  return { series, up };
+  return { series, up, align, day1 };
 }

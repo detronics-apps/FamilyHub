@@ -3,7 +3,7 @@
 // answers that update as you type, and anything saved under a name to compare later.
 // UI only - the arithmetic lives in maths.js (pure, tested).
 
-import { el, svg } from '../../ui/dom.js';
+import { el, svg, download } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
 import { KEYS } from '../../storage.js';
 import { saveRecord } from '../kit.js';
@@ -200,7 +200,15 @@ export const whenLabel = (m) => (m >= 12 ? `year ${Math.ceil(m / 12)}` : `month 
  * upright lines. A zero line is drawn whenever the lines go below zero. `story` is one
  * sentence under the chart saying what to look at. Colours come from the theme.
  */
-export function lineChart(series, { label, marks = [], story = null, xLabel = null }) {
+/** A graph that also keeps its numbers, so CSV export can write them out (D-083). */
+export function lineChart(series, opts) {
+  const figure = drawChart(series, opts);
+  figure.dataset.chart = '';
+  figure.chartData = { label: opts.label, series, xLabel: opts.xLabel ?? null };
+  return figure;
+}
+
+function drawChart(series, { label, marks = [], story = null, xLabel = null }) {
   const W = 640; const H = 240; const L = 64; const B = 26; const T = 14; const R = 12;
   const xs = series.flatMap((s) => s.points.map((p) => p[0]));
   const ys = series.flatMap((s) => s.points.map((p) => p[1]));
@@ -314,6 +322,7 @@ export function savedPanel(hub, { col, kind, d, summary, onOpen, compareScreen }
   const items = list.data ?? [];
   return el('div', { class: 'panel stack', 'data-field': 'saved-panel' }, [
     el('h2', { text: 'Save and compare', style: { margin: 0 } }),
+    exportBar(() => name.value.trim() || d.title || kind),
     el('p', { class: 'small muted', style: { margin: 0 }, text: 'Save this with a name - a car, a house, an offer - and come back to it any time. Tick two or more to compare them.' }),
     el('div', { class: 'row' }, [
       el('label', { class: 'sr-only', for: `name-${kind}`, text: 'Name' }), name,
@@ -336,6 +345,64 @@ export function savedPanel(hub, { col, kind, d, summary, onOpen, compareScreen }
  * Side by side: one column per saved item, the difference from the first, and
  * the biggest differences said in words. rows: [{ label, get(out), lower: true|false|null }].
  */
+/* ------------------------------------------------------------ export */
+
+/**
+ * Print (or save as PDF) and CSV for whatever Finance page it sits on (D-083).
+ * Print: the page as it is, every folded section opened, without buttons or menus.
+ * CSV: your figures, the results, every table, and every graph's numbers.
+ */
+export function exportBar(title) {
+  const bar = el('div', { class: 'row no-print', 'data-field': 'export' }, []);
+  const root = () => bar.closest('section') ?? document.querySelector('main');
+  const name = () => (typeof title === 'function' ? title() : title) || 'Family Hub';
+  bar.append(
+    el('button', { class: 'btn btn-small', type: 'button', text: 'Print', title: 'Print, or choose "Save as PDF" - with every graph', 'data-field': 'export-print', on: { click: () => {
+      const shut = [...root().querySelectorAll('details:not([open])')];
+      shut.forEach((d) => { d.open = true; });
+      window.addEventListener('afterprint', () => shut.forEach((d) => { d.open = false; }), { once: true });
+      window.print();
+    } } }),
+    el('button', { class: 'btn btn-small', type: 'button', text: 'CSV', title: 'For Excel or Google Sheets: your figures, the results, the tables and each graph’s numbers', 'data-field': 'export-csv', on: { click: () => {
+      const csv = pageCsv(root(), name());
+      download(new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8' }), `${name().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'finance'}.csv`);
+    } } }),
+  );
+  return bar;
+}
+
+const clean = (t) => String(t ?? '').replace(/\(i\)|ⓘ/g, '').replace(/\s+/g, ' ').trim();
+const cell = (v) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+
+function pageCsv(root, title) {
+  const rows = [[title], ['Made', new Date().toISOString().slice(0, 10)], []];
+  const figures = [...root.querySelectorAll('label[for]')].map((l) => {
+    const c = root.querySelector(`#${CSS.escape(l.htmlFor)}`);
+    if (!c || c.offsetParent === null || c.type === 'checkbox' || c.type === 'radio') return null;
+    const value = c.tagName === 'SELECT' ? c.selectedOptions[0]?.text : c.value;
+    // The label's own words, without its "Yours" tag or (i) button.
+    const words = [...l.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('');
+    return value === '' || value == null ? null : [clean(words || l.textContent), value];
+  }).filter(Boolean);
+  if (figures.length) rows.push(['Your figures'], ...figures, []);
+  const stats = [...root.querySelectorAll('.stat')].map((s) => [clean(s.querySelector('.stat__label')?.textContent), clean(s.querySelector('.stat__value')?.textContent)]);
+  if (stats.length) rows.push(['Results'], ...stats, []);
+  for (const t of root.querySelectorAll('table')) {
+    rows.push([clean(t.closest('.panel')?.querySelector('h2, h3')?.textContent) || 'Table']);
+    for (const tr of t.rows) rows.push([...tr.cells].map((c) => clean(c.childNodes[0]?.textContent ?? c.textContent)));
+    rows.push([]);
+  }
+  for (const f of root.querySelectorAll('[data-chart]')) {
+    const { label, series, xLabel } = f.chartData ?? {};
+    if (!series) continue;
+    const xs = [...new Set(series.flatMap((s) => s.points.map((p) => p[0])))].sort((a, b) => a - b);
+    rows.push([`Graph: ${label}`], [xLabel ? 'Year' : 'Month', ...series.map((s) => s.name)]);
+    for (const x of xs) rows.push([xLabel ? `${xLabel(x)} (month ${x})` : x, ...series.map((s) => { const p = s.points.find((q) => q[0] === x); return p ? Math.round(p[1]) : ''; })]);
+    rows.push([]);
+  }
+  return rows.map((r) => r.map(cell).join(',')).join('\r\n');
+}
+
 export function compareTable(items, rows, { unitNote } = {}) {
   const first = items[0];
   const diff = (r, it) => {
@@ -363,5 +430,6 @@ export function compareTable(items, rows, { unitNote } = {}) {
     ])]),
     words.length ? el('ul', { class: 'small', style: { margin: 0 } }, words.map((w) => el('li', { text: w }))) : null,
     unitNote ? el('p', { class: 'small muted', style: { margin: 0 }, text: unitNote }) : null,
+    exportBar(`Compared - ${items.map((it) => it.title).join(', ')}`),
   ]);
 }

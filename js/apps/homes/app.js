@@ -5,12 +5,13 @@
 // (D-067, D-072, D-074, D-075); their saved work opens here.
 
 import { el } from '../../ui/dom.js';
+import { confirmAction } from '../../ui/common.js';
 import { loading, failure } from '../kit.js';
 import { REFERENCE, total, sensitivity, SELL_DEFAULTS } from '../finance/maths.js';
 import { historyGrowth, CGT } from './ownrent.js';
 import { EVENT_KINDS } from './bondlog.js';
 import { homePlan, withAndWithout, sameMoney, kindOf, KINDS, SECTIONS, SECTIONS_ON, SCENARIO_KINDS, PLAN_DEFAULTS } from './home.js';
-import { levelBar, shows, draft, loadDraft, input, info, linesPanel as eventsPanel, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, RULE, outOf, savedPanel, rand, pct, months } from '../finance/pod.js';
+import { levelBar, shows, draft, loadDraft, input, info, linesPanel as eventsPanel, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, RULE, outOf, savedPanel, exportBar, rand, pct, months } from '../finance/pod.js';
 import { HOME_HELP as H } from '../finance/help.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => r.title, prefix: 'hom' });
@@ -53,6 +54,10 @@ function listScreen(hub) {
         return el('li', {}, [
           el('div', { class: 'list__main' }, [el('strong', { text: rec.title || 'Untitled' }), el('div', { class: 'small muted', text: [KINDS[v.kind], rec.result?.headline, rec.savedAt ? `saved ${rec.savedAt.slice(0, 10)}` : null].filter(Boolean).join(' · ') })]),
           el('button', { class: 'btn btn-small', type: 'button', text: 'Open', 'aria-label': `Open ${rec.title}`, 'data-field': `open:${rec.id}`, on: { click: () => { loadDraft('homes', DEFAULTS, { ...rec, values: v, kind: KIND }); hub.go('home'); } } }),
+          el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': `Remove ${rec.title}`, 'data-field': `remove:${rec.id}`, on: { click: async () => {
+            if (!(await confirmAction({ title: `Remove "${rec.title || 'Untitled'}"?`, text: 'The saved home is deleted. This cannot be undone.', confirmLabel: 'Remove', danger: true }))) return;
+            await col(hub).remove(rec.id); cmp.picked?.delete(rec.id); hub.invalidate();
+          } } }),
         ]);
       })) : el('p', { class: 'muted', style: { margin: 0 }, text: 'Nothing saved yet. Add a home above, fill it in, and save it with a name.' }),
       all.data?.length > 1 ? el('a', { class: 'btn btn-primary', href: hub.href('compare'), text: 'Compare', 'data-field': 'go-compare', title: 'Compare any of these - buy against buy, against renting, or keeping ours' }) : null,
@@ -73,14 +78,17 @@ const hasHome = (v) => !isRent(v);
 /** The page's sections, in the order a decision is made. `tick`: can be left out. */
 const SECS = [
   { key: 'home', title: 'The home', when: hasHome, fields: [
+    f('fromMonth', 'Buying in', 'month', { optional: true, when: isBuy }),
     f('price', 'Price', 'money', { when: isBuy }),
     f('worthNow', 'What it would sell for now', 'money', { when: isOwn }),
     f('boughtFor', 'We bought it for', 'money', { optional: true, when: isOwn }),
     f('boughtWhen', 'In', 'month', { optional: true, when: isOwn }),
     f('improvedSoFar', 'Spent on improvements so far', 'money', { optional: true, level: 'advanced', when: isOwn }),
+    f('ownFrom', 'Work it out from', 'choice', { when: isOwn, redraw: true, choices: [{ value: 'today', label: 'Today' }, { value: 'bought', label: 'When we bought it' }] }),
     f('growthPct', 'House prices grow by', 'percent', { source: { kind: 'illustrative' } }),
   ], extra: (hub, d) => historyLine(hub, d) },
   { key: 'rentSec', title: 'The rent', when: isRent, fields: [
+    f('fromMonth', 'Renting from', 'month', { optional: true }),
     f('rent', 'Rent a month', 'money'),
     f('rentRisePct', 'Rent rises by', 'percent', { source: { kind: 'illustrative' } }),
     f('rentDeposit', 'Rental deposit', 'money', { optional: true }),
@@ -142,7 +150,7 @@ const SECS = [
     f('sellPct', 'Selling later costs, of the price', 'percent', { unitText: '%', level: 'advanced', source: { kind: 'illustrative' }, when: hasHome }),
     f('marginalPct', 'Your income tax rate on the last rand', 'percent', { unitText: '%', level: 'advanced', source: { kind: 'illustrative' }, when: hasHome }),
   ] },
-  { key: 'forgone', title: SECTIONS.forgone, tick: true, when: (v) => !isOwn(v), fields: [
+  { key: 'forgone', title: SECTIONS.forgone, tick: true, when: (v) => !isOwn(v) || v.ownFrom === 'bought', fields: [
     f('otherRatePct', 'Money could earn elsewhere', 'percent', { source: { kind: 'illustrative' } }),
   ] },
 ];
@@ -179,7 +187,7 @@ function homeScreen(hub) {
     answer,
     savedPanel(hub, {
       col: col(hub), kind: KIND, d, compareScreen: 'compare',
-      summary: () => { const p = homePlan(v, today); return p.missing ? {} : { headline: `${rand(p.monthNow)} a month · ${p.ahead >= 0 ? `${rand(p.ahead)} ahead` : `${rand(-p.ahead)} behind`} after ${yrs(Math.round(p.stay / 12))}` }; },
+      summary: () => { const p = homePlan(v, today); return p.missing ? {} : { headline: `${rand(p.monthNow)} a month · ${p.ahead >= 0 ? `${rand(p.ahead)} ahead` : `${rand(-p.ahead)} behind`} ${p.startYM === today.slice(0, 7) ? `after ${yrs(Math.round(p.stay / 12))}` : `by ${p.at.ym.slice(0, 4)}`}` }; },
       onOpen: (rec) => { loadDraft('homes', DEFAULTS, { ...rec, values: valuesOf(rec) }); hub.render(); },
     }),
   ]);
@@ -289,28 +297,37 @@ function results(hub, d) {
   if (w.missing) return [el('p', { class: 'panel muted', text: `Fill in ${w.missing.join(' and ')} to see the answer.` })];
   const p = w.with; const p0 = w.without;
   const stay = Math.round(p.stay / 12);
+  // Starting now: "after 10 years". Starting another month (ours since we bought it, buying later): "by 2036".
+  const startsNow = p.startYM === today.slice(0, 7);
+  const after = startsNow ? `after ${yrs(stay)}` : `by ${p.at.ym.slice(0, 4)}`;
+  const N = Math.max(0, p.now);
   const at = p.at;
   const lines = [];
+  if (!startsNow && !p.story) lines.push(`${p.kind === 'rent' ? 'Renting' : 'Buying'} from ${ymName(p.startYM)}: until then nothing changes, and costs are taken as a year or so further on.`);
+  if (p.story) lines.push(`Bought for ${rand(p.value0)} in ${ymName(p.startYM)}: ${rand(p.fromPocket)} came from savings - the ${rand(p.deposit)} deposit and ${rand(total(p.buyItems))} in duty and fees (at today's rates, so roughly). It counts everything since, with today marked on the graphs.`);
   if (p.kind === 'buy') lines.push(p.funding ? `Selling our home leaves ${rand(p.funding.cash)}; it pays the ${rand(p.deposit)} deposit and ${rand(total(p.buyItems))} in buying costs${p.inv0 ? `, and ${rand(p.inv0)} stays invested` : ''}${p.fromPocket ? `. ${rand(p.fromPocket)} more comes from savings` : ''}.` : `Moving in takes ${rand(p.fromPocket)} from savings: the ${rand(p.deposit)} deposit, ${rand(total(p.buyItems))} in duty and fees${n(v.moveCost) ? ' and moving' : ''}.`);
-  if (p.kind === 'own') lines.push(`Selling today would leave about ${rand(p.start)}, after the agent${p.owed0 ? `, the ${rand(p.owed0)} still owed` : ''} and any tax - that is where this starts from.`);
+  if (p.kind === 'own' && !p.story) lines.push(`Selling today would leave about ${rand(p.start)}, after the agent${p.owed0 ? `, the ${rand(p.owed0)} still owed` : ''} and any tax - that is where this starts from.`);
   if (p.kind === 'rent') lines.push(`Rent starts at ${rand(n(v.rent))} a month and rises about ${pct(n(v.rentRisePct))} a year${p.funding ? `; the ${rand(p.inv0)} left from selling our home is invested meanwhile` : ''}.`);
-  if (w.any && p.bond && p0.bond) lines.push(`With your ticked what-ifs: paid off ${ymName(p.bond.paidOff)} instead of ${ymName(p0.bond.paidOff)} - ${w.sooner > 0 ? `${months(w.sooner)} sooner` : w.sooner < 0 ? `${months(-w.sooner)} later` : 'the same time'} - with ${rand(Math.abs(w.interestSaved))} ${w.interestSaved >= 0 ? 'less' : 'more'} interest, and ${rand(Math.abs(w.better))} ${w.better >= 0 ? 'better' : 'worse'} off after ${yrs(stay)}.`);
+  if (w.any && p.bond && p0.bond) lines.push(`With your ticked what-ifs: paid off ${ymName(p.bond.paidOff)} instead of ${ymName(p0.bond.paidOff)} - ${w.sooner > 0 ? `${months(w.sooner)} sooner` : w.sooner < 0 ? `${months(-w.sooner)} later` : 'the same time'} - with ${rand(Math.abs(w.interestSaved))} ${w.interestSaved >= 0 ? 'less' : 'more'} interest, and ${rand(Math.abs(w.better))} ${w.better >= 0 ? 'better' : 'worse'} off ${after}.`);
   if (p.on.afterBond && at.inv > 0) lines.push(`After the bond, investing what the instalment was grows to about ${rand(at.inv)} by year ${stay}.`);
-  if (p.on.travel && n(v.km)) lines.push(`Getting to work: about ${rand(p.months[0].trip)} a month${n(v.minutes) ? ` and ${Math.round((2 * n(v.minutes) * n(v.days || 21)) / 60)} hours on the road` : ''}.`);
-  lines.push(`After ${yrs(stay)}: ${p.kind === 'rent' ? `the deposit back${at.inv ? ` and ${rand(at.inv)} invested` : ''}` : `the home would bring about ${rand(at.homeNet)} once sold (after selling costs, any bond still owed and tax)${at.inv ? `, plus ${rand(at.inv)} invested` : ''}`}. ${at.ahead >= 0 ? `You would be about ${rand(at.ahead)} ahead` : `It would have cost you about ${rand(-at.ahead)}`}${p.kind === 'own' ? ', compared with selling today' : ''}${p.on.forgone && p.fromPocket ? ', counting what the money up front could have earned' : ''}.`);
+  if (p.on.travel && n(v.km)) lines.push(`Getting to work: about ${rand(p.months[N].trip)} a month${n(v.minutes) ? ` and ${Math.round((2 * n(v.minutes) * n(v.days || 21)) / 60)} hours on the road` : ''}.`);
+  lines.push(`${after[0].toUpperCase()}${after.slice(1)}: ${p.kind === 'rent' ? `the deposit back${at.inv ? ` and ${rand(at.inv)} invested` : ''}` : `the home would bring about ${rand(at.homeNet)} once sold (after selling costs, any bond still owed and tax)${at.inv ? `, plus ${rand(at.inv)} invested` : ''}`}. ${at.ahead >= 0 ? `You would be about ${rand(at.ahead)} ahead` : `It would have cost you about ${rand(-at.ahead)}`}${p.kind === 'own' && !p.story ? ', compared with selling today' : p.story ? ', compared with never having bought it' : ''}${p.on.forgone && p.fromPocket ? ', counting what the money up front could have earned' : ''}.`);
   const off = Object.entries(SECTIONS).filter(([k]) => !({ ...SECTIONS_ON, ...(v.on ?? {}) })[k] && SECS.find((s) => s.key === k && (!s.when || s.when(v)))).map(([, t]) => t.toLowerCase());
   if (off.length) lines.push(`Left out: ${off.join(', ')}.`);
 
-  const span = Math.min(360, Math.max(p.stay + 24, 120, p.bond?.paidOff ? (p.bond.monthsLeft + 24) : 0));
+  const span = Math.min(p.months.length, Math.max(p.stay + 24, N + 120, p.bond?.paidOff ? (N + p.bond.monthsLeft + 24) : 0));
   const pts = (plan, k, sign = 1) => [[0, k === 'ahead' ? 0 : sign * (k === 'value' ? plan.value0 : k === 'owed' ? plan.owed0 || plan.loan : 0)], ...plan.months.slice(0, span).filter((m) => m.t % 3 === 0).map((m) => [m.t, sign * m[k]])];
   const aheadW = pts(p, 'ahead'); const aheadO = pts(p0, 'ahead');
   // Mark where it turns only when it starts behind - owning already, it starts at zero (selling today).
   const even = aheadW[1]?.[1] < 0 ? crossing(aheadW.slice(1)) : null;
-  const payoff = p.bond?.paidOff ? { x: p.bond.monthsLeft, label: 'Bond paid off' } : null;
+  const payoff = p.bond?.paidOff ? { x: N + p.bond.monthsLeft, label: 'Bond paid off' } : null;
+  const todayMark = p.now > 0 ? { x: p.now, label: 'Today' } : null;
+  // Calendar years under the graphs when it does not start this month.
+  const xLabel = startsNow ? null : (x) => String(Number(p.startYM.slice(0, 4)) + Math.floor((Number(p.startYM.slice(5)) - 1 + x) / 12));
   const out = [
     el('div', { class: 'stats' }, [
       stat(rand(p.monthNow), 'a month now, all counted', 'r-month'),
-      stat(rand(Math.abs(at.ahead)), at.ahead >= 0 ? `ahead after ${yrs(stay)}` : `what it costs you over ${yrs(stay)}`, 'r-ahead'),
+      stat(rand(Math.abs(at.ahead)), at.ahead >= 0 ? `ahead ${after}` : `what it costs you, ${after}`, 'r-ahead'),
       p.bond ? stat(ymName(p.bond.paidOff), 'bond paid off', 'r-paidoff') : stat(rand(p.fromPocket), 'from savings up front', 'r-upfront'),
     ]),
     el('div', { class: 'panel stack' }, [el('h2', { text: 'What it means', style: { margin: 0 } }), ...lines.map((t) => el('p', { style: { margin: 0 }, text: t }))]),
@@ -318,7 +335,7 @@ function results(hub, d) {
       { name: w.any ? 'With your what-ifs' : 'Ahead (above zero) or behind (below)', points: aheadW },
       ...(w.any ? [{ name: 'Without them', points: aheadO, dashed: true }] : []),
     ], { label: 'How far ahead or behind you would be, if you sold or left after that long',
-      marks: [even != null ? { x: even, label: `Ahead from ${whenLabel(even)}` } : null, { x: p.stay, label: `You: ${yrs(stay)}` }, payoff],
+      marks: [even != null ? { x: even, label: startsNow ? `Ahead from ${whenLabel(even)}` : `Ahead from ${xLabel(even)}` } : null, { x: p.stay, label: startsNow ? `You: ${yrs(stay)}` : `You: ${p.at.ym.slice(0, 4)}` }, payoff, todayMark], xLabel,
       story: `${RULE} ${p.kind === 'buy' ? 'It starts below zero: duty, fees and the agent are paid however short the stay.' : p.kind === 'own' ? 'Zero is selling today.' : 'Rent goes further below zero every month - none of it comes back.'}` })),
     chartPanel('Money in and out',
       lineChart([
@@ -327,11 +344,11 @@ function results(hub, d) {
         ...(p.bond && w.any ? [{ name: 'Still owed, without', points: pts(p0, 'owed', -1), dashed: true }] : []),
         { name: 'Paid out so far', points: pts(p, 'paid', -1), dashed: !w.any },
         ...(at.inv > 0 ? [{ name: 'Invested', points: pts(p, 'inv') }] : []),
-      ], { label: 'What the home is worth, what is owed, and what has been paid out', marks: [payoff], story: RULE }),
+      ], { label: 'What the home is worth, what is owed, and what has been paid out', marks: [payoff, todayMark], xLabel, story: RULE }),
       lineChart([
         { name: w.any ? 'Paid out that month, with your what-ifs' : 'Paid out that month', points: outOf(p.months.slice(0, span).map((m) => [m.t, m.out])) },
         ...(w.any ? [{ name: 'Without them', points: outOf(p0.months.slice(0, span).map((m) => [m.t, m.out])), dashed: true }] : []),
-      ], { label: 'What comes out of your pocket each month', marks: [payoff], story: 'The bond, rates, insurance, upkeep, travel - or rent. It drops when the bond is paid off.' })),
+      ], { label: 'What comes out of your pocket each month', marks: [payoff, todayMark], xLabel, story: 'The bond, rates, insurance, upkeep, travel - or rent. It drops when the bond is paid off.' })),
     forgotten(v, p),
   ];
   if (shows('advanced')) {
@@ -427,6 +444,7 @@ function compareScreen(hub, param) {
   const v0 = items[0].v;
   const sm = sameMoney(items.map((x) => x.plan), { investPct: n(v0.investPct) || 9, investTaxPct: n(v0.investTaxPct) || 15, investShare: v0.investShare ?? 100 });
   const H = cmp.years * 12;
+  const fromLater = sm.align !== today.slice(0, 7);
   const wealth = sm.series.map((s) => s[H - 1].wealth);
   const best = wealth.indexOf(Math.max(...wealth));
   const words = items.map((x, i) => (i === best ? null : `${x.rec.title}: ${rand(wealth[best] - wealth[i])} behind ${items[best].rec.title} after ${yrs(cmp.years)}.`)).filter(Boolean);
@@ -439,22 +457,25 @@ function compareScreen(hub, param) {
     ...head,
     el('div', { class: 'stats' }, [stat(items[best].rec.title || 'Untitled', `furthest ahead after ${yrs(cmp.years)}`, 'r-best')]),
     el('div', { class: 'panel stack' }, [el('h2', { text: 'In plain words', style: { margin: 0 } }), ...[...words, ...flips].map((t) => el('p', { style: { margin: 0 }, text: t })),
-      el('p', { class: 'small muted', style: { margin: 0 }, text: 'Each home is worked out with its own ticks and what-ifs, as saved. Change one by opening it.' })]),
+      fromLater ? el('p', { style: { margin: 0 }, text: `Compared from ${ymName(sm.align)}, when the last of them starts - until then nothing differs between them.` }) : null,
+      el('p', { class: 'small muted', style: { margin: 0 }, text: 'Each home is worked out with its own ticks and what-ifs, as saved. Change one by opening it. A home started earlier (ours, since we bought it) joins with what it has by then - what it cost before is the same whichever you choose.' })]),
     chartPanel('Where each would leave you', lineChart(items.map((x, i) => ({ name: x.rec.title || `Home ${i + 1}`, points: sm.series[i].filter((s) => s.t % 6 === 0).map((s) => [s.t, s.wealth]) })), {
       label: 'What each household would have, year by year, on the same money', marks: [{ x: H, label: `${yrs(cmp.years)}` }],
+      xLabel: fromLater ? (x) => String(Number(sm.align.slice(0, 4)) + Math.floor((Number(sm.align.slice(5)) - 1 + x) / 12)) : null,
       story: `${RULE} Each line is what that choice would leave you if you stopped then: the home sold (or the deposit back), plus everything invested.` })),
     el('div', { class: 'panel stack' }, [
       el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums fin-compare' }, [
         el('thead', {}, [el('tr', {}, [el('th', { text: '' }), ...items.map((x) => el('th', { class: 'num', text: x.rec.title || 'Untitled' }))])]),
         el('tbody', {}, [
           ['Kind', (x) => KINDS[x.plan.kind]],
-          ['From savings on day one', (x) => rand(-x.plan.fromPocket)],
+          ['From savings on day one', (x, i) => rand(-sm.day1[i])],
           ['A month now', (x) => rand(-x.plan.monthNow)],
           ['Bond paid off', (x) => (x.plan.bond ? ymName(x.plan.bond.paidOff) : '-')],
           [`Would leave you, after ${yrs(cmp.years)}`, (x, i) => rand(wealth[i])],
           ['Against the best', (x, i) => (i === best ? 'best' : rand(wealth[i] - wealth[best]))],
         ].map(([label, get]) => el('tr', {}, [el('td', { text: label }), ...items.map((x, i) => el('td', { class: 'num', text: get(x, i) }))]))),
       ])]),
+      exportBar(`Homes compared - ${items.map((x) => x.rec.title || 'Untitled').join(', ')}`),
     ]),
   ]);
 }
