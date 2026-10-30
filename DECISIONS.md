@@ -631,6 +631,31 @@ purpose (saved): show people what they have not thought of, and let them put the
   marked not counted), what moves the answer most, and year by year.
 - Tested: a home growing exactly as fast as after-tax investments, with no costs, comes out level.
 
+**D-087 What each situation did; no "After the bond" tick (owner, 2026-10-30).**
+The owner: "paying off the extra amount on the bond, I want to see the impact of that situation. And
+then when I pull out that money... where could it have gone versus what is happening now?" - and
+the "After the bond is paid off" tick showed nothing when opened.
+- **After the bond**: the section had no figures, only a tick, and since D-086 the tick changed
+  nothing - on the same money, whoever spends less invests the difference, so the instalment no
+  longer paid is already invested (measured: R19 052 141 at 30 years either way). The section and
+  `put` are gone; "What it means" now says from when the bond is done what it took a month stays
+  with you, and the graphs count it. An old saved tick is ignored.
+- **What each one did** (homes/situations.js), under the main graph's Explore and bars: every line
+  of the bond's real history (owned) and every ticked what-if is taken out on its own and the
+  whole home worked out again - all of them on one same-money run, so paying more is set against
+  investing that money instead, taking money out against leaving it in the bond.
+  - The graph: one line each, what the home leaves you with it minus without it, month by month,
+    plus "All together" when there are two or more; chips show or hide each line.
+  - In words, each: paid off sooner or later, interest saved or added, and what it leaves you by
+    your leaving year. Paying more that stopped: "had you kept paying it until the bond was done".
+    A take-out larger than what had been paid ahead: a bank usually treats that as a re-advance.
+  - All together is not the sum: a take-out has the bank work the instalment out again over the
+    years left, so what was paid ahead no longer brings the end closer - it says so.
+  - Before the page starts (Ours already, from today) a line is not measured - taking it out would
+    change where it starts and not what it cost; it points to "When we bought it".
+- **Money taken out: Invested / Spent** on each take-out line (homes only). Spent, it is not money
+  in - it is gone. Unchosen, it is counted as invested, as before, and the words say so.
+
 **D-086 Every home compared with something real; four graphs, one question each (owner, 2026-10-30).**
 The owner: "everywhere you say 'ahead' I need to know ahead of what?" A home's page measured it
 against keeping your money and living somewhere for free - every rand of rates or travel counted

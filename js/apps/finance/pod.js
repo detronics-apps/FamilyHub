@@ -354,7 +354,7 @@ export const outOf = (points) => points.map(([x, y]) => [x, -y]);
 export const chartPanel = (title, ...charts) => el('div', { class: 'panel stack' }, [el('h2', { text: title, style: { margin: 0 } }), ...charts.filter(Boolean)]);
 
 /** A list of lines: what happened on the bond, or the "what if" scenarios (ticked to count). */
-export function linesPanel(d, refresh, key, kinds, title, help, tickable = false) {
+export function linesPanel(d, refresh, key, kinds, title, help, tickable = false, uses = false) {
   const list = Array.isArray(d.values[key]) ? d.values[key] : (d.values[key] = []);
   const box = el('div', { class: 'stack' });
   const save = () => { d.mine.add(key); refresh(); };
@@ -369,6 +369,9 @@ export function linesPanel(d, refresh, key, kinds, title, help, tickable = false
     el('span', { class: 'small muted', text: e.kind === 'rate' ? 'new rate' : e.kind === 'more' ? 'R more a month' : e.kind === 'pay' ? 'R a month' : 'R' }),
     el('input', { class: 'input', type: 'number', min: '0', step: 'any', value: e.amount ?? '', 'aria-label': e.kind === 'rate' ? 'New rate, % a year' : 'Amount', style: { maxWidth: '130px' }, on: { change: (x) => { e.amount = Number(x.target.value) || 0; save(); } } }),
     e.kind === 'rate' ? el('span', { class: 'small muted', text: '%' }) : null,
+    // Money taken out: invested, or spent and gone (D-087).
+    uses && e.kind === 'withdraw' ? el('select', { class: 'select', 'aria-label': 'What the money taken out went to', style: { width: 'auto' }, 'data-field': `${key}:${i}:use`, on: { change: (x) => { e.use = x.target.value === 'spent' ? 'spent' : undefined; save(); } } },
+      [['invested', 'Invested'], ['spent', 'Spent']].map(([k, label]) => el('option', { value: k, text: label, selected: (e.use === 'spent') === (k === 'spent') }))) : null,
     el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': 'Remove this line', on: { click: () => { list.splice(i, 1); draw(); save(); } } }),
   ])));
   draw();
@@ -377,7 +380,7 @@ export function linesPanel(d, refresh, key, kinds, title, help, tickable = false
   return el('section', { class: 'panel stack', 'data-field': `${key}-panel` }, [
     el('h2', { style: { margin: 0 } }, [title, ' ', ib]),
     ix,
-    tickable ? el('p', { class: 'small muted', style: { margin: 0 }, text: 'Ticked lines are shown on the graphs next to how things go without them.' }) : null,
+    tickable ? el('p', { class: 'small muted', style: { margin: 0 }, text: 'Ticked lines are counted; "What each one did" shows each one on its own.' }) : null,
     box,
     el('div', {}, [el('button', { class: 'btn btn-small', type: 'button', text: 'Add line', 'data-field': `${key}-add`, on: { click: () => { list.push({ kind: tickable ? 'more' : 'pay', from: tickable ? today : d.values.bondStart ?? null, to: null, amount: null, on: true }); draw(); } } })]),
   ]);

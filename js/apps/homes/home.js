@@ -18,10 +18,9 @@ export const SECTIONS = {
   running: 'Running it',
   upgrades: 'Upgrades',
   travel: 'Getting to work',
-  afterBond: 'After the bond is paid off',
   forgone: 'What the money up front could have earned',
 };
-export const SECTIONS_ON = { sellFirst: false, bond: true, running: true, upgrades: true, travel: true, afterBond: false, forgone: true };
+export const SECTIONS_ON = { sellFirst: false, bond: true, running: true, upgrades: true, travel: true, forgone: true };
 
 export const SCENARIO_KINDS = { more: 'Pay more each month', extra: 'Pay in once', withdraw: 'Take out', rate: 'Rate changes' };
 
@@ -132,7 +131,7 @@ export function homePlan(input, today, { withScenarios = true } = {}) {
   }
   if (run?.missing) run = null;
   const row = (t) => (run && k + t >= 0 ? run.rows[k + t] ?? null : null);
-  const eventsAt = (kindName, t) => (run ? bondEvents.filter((e) => e.kind === kindName && monthsFrom(bondStart, e.from) === k + t).reduce((s, e) => s + num(e.amount), 0) : 0);
+  const eventsAt = (kindName, t, keep = () => true) => (run ? bondEvents.filter((e) => e.kind === kindName && keep(e) && monthsFrom(bondStart, e.from) === k + t).reduce((s, e) => s + num(e.amount), 0) : 0);
   const upgrades = on.upgrades && kind !== 'rent' ? (Array.isArray(v.upgrades) ? v.upgrades : []).map((u) => ({ name: u.name, m: Math.max(1, Math.round(num(u.inYears) * 12) || 1), cost: num(u.cost), adds: num(u.adds) })) : [];
   const ir = investRate(v);
   // `rentToday`: the rent typed is today's, so a rental that started earlier paid less then.
@@ -144,14 +143,14 @@ export function homePlan(input, today, { withScenarios = true } = {}) {
   const homeValue = (t) => (!story ? value0 * (1 + g) ** (t / 12) : t <= now ? value0 * (1 + gNow) ** (t / 12) : value0 * (1 + gNow) ** (now / 12) * (1 + g) ** ((t - now) / 12));
 
   const months = [];
-  let paid = fromPocket; let cashIn = 0; let inv = inv0; let invPut = 0; let upgradesSpent = 0; let interest = 0;
-  let lastMin = row(0)?.minPmt ?? 0;
+  let paid = fromPocket; let cashIn = 0; let inv = inv0; let upgradesSpent = 0; let interest = 0;
   for (let t = 1; t <= M; t += 1) {
     const e = (1 + esc) ** costYr(t);
     const r = row(t);
-    if (r) { lastMin = r.minPmt; if (t > now) interest += r.interestThis; }
+    if (r && t > now) interest += r.interestThis;
     const bondPaid = r ? r.paidThis + eventsAt('extra', t) : 0;
-    const taken = r ? eventsAt('withdraw', t) : 0;
+    // Money taken out comes into your pocket - unless it was spent (D-087), when it is simply gone.
+    const taken = r ? eventsAt('withdraw', t, (e) => e.use !== 'spent') : 0;
     const value = kind === 'rent' ? 0 : homeValue(t) + upgrades.filter((u) => u.m <= t).reduce((s, u) => s + u.adds * (1 + g) ** ((t - u.m) / 12), 0);
     const upgradeNow = upgrades.filter((u) => u.m === t).reduce((s, u) => s + u.cost * (1 + esc) ** (t / 12), 0);
     upgradesSpent += upgradeNow;
@@ -159,17 +158,16 @@ export function homePlan(input, today, { withScenarios = true } = {}) {
     const running = kind === 'rent' || !on.running ? 0 : (num(v.ratesTaxes) + num(v.levies) + num(v.insurance)) * e + maint;
     const rent = kind === 'rent' ? rent0 * (1 + num(v.rentRisePct) / 100) ** yr(t) : 0;
     const trip = on.travel ? travel(v, t).money : 0;
-    // After the bond: the instalment that is no longer due is invested instead.
-    const put = on.afterBond && run && !r ? lastMin * e : 0;
-    inv = inv * (1 + ir) + put; invPut += put;
+    // Once the bond is paid off, the money it no longer takes is invested by sameMoney (D-087).
+    inv *= 1 + ir;
     const out = bondPaid + running + rent + trip + upgradeNow;
     paid += out; cashIn += taken;
     const owed = r ? r.balance : 0;
     const tax = kind === 'rent' ? 0 : homeGainTax(value * (1 - sell), baseCost + upgradesSpent, v.marginalPct).tax;
     const homeNet = kind === 'rent' ? num(v.rentDeposit) : value * (1 - sell) - owed - tax;
     const forgone = on.forgone ? fromPocket * ((1 + ir) ** t - 1) : 0;
-    const ahead = homeNet + inv + cashIn - paid - invPut - forgone - start;
-    months.push({ t, ym: addMonthsYM(ym, t), out, bondPaid, running, upkeep: maint, rent, trip, upgradeNow, taken, owed, value, inv, put, paid, homeNet, ahead, minPmt: r?.minPmt ?? 0 });
+    const ahead = homeNet + inv + cashIn - paid - forgone - start;
+    months.push({ t, ym: addMonthsYM(ym, t), out, bondPaid, running, upkeep: maint, rent, trip, upgradeNow, taken, owed, value, inv, paid, homeNet, ahead, minPmt: r?.minPmt ?? 0 });
   }
   // How long you live there counts from today when it started earlier, else from its start.
   const N = Math.max(0, now);
@@ -177,7 +175,7 @@ export function homePlan(input, today, { withScenarios = true } = {}) {
   return {
     kind, on, months, stay: S, at: months[S - 1], ahead: months[S - 1].ahead, monthNow: months[N].out,
     upfront, fromPocket, inv0, deposit, loan, buyItems, funding, value0, start, owed0, startYM: ym, now, story,
-    bond: run ? { paidOff: run.paidOff, owedNow: row(N)?.balance ?? owed0, minNow: row(N)?.minPmt ?? 0, monthsLeft: Math.max(0, run.months - k - N), interestFromNow: interest, notes: run.notes } : null,
+    bond: run ? { paidOff: run.paidOff, owedNow: row(N)?.balance ?? owed0, minNow: row(N)?.minPmt ?? 0, monthsLeft: Math.max(0, run.months - k - N), interestFromNow: interest, interest: run.interest, notes: run.notes } : null,
   };
 }
 
@@ -217,7 +215,7 @@ export function sameMoney(plans, v = {}) {
   const side = day1.map((x) => up - x);
   const series = plans.map(() => []);
   for (let t = 1; t <= 360; t += 1) {
-    const need = plans.map((p, i) => { const m = rowOf(p, i, t); return m.out + m.put - m.taken; });
+    const need = plans.map((p, i) => { const m = rowOf(p, i, t); return m.out - m.taken; });
     const top = Math.max(...need);
     plans.forEach((p, i) => {
       side[i] = side[i] * (1 + r) + (top - need[i]) * s;

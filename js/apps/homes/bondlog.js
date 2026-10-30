@@ -24,7 +24,7 @@ export const addMonthsYM = (a, n) => { const t = Number(a.slice(0, 4)) * 12 + Nu
 
 export function normaliseEvents(list) {
   return (Array.isArray(list) ? list : []).filter((e) => e && EVENT_KINDS[e.kind] && isMonth(e.from))
-    .map((e) => ({ kind: e.kind, from: e.from, to: isMonth(e.to) ? e.to : null, amount: Number(e.amount) || 0 }));
+    .map((e) => ({ kind: e.kind, from: e.from, to: isMonth(e.to) ? e.to : null, amount: Number(e.amount) || 0, ...(e.use === 'spent' ? { use: 'spent' } : {}) }));
 }
 
 /**

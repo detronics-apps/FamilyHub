@@ -37,11 +37,17 @@ test('D-078 scenarios: paying more shortens the bond and saves interest; with an
   near(m.taken, 100000); assert.ok(m.owed > homePlan(buy, TODAY).months.find((x) => x.ym === '2028-06').owed);
 });
 
-test('D-078 after the bond: the old instalment is invested and grows', () => {
-  const short = { ...buy, termYears: 5, stayYears: 10 };
-  const off = homePlan(short, TODAY); const on = homePlan({ ...short, on: { afterBond: true } }, TODAY);
-  assert.equal(off.at.inv, 0);
-  assert.ok(on.at.inv > on.months.slice(0, on.stay).reduce((s, x) => s + x.put, 0));   // more than was put in: it grew
+test('D-087 after the bond: on the same money the instalment no longer paid is invested - no tick needed', () => {
+  const short = { ...buy, termYears: 5, stayYears: 10, on: { travel: false, running: false } };
+  const rent = { ...short, kind: 'rent', rent: 0.0001, rentDeposit: 0 };
+  const sm = sameMoney([homePlan(short, TODAY), homePlan(rent, TODAY)], { investPct: 7, investTaxPct: 0 });
+  // While the bond runs, the renter (paying next to nothing) invests the instalment each month; once it
+  // is done neither needs anything, so the renter's money only grows - the instalment now stays with the owner.
+  const renter = (t) => sm.series[1][t - 1].wealth;
+  assert.ok(renter(48) / renter(36) > 1.2);
+  near(renter(84) / renter(72), 1.07, 0.001);
+  // An old saved tick changes nothing.
+  near(homePlan({ ...short, on: { ...short.on, afterBond: true } }, TODAY).at.ahead, homePlan(short, TODAY).at.ahead, 0.01);
 });
 
 test('D-078 ours already: measured from selling today; the history and a pay-more scenario', () => {
