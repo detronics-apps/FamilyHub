@@ -214,53 +214,138 @@ export function lineChart(series, opts) {
   return figure;
 }
 
-function drawChart(series, { label, marks = [], story = null, xLabel = null, band = null }) {
-  const W = 640; const H = 240; const L = 64; const B = 26; const T = 14; const R = 12;
-  const xs = series.flatMap((s) => s.points.map((p) => p[0]));
-  const ys = [...series.flatMap((s) => s.points.map((p) => p[1])), ...(band ? band.points.flatMap((p) => [p[1], p[2]]) : [])];
+// Axis steps that read easily: 1, 2, 2.5 or 5 times a power of ten.
+function niceStep(span, n = 4) {
+  const raw = span / n || 1; const pow = 10 ** Math.floor(Math.log10(raw)); const f = raw / pow;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * pow;
+}
+
+/**
+ * Options (D-086): `stack` piles the series into areas that add up; `zones` names what
+ * above and below zero mean; `dots` [{ x, y, label }] write a value on the graph;
+ * `yLines` [{ y, label }] are dotted levels (30% of income); each line's name and last
+ * value sit at its end. Tapping or moving over the graph reads every series at that point.
+ */
+function drawChart(series, { label, marks = [], story = null, xLabel = null, band = null, stack = false, zones = null, dots = [], yLines = [] }) {
+  // Drawn narrower on a phone, so the writing stays readable when it is scaled to fit.
+  const narrow = typeof window !== 'undefined' && window.innerWidth < 560;
+  const W = narrow ? 340 : 640; const H = narrow ? 230 : 260; const L = 48; const B = 26; const T = 16; const R = narrow ? 80 : 118;
+  const colours = ['var(--accent-strong)', 'var(--warn)', 'var(--ok)', 'var(--text-dim)'];
+  const colourOf = (s, i) => s.colour ?? colours[i % colours.length];
+  // Stacked: each series sits on the ones before it - except one marked `over`, a line drawn on top (the rent instead).
+  const piled = (s) => stack && !s.over;
+  const drawn = series.map((s, i) => (!piled(s) ? s : { ...s, points: s.points.map(([x], j) => [x, series.slice(0, i + 1).filter(piled).reduce((t, o) => t + (o.points[j]?.[1] ?? 0), 0)]) }));
+  const below = (i) => drawn.slice(0, i).filter((s, k) => piled(series[k])).at(-1);
+  const xs = drawn.flatMap((s) => s.points.map((p) => p[0]));
+  const ys = [...drawn.flatMap((s) => s.points.map((p) => p[1])), ...(band ? band.points.flatMap((p) => [p[1], p[2]]) : []), ...dots.filter(Boolean).map((d) => d.y), ...yLines.filter(Boolean).map((l) => l.y)].filter(Number.isFinite);
   const x0 = Math.min(...xs); const x1 = Math.max(...xs) || 1;
-  const y0 = Math.min(0, ...ys); const y1 = Math.max(0, ...ys) || 1;
+  const step = niceStep(Math.max(0, ...ys) - Math.min(0, ...ys));
+  const y0 = Math.floor(Math.min(0, ...ys) / step) * step; const y1 = Math.ceil(Math.max(0, ...ys) / step) * step || step;
   const X = (x) => L + ((x - x0) / (x1 - x0 || 1)) * (W - L - R);
   const Y = (y) => T + (1 - (y - y0) / (y1 - y0 || 1)) * (H - T - B);
-  const colours = ['var(--accent-strong)', 'var(--text-dim)', 'var(--warn)', 'var(--ok)'];
-  // Axis amounts short (R2.4m, R850k); a tick too close to zero is left out so labels never overlap.
-  const ticks = (y0 < 0 && y1 > 0 ? [y0, 0, y1] : [y0, (y0 + y1) / 2, y1]).filter((t) => t === 0 || !(y0 < 0 && y1 > 0) || Math.abs(Y(t) - Y(0)) >= 16);
-  // Year ticks on whole years between the ends, whether or not a point falls there.
+  const ticks = []; for (let t = y0; t <= y1 + step / 2; t += step) ticks.push(Math.abs(t) < step / 1e6 ? 0 : t);
   const grid = []; for (let x = Math.ceil(x0 / 12) * 12; x <= x1; x += 12) grid.push(x);
   const years = grid.length > 1 ? grid : [x0, x1];
   const shown = marks.filter((m) => m && Number.isFinite(m.x) && m.x >= x0 && m.x <= x1);
+  const pts = (p) => p.map(([x, y]) => `${X(x).toFixed(1)},${Y(y).toFixed(1)}`).join(' ');
+  // Each line's name and last value at its end, nudged apart so none overlap.
+  const ends = drawn.map((s, i) => {
+    const last = s.points.at(-1); if (!last) return null;
+    const mid = piled(series[i]) ? (last[1] + (below(i)?.points.at(-1)[1] ?? 0)) / 2 : last[1];
+    return { i, y: Y(mid), name: s.name, value: series[i].points.at(-1)[1], colour: colourOf(s, i) };
+  }).filter(Boolean).sort((p, q) => p.y - q.y);
+  for (let k = 1; k < ends.length; k += 1) ends[k].y = Math.max(ends[k].y, ends[k - 1].y + 26);
+  const cut = (t, n = narrow ? 13 : 18) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
+  const cursor = svg('line', { x1: -10, x2: -10, y1: T, y2: H - B, stroke: 'var(--text-dim)', 'stroke-width': 1 });
+  const readout = el('div', { class: 'small muted fin-read', 'aria-live': 'polite', text: 'Tap or move over the graph to read it.' });
+  const when = (x) => (xLabel ? xLabel(x) : x % 12 === 0 ? `After ${x / 12} year${x === 12 ? '' : 's'}` : `After ${x} months`);
+  const near = (p, x) => p.reduce((best, q) => (Math.abs(q[0] - x) < Math.abs(best[0] - x) ? q : best), p[0]);
+  const read = (e) => {
+    const box = e.currentTarget.getBoundingClientRect();
+    const px = ((e.clientX - box.left) / box.width) * W;
+    const x = near(series[0].points, x0 + ((px - L) / (W - L - R)) * (x1 - x0))[0];
+    cursor.setAttribute('x1', X(x)); cursor.setAttribute('x2', X(x));
+    const b = band ? near(band.points, x) : null;
+    readout.classList.remove('muted');
+    readout.textContent = `${when(x)}: ${series.map((s) => `${s.name} ${rand(near(s.points, x)[1])}`).join(' · ')}${stack ? ` · All of it ${rand(series.filter(piled).reduce((t, s) => t + near(s.points, x)[1], 0))}` : ''}${b ? ` · ${band.name}: ${rand(b[1])} to ${rand(b[2])}` : ''}`;
+  };
   return el('figure', { class: 'fin-chart', style: { margin: 0 } }, [
-    svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': [label, ...shown.map((m) => m.label)].join('. '), width: '100%' }, [
+    svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': [label, ...shown.map((m) => m.label), ...dots.filter(Boolean).map((d) => d.label)].join('. '), width: '100%', on: { pointermove: read, pointerdown: read } }, [
       ...ticks.map((t) => svg('g', {}, [
-        svg('line', { x1: L, x2: W - R, y1: Y(t), y2: Y(t), stroke: t === 0 && y0 < 0 ? 'var(--text-dim)' : 'var(--border)', 'stroke-width': t === 0 && y0 < 0 ? 1.5 : 1 }),
+        svg('line', { x1: L, x2: W - R, y1: Y(t), y2: Y(t), stroke: t === 0 ? 'var(--text-dim)' : 'var(--border)', 'stroke-width': t === 0 ? 1.5 : 1 }),
         svg('text', { x: L - 6, y: Y(t) + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--text-dim)' }, [short(t)]),
       ])),
-      ...years.filter((x, i) => years.length < 14 || i % Math.ceil(years.length / 10) === 0).map((x) => svg('text', { x: X(x), y: H - 8, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--text-dim)' }, [xLabel ? xLabel(x) : x % 12 === 0 ? `${x / 12}y` : `${x}m`])),
+      ...years.filter((x, i) => years.length < 14 || i % Math.ceil(years.length / 10) === 0).map((x) => svg('text', { x: X(x), y: H - 8, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--text-dim)' }, [xLabel ? xLabel(x) : `${x / 12}y`])),
       // The scenario range (D-084): shaded between its low and high edges, under the lines.
       band ? svg('polygon', { points: [...band.points.map(([x, lo]) => `${X(x).toFixed(1)},${Y(lo).toFixed(1)}`), ...band.points.slice().reverse().map(([x, , hi]) => `${X(x).toFixed(1)},${Y(hi).toFixed(1)}`)].join(' '), fill: 'var(--accent-soft)', stroke: 'none', opacity: 0.9 }) : null,
-      ...series.map((s, i) => svg('polyline', {
-        points: s.points.map(([x, y]) => `${X(x).toFixed(1)},${Y(y).toFixed(1)}`).join(' '),
-        fill: 'none', stroke: colours[i % colours.length], 'stroke-width': 2.5, 'stroke-dasharray': s.dashed ? '6 4' : null,
-      })),
-      // Marks last, on top; labels step down so two close together do not overlap.
+      ...drawn.map((s, i) => (piled(series[i]) ? svg('polygon', {
+        points: [...s.points.map(([x, y]) => `${X(x).toFixed(1)},${Y(y).toFixed(1)}`), ...(below(i)?.points ?? s.points.map(([x]) => [x, 0])).slice().reverse().map(([x, y]) => `${X(x).toFixed(1)},${Y(y).toFixed(1)}`)].join(' '),
+        fill: colourOf(s, i), opacity: 0.45, stroke: 'none',
+      }) : null)),
+      ...drawn.map((s, i) => svg('polyline', { points: pts(s.points), fill: 'none', stroke: colourOf(s, i), 'stroke-width': piled(series[i]) ? 1.5 : 2.5, 'stroke-dasharray': s.dashed ? '6 4' : null })),
+      // What above and below zero mean, in words, at the edges.
+      zones && y1 > 0 ? svg('text', { x: L + 6, y: T + 12, 'font-size': 12, 'font-weight': 700, fill: 'var(--ok)' }, [`↑ ${zones.above}`]) : null,
+      zones && y0 < 0 ? svg('text', { x: L + 6, y: H - B - 8, 'font-size': 12, 'font-weight': 700, fill: 'var(--warn)' }, [`↓ ${zones.below}`]) : null,
+      ...yLines.filter((l) => l && Number.isFinite(l.y)).map((l) => svg('g', {}, [
+        svg('line', { x1: L, x2: W - R, y1: Y(l.y), y2: Y(l.y), stroke: 'var(--text-dim)', 'stroke-dasharray': '2 3' }),
+        svg('text', { x: L + 6, y: Y(l.y) - 4, 'font-size': 11, fill: 'var(--text-dim)' }, [l.label]),
+      ])),
       ...shown.map((m, i) => {
-        const x = X(m.x); const right = x > W * 0.62;
+        const x = X(m.x); const right = x > L + (W - L - R) * 0.6;
         return svg('g', {}, [
           svg('line', { x1: x, x2: x, y1: T, y2: H - B, stroke: 'var(--text)', 'stroke-width': 1, 'stroke-dasharray': '3 3' }),
-          svg('text', { x: right ? x - 5 : x + 5, y: T + 10 + (i % 3) * 14, 'text-anchor': right ? 'end' : 'start', 'font-size': 12, 'font-weight': 700, fill: 'var(--text)' }, [m.label]),
+          svg('text', { x: right ? x - 5 : x + 5, y: T + 30 + (i % 3) * 14, 'text-anchor': right ? 'end' : 'start', 'font-size': 12, 'font-weight': 700, fill: 'var(--text)' }, [m.label]),
         ]);
       }),
+      ...dots.filter((d) => d && Number.isFinite(d.x) && Number.isFinite(d.y) && d.x >= x0 && d.x <= x1).map((d) => svg('g', {}, [
+        svg('circle', { cx: X(d.x), cy: Y(d.y), r: 5, fill: 'var(--accent-strong)', stroke: 'var(--panel)', 'stroke-width': 2 }),
+        svg('text', { x: X(d.x) - 8, y: Y(d.y) + (d.below ? 18 : -10), 'text-anchor': 'end', 'font-size': 12, 'font-weight': 700, fill: 'var(--text)' }, [d.label]),
+      ])),
+      ...ends.map((e) => svg('g', {}, [
+        svg('text', { x: W - R + 8, y: e.y, 'font-size': 11, fill: 'var(--text)' }, [cut(e.name)]),
+        svg('text', { x: W - R + 8, y: e.y + 12, 'font-size': 11, 'font-weight': 700, fill: e.colour }, [short(e.value)]),
+      ])),
+      cursor,
     ]),
     el('figcaption', { class: 'stack', style: { gap: 'var(--space-1)' } }, [
+      readout,
       el('div', { class: 'row small', style: { gap: 'var(--space-3)' } }, [...series.map((s, i) => el('span', {}, [
-        el('span', { class: 'fin-key', style: { background: colours[i % colours.length] } }), s.name,
+        el('span', { class: 'fin-key', style: { background: colourOf(s, i) } }), s.name,
       ])), band ? el('span', {}, [el('span', { class: 'fin-key', style: { background: 'var(--accent-soft)', outline: '1px solid var(--border-strong)' } }), band.name]) : null]),
       story ? el('p', { class: 'small', style: { margin: 0 }, text: story }) : null,
     ]),
   ]);
 }
 
-/** The rule on every money graph (D-077): what grows your pocket is above zero, what comes out of it below. */
+/**
+ * What moves the answer (D-086): one bar per assumption, longest first - worse to the
+ * left of your answer, better to the right. rows: [{ label, low, high }], low and high
+ * being how far each end of its range moves the answer, in rand.
+ */
+export function barsChart(rows, { label, worse = 'worse', better = 'better' }) {
+  const narrow = typeof window !== 'undefined' && window.innerWidth < 560;
+  const W = narrow ? 340 : 640; const L = narrow ? 100 : 150; const R = 12; const row = 32; const H = rows.length * row + 40;
+  const m = Math.max(1, ...rows.flatMap((r) => [Math.abs(r.low), Math.abs(r.high)]));
+  const mid = L + (W - L - R) / 2; const X = (d) => mid + (d / m) * ((W - L - R) / 2 - (narrow ? 40 : 52));
+  const bar = (d, y) => svg('rect', { x: Math.min(X(0), X(d)), y, width: Math.max(1, Math.abs(X(d) - X(0))), height: 16, rx: 3, fill: d < 0 ? 'var(--warn)' : 'var(--ok)', opacity: 0.8 });
+  const val = (d, y) => svg('text', { x: X(d) + (d < 0 ? -4 : 4), y: y + 12, 'text-anchor': d < 0 ? 'end' : 'start', 'font-size': 11, fill: 'var(--text-dim)' }, [Math.abs(d) < 1000 ? 'hardly' : short(d)]);
+  const figure = el('figure', { class: 'fin-chart', style: { margin: 0 } }, [
+    svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `${label}. ${rows.map((r) => `${r.label}: ${short(r.low)} to ${short(r.high)}`).join('. ')}`, width: '100%' }, [
+      svg('text', { x: X(0) - 6, y: 12, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--warn)', 'font-weight': 700 }, [`← ${worse}`]),
+      svg('text', { x: X(0) + 6, y: 12, 'font-size': 11, fill: 'var(--ok)', 'font-weight': 700 }, [`${better} →`]),
+      ...rows.flatMap((r, i) => {
+        const y = 24 + i * row;
+        return [svg('text', { x: 4, y: y + 12, 'font-size': 12, fill: 'var(--text)' }, [narrow && r.label.length > 15 ? `${r.label.slice(0, 14)}…` : r.label]), bar(r.low, y), bar(r.high, y), val(r.low, y), val(r.high, y)];
+      }),
+      svg('line', { x1: X(0), x2: X(0), y1: 18, y2: H - 16, stroke: 'var(--text)', 'stroke-width': 1.5 }),
+      svg('text', { x: X(0), y: H - 3, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--text-dim)' }, ['your answer']),
+    ]),
+  ]);
+  figure.dataset.chart = '';
+  figure.chartData = { label, series: [{ name: 'Lower end', points: rows.map((r, i) => [i + 1, r.low]) }, { name: 'Upper end', points: rows.map((r, i) => [i + 1, r.high]) }] };
+  return figure;
+}
+
 export const RULE = 'Above zero: what grows your pocket. Below zero: what comes out of it.';
 /** Turn amounts that leave your pocket into the minus side of a graph. */
 export const outOf = (points) => points.map(([x, y]) => [x, -y]);

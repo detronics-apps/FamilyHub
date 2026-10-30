@@ -77,6 +77,8 @@ export const HOME_HELP = {
   sellPct: 'Selling later costs the agent’s commission (with VAT) and a few certificates, as a share of the price.',
   marginalPct: 'Your income tax rate on the last rand earned (your payslip or tax assessment shows it). Only used if the gain on the home is above R3 million.',
   otherRatePct: 'What the money paid up front could have grown by if it had been saved instead.',
+  alt: 'Whether a home is a good choice depends on what else you would do. Buying is set against renting a similar home; the home you own, against renting one instead; renting, against buying a similar home. Both start with the same savings and have the same money every month - whoever spends less invests the difference (or keeps it as cash, if you choose). Nothing is compared with paying nothing for a home.',
+  likeRent: 'What a home like this one - same area, size and kind - rents for a month. Look at a few listings nearby or ask a letting agent. No market figure is filled in for you.',
 };
 
 export const CAR_HELP = {

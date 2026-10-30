@@ -7,7 +7,7 @@ import { homeCost } from '../js/apps/finance/maths.js';
 
 const near = (a, b, tol = 1) => assert.ok(Math.abs(a - b) <= tol, `${a} is not ${b}`);
 const TODAY = '2026-10-28';
-const buy = { kind: 'buy', price: 1800000, deposit: 180000, ratePct: 11, termYears: 20, stayYears: 10, ratesTaxes: 1500, insurance: 600, maintMode: 'percent', upkeepPct: 1, km: 20, growthPct: 5, sellPct: 7.5, otherRatePct: 7 };
+const buy = { kind: 'buy', price: 1800000, deposit: 180000, ratePct: 11, termYears: 20, stayYears: 10, ratesTaxes: 1500, insurance: 600, maintMode: 'percent', upkeepPct: 1, km: 20, growthPct: 5, sellPct: 7.5, otherRatePct: 7, investPct: 7, investTaxPct: 0 };
 
 test('D-078 buying: the same answer as before, counted month by month', () => {
   const p = homePlan(buy, TODAY);

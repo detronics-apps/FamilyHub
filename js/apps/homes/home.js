@@ -135,7 +135,8 @@ export function homePlan(input, today, { withScenarios = true } = {}) {
   const eventsAt = (kindName, t) => (run ? bondEvents.filter((e) => e.kind === kindName && monthsFrom(bondStart, e.from) === k + t).reduce((s, e) => s + num(e.amount), 0) : 0);
   const upgrades = on.upgrades && kind !== 'rent' ? (Array.isArray(v.upgrades) ? v.upgrades : []).map((u) => ({ name: u.name, m: Math.max(1, Math.round(num(u.inYears) * 12) || 1), cost: num(u.cost), adds: num(u.adds) })) : [];
   const ir = investRate(v);
-  const o = num(v.otherRatePct) / 100;
+  // `rentToday`: the rent typed is today's, so a rental that started earlier paid less then.
+  const rent0 = kind === 'rent' ? num(v.rent) / (v.rentToday && now > 0 ? (1 + num(v.rentRisePct) / 100) ** Math.floor(now / 12) : 1) : 0;
   const owed0 = row(0)?.balance ?? 0;
   if (kind === 'own' && !story) start = value0 * (1 - sell) - owed0 - homeGainTax(value0 * (1 - sell), baseCost, v.marginalPct).tax;
   // The whole story: from what we paid to what it is worth now, then growing as assumed.
@@ -156,7 +157,7 @@ export function homePlan(input, today, { withScenarios = true } = {}) {
     upgradesSpent += upgradeNow;
     const maint = !on.running || kind === 'rent' ? 0 : v.maintMode === 'percent' ? (value * num(v.upkeepPct)) / 1200 : (num(v.maintYearly) / 12) * e;
     const running = kind === 'rent' || !on.running ? 0 : (num(v.ratesTaxes) + num(v.levies) + num(v.insurance)) * e + maint;
-    const rent = kind === 'rent' ? num(v.rent) * (1 + num(v.rentRisePct) / 100) ** yr(t) : 0;
+    const rent = kind === 'rent' ? rent0 * (1 + num(v.rentRisePct) / 100) ** yr(t) : 0;
     const trip = on.travel ? travel(v, t).money : 0;
     // After the bond: the instalment that is no longer due is invested instead.
     const put = on.afterBond && run && !r ? lastMin * e : 0;
@@ -166,7 +167,7 @@ export function homePlan(input, today, { withScenarios = true } = {}) {
     const owed = r ? r.balance : 0;
     const tax = kind === 'rent' ? 0 : homeGainTax(value * (1 - sell), baseCost + upgradesSpent, v.marginalPct).tax;
     const homeNet = kind === 'rent' ? num(v.rentDeposit) : value * (1 - sell) - owed - tax;
-    const forgone = on.forgone ? fromPocket * ((1 + o) ** (t / 12) - 1) : 0;
+    const forgone = on.forgone ? fromPocket * ((1 + ir) ** t - 1) : 0;
     const ahead = homeNet + inv + cashIn - paid - invPut - forgone - start;
     months.push({ t, ym: addMonthsYM(ym, t), out, bondPaid, running, upkeep: maint, rent, trip, upgradeNow, taken, owed, value, inv, put, paid, homeNet, ahead, minPmt: r?.minPmt ?? 0 });
   }
@@ -201,7 +202,8 @@ export function withAndWithout(input, today) {
  * investments + those savings.
  */
 export function sameMoney(plans, v = {}) {
-  const r = investRate({ investPct: v.investPct ?? 9, investTaxPct: v.investTaxPct ?? 15 });
+  // The differences invested - or kept as cash, growing nothing (`cash`).
+  const r = v.cash ? 0 : investRate({ investPct: v.investPct ?? 9, investTaxPct: v.investTaxPct ?? 15 });
   const s = Math.min(100, Math.max(0, v.investShare ?? 100)) / 100;
   // One calendar (D-083): compared from the month the last of them starts - until then
   // nothing differs. A home that started earlier (ours, since we bought it) joins with

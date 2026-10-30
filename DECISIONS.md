@@ -631,6 +631,50 @@ purpose (saved): show people what they have not thought of, and let them put the
   marked not counted), what moves the answer most, and year by year.
 - Tested: a home growing exactly as fast as after-tax investments, with no costs, comes out level.
 
+**D-086 Every home compared with something real; four graphs, one question each (owner, 2026-10-30).**
+The owner: "everywhere you say 'ahead' I need to know ahead of what?" A home's page measured it
+against keeping your money and living somewhere for free - every rand of rates or travel counted
+against the home, and nothing set against rent. Then: the graphs did not clearly answer the
+questions people come with.
+- **What it is compared with** (homes/alternative.js), built from the page's own figures:
+  - Buying: renting a similar home - "Rent for a similar home" (and rent rises).
+  - Ours already, from when we bought it: renting a similar home since then - its rent today
+    typed, earlier rents worked back at the rent rise (`rentToday`) - with the deposit and buying
+    costs invested instead.
+  - Ours already, from today: selling today and renting, the sale invested.
+  - Renting: buying a similar home (its price, deposit, rate, costs, growth).
+  - Both on the same money (sameMoney): the same savings on day one, the same money each month,
+    whoever spends less invests the difference - or keeps it as cash (a new switch, `diffCash`).
+  - Until the figure is given, the page asks for it ("Add it") and compares nothing - never
+    against nothing. Travel is the same for the similar home, so it does not move the answer.
+- **One investment return**: "What the money up front could have earned" (its own 10%) is gone;
+  the one "Investments grow by" is used everywhere. The range's "investments" now really moves
+  a single home's answer.
+- **The four graphs**, each titled by its question and answering it on the graph:
+  1. "Buying or renting a similar home: which leaves you more?" (by kind) - one line, what this
+     home leaves minus the other, above zero and below zero named, the tested range shaded, where
+     one pulls ahead marked, and the value at your stay written on it. Replaces "If you left
+     after…" and "How much could the answer move?".
+  2. "What could change the answer?" - one bar per assumption, longest first, towards each side.
+  3. "Can you afford it each month?" - the parts stacked, the other option as a dashed line, 30%
+     of income dotted when given, and the table with the other option's row.
+  4. "How much of the home is yours?" - the value split into owed and yours (replaces "Money in
+     and out", which mixed value, debt and money spent).
+- **Explore how the result could change** sits under graph 1: lower · your estimate · upper as
+  numbers, a slider each side (lower can never pass your estimate), Narrow / Wider / Custom
+  (2 points, or half as much again - testing choices, said so), each assumption's what and how
+  to choose. Simple shows the three that move the answer most; Adjust on any bar opens its own.
+- **Repairs are tested only with a figure** - 50% more than nothing is nothing, and it says so.
+- **Every graph in Finance** (shared drawing): axis steps that read easily, calendar years,
+  each line's name and last value at its end, tapping a point reads every value, and drawn
+  narrower on a phone so the writing stays readable.
+- **Words**: no bare "ahead" or "behind" anywhere in Homes. "Estimated proceeds if sold";
+  "would leave you"; Compare says "would leave you R… less than"; the saved list says which
+  leaves more by when; "Leaving sooner" in Can you carry it? is against the comparison.
+- **Your figures** fold into one line once there is an answer; the answer comes first.
+- The ten reasons for buying and "was it the right call" (docs/homes-reasons-plan.md) stay
+  parked until the owner has seen this.
+
 **D-085 The rest of the property report: cost by part, the order, your figure in the range (owner, 2026-10-30).**
 - **What it costs a month, by part** (a home's page): the bond, rates/levies/insurance, upkeep and
   repairs, rent, getting to work - now, in 5 years, when you leave, and after the bond - with "All

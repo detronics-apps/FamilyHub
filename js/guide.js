@@ -263,7 +263,7 @@ export const HOWTOS = [
   { id: 'ownrent', title: 'Own or rent - with your own numbers', steps: [
     'Save the home you might buy (or the one you own, as "Ours already") and the place you might rent, each in Homes.',
     'For selling yours to rent, tick "Selling our current home first" on the rental: what the sale leaves is invested while you rent.',
-    'Press Compare and tick both. "Where each would leave you" shows, year by year, which is ahead - and when that changes.',
+    'Press Compare and tick both. "Where each would leave you" shows, year by year, what each would leave you - and when the other one starts to leave you more.',
   ] },
   { id: 'car', title: 'Work out the true cost of a car - and compare', steps: [
     'Open Finance, then Cars. Fill in the price, the rate on your quote, how long the loan runs and how long you will keep the car.',
@@ -435,7 +435,7 @@ export const FEATURES = [
   { name: 'What if…', where: 'Finance › Homes and Cars', what: 'Pay more each month for a while, pay in a lump sum, take money back out, or a rate change - each ticked line shown on the graphs with it and without it.' },
   { name: 'The (i) beside every figure', where: 'Finance › Homes and Cars', what: 'What each heading and figure means, where to find your own, and how to get the latest - your bond statement, municipal account, the monthly fuel price.' },
   { name: 'Money in and out', where: 'Every Finance tool', what: 'What the house, car or savings are worth, against what has gone out of your pocket so far, and each month’s spending. Money growing your pocket is above zero; money coming out of it is below.' },
-  { name: 'Graphs with the turning points', where: 'Every Finance tool', what: 'Each tool has a graph that tells its story, with the moments that matter marked: when owning gets ahead of renting, when a car is worth more than is owed, when more of the bond pays it off than interest.' },
+  { name: 'Graphs with the turning points', where: 'Every Finance tool', what: 'Each tool has a graph that tells its story, with the moments that matter marked: when owning starts to leave you more than renting, when a car is worth more than is owed, when more of the bond pays it off than interest.' },
   { name: 'Compare homes', where: 'Finance › Homes › Compare', what: 'Any saved homes side by side - buy against buy, against renting, or keeping ours - on the same money each month, with where each would leave you, year by year.' },
   { name: 'Variations', where: 'Cookbook › a meal › Variations', what: 'One meal made several ways - cheese, pepper or mushroom sauce from one white sauce - with one set of ratings, and shopping that follows the way chosen.' },
   { name: 'Money plan', where: 'Finance › Money plan', what: 'Every goal on one timeline, brought in from Holidays, Cars, Homes, Children’s future and savings goals - what to put aside each month, and where it does not fit.' },
@@ -449,6 +449,9 @@ export const FEATURES = [
   { name: 'Time a day for chores', where: 'Chores › Plan and Progress', what: 'All the chores together, a week and on average a day - so you can plan for, say, an hour a day.' },
   { name: 'The timer ring', where: 'Chores › Start', what: 'Fills to the time a chore should take, then turns honey and counts what is over. Done records the minutes; Cancel records nothing; left running, it asks "Still on it?" and stops if nobody answers.' },
   { name: 'How much could the answer move?', where: 'Finance › Homes and Compare', what: 'A favourable and an unfavourable line, each worked out again with its own assumptions, with the range shaded between - what it says in words, what moves it most, and sliders to change how far each assumption is tested.' },
+  { name: 'Compared with something real', where: 'Finance › Homes › a home', what: 'Buying is set against renting a similar home, the home you own against renting one instead, renting against buying - on the same money. Add the rent (or price) of a similar home and the page says which leaves you more, and by when.' },
+  { name: 'Explore how the result could change', where: 'Finance › Homes › under the main graph', what: 'Lower, your estimate and upper for each assumption, as numbers - Narrow, Wider or your own. The graph works the whole comparison out again as you move them.' },
+  { name: 'Tap a graph to read it', where: 'Every Finance graph', what: 'Tap or move over a graph to see every figure at that point. Each line has its name and last value at its end.' },
   { name: 'What it costs a month, by part', where: 'Finance › Homes › a home', what: 'The bond, rates and insurance, upkeep, rent and travel - now, in 5 years, when you leave and after the bond - so you see that a paid-off home still costs something.' },
   { name: 'Your figure in the range', where: 'Finance › Homes › a home › Change the range', what: 'Change house price growth, the bond rate or any tested assumption right beside its slider; the home and the range follow.' },
   { name: 'Can you carry it?', where: 'Finance › Homes › a home', what: 'What could make a home tight for your household: the monthly cost against income, a 2-point rate rise, the cash left after moving in, a big repair, leaving sooner - and what you skip is shown as not assessed.' },

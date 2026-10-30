@@ -549,6 +549,13 @@ table.plain .num { text-align: right; white-space: nowrap; font-variant-numeric:
 .fin-better { color: var(--ok); }
 .fin-worse { color: var(--warn); }
 .fin-chart svg { display: block; max-width: 100%; height: auto; }
+.fin-chart svg { touch-action: pan-y; }
+.fin-read { min-height: 1.4em; font-variant-numeric: tabular-nums; }
+.home-figs > summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: var(--space-1); flex-wrap: wrap; }
+.home-figs > summary::-webkit-details-marker { display: none; }
+.home-figs > summary::before { content: '▸'; margin-right: var(--space-1); }
+.home-figs[open] > summary::before { content: '▾'; }
+.home-figs[open] > summary { margin-bottom: var(--space-3); }
 .fin-key { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
 .fin-step { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius); }
 .fin-formula { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; padding: var(--space-1) var(--space-2); border-radius: 6px; background: color-mix(in srgb, var(--text) 6%, transparent); }

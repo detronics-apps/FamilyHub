@@ -14,21 +14,27 @@ import { homePlan, sameMoney, PLAN_DEFAULTS } from './home.js';
 export const VARS = [
   { key: 'growth', label: 'House prices grow', unit: 'points', spread: 2, step: 0.5, max: 6,
     why: 'What the home is worth later. Nobody knows it: the past is a guide only.', field: () => 'growthPct',
+    how: 'Think about how sure anyone can be about prices in this area over these years, rather than assuming the recent trend carries on. Lower: prices grow more slowly; higher: faster.',
     apply: (v, d) => ({ ...v, growthPct: n(v.growthPct, PLAN_DEFAULTS.growthPct) + d }) },
   { key: 'invest', label: 'Investments grow', unit: 'points', spread: 2, step: 0.5, max: 6,
     why: 'What money not tied up in a home could earn - the deposit, and what is saved each month.', field: () => 'investPct',
+    how: 'Returns jump about from year to year; over many years a wider range is honest. Lower: the money not in a home earns less; higher: more.',
     apply: (v, d) => ({ ...v, investPct: n(v.investPct, PLAN_DEFAULTS.investPct) + d }) },
   { key: 'rate', label: 'The bond rate', unit: 'points', spread: 2, step: 0.25, max: 5,
     why: 'A higher rate means a bigger instalment and more interest in all.', field: (v) => (v.kind === 'own' ? 'bondRate' : 'ratePct'),
+    how: 'Test a higher rate to see whether the instalment stays affordable if rates rise. Lower: rates fall; higher: they rise.',
     apply: (v, d) => ({ ...v, ratePct: n(v.ratePct, PLAN_DEFAULTS.ratePct) + d, bondRate: n(v.bondRate, PLAN_DEFAULTS.bondRate) + d }) },
   { key: 'rent', label: 'Rent rises', unit: 'points', spread: 2, step: 0.5, max: 6,
     why: 'Rent usually goes up every year; how fast decides what renting costs later.', field: () => 'rentRisePct',
+    how: 'Rent rises differ by area and by year. Lower: rent rises more slowly; higher: faster.',
     apply: (v, d) => ({ ...v, rentRisePct: n(v.rentRisePct, PLAN_DEFAULTS.rentRisePct) + d }) },
   { key: 'costs', label: 'Running costs rise', unit: 'points', spread: 2, step: 0.5, max: 6,
     why: 'Rates, levies, insurance and repairs rise with inflation - sometimes faster.', field: () => 'escalatePct',
+    how: 'Rates, levies and insurance can rise faster than inflation. Test whether the monthly cost stays manageable. Lower: slower; higher: faster.',
     apply: (v, d) => ({ ...v, escalatePct: n(v.escalatePct, PLAN_DEFAULTS.escalatePct) + d }) },
   { key: 'repairs', label: 'Repairs and upkeep', unit: 'percent', spread: 50, step: 10, max: 200,
     why: 'Maintenance comes in lumps - a roof, a geyser. More than planned is common.', field: (v) => (v.maintMode === 'percent' ? 'upkeepPct' : 'maintYearly'),
+    how: 'One big repair can cost far more than the allowance for a whole year. Test a higher figure to see how much it matters. Lower: less spent; higher: more.',
     apply: (v, d) => ({ ...v, maintYearly: n(v.maintYearly, 0) * (1 + d / 100), upkeepPct: n(v.upkeepPct, PLAN_DEFAULTS.upkeepPct) * (1 + d / 100) }) },
 ];
 
@@ -37,8 +43,17 @@ const n = (x, dflt) => (x === null || x === undefined || x === '' || !Number.isF
 /** Which variables matter for these homes (rent only with a rental, the bond rate only with a bond...). */
 export function relevant(values) {
   const kinds = new Set(values.map((v) => v.kind));
-  return VARS.filter((x) => (x.key === 'rent' ? kinds.has('rent') : x.key === 'rate' || x.key === 'growth' || x.key === 'repairs' || x.key === 'costs' ? kinds.has('buy') || kinds.has('own') : true));
+  // Repairs only when there is a figure to test: 50% more than nothing is still nothing.
+  const upkeep = values.some((v) => v.kind !== 'rent' && (v.maintMode === 'percent' ? n(v.upkeepPct, PLAN_DEFAULTS.upkeepPct) > 0 : n(v.maintYearly, 0) > 0));
+  return VARS.filter((x) => (x.key === 'rent' ? kinds.has('rent') : x.key === 'repairs' ? upkeep : x.key === 'rate' || x.key === 'growth' || x.key === 'costs' ? kinds.has('buy') || kinds.has('own') : true));
 }
+
+/** Narrow is each assumption's own spread; wider is half as much again. Testing choices, not forecasts. */
+export const PRESETS = { narrow: 1, wider: 1.5 };
+export const presetRanges = (values, preset) => Object.fromEntries(relevant(values).map((x) => {
+  const d = Math.round((x.spread * PRESETS[preset]) / x.step) * x.step;
+  return [x.key, { on: true, low: -d, high: d, preset }];
+}));
 
 /** Move every home by the same deltas: { growth: -2, invest: +1, ... }. */
 const moved = (values, deltas) => values.map((v) => VARS.reduce((acc, x) => (deltas[x.key] ? x.apply(acc, deltas[x.key]) : acc), v));
@@ -53,7 +68,7 @@ export function measure(values, today, deltas = {}, { a = 0, b = 1, share = {} }
   const plans = vs.map((v) => homePlan(v, today));
   if (plans.some((p) => p.missing)) return null;
   if (vs.length === 1) return { series: plans[0].months.slice(Math.max(0, plans[0].now)).map((m, i) => [i + 1, m.ahead]), plans };
-  const sm = sameMoney(plans, { investPct: n(vs[0].investPct, 9), investTaxPct: n(vs[0].investTaxPct, 15), investShare: share.investShare ?? vs[0].investShare ?? 100 });
+  const sm = sameMoney(plans, { investPct: n(vs[0].investPct, 9), investTaxPct: n(vs[0].investTaxPct, 15), investShare: share.investShare ?? vs[0].investShare ?? 100, cash: vs[0].diffCash === true });
   return { series: sm.series[a].map((s, i) => [s.t, s.wealth - sm.series[b][i].wealth]), wealthA: sm.series[a], wealthB: sm.series[b], plans, sm };
 }
 
@@ -94,4 +109,4 @@ export function scenarioRange(values, today, ranges, H, opts = {}) {
 }
 
 /** Default ranges for the variables that matter here. */
-export const defaultRanges = (values) => Object.fromEntries(relevant(values).map((x) => [x.key, { on: true, low: -x.spread, high: x.spread }]));
+export const defaultRanges = (values) => presetRanges(values, 'narrow');

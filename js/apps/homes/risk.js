@@ -14,10 +14,11 @@ export const COMFORT = { steady: 'I prefer to know what is coming', some: 'Some 
 /**
  * @param v      the home's values (with the optional personal ones)
  * @param plan   homePlan(v, today)
- * @param range  scenarioRange for this home, or null
+ * @param range  scenarioRange for this home against its comparison, or null
+ * @param names  [this, the other], as the comparison names them
  * @returns { factors: [{ level: 'ok'|'watch'|'strain'|'unknown', title, text }], options: [string] }
  */
-export function carryIt(v, plan, today, range = null) {
+export function carryIt(v, plan, today, range = null, names = null) {
   const factors = [];
   const options = new Set();
   const add = (level, title, text) => factors.push({ level, title, text });
@@ -43,18 +44,19 @@ export function carryIt(v, plan, today, range = null) {
       `The instalment would be about ${R(more)} more a month${income ? ` - ${pc((month + more) / income)} of income` : ''}. Rates have moved that much within a few years before.`);
   }
 
-  // 3. Cash left after moving in.
+  // 3. Cash left after moving in (owning already: the buffer you have now).
+  const cashTitle = plan.kind === 'own' ? 'Your cash buffer' : 'Cash after moving in';
   if (cash != null) {
     const left = cash - (buying ? plan.fromPocket : plan.kind === 'rent' ? plan.fromPocket : 0);
     const burn = month + (other ?? 0);
     const months = burn > 0 ? left / burn : null;
-    if (left < 0) { add('strain', 'Cash after moving in', `Moving in needs ${R(plan.fromPocket)}; the ${R(cash)} you have falls ${R(-left)} short.`); options.add('Save longer, borrow less, or look at a less expensive home.'); }
+    if (left < 0) { add('strain', cashTitle, `Moving in needs ${R(plan.fromPocket)}; the ${R(cash)} you have falls ${R(-left)} short.`); options.add('Save longer, borrow less, or look at a less expensive home.'); }
     else {
-      add(months != null && months < 3 ? 'strain' : months != null && months < 6 ? 'watch' : 'ok', 'Cash after moving in',
+      add(months != null && months < 3 ? 'strain' : months != null && months < 6 ? 'watch' : 'ok', cashTitle,
         `${R(left)} would be left${months != null ? ` - about ${Math.floor(months)} month${Math.floor(months) === 1 ? '' : 's'} of ${other != null ? 'all your spending' : 'housing costs'}` : ''}. Three to six months is a common buffer for a lost income or a big repair.`);
       if (months != null && months < 6) options.add('Keeping more cash aside, rather than in the deposit, gives a bigger buffer.');
     }
-  } else add('unknown', 'Cash after moving in', 'Not assessed - add the cash and savings you have to see what buffer is left.');
+  } else add('unknown', cashTitle, 'Not assessed - add the cash and savings you have to see what buffer is left.');
 
   // 4. A big repair.
   if (plan.kind !== 'rent') {
@@ -64,18 +66,24 @@ export function carryIt(v, plan, today, range = null) {
       `A roof, a geyser or plumbing can cost ${R(big)} or more at once (about 2% of the value is used here).${cash == null ? ' Add your cash to see whether it would be covered.' : ''}`);
   }
 
-  // 5. Leaving sooner than planned.
-  if (buying) {
-    const even = plan.months.findIndex((m) => m.ahead >= 0);
-    const stay = Math.round((plan.stay - Math.max(0, plan.now)) / 12);
-    if (even < 0) add('watch', 'Leaving sooner', 'Over the 30 years worked out, selling never gets back everything put in (against keeping your money and paying nothing for a home - set it against renting in Compare for the real choice). Duty, fees and the agent are paid however short the stay.');
-    else add(even / 12 > stay ? 'watch' : 'ok', 'Leaving sooner', `Selling would get back what it cost (against keeping your money) from about year ${Math.ceil((even + 1) / 12)}${even / 12 > stay ? ` - later than the ${stay} years you plan to stay` : ''}. Before that, buying and selling costs are not yet earned back.`);
+  // 5. Leaving sooner (D-086): against the comparison, never against paying nothing for a home.
+  if (buying || plan.story) {
+    if (!range || !names) add('unknown', 'Leaving sooner', 'Not assessed - it needs something to compare with (the rent for a similar home).');
+    else {
+      const s = range.central.series; const H = Math.min(s.length, plan.stay);
+      let k = -1; for (let i = H - 1; i >= 0; i -= 1) if (s[i][1] < 0) { k = i; break; }
+      const year = (i) => plan.months[s[i][0] - 1]?.ym.slice(0, 4);
+      if (k === H - 1) add('watch', 'Leaving sooner', `At your figures ${names[1].toLowerCase()} leaves you more right up to when you plan to leave. Duty, fees and the agent are paid however short the stay.`);
+      else if (k < 0) add('ok', 'Leaving sooner', `At your figures ${names[0].toLowerCase()} leaves you more from the start, even selling soon.`);
+      else if (s[k + 1][0] <= plan.now) add('ok', 'Leaving sooner', `${names[0]} has left you more than ${names[1].toLowerCase()} since about ${year(k + 1)} - so selling sooner than planned would still leave you more, at your figures.`);
+      else add(k + 1 > H - 24 ? 'watch' : 'ok', 'Leaving sooner', `${names[0]} leaves you more than ${names[1].toLowerCase()} only from about ${year(k + 1)}. Selling before then - a job move, a change in the family - would leave you with less, because duty, fees and the agent take years to earn back.`);
+    }
   }
 
   // 6. How sure the answer is.
   if (range) {
-    if (range.flips.length) add('watch', 'How sure the answer is', `It depends on the assumptions: ${range.flips.map((e) => e.label.toLowerCase()).join(' or ')} going the other way can change it on its own.`);
-    else add(range.verdict === 'crosses' ? 'watch' : 'ok', 'How sure the answer is', range.verdict === 'crosses' ? 'The tested range crosses zero when several assumptions go the same way.' : 'Across the tested range the answer stays on the same side.');
+    if (range.flips.length) add('watch', 'How sure the answer is', `It depends on the assumptions: ${range.flips.map((e) => e.label.toLowerCase()).join(' or ')} going the other way can, on its own, change which leaves you more.`);
+    else add(range.verdict === 'crosses' ? 'watch' : 'ok', 'How sure the answer is', range.verdict === 'crosses' ? 'The tested range crosses zero when several assumptions go the same way - which leaves you more depends on them.' : `Across the tested range ${(range.verdict === 'all-above' ? names?.[0] : names?.[1])?.toLowerCase() ?? 'the same one'} leaves you more.`);
   }
 
   // Personal resilience - only what was given.
