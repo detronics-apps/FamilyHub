@@ -25,7 +25,7 @@ export function rangePanel(args) {
  * @param title   the graph's question, e.g. "Buying or renting: which leaves you more?"
  * @param onCentral(field, value)  changes the first home's own figure (its page only)
  */
-export function rangeParts({ values, today, state, names, H, opts = {}, xLabel = null, onCentral = null, title = null }) {
+export function rangeParts({ values, today, state, names, H, opts = {}, xLabel = null, onCentral = null, title = null, todayX = null }) {
   const parts = { chart: el('div', { class: 'stack', 'data-field': 'range-chart' }), explore: el('div', { class: 'stack' }), moves: el('div', { class: 'stack' }) };
   const keys = relevant(values).map((x) => x.key).join();
   if (!state.ranges || state.keys !== keys) { state.ranges = defaultRanges(values); state.keys = keys; state.preset = 'narrow'; }
@@ -46,7 +46,7 @@ export function rangeParts({ values, today, state, names, H, opts = {}, xLabel =
     const fav = step(r.favourable); const unf = step(r.unfavourable);
     const band = step(r.central).map(([t], i) => [t, Math.min(fav[i][1], unf[i][1]), Math.max(fav[i][1], unf[i][1])]);
     const c = r.at.central;
-    const marks = [{ x: H, label: when[0].toUpperCase() + when.slice(1) }];
+    const marks = [{ x: H, label: when[0].toUpperCase() + when.slice(1) }, todayX ? { x: todayX, label: 'Today' } : null].filter(Boolean);
     const cross = r.crossings.central;
     if (cross != null && cross <= span) {
       const up = r.central.series[cross - 1][1] > 0;

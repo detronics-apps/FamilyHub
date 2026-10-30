@@ -206,13 +206,41 @@ export const whenLabel = (m) => (m >= 12 ? `year ${Math.ceil(m / 12)}` : `month 
  */
 /** A graph that also keeps its numbers, so CSV export can write them out (D-083). */
 export function lineChart(series, opts) {
-  const figure = drawChart(series, opts);
-  figure.dataset.chart = '';
-  // A shaded range goes to CSV as its two edges.
+  const box = el('div', { class: 'stack', style: { gap: 'var(--space-1)' } });
+  box.dataset.chart = '';
+  // A shaded range goes to CSV as its two edges - always the whole timeline, zoomed or not.
   const edges = opts.band ? [{ name: `${opts.band.name} - low edge`, points: opts.band.points.map(([x, lo]) => [x, lo]) }, { name: `${opts.band.name} - high edge`, points: opts.band.points.map(([x, , hi]) => [x, hi]) }] : [];
-  figure.chartData = { label: opts.label, series: [...series, ...edges], xLabel: opts.xLabel ?? null };
-  return figure;
+  box.chartData = { label: opts.label, series: [...series, ...edges], xLabel: opts.xLabel ?? null };
+  const xs = series.flatMap((s) => s.points.map((p) => p[0]));
+  const lo = Math.min(...xs); const hi = Math.max(...xs);
+  if (!(hi - lo > ZOOM + 12)) { box.append(drawChart(series, opts)); return box; }
+  // Zoom (D-088): five years at a time, opening on the two before today and three after, a year back or on.
+  const today = (opts.marks ?? []).find((m) => m && m.label === 'Today')?.x;
+  const clamp = (x) => Math.max(lo, Math.min(hi - ZOOM, x));
+  const year = (x) => (opts.xLabel ? opts.xLabel(x) : `Year ${Math.round(x / 12)}`);
+  const draw = () => {
+    const from = zooms.get(opts.label) ?? null;
+    const cut = (p) => (from == null ? p : p.filter(([x]) => x >= from && x <= from + ZOOM));
+    const set = (x) => { zooms.set(opts.label, x == null ? null : clamp(x)); draw(); };
+    const btn = (text, label, to, off = false) => el('button', { class: 'btn btn-small btn-quiet', type: 'button', text, 'aria-label': label, disabled: off, on: { click: () => set(to) } });
+    box.replaceChildren(
+      el('div', { class: 'row small', style: { gap: 'var(--space-2)', alignItems: 'center', justifyContent: 'flex-end' }, 'data-field': 'zoom' }, [
+        el('div', { class: 'chipset', role: 'group', 'aria-label': 'How much of the timeline' }, [
+          el('button', { class: 'chip', type: 'button', text: '5 years', 'aria-pressed': String(from != null), on: { click: () => set(from ?? (today != null ? today - 24 : lo)) } }),
+          el('button', { class: 'chip', type: 'button', text: 'All', 'aria-pressed': String(from == null), on: { click: () => set(null) } }),
+        ]),
+        from != null ? btn('‹', 'A year earlier', from - 12, from <= lo) : null,
+        from != null ? el('span', { class: 'muted', text: `${year(from)} to ${year(from + ZOOM)}` }) : null,
+        from != null ? btn('›', 'A year later', from + 12, from >= hi - ZOOM) : null,
+      ]),
+      drawChart(series.map((s) => ({ ...s, points: cut(s.points) })), { ...opts, band: opts.band ? { ...opts.band, points: cut(opts.band.points) } : null }),
+    );
+  };
+  draw();
+  return box;
 }
+const ZOOM = 60;          // months shown when zoomed in
+const zooms = new Map();  // graph label -> first month shown (null: all), kept while the app is open
 
 // Axis steps that read easily: 1, 2, 2.5 or 5 times a power of ten.
 function niceStep(span, n = 4) {

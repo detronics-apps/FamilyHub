@@ -393,7 +393,7 @@ function results(hub, d) {
   const span = Math.min(p.months.length, Math.max(H + 24, N + 120, p.bond?.paidOff ? (N + p.bond.monthsLeft + 24) : 0));
   const payoff = p.bond?.paidOff ? { x: N + p.bond.monthsLeft, label: 'Bond paid off' } : null;
   const todayMark = p.now > 0 ? { x: p.now, label: 'Today' } : null;
-  const range = cmp.values ? rangeParts({ values: cmp.values, today, state: homeRange, names: cmp.names, H, opts: { a: 0, b: 1 }, xLabel,
+  const range = cmp.values ? rangeParts({ values: cmp.values, today, state: homeRange, names: cmp.names, H, opts: { a: 0, b: 1 }, xLabel, todayX: todayMark?.x,
     title: TITLES[p.story ? 'story' : p.kind],
     onCentral: (key, val) => { v[key] = val; d.mine.add(key); hub.render(); } }) : null;
   const diffNow = cmp.values ? cmp.m.series[H - 1][1] : null;

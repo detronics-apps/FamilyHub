@@ -631,6 +631,19 @@ purpose (saved): show people what they have not thought of, and let them put the
   marked not counted), what moves the answer most, and year by year.
 - Tested: a home growing exactly as fast as after-tax investments, with no costs, comes out level.
 
+**D-088 Zoom in on a graph's timeline (owner, 2026-10-30).**
+The owner: a home's graphs ran from 2019 to past 2040, and they wanted to look closely at before
+today and after today - "a little zoom in, which takes all 5 years of the timeline, and then go
+sideways in time".
+- Every Finance line graph longer than six years (shared drawing, `lineChart`) has **5 years** and
+  **All** beside it. 5 years opens on the two years before today and three after (from the start
+  when there is no today); **‹** and **›** move a year back or on, stopping at either end.
+- The scale up the side fits what is shown, so small differences become visible; Today, Bond paid
+  off and the other marks show when they fall inside.
+- Kept per graph while the app is open, so retyping a figure does not zoom back out.
+- CSV always writes the whole timeline; printing shows what is on screen, with its years written.
+- The main graph now marks Today too.
+
 **D-087 What each situation did; no "After the bond" tick (owner, 2026-10-30).**
 The owner: "paying off the extra amount on the bond, I want to see the impact of that situation. And
 then when I pull out that money... where could it have gone versus what is happening now?" - and
