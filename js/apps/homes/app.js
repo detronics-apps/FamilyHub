@@ -142,10 +142,11 @@ const SECS = [
     f('bondStart', 'It started in', 'month', { when: isOwn }),
     f('bondYears', 'Over', 'years', { source: { kind: 'assumption' }, when: isOwn }),
     f('bondRate', 'Rate at the start', 'percent', { source: { ref: REFERENCE.prime }, when: isOwn }),
-  ], extra: (hub, d, plan, refresh) => [bondBox(d.values, plan), isOwn(d.values) ? eventsPanel(d, refresh, 'bondEvents', EVENT_KINDS, 'What happened, over the years', H.history, false, true) : null] },
+  ], extra: (hub, d, plan, refresh) => [bondBox(hub, d, plan), isOwn(d.values) ? eventsPanel(d, refresh, 'bondEvents', EVENT_KINDS, 'What happened (from your statements)', H.history, false, true) : null] },
   { key: 'running', title: SECTIONS.running, tick: true, when: hasHome, fields: [
     f('ratesTaxes', 'Rates and taxes a month', 'money', { optional: true }),
     f('levies', 'Levies a month', 'money', { optional: true }),
+    f('leviesRisePct', 'Levies rise by', 'percent', { placeholder: 'as costs', fallback: () => null, fallbackLabel: 'As costs rise - empty', when: (v) => n(v.levies) > 0 }),
     f('insurance', 'Building insurance a month', 'money', { optional: true }),
     f('maintYearly', 'Maintenance and repairs a year - what you really spend', 'money', { optional: true, when: (v) => v.maintMode !== 'percent' }),
     f('maintMode', 'Maintenance as', 'choice', { level: 'advanced', redraw: true, choices: [{ value: 'amount', label: 'Our figure' }, { value: 'percent', label: 'Percentage' }] }),
@@ -206,7 +207,7 @@ function homeScreen(hub) {
     ]),
     figuresFold(v, today, [
       ...sections,
-      hasHome(v) && (v.on?.bond ?? true) ? eventsPanel(d, refresh, 'scenarios', SCENARIO_KINDS, 'What if…', H.scenarios, true, true) : null,
+      hasHome(v) && (v.on?.bond ?? true) ? eventsPanel(d, refresh, 'scenarios', SCENARIO_KINDS, isOwn(v) ? 'What if… (from today on)' : 'What if…', H.scenarios, true, true) : null,
     ]),
     answer,
     savedPanel(hub, {
@@ -244,12 +245,15 @@ function sectionPanel(hub, d, s, plan, refresh, changed, boxes) {
 /** What our own home has grown by, with "Use it" to grow prices at that rate. */
 function historyLine(hub, d) {
   const v = d.values;
-  const h = historyGrowth(v.boughtFor, v.boughtWhen, isOwn(v) ? v.worthNow : v.worthNow, hub.today());
+  // What the home itself grew by: money spent on improvements is part of what it is worth now, not growth.
+  const impr = n(v.improvedSoFar);
+  const h = historyGrowth(n(v.boughtFor) + impr, v.boughtWhen, v.worthNow, hub.today());
   if (!isOwn(v)) return el('p', { class: 'small muted', style: { margin: 0 }, text: 'Own a home already? Fill it in as "Ours already" to see what it has grown by - and use that here.' });
   if (!h) return el('p', { class: 'small muted', style: { margin: 0 }, text: 'Fill in what you paid and when, to see what your home has grown by each year.' });
+  const all = impr ? historyGrowth(v.boughtFor, v.boughtWhen, v.worthNow, hub.today()) : null;
   const same = Math.abs(h.pct - n(v.growthPct)) < 0.05;
   return el('div', { class: 'row' }, [
-    el('p', { class: 'small', style: { margin: 0, flex: '1 1 240px' }, text: `${rand(n(v.boughtFor))} in ${v.boughtWhen.slice(0, 4)} to ${rand(n(v.worthNow))} now is about ${pct(h.pct, 1)} a year over ${h.years.toFixed(1)} years${same ? ' - and that is what is used.' : '.'} The past is not a promise.` }),
+    el('p', { class: 'small', style: { margin: 0, flex: '1 1 240px' }, text: `${rand(n(v.boughtFor))} in ${v.boughtWhen.slice(0, 4)}${impr ? ` and ${rand(impr)} of improvements` : ''}, to ${rand(n(v.worthNow))} now: about ${pct(h.pct, 1)} a year over ${h.years.toFixed(1)} years${impr ? ` for the home itself (${pct(all.pct, 1)} if the improvements are counted as growth)` : ''}${same ? ' - and that is what is used.' : '.'} The past is not a promise.` }),
     same ? null : el('button', { class: 'btn btn-small', type: 'button', text: 'Use it', 'data-field': 'use-history', title: 'Grow prices at our own home’s rate', on: { click: () => { v.growthPct = Math.round(h.pct * 10) / 10; d.mine.add('growthPct'); hub.render(); } } }),
   ]);
 }
@@ -282,14 +286,24 @@ function saleBox(plan) {
 }
 
 /** The bond in a few lines: the instalment, what it means against income, and what is still owed. */
-function bondBox(v, plan) {
+function bondBox(hub, d, plan) {
+  const v = d.values;
   if (plan.missing || !plan.bond) return null;
   const b = plan.bond;
   const lines = isOwn(v)
-    ? [`Today: ${rand(b.owedNow)} owed, a minimum of ${rand(b.minNow)} a month, paid off ${ymName(b.paidOff)} at the minimum (${months(b.monthsLeft)}).`, ...b.notes.map((x) => x.text)]
+    ? [`Today: ${rand(b.owedNow)} owed, a minimum of ${rand(b.minNow)} a month, paid off ${ymName(b.paidOff)} at the minimum (${months(b.monthsLeft)}).`, ...b.notes.filter((x) => !x.low).map((x) => x.text)]
     : [`${rand(plan.loan)} at ${pct(n(v.ratePct))} over ${yrs(n(v.termYears))}: ${rand(b.minNow)} a month, paid off ${ymName(b.paidOff)}, about ${rand(b.interestFromNow)} interest in all.`,
       n(v.income) ? `That is ${Math.round((b.minNow / n(v.income)) * 100)}% of the household’s income before tax. Banks often look for no more than about 30% - here about ${rand(b.minNow / 0.3)} a month. Each bank decides for itself.` : null];
-  return el('div', { class: 'stack' }, lines.filter(Boolean).map((t) => el('p', { class: 'small', style: { margin: 0 }, text: t })));
+  // "Paid each month" below the minimum: the whole instalment was meant, or - far likelier - the extra on top.
+  const low = isOwn(v) ? b.notes.filter((x) => x.low) : [];
+  const toMore = (x) => { for (const e of v.bondEvents ?? []) if (e?.kind === 'pay' && e.from === x.from && n(e.amount) === x.amount) e.kind = 'more'; d.mine.add('bondEvents'); hub.render(); };
+  return el('div', { class: 'stack' }, [
+    ...lines.filter(Boolean).map((t) => el('p', { class: 'small', style: { margin: 0 }, text: t })),
+    ...low.map((x) => el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' }, 'data-field': `low-pay:${x.from}` }, [
+      el('p', { class: 'small fin-worse', style: { margin: 0, flex: '1 1 240px' }, text: `${rand(x.amount)} a month from ${ymName(x.from)} is less than the minimum of ${rand(x.min)}, so it changes nothing: "Paid each month" is the whole instalment. If ${rand(x.amount)} was paid on top of the minimum, it is "Paid more each month".` }),
+      el('button', { class: 'btn btn-small', type: 'button', text: 'Change', title: `Make it ${rand(x.amount)} more each month`, on: { click: () => toMore(x) } }),
+    ])),
+  ]);
 }
 
 /** Upgrades: what each costs, when, and what it adds to the selling price. */
@@ -390,10 +404,16 @@ function results(hub, d) {
   const off = Object.entries(SECTIONS).filter(([k]) => k !== 'forgone' && !({ ...SECTIONS_ON, ...(v.on ?? {}) })[k] && SECS.find((s) => s.key === k && (!s.when || s.when(v)))).map(([, t]) => t.toLowerCase());
   if (off.length) lines.push(`Left out: ${off.join(', ')}.`);
 
-  const span = Math.min(p.months.length, Math.max(H + 24, N + 120, p.bond?.paidOff ? (N + p.bond.monthsLeft + 24) : 0));
-  const payoff = p.bond?.paidOff ? { x: N + p.bond.monthsLeft, label: 'Bond paid off' } : null;
+  // Where the graphs end (D-089): the bond paid off, 5 or 10 years after it, or when you leave.
+  const paidX = p.bond?.paidOff ? N + p.bond.monthsLeft : null;
+  const ends = { paid: paidX, paid5: paidX != null ? paidX + 60 : null, paid10: paidX != null ? paidX + 120 : null, leave: H };
+  const span = Math.min(p.months.length, Math.max(ends[v.graphEnd] ?? ends.paid5 ?? H, N + 12));
+  const endPick = paidX != null ? el('label', { class: 'small row', style: { gap: 'var(--space-2)', alignItems: 'center' } }, [el('span', { class: 'muted', text: 'Graphs run to' }),
+    el('select', { class: 'select', style: { width: 'auto' }, 'data-field': 'graph-end', on: { change: (e) => { v.graphEnd = e.target.value; d.mine.add('graphEnd'); hub.render(); } } },
+      [['paid', `The bond paid off (${ymName(p.bond.paidOff).slice(-4)})`], ['paid5', '5 years after the bond'], ['paid10', '10 years after the bond'], ['leave', `When you leave (${leave})`]].map(([k, t]) => el('option', { value: k, text: t, selected: (v.graphEnd ?? 'paid5') === k })))]) : null;
+  const payoff = paidX != null ? { x: paidX, label: 'Bond paid off' } : null;
   const todayMark = p.now > 0 ? { x: p.now, label: 'Today' } : null;
-  const range = cmp.values ? rangeParts({ values: cmp.values, today, state: homeRange, names: cmp.names, H, opts: { a: 0, b: 1 }, xLabel, todayX: todayMark?.x,
+  const range = cmp.values ? rangeParts({ values: cmp.values, today, state: homeRange, names: cmp.names, H, opts: { a: 0, b: 1 }, xLabel, todayX: todayMark?.x, endX: span,
     title: TITLES[p.story ? 'story' : p.kind],
     onCentral: (key, val) => { v[key] = val; d.mine.add(key); hub.render(); } }) : null;
   const diffNow = cmp.values ? cmp.m.series[H - 1][1] : null;
@@ -404,6 +424,7 @@ function results(hub, d) {
     el('div', { class: 'panel stack', 'data-field': 'comparing' }, [
       el('p', { style: { margin: 0 } }, [el('strong', { text: `Comparing ${d.title || 'this home'}: ` }), cmp.values ? `${A.toLowerCase()}, against ${altWords(v, p, cmp)} - up to ${leave}.` : `${A.toLowerCase()} - against what? It needs ${cmp.ask}.`]),
       cmp.values ? el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' } }, [el('span', { class: 'small muted', text: 'Whoever spends less each month:' }), switchCash]) : null,
+      endPick,
     ]),
     el('div', { class: 'stats' }, [
       stat(rand(p.monthNow), 'a month now, all counted', 'r-month'),
@@ -416,26 +437,32 @@ function results(hub, d) {
     range?.moves,
     situationsPanel(hub, v, today, H, xLabel, span, [payoff, todayMark]),
     costSplit(p, N, span, xLabel, [payoff, todayMark], v, cmp),
-    p.kind !== 'rent' ? equityPanel(p, span, xLabel, [payoff, todayMark]) : null,
+    p.kind !== 'rent' ? equityPanel(hub, d, p, today, span, xLabel, [payoff, todayMark]) : null,
     carryPanel(v, p, today, homeRange, H, cmp.values ? cmp : null),
     forgotten(v, p, cmp.values ? cmp : null),
   ];
-  // Year by year, folded away: the numbers behind the graphs.
-  const yearRows = [1, 2, 3, 5, 7, 10, 15, 20, 25, 30].map((y) => N + y * 12).filter((t) => t <= Math.min(p.months.length, 360));
+  // Year by year, folded away (D-089): every year from the start to where the graphs end, with
+  // today as its own line - so the past can be checked against the bank's statements.
+  const yearRows = [...new Set([...Array.from({ length: Math.floor(span / 12) }, (_, i) => (i + 1) * 12), N % 12 ? N : null])].filter((t) => t > 0 && t <= span).sort((a, b) => a - b);
+  const hasBond = !!p.bond;
+  const between = (t, i, get) => p.months.slice(i ? yearRows[i - 1] : 0, t).reduce((s, m) => s + get(m), 0);
   out.push(el('details', { class: 'panel more', 'data-field': 'year-by-year' }, [
     el('summary', { text: 'Year by year' }),
+    p.kind === 'own' && !p.story ? el('p', { class: 'small muted', style: { margin: 0 }, text: 'From today on. Choose "When we bought it" under "Work it out from" to see every year since you bought.' }) : null,
     el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums' }, [
-      el('thead', {}, [el('tr', {}, ['Year', p.kind !== 'rent' ? 'Worth' : null, p.kind !== 'rent' ? 'Bond owed' : null, p.kind !== 'rent' ? 'Equity' : null, 'Paid out so far', cmp.values ? `${A} minus ${B.toLowerCase()}` : null].filter(Boolean).map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
-      el('tbody', {}, yearRows.map((t) => { const m = p.months[t - 1]; const dd = cmp.values ? cmp.m.series[t - 1]?.[1] : null; return el('tr', {}, [
-        el('td', { text: m.ym.slice(0, 4) }),
+      el('thead', {}, [el('tr', {}, ['End of', p.kind !== 'rent' ? 'Worth' : null, hasBond ? 'Bond owed' : null, hasBond ? 'Interest that year' : null, hasBond ? 'Paid on the bond that year' : null, p.kind !== 'rent' ? 'Equity' : null, 'Paid out so far', cmp.values ? `${A} minus ${B.toLowerCase()}` : null].filter(Boolean).map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
+      el('tbody', {}, yearRows.map((t, i) => { const m = p.months[t - 1]; const dd = cmp.values ? cmp.m.series[t - 1]?.[1] : null; return el('tr', { class: t === N ? 'fin-today' : null, style: t === N ? { fontWeight: 700 } : null }, [
+        el('td', { text: `${ymName(m.ym)}${t === N ? ' · today' : ''}` }),
         p.kind !== 'rent' ? el('td', { class: 'num', text: rand(m.value) }) : null,
-        p.kind !== 'rent' ? el('td', { class: 'num', text: rand(m.owed) }) : null,
+        hasBond ? el('td', { class: 'num', text: rand(m.owed) }) : null,
+        hasBond ? el('td', { class: 'num', text: rand(between(t, i, (x) => x.interest)) }) : null,
+        hasBond ? el('td', { class: 'num', text: rand(between(t, i, (x) => x.bondPaid)) }) : null,
         p.kind !== 'rent' ? el('td', { class: 'num', text: rand(m.value - m.owed) }) : null,
         el('td', { class: 'num', text: rand(m.paid) }),
-        cmp.values ? el('td', { class: `num ${dd >= 0 ? 'fin-better' : 'fin-worse'}`, text: rand(dd) }) : null,
+        cmp.values ? el('td', { class: `num ${dd >= 0 ? 'fin-better' : 'fin-worse'}`, text: dd == null ? '-' : rand(dd) }) : null,
       ].filter(Boolean)); })),
     ])]),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: 'Paid out so far is every rand spent - it does not on its own say whether buying or renting is better; the last column does, with both sides counted.' }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: `${hasBond ? 'Interest and paid on the bond count the months since the line above, so the today line is part of a year. Check them against your bank\'s statements; if they differ, a rate change not yet under "What happened" is the usual reason. ' : ''}Paid out so far is every rand spent - it does not on its own say whether buying or renting is better${cmp.values ? '; the last column does, with both sides counted' : ''}.` }),
   ]));
   if (shows('learn')) {
     out.push(el('div', { class: 'panel stack fin-learn' }, [
@@ -482,7 +509,7 @@ function withoutWords(e, v) {
   const rest = v.diffCash ? 'keeping that money as cash' : 'investing that money instead';
   if (e.kind === 'more' || e.kind === 'extra') return `not paying it and ${rest}`;
   if (e.kind === 'pay') return `paying only the bank's minimum and ${rest}`;
-  if (e.kind === 'withdraw') return `leaving it in the bond${e.use === 'spent' ? '' : ' (the money taken out counted as invested - if it was spent, say so on the line)'}`;
+  if (e.kind === 'withdraw') return `leaving it in the bond${e.use === 'spent' ? ' (what it bought - a car, say - counts as nothing here)' : ' (the money taken out counted as invested - if it was spent, say so on the line)'}`;
   return 'the rate staying as it was';
 }
 
@@ -502,19 +529,41 @@ function situationsPanel(hub, v, today, H, xLabel, span, marks) {
   })));
   const shown = lines.filter((l) => !hiddenSits.has(l.key));
   const say = (x) => {
-    if (x.past) return 'Before today, so not measured from here - choose "When we bought it" under "Work it out from" to see what it did.';
+    if (x.past) return r.plan.story ? 'Before you bought it, so not measured.' : 'Before today, so not measured from here - choose "When we bought it" under "Work it out from" to see what it did.';
     const bond = x.sooner ? `The bond is paid off ${months(Math.abs(x.sooner))} ${x.sooner > 0 ? 'sooner' : 'later'}` : 'The bond ends at the same time';
     const parts = [`${bond}, with ${rand(Math.abs(x.interest))} ${x.interest >= 0 ? 'less' : 'more'} interest. By ${leave} it leaves you ${rand(Math.abs(x.effect))} ${x.effect >= 0 ? 'more' : 'less'} than ${withoutWords(x.e, v)}.`];
     if (x.kept != null) parts.push(`Had you kept paying it until the bond was done: paid off ${ymName(x.keptPaidOff)}, and ${rand(Math.abs(x.kept))} ${x.kept >= 0 ? 'more' : 'less'} by ${leave} than as it is.`);
-    if (x.moreThanAhead != null) parts.push(`That is more than the ${rand(x.moreThanAhead)} paid ahead by then - a bank usually treats it as a re-advance or a further loan, with its own fees.`);
+    if (x.moreThanAhead != null) parts.push(`${x.moreThanAhead >= 1 ? `That is more than the ${rand(x.moreThanAhead)} paid ahead by then` : 'Nothing had been paid ahead by then'} - a bank usually treats it as a re-advance or a further loan, with its own fees.`);
     return parts.join(' ');
   };
   const sum = live.reduce((s, x) => s + x.effect, 0);
+  // The bond itself (D-089): as it happened, without each line, and with none of them.
+  const b = r.bond;
+  const ways = live.length ? [
+    { key: 'asIs', name: 'As it happened', ...b.asIs },
+    ...live.map((x) => ({ key: x.key, name: `Without ${sitShort(x.e)}`, ...b.without[x.key] })),
+    b.none ? { key: 'none', name: 'None of them', ...b.none } : null,
+  ].filter(Boolean) : [];
+  const owedChart = ways.length ? lineChart(ways.map((w, i) => ({ name: w.name, points: w.owed.slice(0, span).filter(([t]) => t % 3 === 0), dashed: i > 0 })), {
+    label: 'What is owed on the bond, as it happened and without each line', xLabel, marks,
+    story: 'The bond itself: where each line ends at zero is when it is paid off. The dashed lines are the bond without that line.' }) : null;
+  const bondTable = ways.length ? el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums', 'data-field': 'sit-bond' }, [
+    el('thead', {}, [el('tr', {}, ['The bond', 'Paid off', 'Interest, the whole bond', r.plan.now > 0 ? 'Owed today' : null].filter(Boolean).map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
+    el('tbody', {}, ways.map((w) => el('tr', { style: w.key === 'asIs' ? { fontWeight: 700 } : null }, [
+      el('td', { text: w.name }), el('td', { class: 'num', text: ymName(w.paidOff) }), el('td', { class: 'num', text: rand(w.interest) }),
+      r.plan.now > 0 ? el('td', { class: 'num', text: rand(w.owedNow) }) : null,
+    ].filter(Boolean)))),
+  ])]) : null;
   return el('div', { class: 'panel stack', 'data-field': 'situations' }, [
     el('h2', { text: 'What each one did', style: { margin: 0 } }),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: 'Each line under "What happened" and each ticked what-if, taken out on its own and the whole home worked out again on the same money: paying more is set against investing that money instead, taking money out against leaving it in the bond. Above zero it left you more by then; below, less.' }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'Each line under "What happened" and each ticked what-if, taken out on its own and worked out again: first what it did to the bond, then what it did to what the home leaves you.' }),
+    bondTable,
+    owedChart,
+    live.length ? el('h3', { text: 'What it leaves you', style: { margin: 0 } }) : null,
+    live.length ? el('p', { class: 'small muted', style: { margin: 0 }, text: 'The whole home on the same money: paying more is set against investing that money instead, taking money out against leaving it in the bond. Above zero it left you more by then; below, less. This is not what is owed - that is the graph above.' }) : null,
     live.length ? chips : null,
-    shown.length ? lineChart(shown.map((l) => ({ name: l.name, points: l.points.slice(0, span) })), { label: 'What each situation did, month by month', xLabel, marks, zones: { above: 'Left you more', below: 'Left you less' } }) : null,
+    shown.length ? lineChart(shown.map((l) => ({ name: l.name, points: l.points.slice(0, span) })), { label: 'What each situation did to what the home leaves you, month by month', xLabel, marks, zones: { above: 'Left you more', below: 'Left you less' },
+      story: 'Each line: what the home leaves you with it, minus without it. The figure at its end is that difference then.' }) : null,
     el('ul', { style: { margin: 0, paddingLeft: '1.2em' } }, r.items.map((x) => el('li', { 'data-field': `sit-say:${x.key}` }, [el('strong', { text: `${x.label}: ` }), say(x)]))),
     r.together ? el('p', { style: { margin: 0 }, text: `All of them together: ${rand(Math.abs(r.together.effect))} ${r.together.effect >= 0 ? 'more' : 'less'} by ${leave} than none of them.${Math.abs(r.together.effect - sum) > Math.max(5000, 0.05 * Math.abs(sum)) ? ' Not the same as adding them up - they affect each other: taking money out, for one, has the bank work the instalment out again over the years left, so what was paid ahead no longer brings the end closer.' : ''}` }) : null,
   ]);
@@ -529,10 +578,17 @@ const PARTS = [
   ['trip', 'Getting to work'],
 ];
 const partOf = (m, k) => (k === 'fixed' ? m.running - m.upkeep : m[k]);
+/** "rates and taxes and levies" - only what is filled in (in a complex the insurance is in the levy). */
+function fixedName(v) {
+  const xs = [['ratesTaxes', 'rates'], ['levies', 'levies'], ['insurance', 'insurance']].filter(([k]) => n(v[k]) > 0).map(([, t]) => t);
+  return !xs.length ? 'rates, levies and insurance' : xs.length === 1 ? xs[0] : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`;
+}
+const cap = (t) => t[0].toUpperCase() + t.slice(1);
 
 /** "Can you afford it each month?" (D-086): the parts stacked, with the alternative and 30% of income. */
 function costSplit(p, N, span, xLabel, marks, v, cmp) {
-  const parts = PARTS.filter(([k]) => p.months.slice(N, span).some((m) => partOf(m, k) > 0.5));
+  const parts = PARTS.filter(([k]) => p.months.slice(N, span).some((m) => partOf(m, k) > 0.5)).map(([k, label]) => [k, k === 'fixed' ? cap(fixedName(v)) : label]);
+  const stays = `${fixedName(v)}${parts.some(([k]) => k === 'upkeep') ? ' and upkeep' : ''}`;
   if (!parts.length) return null;
   const alt = cmp.values ? cmp.altPlan : null;
   const altOut = (t) => (alt ? (alt.months[t - 1] ? alt.months[t - 1].out - alt.months[t - 1].upgradeNow : 0) : null);
@@ -545,7 +601,7 @@ function costSplit(p, N, span, xLabel, marks, v, cmp) {
   const lines = [
     `${(p.kind === 'own' && !p.story) || p.fromPocket < 1 || p.now > 0 ? '' : `Up front: ${rand(p.fromPocket)} once${p.kind === 'rent' ? '' : ' - the deposit, duty and fees'}. `}Every month: ${rand(p.months[N].out)} now, about ${rand(monthly)} in all over the ${stayYrs} you plan to stay.`,
     alt ? `${cmp.names[1]}: ${rand(altOut(N + 1))} a month now. ${p.months[N].out > altOut(N + 1) ? `This home costs ${rand(p.months[N].out - altOut(N + 1))} more a month now - on the other side that difference is ${v.diffCash ? 'kept' : 'invested'}.` : `This home costs ${rand(altOut(N + 1) - p.months[N].out)} less a month now - that difference is ${v.diffCash ? 'kept' : 'invested'} on this side.`}` : null,
-    !afterBond ? null : afterBond.running > 0.5 ? `A paid-off home is not free: rates, insurance and upkeep stay - about ${rand(afterBond.out - afterBond.upgradeNow)} a month once the bond is done in ${afterBond.ym.slice(0, 4)}, still rising with costs.`
+    !afterBond ? null : afterBond.running > 0.5 ? `A paid-off home is not free: ${stays} stay - about ${rand(afterBond.out - afterBond.upgradeNow)} a month once the bond is done in ${afterBond.ym.slice(0, 4)}, still rising.`
       : `After the bond is done in ${afterBond.ym.slice(0, 4)} nothing more is counted, because rates, insurance and upkeep are ${p.on.running ? 'not filled in' : 'left out'} - a paid-off home still has those.`,
     p.kind === 'rent' ? 'Rent has no rates, levies or upkeep - the landlord pays those out of it - but it rises every year and none of it comes back.' : null,
   ].filter(Boolean);
@@ -559,7 +615,7 @@ function costSplit(p, N, span, xLabel, marks, v, cmp) {
       ...(alt ? [{ name: cmp.names[1], points: pts((m) => altOut(m.t)), over: true, dashed: true, colour: 'var(--text)' }] : []),
     ], { label: `What this home costs each month, part by part, stacked${alt ? `, with ${cmp.names[1].toLowerCase()} as a dashed line` : ''}`, stack: true, marks, xLabel,
       yLines: [income ? { y: income * 0.3, label: `30% of income (${rand(income * 0.3)})` } : null],
-      story: `${p.kind === 'rent' ? 'Rent rises every year.' : `Stacked, so the top edge is the whole month. ${p.bond ? 'The bond stays level unless the rate changes, then stops when it is paid off; ' : ''}rates, insurance and upkeep carry on and rise with costs.`}${alt ? ` The dashed line is ${cmp.names[1].toLowerCase()} each month.` : ''}` }),
+      story: `${p.kind === 'rent' ? 'Rent rises every year.' : `Stacked, so the top edge is the whole month. ${p.bond ? 'The bond stays level unless the rate changes, then stops when it is paid off; ' : ''}${stays} carry on and rise.`}${alt ? ` The dashed line is ${cmp.names[1].toLowerCase()} each month.` : ''}` }),
     el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums' }, [
       el('thead', {}, [el('tr', {}, ['A month', ...cols.map(([, h]) => h)].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
       el('tbody', {}, [
@@ -571,18 +627,35 @@ function costSplit(p, N, span, xLabel, marks, v, cmp) {
   ]);
 }
 
-/** "How much of the home is yours?" (D-086): what it is worth, split into owed and yours. */
-function equityPanel(p, span, xLabel, marks) {
-  const pts = (get) => [[0, get({ value: p.value0, owed: p.owed0 || p.loan })], ...p.months.slice(0, span).filter((m) => m.t % 3 === 0).map((m) => [m.t, get(m)])];
-  const now = p.months[Math.max(0, p.now)] ?? p.months[0];
+/**
+ * "How much of the home is yours?" (D-086): what it is worth, split into owed and yours - with
+ * a shaded band for prices growing slower or faster than your figure (D-089), each worked out again.
+ */
+function equityPanel(hub, d, p, today, span, xLabel, marks) {
+  const v = d.values;
+  const pts = (months, get) => [[0, get({ value: p.value0, owed: p.owed0 || p.loan })], ...months.slice(0, span).filter((m) => m.t % 3 === 0).map((m) => [m.t, get(m)])];
+  // Today is month `now` itself - the same balance the bond section shows.
+  const now = p.now > 0 ? p.months[p.now - 1] : { value: p.value0, owed: p.owed0 || p.loan };
+  const g = n(v.growthPct);
+  const lowG = v.growthLow ?? g - 2; const highG = v.growthHigh ?? g + 2;
+  const lo = homePlan({ ...v, growthPct: Math.min(lowG, highG) }, today); const hi = homePlan({ ...v, growthPct: Math.max(lowG, highG) }, today);
+  const hiPts = pts(hi.months, (m) => m.value);
+  const band = lowG !== highG ? { name: `Prices growing ${pct(Math.min(lowG, highG), 1)} to ${pct(Math.max(lowG, highG), 1)} a year`, points: pts(lo.months, (m) => m.value).map(([t, y], i) => [t, Math.min(y, hiPts[i][1]), Math.max(y, hiPts[i][1])]) } : null;
+  const S = p.stay; const leave = p.months[S - 1].ym.slice(0, 4);
+  const worth = (q) => q.months[S - 1].value;
+  const growIn = (key, label, val) => el('label', { class: 'small row', style: { gap: '6px', alignItems: 'center' } }, [label,
+    el('input', { class: 'input', type: 'number', inputmode: 'decimal', step: '0.5', value: Math.round(val * 10) / 10, style: { maxWidth: '6em' }, 'data-field': `in:${key}`, 'aria-label': `House prices grow by, ${label.toLowerCase()}`,
+      on: { change: (e) => { v[key] = e.target.value === '' ? null : Number(e.target.value); d.mine.add(key); hub.render(); } } }), '% a year']);
   return el('div', { class: 'panel stack', 'data-field': 'equity' }, [
     el('h2', { text: 'How much of the home is yours?', style: { margin: 0 } }),
-    el('p', { style: { margin: 0 }, text: `${p.now > 0 ? 'Today' : 'At the start'} it is worth about ${rand(now.value)}; ${rand(now.owed)} is owed to the bank and ${rand(Math.max(0, now.value - now.owed))} is yours.` }),
+    el('p', { style: { margin: 0 }, text: `${p.now > 0 || p.kind === 'own' ? 'Today' : 'At the start'} it is worth about ${rand(now.value)}; ${rand(now.owed)} is owed to the bank and ${rand(Math.max(0, now.value - now.owed))} is yours.` }),
+    el('div', { class: 'row', style: { gap: 'var(--space-3)', alignItems: 'center' } }, [el('span', { class: 'small muted', text: 'If prices grow' }), growIn('growthLow', 'Slower', lowG), growIn('growthHigh', 'Faster', highG)]),
+    el('p', { style: { margin: 0 }, text: `By ${leave}, at your ${pct(g, 1)} a year it is worth about ${rand(worth(p))}; at ${pct(Math.min(lowG, highG), 1)}, ${rand(worth(lo))}; at ${pct(Math.max(lowG, highG), 1)}, ${rand(worth(hi))}.${p.story ? ' Up to today it follows what your home really did.' : ''} Nobody knows which - the past is a guide only.` }),
     lineChart([
-      { name: 'Owed to the bank', points: pts((m) => Math.min(m.owed, m.value)), colour: 'var(--text-dim)' },
-      { name: 'Yours (equity)', points: pts((m) => Math.max(0, m.value - m.owed)), colour: 'var(--ok)' },
-    ], { label: 'What the home is worth, split into what is owed and what is yours', stack: true, marks, xLabel,
-      story: 'The top edge is what the home is worth. Equity is the part you own once the bond is subtracted - not cash you can spend: selling costs, tax and the time it takes to sell still apply.' }),
+      { name: 'Owed to the bank', points: pts(p.months, (m) => Math.min(m.owed, m.value)), colour: 'var(--text-dim)' },
+      { name: 'Yours (equity)', points: pts(p.months, (m) => Math.max(0, m.value - m.owed)), colour: 'var(--ok)' },
+    ], { label: 'What the home is worth, split into what is owed and what is yours', stack: true, marks, xLabel, band,
+      story: `The top edge is what the home is worth at your ${pct(g, 1)}${band ? '; the shaded band is where it would be if prices grew slower or faster' : ''}. Equity is the part you own once the bond is subtracted - not cash you can spend: selling costs, tax and the time it takes to sell still apply.` }),
   ]);
 }
 

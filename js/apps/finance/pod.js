@@ -111,7 +111,7 @@ export function input(f, d, onInput) {
   } else {
     control = el('input', {
       class: 'input', id, type: 'number', inputmode: 'decimal', step: 'any', min: f.min === null ? null : f.min ?? '0', value: d.values[f.key] ?? '',
-      placeholder: f.estimate ? 'estimate' : f.optional ? 'not counted' : '', 'data-field': `in:${f.key}`, style: { maxWidth: '200px' },
+      placeholder: f.placeholder ?? (f.estimate ? 'estimate' : f.optional ? 'not counted' : ''), 'data-field': `in:${f.key}`, style: { maxWidth: '200px' },
       on: { input: (e) => set(e.target.value === '' ? null : Number(e.target.value)) },
     });
   }
@@ -401,10 +401,12 @@ export function linesPanel(d, refresh, key, kinds, title, help, tickable = false
     uses && e.kind === 'withdraw' ? el('select', { class: 'select', 'aria-label': 'What the money taken out went to', style: { width: 'auto' }, 'data-field': `${key}:${i}:use`, on: { change: (x) => { e.use = x.target.value === 'spent' ? 'spent' : undefined; save(); } } },
       [['invested', 'Invested'], ['spent', 'Spent']].map(([k, label]) => el('option', { value: k, text: label, selected: (e.use === 'spent') === (k === 'spent') }))) : null,
     el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': 'Remove this line', on: { click: () => { list.splice(i, 1); draw(); save(); } } }),
+    // A what-if on the home we own that is already past: what really happened goes in its own list.
+    tickable && d.values.kind === 'own' && e.from && e.from < today ? el('span', { class: 'small muted', style: { flexBasis: '100%' }, text: 'Already past - if it really happened, put it under "What happened" instead, so it is not counted twice.' }) : null,
   ])));
+  const today = new Date().toISOString().slice(0, 7);
   draw();
   const [ib, ix] = info(help, title);
-  const today = new Date().toISOString().slice(0, 7);
   return el('section', { class: 'panel stack', 'data-field': `${key}-panel` }, [
     el('h2', { style: { margin: 0 } }, [title, ' ', ib]),
     ix,

@@ -40,3 +40,20 @@ test('D-087 from today, what happened before is not measured; a spent take-out i
   assert.equal(m({ ...own, bondEvents: [{ ...own.bondEvents[1], use: 'spent' }] }).taken, 0);
   assert.equal(m({ ...own, bondEvents: [own.bondEvents[1]] }).taken, 150000);
 });
+
+test('D-089 a line from the month we bought is measured; the bond each way', () => {
+  // The owner's own bond: R1 000 more a month from the month it started, R100 000 taken out in 2023.
+  const mine = { ...own, bondLoan: 900000, bondYears: 14, bondRate: 10.75, growthPct: 11.7, stayYears: 15,
+    bondEvents: [{ kind: 'more', from: '2019-12', to: '2026-08', amount: 1000 }, { kind: 'withdraw', from: '2023-09', amount: 100000, use: 'spent' }] };
+  const r = situationEffects(mine, '2026-10-31', 15 * 12 + 82);
+  assert.ok(r.items.every((x) => !x.past));
+  const [more, out] = r.items;
+  assert.ok(more.sooner > 0 && more.interest > 0, 'paying more brought the end closer and saved interest');
+  assert.ok(out.sooner < 0 && out.interest < 0, 'taking it out pushed the end back and added interest');
+  assert.equal(r.bond.asIs.paidOff, '2033-05');
+  assert.equal(r.bond.without['bondEvents:1'].paidOff, '2032-02');   // never took it out
+  assert.equal(r.bond.none.paidOff, '2033-12');                       // the bank's own schedule
+  assert.ok(r.bond.none.interest - r.bond.asIs.interest > 30000, 'both together still saved interest');
+  assert.ok(r.bond.asIs.owedNow < r.bond.without['bondEvents:0'].owedNow);
+  assert.ok(out.moreThanAhead > 50000 && out.moreThanAhead < 100000);
+});

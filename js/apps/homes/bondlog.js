@@ -48,7 +48,11 @@ export function runBond({ loan, ratePct, termYears, start, events = [], fromMont
     const i = bal * r;
     const chosen = ev.filter((x) => x.kind === 'pay' && x.at <= m && (x.until == null || m <= x.until)).at(-1);
     let pay = chosen ? chosen.amount : minPmt;
-    if (chosen && pay < minPmt - 0.5) { notes.push({ m, text: `${addMonthsYM(start, m)}: R${Math.round(pay)} is below the minimum of R${Math.round(minPmt)} - the minimum is used.` }); pay = minPmt; }
+    // Said once per line: "Paid each month" is the whole instalment, so a small amount was most likely paid on top.
+    if (chosen && pay < minPmt - 0.5) {
+      if (!notes.some((x) => x.low === chosen)) notes.push({ m, low: chosen, from: chosen.from, amount: chosen.amount, min: minPmt, text: `${addMonthsYM(start, m)}: R${Math.round(pay)} is below the minimum of R${Math.round(minPmt)} - the minimum is used.` });
+      pay = minPmt;
+    }
     // "More each month": on top of whatever the payment is then, for the period (D-078).
     pay += ev.filter((x) => x.kind === 'more' && x.at <= m && (x.until == null || m <= x.until)).reduce((s, x) => s + x.amount, 0);
     if (fromMonth != null && m >= fromMonth) pay += extraFrom;
@@ -62,7 +66,7 @@ export function runBond({ loan, ratePct, termYears, start, events = [], fromMont
     rows.push({ m, ym: addMonthsYM(start, m), balance: Math.max(0, bal), minPmt, paidThis: pay, interestThis: i });
   }
   const end = rows.at(-1);
-  return { rows, months: end.m, paidOff: end.balance <= 0.005 ? end.ym : null, interest, paid, taken, notes: notes.slice(0, 5), plannedMonths: n };
+  return { rows, months: end.m, paidOff: end.balance <= 0.005 ? end.ym : null, interest, paid, taken, notes: notes.slice(0, 5).map(({ low, ...x }) => ({ ...x, low: !!low })), plannedMonths: n };
 }
 
 /** Where things stand on a given month, and what paying `extra` more a month from then would do. */

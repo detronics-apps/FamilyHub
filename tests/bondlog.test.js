@@ -37,6 +37,10 @@ test('D-075 paid in once, taken out again, and a rate change', () => {
   assert.equal(rate.months, 240);
   // A payment below the minimum is raised to it, and said.
   assert.ok(runBond({ ...base, events: [{ kind: 'pay', from: '2020-01', to: '2020-03', amount: 5000 }] }).notes.length > 0);
+  // D-089: once per line, not once a month - with what it needs to offer "Paid more each month".
+  const low = runBond({ ...base, events: [{ kind: 'pay', from: '2019-12', to: '2026-08', amount: 1000 }] }).notes;
+  assert.equal(low.length, 1);
+  assert.deepEqual([low[0].low, low[0].from, low[0].amount], [true, '2019-12', 1000]);
 });
 
 test('D-075 where it stands today, and what paying extra from now would do', () => {

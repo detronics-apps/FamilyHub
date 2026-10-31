@@ -63,7 +63,7 @@ export function carryIt(v, plan, today, range = null, names = null) {
     const value = plan.months[Math.max(0, plan.now)]?.value ?? plan.value0;
     const big = Math.max(30000, value * 0.02);
     add(cash == null ? 'unknown' : cash - (buying ? plan.fromPocket : 0) >= big ? 'ok' : 'watch', 'A big repair',
-      `A roof, a geyser or plumbing can cost ${R(big)} or more at once (about 2% of the value is used here).${cash == null ? ' Add your cash to see whether it would be covered.' : ''}`);
+      `A roof, a geyser or plumbing can cost ${R(big)} or more at once (about 2% of the value is used here).${Number(v.levies) > 0 ? ' In a complex the body corporate usually pays for the roof and the structure out of the levies, and its insurance may cover a geyser - what is left to you is inside the unit, so it may be less.' : ''}${cash == null ? ' Add your cash to see whether it would be covered.' : ''}`);
   }
 
   // 5. Leaving sooner (D-086): against the comparison, never against paying nothing for a home.

@@ -631,6 +631,34 @@ purpose (saved): show people what they have not thought of, and let them put the
   marked not counted), what moves the answer most, and year by year.
 - Tested: a home growing exactly as fast as after-tax investments, with no costs, comes out level.
 
+**D-089 What the bond history really did; graphs to a chosen end; a growth band (owner, 2026-10-31).**
+The owner's own home: R1 000 a month on top of the minimum for six years, then R100 000 taken out
+for a car - and the page showed nothing for the R1 000, the graphs ran 30 years from today, the
+year-by-year table started next year, and the home's value had no range.
+- **Why the R1 000 showed nothing** (measured): it was entered as "Paid each month", which is the
+  whole instalment - below the R10 383 minimum, so the minimum was used and it did nothing. Now said
+  once per line, not once a month: "is less than the minimum... did you mean Paid more each month",
+  with **Change**. And a bug: a line starting the month we bought was marked "before today" even
+  with "When we bought it" chosen - from when we bought, the start month is measured.
+- **What happened (from your statements)** and **What if… (from today on)**: a what-if on the home
+  we own dated in the past says it belongs under What happened, so nothing is counted twice.
+- **What each one did** starts with the bond itself: a table (paid off, interest over the whole bond,
+  owed today) as it happened, without each line and with none of them, and a **What is owed** graph
+  of the same. The owner's: as it happened May 2033, R811 721; never took it out Feb 2032,
+  R693 095; none of them Dec 2033, R844 388. The wealth graph follows under "What it leaves you",
+  saying it is not what is owed. Spent take-outs say what they bought counts as nothing.
+- **Graphs run to** the bond paid off, 5 years after it (default), 10 years after it, or when you
+  leave - saved with the home. The comparison graph still reaches the year its answer is read at.
+- **Year by year** has every year from the start, today as its own line, and interest and paid on
+  the bond each year - to check against the bank's statements.
+- **Levies rise by** their own figure (empty: as costs do); the words name only the costs filled in
+  ("rates and levies"); in a complex, insurance is in the levy and a big repair may be less.
+- **How much of the home is yours?** has a shaded band for prices growing slower or faster (your
+  own two figures, default 2 points either side), each worked out again, and what it is worth by
+  your leaving year at each. Today's owed there is now the same as the bond section's.
+- **Growth from your own history** takes improvements off: R1.5m and R100 000 of improvements to
+  R3.2m is 10.7% a year for the home itself (11.7% counting the improvements as growth).
+
 **D-088 Zoom in on a graph's timeline (owner, 2026-10-30).**
 The owner: a home's graphs ran from 2019 to past 2040, and they wanted to look closely at before
 today and after today - "a little zoom in, which takes all 5 years of the timeline, and then go

@@ -24,8 +24,9 @@ export function rangePanel(args) {
  * @param H       months at which the answer is read
  * @param title   the graph's question, e.g. "Buying or renting: which leaves you more?"
  * @param onCentral(field, value)  changes the first home's own figure (its page only)
+ * @param endX    the month the page's graphs end at (D-089); the graph still reaches H
  */
-export function rangeParts({ values, today, state, names, H, opts = {}, xLabel = null, onCentral = null, title = null, todayX = null }) {
+export function rangeParts({ values, today, state, names, H, opts = {}, xLabel = null, onCentral = null, title = null, todayX = null, endX = null }) {
   const parts = { chart: el('div', { class: 'stack', 'data-field': 'range-chart' }), explore: el('div', { class: 'stack' }), moves: el('div', { class: 'stack' }) };
   const keys = relevant(values).map((x) => x.key).join();
   if (!state.ranges || state.keys !== keys) { state.ranges = defaultRanges(values); state.keys = keys; state.preset = 'narrow'; }
@@ -41,7 +42,8 @@ export function rangeParts({ values, today, state, names, H, opts = {}, xLabel =
   };
 
   function chartPanel(r) {
-    const span = Math.min(r.central.series.length, Math.max(H + 24, 120));
+    // Where the page says the graphs end - never before the year the answer is read at.
+    const span = Math.min(r.central.series.length, endX != null ? Math.max(endX, H) : Math.max(H + 24, 120));
     const step = (s) => s.series.slice(0, span).filter(([t]) => t % 3 === 0 || t === H);
     const fav = step(r.favourable); const unf = step(r.unfavourable);
     const band = step(r.central).map(([t], i) => [t, Math.min(fav[i][1], unf[i][1]), Math.max(fav[i][1], unf[i][1])]);

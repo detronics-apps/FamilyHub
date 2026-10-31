@@ -50,6 +50,15 @@ test('D-087 after the bond: on the same money the instalment no longer paid is i
   near(homePlan({ ...short, on: { ...short.on, afterBond: true } }, TODAY).at.ahead, homePlan(short, TODAY).at.ahead, 0.01);
 });
 
+test('D-089 levies rise at their own pace; each month keeps its interest', () => {
+  const v = { ...buy, ratesTaxes: 1000, levies: 2000, insurance: 0, escalatePct: 6, on: { travel: false } };
+  const fixed = (p, t) => p.months[t - 1].running - p.months[t - 1].upkeep;
+  near(fixed(homePlan({ ...v, leviesRisePct: 0 }, TODAY), 13), 1000 * 1.06 + 2000, 0.01);
+  near(fixed(homePlan(v, TODAY), 13), 3000 * 1.06, 0.01);    // empty: as costs rise
+  const p = homePlan(v, TODAY);
+  near(p.months.reduce((s, m) => s + m.interest, 0), p.bond.interest, 1);
+});
+
 test('D-078 ours already: measured from selling today; the history and a pay-more scenario', () => {
   const own = { kind: 'own', worthNow: 3200000, boughtFor: 1500000, bondLoan: 900000, bondStart: '2019-12', bondYears: 14, bondRate: 9, stayYears: 10, sellPct: 7.5, growthPct: 6,
     bondEvents: [{ kind: 'pay', from: '2020-01', to: '2026-09', amount: 12000 }, { kind: 'withdraw', from: '2023-12', amount: 100000 }] };

@@ -28,6 +28,9 @@ export const PLAN_DEFAULTS = {
   ...HOME_DEFAULTS, ...OWN_RENT_DEFAULTS,
   kind: 'buy', on: {}, scenarios: [],
   bondLoan: null, bondStart: null, bondYears: 20, bondRate: REFERENCE.prime.value, bondEvents: [],
+  leviesRisePct: null, // empty: levies rise as costs do
+  graphEnd: 'paid5',   // where the graphs end: 'paid', 'paid5', 'paid10' (after the bond) or 'leave'
+  growthLow: null, growthHigh: null,   // the band on "How much of the home is yours?" (empty: 2 points either side)
   income: null,
   fromMonth: null,     // buying or renting: the month it starts (empty: this month)
   ownFrom: 'today',    // ours already: 'today' (as if selling today) or 'bought' (the whole story)
@@ -74,6 +77,8 @@ export function homePlan(input, today, { withScenarios = true } = {}) {
   const M = 360 + Math.max(0, now);            // always 30 years on from today
   const g = num(v.growthPct) / 100;
   const esc = num(v.escalatePct) / 100;
+  // Levies often rise at their own pace (a complex's budget, not inflation) - empty: as costs rise.
+  const escLevy = v.leviesRisePct === null || v.leviesRisePct === undefined || v.leviesRisePct === '' ? esc : num(v.leviesRisePct) / 100;
   const sell = num(v.sellPct) / 100;
   const yr = (t) => Math.floor((t - 1) / 12);
   // Costs are typed in today's money: rising from today, smaller before it.
@@ -155,7 +160,7 @@ export function homePlan(input, today, { withScenarios = true } = {}) {
     const upgradeNow = upgrades.filter((u) => u.m === t).reduce((s, u) => s + u.cost * (1 + esc) ** (t / 12), 0);
     upgradesSpent += upgradeNow;
     const maint = !on.running || kind === 'rent' ? 0 : v.maintMode === 'percent' ? (value * num(v.upkeepPct)) / 1200 : (num(v.maintYearly) / 12) * e;
-    const running = kind === 'rent' || !on.running ? 0 : (num(v.ratesTaxes) + num(v.levies) + num(v.insurance)) * e + maint;
+    const running = kind === 'rent' || !on.running ? 0 : (num(v.ratesTaxes) + num(v.insurance)) * e + num(v.levies) * (1 + escLevy) ** costYr(t) + maint;
     const rent = kind === 'rent' ? rent0 * (1 + num(v.rentRisePct) / 100) ** yr(t) : 0;
     const trip = on.travel ? travel(v, t).money : 0;
     // Once the bond is paid off, the money it no longer takes is invested by sameMoney (D-087).
@@ -167,7 +172,7 @@ export function homePlan(input, today, { withScenarios = true } = {}) {
     const homeNet = kind === 'rent' ? num(v.rentDeposit) : value * (1 - sell) - owed - tax;
     const forgone = on.forgone ? fromPocket * ((1 + ir) ** t - 1) : 0;
     const ahead = homeNet + inv + cashIn - paid - forgone - start;
-    months.push({ t, ym: addMonthsYM(ym, t), out, bondPaid, running, upkeep: maint, rent, trip, upgradeNow, taken, owed, value, inv, paid, homeNet, ahead, minPmt: r?.minPmt ?? 0 });
+    months.push({ t, ym: addMonthsYM(ym, t), out, bondPaid, running, upkeep: maint, rent, trip, upgradeNow, taken, owed, value, inv, paid, homeNet, ahead, minPmt: r?.minPmt ?? 0, interest: r?.interestThis ?? 0 });
   }
   // How long you live there counts from today when it started earlier, else from its start.
   const N = Math.max(0, now);
