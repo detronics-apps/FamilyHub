@@ -47,8 +47,10 @@ const without = (v, keys) => {
  *   bond: { asIs, without: { key: … }, none } - each { paidOff, interest, owedNow, owed: [[t, owed]] }
  *   effect: what the home leaves you at H with it, minus without it (both on the same money);
  *   points: that difference month by month; past: before the page starts (today) - not measured.
+ *   cost (a take-out): [[t, more owed, more interest so far, what it cost in all]] from its month on.
+ * @param off  keys of lines left out (D-090): `chosen` is then the home worked out with only the rest.
  */
-export function situationEffects(v, today, H) {
+export function situationEffects(v, today, H, off = []) {
   const base = homePlan(v, today);
   if (base.missing || !base.bond) return null;
   const list = situationList(v);
@@ -89,6 +91,9 @@ export function situationEffects(v, today, H) {
     if (s.k != null) { item.kept = S[s.k][at].wealth - S[0][at].wealth; item.keptPaidOff = plans[s.k].bond?.paidOff ?? null; }
     if (s.e.kind === 'withdraw') {
       const i = base.months.findIndex((m) => m.ym === s.e.from);
+      // What it has cost, building up: more owed, more interest so far, and in all on the same money.
+      let extra = 0;
+      item.cost = i < 0 ? [] : base.months.map((m, j) => { extra += m.interest - (p.months[j]?.interest ?? 0); return [m.t, m.owed - (p.months[j]?.owed ?? 0), extra, (S[s.w][j]?.wealth ?? 0) - (S[0][j]?.wealth ?? 0)]; }).slice(i);
       const before = i > 0 ? base.months[i - 1] : null;
       const sched = before ? plain.months[i - 1]?.owed : null;
       // The bank's schedule less what was really owed, the month before (with this take-out's month excluded).
@@ -100,5 +105,7 @@ export function situationEffects(v, today, H) {
   // The bond itself, each way: paid off, interest over the whole bond, owed today, owed month by month.
   const bondOf = (p) => ({ paidOff: p.bond?.paidOff ?? null, interest: p.bond?.interest ?? 0, owedNow: p.bond?.owedNow ?? 0, owed: p.months.map((m) => [m.t, m.owed]) });
   const bond = { asIs: bondOf(base), without: Object.fromEntries(live.map((s) => [s.key, bondOf(plans[s.w])])), none: all != null ? bondOf(plans[all]) : null };
-  return { items, together, plan: base, bond };
+  const out = off.filter((k) => live.some((s) => s.key === k));
+  const chosen = out.length ? homePlan(without(v, out), today) : base;
+  return { items, together, plan: base, bond, chosen, chosenBond: bondOf(chosen) };
 }

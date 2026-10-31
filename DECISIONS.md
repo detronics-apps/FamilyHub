@@ -631,6 +631,21 @@ purpose (saved): show people what they have not thought of, and let them put the
   marked not counted), what moves the answer most, and year by year.
 - Tested: a home growing exactly as fast as after-tax investments, with no costs, comes out level.
 
+**D-090 Tick the lines; a take-out's cost; today's money (owner, 2026-10-31).**
+- **Paid each month under half the minimum is counted as paid on top** - R1 000 against a R10 383
+  minimum can only have been the extra. Between half and the minimum it is still raised to the
+  minimum and said. Change still turns the line into "Paid more each month".
+- **Work it out with**: a tick per line at the top of "What each one did". The bond table marks the
+  ticked way, the owed graph shows it against as it happened, and year by year is worked out with
+  only the ticked lines, each figure with its difference from what really happened under it.
+  Year by year adds Taken out that year.
+- **What the take-out has cost**, building up from its month: more owed, more interest so far, and
+  less in all on the same money (the amount if spent, the interest, and the higher instalments
+  invested instead) - by today, when the bond is paid off and when you leave.
+- **Today's money**: what a later price buys at today's prices, rising as costs do ("Costs rise
+  by"). A dashed line on the equity graph, a column in year by year, and beside the worth by the
+  leaving year.
+
 **D-089 What the bond history really did; graphs to a chosen end; a growth band (owner, 2026-10-31).**
 The owner's own home: R1 000 a month on top of the minimum for six years, then R100 000 taken out
 for a car - and the page showed nothing for the R1 000, the graphs ran 30 years from today, the

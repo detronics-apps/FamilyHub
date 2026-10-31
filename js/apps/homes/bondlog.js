@@ -48,8 +48,12 @@ export function runBond({ loan, ratePct, termYears, start, events = [], fromMont
     const i = bal * r;
     const chosen = ev.filter((x) => x.kind === 'pay' && x.at <= m && (x.until == null || m <= x.until)).at(-1);
     let pay = chosen ? chosen.amount : minPmt;
-    // Said once per line: "Paid each month" is the whole instalment, so a small amount was most likely paid on top.
-    if (chosen && pay < minPmt - 0.5) {
+    // "Paid each month" is the whole instalment. Under half the minimum it can only have been paid
+    // on top, so it is counted so (D-090); between half and the minimum it is raised to it. Said once per line.
+    if (chosen && pay < minPmt / 2) {
+      if (!notes.some((x) => x.low === chosen)) notes.push({ m, low: chosen, onTop: true, from: chosen.from, amount: chosen.amount, min: minPmt, text: `R${Math.round(pay)} a month from ${addMonthsYM(start, m)} is counted as paid on top of the minimum.` });
+      pay = minPmt + chosen.amount;
+    } else if (chosen && pay < minPmt - 0.5) {
       if (!notes.some((x) => x.low === chosen)) notes.push({ m, low: chosen, from: chosen.from, amount: chosen.amount, min: minPmt, text: `${addMonthsYM(start, m)}: R${Math.round(pay)} is below the minimum of R${Math.round(minPmt)} - the minimum is used.` });
       pay = minPmt;
     }

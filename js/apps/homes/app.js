@@ -300,7 +300,9 @@ function bondBox(hub, d, plan) {
   return el('div', { class: 'stack' }, [
     ...lines.filter(Boolean).map((t) => el('p', { class: 'small', style: { margin: 0 }, text: t })),
     ...low.map((x) => el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' }, 'data-field': `low-pay:${x.from}` }, [
-      el('p', { class: 'small fin-worse', style: { margin: 0, flex: '1 1 240px' }, text: `${rand(x.amount)} a month from ${ymName(x.from)} is less than the minimum of ${rand(x.min)}, so it changes nothing: "Paid each month" is the whole instalment. If ${rand(x.amount)} was paid on top of the minimum, it is "Paid more each month".` }),
+      el('p', { class: `small ${x.onTop ? '' : 'fin-worse'}`, style: { margin: 0, flex: '1 1 240px' }, text: x.onTop
+        ? `${rand(x.amount)} a month from ${ymName(x.from)} is far below the minimum of ${rand(x.min)}, so it is counted as paid on top of the minimum. Change makes the line say so ("Paid more each month").`
+        : `${rand(x.amount)} a month from ${ymName(x.from)} is less than the minimum of ${rand(x.min)}, so it changes nothing: "Paid each month" is the whole instalment. If ${rand(x.amount)} was paid on top of the minimum, it is "Paid more each month".` }),
       el('button', { class: 'btn btn-small', type: 'button', text: 'Change', title: `Make it ${rand(x.amount)} more each month`, on: { click: () => toMore(x) } }),
     ])),
   ]);
@@ -406,6 +408,9 @@ function results(hub, d) {
 
   // Where the graphs end (D-089): the bond paid off, 5 or 10 years after it, or when you leave.
   const paidX = p.bond?.paidOff ? N + p.bond.monthsLeft : null;
+  // Today's money (D-090): what a price then buys at today's prices, with prices rising as costs do.
+  const esc = n(v.escalatePct ?? PLAN_DEFAULTS.escalatePct) / 100;
+  const inToday = (t, x) => x / (1 + esc) ** ((t - N) / 12);
   const ends = { paid: paidX, paid5: paidX != null ? paidX + 60 : null, paid10: paidX != null ? paidX + 120 : null, leave: H };
   const span = Math.min(p.months.length, Math.max(ends[v.graphEnd] ?? ends.paid5 ?? H, N + 12));
   const endPick = paidX != null ? el('label', { class: 'small row', style: { gap: 'var(--space-2)', alignItems: 'center' } }, [el('span', { class: 'muted', text: 'Graphs run to' }),
@@ -417,6 +422,7 @@ function results(hub, d) {
     title: TITLES[p.story ? 'story' : p.kind],
     onCentral: (key, val) => { v[key] = val; d.mine.add(key); hub.render(); } }) : null;
   const diffNow = cmp.values ? cmp.m.series[H - 1][1] : null;
+  const sit = situationEffects(v, today, H, [...offSits]);
   const switchCash = el('div', { class: 'chipset', role: 'group', 'aria-label': 'The differences' }, [[false, 'Invested'], [true, 'Kept as cash']].map(([c, label]) => el('button', {
     class: 'chip', type: 'button', 'aria-pressed': String(!!v.diffCash === c), text: label, 'data-field': `diff-cash:${c}`,
     on: { click: () => { v.diffCash = c; d.mine.add('diffCash'); hub.render(); } } })));
@@ -435,34 +441,43 @@ function results(hub, d) {
     cmp.values ? range.chart : askPanel(hub, cmp, A),
     range?.explore,
     range?.moves,
-    situationsPanel(hub, v, today, H, xLabel, span, [payoff, todayMark]),
+    situationsPanel(hub, v, sit, H, xLabel, span, [payoff, todayMark]),
     costSplit(p, N, span, xLabel, [payoff, todayMark], v, cmp),
-    p.kind !== 'rent' ? equityPanel(hub, d, p, today, span, xLabel, [payoff, todayMark]) : null,
+    p.kind !== 'rent' ? equityPanel(hub, d, p, today, span, xLabel, [payoff, todayMark], esc) : null,
     carryPanel(v, p, today, homeRange, H, cmp.values ? cmp : null),
     forgotten(v, p, cmp.values ? cmp : null),
   ];
   // Year by year, folded away (D-089): every year from the start to where the graphs end, with
-  // today as its own line - so the past can be checked against the bank's statements.
+  // today as its own line - so the past can be checked against the bank's statements. Worked out
+  // with the lines ticked under "What each one did" (D-090), each figure beside as it happened.
+  const q = sit?.chosen ?? p; const alt = q !== p;
+  const offNames = alt ? sit.items.filter((x) => !x.past && offSits.has(x.key)).map((x) => x.label) : [];
   const yearRows = [...new Set([...Array.from({ length: Math.floor(span / 12) }, (_, i) => (i + 1) * 12), N % 12 ? N : null])].filter((t) => t > 0 && t <= span).sort((a, b) => a - b);
   const hasBond = !!p.bond;
-  const between = (t, i, get) => p.months.slice(i ? yearRows[i - 1] : 0, t).reduce((s, m) => s + get(m), 0);
+  const between = (pl, t, i, get) => pl.months.slice(i ? yearRows[i - 1] : 0, t).reduce((s, m) => s + get(m), 0);
+  const anyOut = [p, q].some((pl) => pl.months.some((m) => m.takenOut > 0));
+  // A figure, and under it how far it is from what really happened (worse: +1 more is worse, -1 less is, 0 neither).
+  const cell = (x, was, worse = 0) => el('td', { class: 'num' }, [rand(x), alt && Math.abs(x - was) >= 1 ? el('div', { class: `small ${worse && (x - was) * worse > 0 ? 'fin-worse' : worse ? 'fin-better' : 'muted'}`, text: `${x > was ? '+' : '−'}${rand(Math.abs(x - was))}` }) : null].filter(Boolean));
   out.push(el('details', { class: 'panel more', 'data-field': 'year-by-year' }, [
     el('summary', { text: 'Year by year' }),
     p.kind === 'own' && !p.story ? el('p', { class: 'small muted', style: { margin: 0 }, text: 'From today on. Choose "When we bought it" under "Work it out from" to see every year since you bought.' }) : null,
+    alt ? el('p', { class: 'small', style: { margin: 0 }, 'data-field': 'yby-without', text: `Without ${offNames.join(' and ')} - as ticked under "What each one did". The small figure under each is how far it is from what really happened.` }) : null,
     el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums' }, [
-      el('thead', {}, [el('tr', {}, ['End of', p.kind !== 'rent' ? 'Worth' : null, hasBond ? 'Bond owed' : null, hasBond ? 'Interest that year' : null, hasBond ? 'Paid on the bond that year' : null, p.kind !== 'rent' ? 'Equity' : null, 'Paid out so far', cmp.values ? `${A} minus ${B.toLowerCase()}` : null].filter(Boolean).map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
-      el('tbody', {}, yearRows.map((t, i) => { const m = p.months[t - 1]; const dd = cmp.values ? cmp.m.series[t - 1]?.[1] : null; return el('tr', { class: t === N ? 'fin-today' : null, style: t === N ? { fontWeight: 700 } : null }, [
+      el('thead', {}, [el('tr', {}, ['End of', p.kind !== 'rent' ? 'Worth' : null, p.kind !== 'rent' ? 'Worth in today\'s money' : null, hasBond ? 'Bond owed' : null, hasBond ? 'Interest that year' : null, hasBond ? 'Paid on the bond that year' : null, anyOut ? 'Taken out that year' : null, p.kind !== 'rent' ? 'Equity' : null, 'Paid out so far', cmp.values && !alt ? `${A} minus ${B.toLowerCase()}` : null].filter(Boolean).map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
+      el('tbody', {}, yearRows.map((t, i) => { const m = q.months[t - 1]; const w = p.months[t - 1]; const dd = cmp.values ? cmp.m.series[t - 1]?.[1] : null; const sum = (pl, get) => between(pl, t, i, get); return el('tr', { class: t === N ? 'fin-today' : null, style: t === N ? { fontWeight: 700 } : null }, [
         el('td', { text: `${ymName(m.ym)}${t === N ? ' · today' : ''}` }),
         p.kind !== 'rent' ? el('td', { class: 'num', text: rand(m.value) }) : null,
-        hasBond ? el('td', { class: 'num', text: rand(m.owed) }) : null,
-        hasBond ? el('td', { class: 'num', text: rand(between(t, i, (x) => x.interest)) }) : null,
-        hasBond ? el('td', { class: 'num', text: rand(between(t, i, (x) => x.bondPaid)) }) : null,
-        p.kind !== 'rent' ? el('td', { class: 'num', text: rand(m.value - m.owed) }) : null,
-        el('td', { class: 'num', text: rand(m.paid) }),
-        cmp.values ? el('td', { class: `num ${dd >= 0 ? 'fin-better' : 'fin-worse'}`, text: dd == null ? '-' : rand(dd) }) : null,
+        p.kind !== 'rent' ? el('td', { class: 'num muted', text: rand(inToday(t, m.value)) }) : null,
+        hasBond ? cell(m.owed, w.owed, 1) : null,
+        hasBond ? cell(sum(q, (x) => x.interest), sum(p, (x) => x.interest), 1) : null,
+        hasBond ? cell(sum(q, (x) => x.bondPaid), sum(p, (x) => x.bondPaid)) : null,
+        anyOut ? cell(sum(q, (x) => x.takenOut), sum(p, (x) => x.takenOut)) : null,
+        p.kind !== 'rent' ? cell(m.value - m.owed, w.value - w.owed, -1) : null,
+        cell(m.paid, w.paid),
+        cmp.values && !alt ? el('td', { class: `num ${dd >= 0 ? 'fin-better' : 'fin-worse'}`, text: dd == null ? '-' : rand(dd) }) : null,
       ].filter(Boolean)); })),
     ])]),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: `${hasBond ? 'Interest and paid on the bond count the months since the line above, so the today line is part of a year. Check them against your bank\'s statements; if they differ, a rate change not yet under "What happened" is the usual reason. ' : ''}Paid out so far is every rand spent - it does not on its own say whether buying or renting is better${cmp.values ? '; the last column does, with both sides counted' : ''}.` }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: `${hasBond ? 'Interest and paid on the bond count the months since the line above, so the today line is part of a year. Check them against your bank\'s statements; if they differ, a rate change not yet under "What happened" is the usual reason. ' : ''}${p.kind !== 'rent' ? `Worth in today's money is what that price buys at today's prices, with prices rising ${pct(esc * 100, 1)} a year ("Costs rise by") - a price in 2040 is not worth what the same rand is now. ` : ''}Paid out so far is every rand spent - it does not on its own say whether buying or renting is better${cmp.values && !alt ? '; the last column does, with both sides counted' : ''}.` }),
   ]));
   if (shows('learn')) {
     out.push(el('div', { class: 'panel stack fin-learn' }, [
@@ -500,6 +515,7 @@ function askPanel(hub, cmp, A) {
 
 const homeRange = {};   // this page's scenario range settings
 const hiddenSits = new Set();   // lines hidden on "What each one did"
+const offSits = new Set();      // lines left out of the working (D-090): the owed graph, bond table and year by year
 
 /** "R4 000 more" - a line's name at the end of its graph line. */
 const sitShort = (e) => (e.kind === 'rate' ? `Rate ${n(e.amount)}%` : `${rand(n(e.amount))}${{ more: ' more', pay: ' a month', extra: ' in', withdraw: ' out' }[e.kind]}`);
@@ -517,8 +533,7 @@ function withoutWords(e, v) {
  * "What each one did" (D-087): every situation taken out on its own and the home worked out
  * again on the same money - one line each on the graph, its effect in words below.
  */
-function situationsPanel(hub, v, today, H, xLabel, span, marks) {
-  const r = situationEffects(v, today, H);
+function situationsPanel(hub, v, r, H, xLabel, span, marks) {
   if (!r || !r.items.length) return null;
   const leave = r.plan.months[H - 1].ym.slice(0, 4);
   const live = r.items.filter((x) => !x.past);
@@ -539,26 +554,56 @@ function situationsPanel(hub, v, today, H, xLabel, span, marks) {
   const sum = live.reduce((s, x) => s + x.effect, 0);
   // The bond itself (D-089): as it happened, without each line, and with none of them.
   const b = r.bond;
+  // Ticked (D-090): the lines counted. The owed graph, this table and year by year follow them.
+  const out = live.filter((x) => offSits.has(x.key));
+  const pick = !out.length ? 'asIs' : out.length === 1 ? out[0].key : out.length === live.length && b.none ? 'none' : 'chosen';
   const ways = live.length ? [
     { key: 'asIs', name: 'As it happened', ...b.asIs },
     ...live.map((x) => ({ key: x.key, name: `Without ${sitShort(x.e)}`, ...b.without[x.key] })),
     b.none ? { key: 'none', name: 'None of them', ...b.none } : null,
+    pick === 'chosen' ? { key: 'chosen', name: `Without ${out.map((x) => sitShort(x.e)).join(', ')}`, ...r.chosenBond } : null,
   ].filter(Boolean) : [];
-  const owedChart = ways.length ? lineChart(ways.map((w, i) => ({ name: w.name, points: w.owed.slice(0, span).filter(([t]) => t % 3 === 0), dashed: i > 0 })), {
+  const count = live.length ? el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' } }, [el('span', { class: 'small muted', text: 'Work it out with' }),
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Lines counted' }, live.map((x) => el('button', {
+      class: 'chip', type: 'button', 'aria-pressed': String(!offSits.has(x.key)), text: sitShort(x.e), 'data-field': `count:${x.key}`,
+      on: { click: () => { if (offSits.has(x.key)) offSits.delete(x.key); else offSits.add(x.key); hub.render(); } } })))]) : null;
+  const drawnWays = pick === 'asIs' ? ways : ways.filter((w) => w.key === 'asIs' || w.key === pick);
+  const owedChart = ways.length ? lineChart(drawnWays.map((w, i) => ({ name: w.name, points: w.owed.slice(0, span).filter(([t]) => t % 3 === 0), dashed: i > 0 })), {
     label: 'What is owed on the bond, as it happened and without each line', xLabel, marks,
-    story: 'The bond itself: where each line ends at zero is when it is paid off. The dashed lines are the bond without that line.' }) : null;
+    story: pick === 'asIs' ? 'The bond itself: where each line ends at zero is when it is paid off. The dashed lines are the bond without that line.' : 'The bond as it happened, and dashed without what is unticked above. Where each ends at zero is when it is paid off.' }) : null;
+  // A take-out's cost, building up (D-090): more owed, more interest so far, and in all on the same money.
+  const N = r.plan.now; const paidT = r.plan.bond?.paidOff ? N + r.plan.bond.monthsLeft : null;
+  const costOf = (x) => {
+    if (!x.cost?.length) return null;
+    const at = (t) => x.cost.find(([u]) => u === t) ?? x.cost.at(-1);
+    const pts = (k) => x.cost.filter(([t]) => t <= span && t % 3 === 0).map((c) => [c[0], c[k]]);
+    const [, owedNow, intNow, allNow] = at(N); const intPaid = paidT ? at(paidT)[2] : null; const allLeave = at(H)[3];
+    const spent = x.e.use === 'spent';
+    return el('div', { class: 'stack', 'data-field': `sit-cost:${x.key}` }, [
+      el('h3', { text: `What the ${rand(n(x.e.amount))} taken out has cost`, style: { margin: 0 } }),
+      el('p', { style: { margin: 0 }, text: `${N > 0 && N >= x.cost[0][0] ? `By today: ${rand(owedNow)} more owed, ${rand(intNow)} more interest so far, ${rand(allNow)} less in all. ` : ''}${intPaid != null ? `By the time the bond is paid off (${ymName(r.plan.bond.paidOff)}): ${rand(intPaid)} more interest. ` : ''}By ${leave}: ${rand(allLeave)} less in all.` }),
+      lineChart([
+        { name: 'More owed', points: pts(1), colour: 'var(--text-dim)' },
+        { name: 'More interest so far', points: pts(2), colour: 'var(--warn)' },
+        { name: 'Less in all', points: pts(3), colour: 'var(--accent-strong)' },
+      ], { label: `What taking out ${rand(n(x.e.amount))} has cost, building up`, xLabel, marks,
+        story: `Against leaving it in the bond. More owed jumps by the amount and shrinks as it is paid back; the interest on it keeps adding up. Less in all is ${spent ? `the ${rand(n(x.e.amount))} spent (what it bought counts as nothing here)` : 'counted with the money invested'}, the extra interest, and what the higher instalments would have grown to invested instead.` }),
+    ]);
+  };
   const bondTable = ways.length ? el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums', 'data-field': 'sit-bond' }, [
     el('thead', {}, [el('tr', {}, ['The bond', 'Paid off', 'Interest, the whole bond', r.plan.now > 0 ? 'Owed today' : null].filter(Boolean).map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
-    el('tbody', {}, ways.map((w) => el('tr', { style: w.key === 'asIs' ? { fontWeight: 700 } : null }, [
-      el('td', { text: w.name }), el('td', { class: 'num', text: ymName(w.paidOff) }), el('td', { class: 'num', text: rand(w.interest) }),
+    el('tbody', {}, ways.map((w) => el('tr', { style: w.key === pick ? { fontWeight: 700 } : null }, [
+      el('td', { text: `${w.name}${w.key === pick && pick !== 'asIs' ? ' · shown below' : ''}` }), el('td', { class: 'num', text: ymName(w.paidOff) }), el('td', { class: 'num', text: rand(w.interest) }),
       r.plan.now > 0 ? el('td', { class: 'num', text: rand(w.owedNow) }) : null,
     ].filter(Boolean)))),
   ])]) : null;
   return el('div', { class: 'panel stack', 'data-field': 'situations' }, [
     el('h2', { text: 'What each one did', style: { margin: 0 } }),
     el('p', { class: 'small muted', style: { margin: 0 }, text: 'Each line under "What happened" and each ticked what-if, taken out on its own and worked out again: first what it did to the bond, then what it did to what the home leaves you.' }),
+    count,
     bondTable,
     owedChart,
+    ...live.filter((x) => x.e.kind === 'withdraw').map(costOf),
     live.length ? el('h3', { text: 'What it leaves you', style: { margin: 0 } }) : null,
     live.length ? el('p', { class: 'small muted', style: { margin: 0 }, text: 'The whole home on the same money: paying more is set against investing that money instead, taking money out against leaving it in the bond. Above zero it left you more by then; below, less. This is not what is owed - that is the graph above.' }) : null,
     live.length ? chips : null,
@@ -631,7 +676,7 @@ function costSplit(p, N, span, xLabel, marks, v, cmp) {
  * "How much of the home is yours?" (D-086): what it is worth, split into owed and yours - with
  * a shaded band for prices growing slower or faster than your figure (D-089), each worked out again.
  */
-function equityPanel(hub, d, p, today, span, xLabel, marks) {
+function equityPanel(hub, d, p, today, span, xLabel, marks, esc) {
   const v = d.values;
   const pts = (months, get) => [[0, get({ value: p.value0, owed: p.owed0 || p.loan })], ...months.slice(0, span).filter((m) => m.t % 3 === 0).map((m) => [m.t, get(m)])];
   // Today is month `now` itself - the same balance the bond section shows.
@@ -650,12 +695,13 @@ function equityPanel(hub, d, p, today, span, xLabel, marks) {
     el('h2', { text: 'How much of the home is yours?', style: { margin: 0 } }),
     el('p', { style: { margin: 0 }, text: `${p.now > 0 || p.kind === 'own' ? 'Today' : 'At the start'} it is worth about ${rand(now.value)}; ${rand(now.owed)} is owed to the bank and ${rand(Math.max(0, now.value - now.owed))} is yours.` }),
     el('div', { class: 'row', style: { gap: 'var(--space-3)', alignItems: 'center' } }, [el('span', { class: 'small muted', text: 'If prices grow' }), growIn('growthLow', 'Slower', lowG), growIn('growthHigh', 'Faster', highG)]),
-    el('p', { style: { margin: 0 }, text: `By ${leave}, at your ${pct(g, 1)} a year it is worth about ${rand(worth(p))}; at ${pct(Math.min(lowG, highG), 1)}, ${rand(worth(lo))}; at ${pct(Math.max(lowG, highG), 1)}, ${rand(worth(hi))}.${p.story ? ' Up to today it follows what your home really did.' : ''} Nobody knows which - the past is a guide only.` }),
+    el('p', { style: { margin: 0 }, text: `By ${leave}, at your ${pct(g, 1)} a year it is worth about ${rand(worth(p))} (about ${rand(worth(p) / (1 + esc) ** ((S - p.now) / 12))} in today's money); at ${pct(Math.min(lowG, highG), 1)}, ${rand(worth(lo))}; at ${pct(Math.max(lowG, highG), 1)}, ${rand(worth(hi))}.${p.story ? ' Up to today it follows what your home really did.' : ''} Nobody knows which - the past is a guide only.` }),
     lineChart([
       { name: 'Owed to the bank', points: pts(p.months, (m) => Math.min(m.owed, m.value)), colour: 'var(--text-dim)' },
       { name: 'Yours (equity)', points: pts(p.months, (m) => Math.max(0, m.value - m.owed)), colour: 'var(--ok)' },
+      { name: 'Worth in today\'s money', points: pts(p.months, (m) => m.value / (1 + esc) ** (((m.t ?? 0) - p.now) / 12)), colour: 'var(--warn)', dashed: true, over: true },
     ], { label: 'What the home is worth, split into what is owed and what is yours', stack: true, marks, xLabel, band,
-      story: `The top edge is what the home is worth at your ${pct(g, 1)}${band ? '; the shaded band is where it would be if prices grew slower or faster' : ''}. Equity is the part you own once the bond is subtracted - not cash you can spend: selling costs, tax and the time it takes to sell still apply.` }),
+      story: `The top edge is what the home is worth at your ${pct(g, 1)}${band ? '; the shaded band is where it would be if prices grew slower or faster' : ''}. The dashed line is what that price buys at today's prices, with prices rising ${pct(esc * 100, 1)} a year - the rand figure later is bigger than what it buys. Equity is the part you own once the bond is subtracted - not cash you can spend: selling costs, tax and the time it takes to sell still apply.` }),
   ]);
 }
 

@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { situationEffects, situationList, situationLabel } from '../js/apps/homes/situations.js';
 import { homePlan } from '../js/apps/homes/home.js';
 
+const near = (a, b, tol = 1) => assert.ok(Math.abs(a - b) <= tol, `${a} is not ${b}`);
+
 const TODAY = '2026-10-30';
 const own = { kind: 'own', ownFrom: 'bought', worthNow: 3200000, boughtFor: 1500000, boughtWhen: '2019-12', bondLoan: 1300000, bondStart: '2019-12', bondYears: 20, bondRate: 10, stayYears: 10, sellPct: 7.5, growthPct: 6, investPct: 9, investTaxPct: 15, likeRent: 15000,
   bondEvents: [{ kind: 'more', from: '2020-01', to: '2022-12', amount: 4000 }, { kind: 'withdraw', from: '2024-03', amount: 150000 }] };
@@ -56,4 +58,15 @@ test('D-089 a line from the month we bought is measured; the bond each way', () 
   assert.ok(r.bond.none.interest - r.bond.asIs.interest > 30000, 'both together still saved interest');
   assert.ok(r.bond.asIs.owedNow < r.bond.without['bondEvents:0'].owedNow);
   assert.ok(out.moreThanAhead > 50000 && out.moreThanAhead < 100000);
+  // D-090: the take-out's cost builds up - more owed at once, more interest each month after.
+  const [t0, owed0, int0, all0] = out.cost[0];
+  assert.equal(mine.bondEvents[1].from, r.plan.months[t0 - 1].ym);
+  near(owed0, 100000, 2000); assert.ok(int0 < 1500 && all0 > 90000);
+  assert.ok(out.cost.at(-1)[2] > 50000, 'the interest keeps adding up');
+  near(out.cost.at(-1)[2], -out.interest, 1);
+  // Lines left out: the home worked out with only the rest - the same as "without" it.
+  const off = situationEffects(mine, '2026-10-31', 15 * 12 + 82, ['bondEvents:1']);
+  assert.equal(off.chosenBond.paidOff, r.bond.without['bondEvents:1'].paidOff);
+  near(off.chosenBond.interest, r.bond.without['bondEvents:1'].interest, 0.01);
+  assert.equal(r.chosen, r.plan);
 });
