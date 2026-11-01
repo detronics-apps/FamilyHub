@@ -7,6 +7,7 @@ import { el } from '../../ui/dom.js';
 import { confirmAction, fold, roomy } from '../../ui/common.js';
 import { fmtDay } from '../../dates.js';
 import { tabs, loading, failure, saveRecord, nameOf } from '../kit.js';
+import { linksEditor, linksView } from '../../ui/links-editor.js';
 import {
   BOOKS, PRESETS, normalisePlan, planSummary, planProgress, nextReading, describe, markRead, markUnread, chapters, daysIn,
   NOTE_KINDS, QUESTION_STATUS, QUESTION_SHORT, VERSIONS, chaptersIn, normaliseNote, noteSummary, noteText, passageRef, filterNotes, allQuestions, termsUsed, loggedOn, normaliseTopics, topicList, topicLabel, addTopic, setTopicHidden, removeTopic, bookNoteId, normaliseBookNote,
@@ -211,6 +212,7 @@ function entryScreen(hub, id) {
       ]))]) : null,
       n.passages.length || n.passage ? el('div', {}, [el('h2', { text: 'Passages', style: { margin: 0 } }), el('ul', {}, [...n.passages.map(passageRef), n.passage].filter(Boolean).map((t) => el('li', { text: t })))]) : null,
       n.notes ? el('p', { text: n.notes, style: { whiteSpace: 'pre-wrap' } }) : null,
+      linksView(hub, n, { small: false }),
       n.topics.length || n.terms.length ? el('div', { class: 'chipset' }, [...n.topics.map((t) => el('span', { class: 'badge badge--accent', text: topicLabel(famOf(hub), t) })), ...n.terms.map((t) => el('span', { class: 'badge', text: t }))]) : null,
     ]),
     el('div', { class: 'row' }, [
@@ -279,6 +281,7 @@ function writeScreen(hub, id) {
 
     el('label', { class: 'field__label', text: 'Notes' }),
     el('textarea', { class: 'input', rows: '6', placeholder: 'What stood out, what you learnt, what to talk about together...', 'aria-label': 'Notes', 'data-field': 'w-notes', text: d.notes, on: { input: (e) => { d.notes = e.target.value; } } }),
+    linksEditor(hub, d),
 
     el('h2', { text: 'Topics', style: { margin: 'var(--space-2) 0 0' } }),
     // The family's topics (hidden ones only when this entry already has them), and a new one right here.

@@ -4,6 +4,7 @@
 import { el } from '../../ui/dom.js';
 import { fmtDay, addDays, weekStart } from '../../dates.js';
 import { tabs, loading, failure, recordForm, saveRecord, nameOf } from '../kit.js';
+import { linksControl, linksView } from '../../ui/links-editor.js';
 import {
   KINDS, IDEAS, normaliseActivity, activitySummary, normalisePlan, planSummary, weekMinutes, together, planProgress, goalLine,
 } from './logic.js';
@@ -54,7 +55,7 @@ function weekScreen(hub) {
     el('div', { class: 'panel' }, [
       el('h2', { text: 'This week' }),
       thisWeek.length ? el('ul', { class: 'list' }, thisWeek.map((x) => el('li', {}, [
-        el('span', { class: 'list__main', text: `${KINDS[x.kind]}${x.minutes ? ` - ${x.minutes} min` : ''}` }),
+        el('span', { class: 'list__main' }, [`${KINDS[x.kind]}${x.minutes ? ` - ${x.minutes} min` : ''}`, linksView(hub, x)]),
         el('span', { class: 'small muted', text: [fmtDay(x.day, hub.today()), x.who.map((w) => nameOf(people, w)).join(', ')].filter(Boolean).join(' · ') }),
       ]))) : el('p', { class: 'small muted', text: 'Nothing logged yet this week.' }),
       el('a', { class: 'btn btn-primary', href: hub.href('log'), text: 'Log activity', 'data-field': 'log-activity' }),
@@ -79,9 +80,11 @@ function logScreen(hub) {
         { key: 'who', label: 'Who took part', type: 'people' },
         { key: 'day', label: 'When', type: 'day' },
         { key: 'note', label: 'Note', more: true },
+        ...(hub.creators ? [{ key: 'links', label: 'Creators and videos', type: 'custom', more: true, control: () => linksControl(hub, {}) }] : []),
       ],
       onSave: async (values) => {
-        await saveRecord(hub, acts(hub), normaliseActivity(values, hub.today()));
+        const { links, ...rest } = values;
+        await saveRecord(hub, acts(hub), normaliseActivity({ ...rest, ...links }, hub.today()));
         hub.ui.notice('Logged.');
         hub.go(null);
       },
@@ -107,7 +110,7 @@ function plansScreen(hub) {
     el('div', { class: 'panel' }, [
       el('h2', { text: 'Weekly plans' }),
       p.data.length ? el('ul', { class: 'list' }, p.data.map((pl) => el('li', {}, [
-        el('span', { class: 'list__main' }, [el('strong', { text: pl.title }), el('div', { class: 'small muted', text: [`${pl.timesPerWeek} times a week`, pl.kind ? KINDS[pl.kind] : 'any activity', pl.minutes ? `${pl.minutes}+ min` : null, pl.who.length ? pl.who.map((w) => nameOf(people, w)).join(', ') : 'anyone'].filter(Boolean).join(' · ') })]),
+        el('span', { class: 'list__main' }, [el('strong', { text: pl.title }), el('div', { class: 'small muted', text: [`${pl.timesPerWeek} times a week`, pl.kind ? KINDS[pl.kind] : 'any activity', pl.minutes ? `${pl.minutes}+ min` : null, pl.who.length ? pl.who.map((w) => nameOf(people, w)).join(', ') : 'anyone'].filter(Boolean).join(' · ') }), linksView(hub, pl)]),
         el('button', { class: 'btn btn-small', type: 'button', text: pl.active ? 'Pause' : 'Resume', on: { click: async () => { const full = await plans(hub).get(pl.id); await saveRecord(hub, plans(hub), normalisePlan({ ...full, active: !pl.active })); } } }),
         el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', on: { click: async () => { await plans(hub).remove(pl.id); hub.invalidate(); } } }),
       ]))) : el('p', { class: 'small muted', text: 'No plans yet - "walk three times a week" is a good one.' }),
@@ -123,8 +126,9 @@ function plansScreen(hub) {
         { key: 'kind', label: 'Which activity counts', type: 'select', options: [['', 'Any activity'], ...Object.entries(KINDS)] },
         { key: 'minutes', label: 'At least this many minutes', type: 'number', more: true },
         { key: 'who', label: 'For whom', type: 'people', more: true, hint: 'None ticked: anyone in the household.' },
+        ...(hub.creators ? [{ key: 'links', label: 'Creators and videos', type: 'custom', more: true, hint: 'The coach or channel, and the workout videos to follow.', control: () => linksControl(hub, {}) }] : []),
       ],
-      onSave: async (values) => { await saveRecord(hub, plans(hub), normalisePlan(values)); hub.ui.notice('Plan added.'); },
+      onSave: async (values) => { const { links, ...rest } = values; await saveRecord(hub, plans(hub), normalisePlan({ ...rest, ...links })); hub.ui.notice('Plan added.'); },
     }),
   ]);
 }

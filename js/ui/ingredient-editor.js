@@ -130,6 +130,8 @@ export function ingredientEditor({ rows, db = null, own = [], selfId = null, onC
       el('span', { class: `ing-status${mark === '?' ? ' ing-status--off' : ''}`, title: why, 'aria-label': why, text: mark }),
       el('button', { class: 'btn btn-small btn-quiet btn-icon', type: 'button', text: '×', 'aria-label': `Remove ingredient ${idx + 1}`, on: { click: () => { rows.splice(idx, 1); changed(); redraw(); } } }),
       r.usdaName ? el('div', { class: 'small muted ing-row__full', text: r.usdaName }) : null,
+      // An imported line: what the recipe said, how it was matched, and how its amount was converted (D-092).
+      r.from ? el('div', { class: 'small muted ing-row__full', 'data-field': `ing-from:${idx}` , text: `The recipe said: ${r.from}${r.fdcId || r.recipeId ? ({ remembered: ' · matched as last time', ours: ' · our own item', matched: ' · matched', picked: ' · your pick, remembered when saved' }[r.how] ?? '') : ' · not matched yet'}${r.said ? ` · ${r.said}` : ''}` }) : null,
       adding === idx ? sizeForm(r) : null,
     ]);
   }
@@ -169,6 +171,7 @@ export function ingredientEditor({ rows, db = null, own = [], selfId = null, onC
     }
     r.name = p.name;
     r.usdaName = p.usdaName;
+    if (r.from) r.how = 'picked';
     if (p.recipeId) { r.recipeId = p.recipeId; delete r.fdcId; delete r.each; r.unit = p.unit; }
     else { r.fdcId = p.fdcId; delete r.recipeId; if (r.each) { delete r.each; r.unit = 'g'; } r.unit = /\beggs?\b/i.test(p.name) ? '' : r.unit || 'g'; }
     openRow = null;

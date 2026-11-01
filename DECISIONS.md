@@ -631,6 +631,48 @@ purpose (saved): show people what they have not thought of, and let them put the
   marked not counted), what moves the answer most, and year by year.
 - Tested: a home growing exactly as fast as after-tax investments, with no costs, comes out level.
 
+**D-091 Creators and video links (owner, 2026-11-01).** One household list of creators - a name,
+one channel or site link, a note - kept with People in the household (so phones get it in the
+family file, and two devices' additions merge like people). Faith journal entries, Cookbook items,
+Exercise plans and activities, and Finance goals keep `creators` (ids) and `videos` ({url, title}).
+Only http(s) links are kept; they show as plain links opening in a new tab - nothing is embedded or
+fetched. Apps get `hub.creators` through the first-party permission `household:creators`; the list
+is edited (renamed, relinked, removed) on the People page. This is also the "sources" of the Faith
+design agreed on 2026-10-27. Parenting will use the same list once it exists. Not built: a
+creator's page listing everything that names them across the apps (each app's index would need it).
+
+**D-092 Importing a recipe from its text (owner, 2026-11-01).** Cookbook › Import: paste a recipe;
+it is split into a name, "Serves", the ingredients and the method (by "Ingredients"/"Method"
+lines, or else by which lines start with an amount); a video link becomes a video, another link
+the source. Each ingredient line is matched to our foods: what the family matched those words to
+before (kept in the Cookbook's settings as `aliases`, words cleaned of "chopped", "large" and
+plurals), then our own items by name, then the nutrition's careful matcher (D-035) - never a loose
+search. Units: oz, lb to g and fl oz, tsp, tbsp to ml, exactly; a cup (250 ml, or 240 ml chosen)
+becomes grams only from a known density - the family's own "cup"/"tbsp" size for the food first,
+then the food database's measures - and never for liquids; otherwise ml. It opens the recipe form
+filled in, each row showing what the recipe said and how it was matched; changing a match there is
+remembered on Save. Nothing is saved before Save.
+
+**D-093 Starter meals; fillings and sauces that go with meals (owner, 2026-11-01).** The owner: "I
+don't want 50 different items of the same meal" - burgers, pasta, stew, pizza, porridge are one meal
+each with versions (D-071 variations). Three additions:
+- **Goes with**: a filling or sauce (an own ingredient, with what a batch makes) ticks the meals it
+  goes in. Each ticked meal gets it as one of its variations (`from` the item, id `with_<item id>`,
+  a whole batch scaled to the meal's servings); unticking takes it away. Kept on the meal itself, so
+  This Week, Shopping and nutrition need nothing new. One variation is chosen at a time, so a meal
+  with both its own versions and fillings offers them side by side, not combined.
+- **A version of a version**: a line using one of our own items can name which of its variations
+  (`variation`) - the pepper steak burger uses the Sauce's pepper version; shopping, nutrition and the
+  ingredients opened up all follow it. Own ingredients can now have variations; chosen under Variations.
+- **Samples** (Cookbook › Samples): Sauce (pepper, garlic, mushroom, cheese), Burgers, Pasta
+  (bolognese, creamy chicken, mac & cheese, tuna bake), Stew (lamb, chicken, bean & lentil),
+  Pancakes, Toasted sandwiches, six fillings, Pizza dough and Pizza (six toppings), Flapjacks,
+  Porridge (peanut butter, berries, kids', white pap), Cooked rice (yellow) and Fried rice. Fixed ids
+  (`rec_s_…`), so adding twice changes nothing and what one needs (the sauce, the dough, the rice)
+  comes along. Every ingredient is linked to a food in the food list (water apart; a test checks).
+  Amounts are for 4 and are a starting point, not tested recipes. Rice is not linked to Stew: with
+  one variation at a time it would have replaced the lamb or chicken choice.
+
 **D-090 Tick the lines; a take-out's cost; today's money (owner, 2026-10-31).**
 - **Paid each month under half the minimum is counted as paid on top** - R1 000 against a R10 383
   minimum can only have been the extra. Between half and the minimum it is still raised to the

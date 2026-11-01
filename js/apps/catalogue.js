@@ -97,11 +97,12 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'meals', section: 'meals', name: 'Cookbook', version: '1.6.0',
+      fhManifest: 1, id: 'meals', section: 'meals', name: 'Cookbook', version: '1.7.0',
       description: 'Your family’s meals, recipes and own ingredients, and how much each person might eat.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [
         { id: 'recipes', title: 'Cookbook' }, { id: 'item', title: 'Item', nav: false }, { id: 'new', title: 'Add an item', nav: false },
+        { id: 'import', title: 'Import a recipe', nav: false },
       ],
       modes: [
         { mode: 'note', screen: 'new', label: 'Write down a meal to try', hint: 'Saw something good? Save it before you forget' },
@@ -110,7 +111,7 @@ const RAW = [
       // Plans and the shopping list were kept here before This Week and Shopping became
       // mini-apps of their own; those apps still read the old files, which stay untouched.
       data: { collections: [{ name: 'recipes', schema: 1 }, { name: 'sizes', schema: 1 }] },
-      permissions: ['data:own', 'notify', 'food:read', 'people:food'],
+      permissions: ['data:own', 'notify', 'food:read', 'people:food', 'household:creators'],
     },
     load: () => import('./meals/app.js'),
     importer: () => import('./meals/logic.js').then((m) => m.IMPORTER),
@@ -211,7 +212,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'finance', section: 'finance', name: 'Budget and goals', version: '1.1.0',
+      fhManifest: 1, id: 'finance', section: 'finance', name: 'Budget and goals', version: '1.2.0',
       description: 'Monthly budgets, and savings and debt goals with the assumptions in plain view.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'month', title: 'Budget' }, { id: 'goals', title: 'Goals' }, { id: 'goal', title: 'Goal', nav: false }, { id: 'new-goal', title: 'Add a goal', nav: false }],
@@ -220,7 +221,7 @@ const RAW = [
         { mode: 'note', screen: 'goals', label: 'Check our savings and debt goals' },
       ],
       data: { collections: [{ name: 'months', schema: 1 }, { name: 'goals', schema: 1 }] },
-      permissions: ['data:own', 'people:read', 'notify'],
+      permissions: ['data:own', 'people:read', 'notify', 'household:creators'],
     },
     load: () => import('./finance/app.js'),
   },
@@ -301,7 +302,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'exercise', section: 'exercise', name: 'Exercise', version: '1.0.0',
+      fhManifest: 1, id: 'exercise', section: 'exercise', name: 'Exercise', version: '1.1.0',
       description: 'Log activity, keep flexible weekly plans, and see what the family did together.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'week', title: 'This week' }, { id: 'log', title: 'Log activity' }, { id: 'plans', title: 'Plans and goals' }],
@@ -311,13 +312,13 @@ const RAW = [
         { mode: 'plan', screen: 'plans', label: 'Plan how we move each week' },
       ],
       data: { collections: [{ name: 'activities', schema: 1 }, { name: 'plans', schema: 1 }] },
-      permissions: ['data:own', 'people:read', 'notify'],
+      permissions: ['data:own', 'people:read', 'notify', 'household:creators'],
     },
     load: () => import('./exercise/app.js'),
   },
   {
     manifest: {
-      fhManifest: 1, id: 'faith', section: 'faith', name: 'Faith', version: '1.1.0',
+      fhManifest: 1, id: 'faith', section: 'faith', name: 'Faith', version: '1.2.0',
       description: 'Bible reading plans, a journal with the questions you are working through, and a guide to who wrote each book, when, to whom and why.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [
@@ -333,7 +334,7 @@ const RAW = [
         { mode: 'plan', screen: 'journal', label: 'Look back through the journal' },
       ],
       data: { collections: [{ name: 'plans', schema: 1 }, { name: 'notes', schema: 1 }, { name: 'books', schema: 1 }, { name: 'topics', schema: 1 }] },
-      permissions: ['data:own', 'people:read', 'notify'],
+      permissions: ['data:own', 'people:read', 'notify', 'household:creators'],
     },
     load: () => import('./faith/app.js'),
   },

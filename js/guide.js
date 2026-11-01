@@ -26,6 +26,9 @@ export const SEARCH_ALIASES = {
   task: ['to do', 'todo', 'errand', 'repair', 'project', 'job'],
   'bring in data': ['import', 'csv', 'spreadsheet', 'excel', 'google sheets', 'template', 'upload', 'existing', 'already have'],
   recipe: ['meal', 'meals', 'cooking', 'food', 'dinner', 'menu'],
+  creator: ['youtuber', 'youtube', 'channel', 'pastor', 'preacher', 'sermon', 'video', 'videos', 'link', 'links', 'source', 'influencer', 'coach'],
+  'sample meals': ['starter', 'default', 'burgers', 'pizza', 'filling', 'sauce', 'variant', 'version', 'goes with', 'porridge', 'pap'],
+  'import a recipe': ['paste', 'website', 'copy', 'convert', 'cups', 'grams', 'ounces', 'tbsp', 'units', 'ap flour', 'match'],
   variation: ['version', 'versions', 'variant', 'alteration', 'different way', 'swap', 'sauce', 'cheese sauce', 'without', 'instead of'],
   'shopping list': ['groceries', 'shop', 'buy', 'ingredients'],
   trip: ['holiday', 'vacation', 'travel', 'packing', 'itinerary'],
@@ -186,7 +189,25 @@ export const HOWTOS = [
     'When planning, the recipe is made x1, x1.5 or x2 so eggs and other whole-only items stay whole.',
     'Already made the mayo? When sending to the shopping list, tick "We already have the Home-made mayo" under Made at home - its eggs and oil are left off.',
   ] },
+  { id: 'recipe-import', title: 'Import a recipe from a site or a message', steps: [
+    'In the Cookbook, press Import and paste the recipe: its name, the ingredients and the method. Lines saying "Ingredients" and "Method" help it tell them apart; "Serves 4" and a video link are picked up too.',
+    'Say whether its cups are metric (250 ml) or US (240 ml), then press "Read it". The recipe form opens with everything filled in - nothing is saved yet.',
+    'Under each ingredient is what the recipe said. ✓ means it is matched to one of our foods; ? means it is not. If a match is wrong - "AP flour" is really our cake flour - type over it and pick the right one. When you save, the choice is remembered, so the next recipe with "AP flour" is matched the same way.',
+    'Ounces and pounds become grams and spoons become ml, exactly. A cup becomes grams only when we know what a cup of that food weighs - from the food list, or a size of your own ("+ Add our own size", named cup). Otherwise it stays in ml, and liquids always do.',
+  ] },
+  { id: 'meal-samples', title: 'Start from sample meals, fillings and sauces', steps: [
+    'In the Cookbook, press Samples, tick the groups you want - Burgers, Pasta, Stew, Pizza, Breakfast and more - and press Add. They become your own items; change anything after.',
+    'Each is one meal with its versions: open Burgers and choose Cheese burger or Pepper steak burger above the ingredients. Plan it and Shopping follow the one you choose.',
+    'A filling or sauce is made once. Open it and press "Goes with" to tick the meals it goes in - Chicken mayo filling on Pancakes and Toasted sandwiches - and it shows on each as a choice.',
+    'A version can use a version of a sauce: under Variations, add the Sauce and pick "Which Sauce" - pepper, garlic, mushroom or cheese.',
+  ] },
+  { id: 'creators', title: 'Link the creators and videos something came from', steps: [
+    'A journal entry, a recipe, an exercise plan or activity, or a goal can name the people it came from - a pastor, a YouTube channel, a cook - and the videos it refers to.',
+    'In the form (in Faith under the notes; elsewhere under More details), tick the creators, or type a new one with their channel or site link and press "+ Creator". Paste video links one per line, with a title after the link if you like.',
+    'They show on the item as plain links that open in a new tab. The list of creators is shared by every app: change a name or link, or remove one, on the People page.',
+  ] },
   { id: 'rate', title: 'Rate a meal and record favourites', steps: [
+
     'Open a meal in the Cookbook. Tick "We have tried it", then choose a family rating from 1 to 10.',
     'Set each person’s preference - favourite, likes, neutral or dislikes. A 7/10 meal can still be one child’s favourite.',
     'Add notes for next time. A note about one particular meal goes on that day in Meal Planner.',

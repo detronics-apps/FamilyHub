@@ -15,6 +15,7 @@ import { split, numOrNull } from '../../importer.js';
 import { ALLERGENS } from '../../model.js';
 import { recipeFacts } from './facts.js';
 import { parseCSV } from '../../csv.js';
+import { normaliseLinks } from '../../links.js';
 
 export { ALLERGENS };
 
@@ -101,6 +102,7 @@ export function normaliseRecipe(r = {}) {
       ...(Number.isInteger(i.fdcId) && i.fdcId > 0 ? { fdcId: i.fdcId } : {}),
       ...(num(i.each) > 0 ? { each: num(i.each) } : {}),   // grams in one of its unit ("head, medium" = 539 g)
       ...(str(i.recipeId, 40) ? { recipeId: str(i.recipeId, 40) } : {}),   // one of our own meals used as an ingredient (home-made mayo)
+      ...(str(i.recipeId, 40) && str(i.variation, 40) ? { variation: str(i.variation, 40) } : {}),   // which version of it (the pepper sauce, D-093)
       ...(typeof i.whole === 'boolean' ? { whole: i.whole } : {}),          // can only be used whole (eggs)
     }))
     .slice(0, 80);
@@ -121,6 +123,7 @@ export function normaliseRecipe(r = {}) {
     nutrition,                      // per serving, as supplied - never calculated
     notes: str(r.notes),           // general notes as typed in the form (older records: the only notes)
     source: str(r.source, 300),
+    ...normaliseLinks(r),          // the creators it came from and its videos (D-091)
     // Feedback. A rating only exists for a meal that has been tried; nothing is ever filled in.
     tried: r.tried === true || rating(r.rating) !== null,
     rating: rating(r.rating),
@@ -139,7 +142,10 @@ export function normaliseRecipe(r = {}) {
       leaveOut: (Array.isArray(v.leaveOut) ? v.leaveOut : []).map((x) => str(x, 120).toLowerCase()).filter(Boolean),
       add: normaliseAdded(v.add),
       steps: lines(v.steps).slice(0, 20),
+      ...(str(v.from, 40) ? { from: str(v.from, 40) } : {}),   // put here by a filling or sauce that goes with this meal (D-093)
     })),
+    // The meals a filling or sauce goes with (D-093): each shows it as one of its variations.
+    goesWith: [...new Set((Array.isArray(r.goesWith) ? r.goesWith : []).filter((x) => typeof x === 'string' && x))].slice(0, 40),
     // What one batch makes ("12 pancakes", "300 ml") - what another entry uses a part of.
     // auto: the amount was worked out from the ingredients' weight, so it is worked out again on every save.
     yield: { qty: num(r.yield?.qty), unit: unitKey(str(r.yield?.unit, 30)), ...(r.yield?.auto === true ? { auto: true } : {}) },
@@ -156,6 +162,23 @@ export function variationIngredients(recipe, variation) {
   if (!variation) return recipe.ingredients;
   const out = new Set(variation.leaveOut);
   return [...recipe.ingredients.filter((i) => !out.has(i.name.toLowerCase())), ...variation.add];
+}
+
+/** What one of our own items brings when a line uses it: its ingredients, as the version the line names (the pepper sauce). */
+export const subLines = (sub, line) => variationIngredients(sub, variationOf(sub, line?.variation));
+
+/**
+ * A filling or sauce that goes with a meal (D-093), as one of that meal's variations: it adds the
+ * item, a whole batch for the meal's servings. Its id follows the item, so ticking it again replaces it.
+ */
+export function linkedWay(meal, item) {
+  const qty = item.yield?.qty ? Math.round((item.yield.qty * meal.servings) / Math.max(1, item.servings ?? 4)) : null;
+  return { id: `with_${item.id}`, name: item.title, leaveOut: [], add: [{ name: item.title, qty, unit: item.yield?.unit ?? '', recipeId: item.id }], steps: [], from: item.id };
+}
+/** The meal with the item's variation added (on) or taken away. */
+export function setLinked(meal, item, on) {
+  const rest = meal.variations.filter((x) => x.id !== `with_${item.id}`);
+  return { ...meal, variations: on ? [...rest, linkedWay(meal, item)] : rest };
 }
 
 /** The recipe as this variation: its ingredients, its title, and its extra steps after the method. */
@@ -215,7 +238,7 @@ export const goodFor = (tags = []) => MEALS.filter((m) => tags.includes(m) || (m
 export const setGoodFor = (r, meals) => ({ ...r, tags: [...MEALS.filter((m) => meals.includes(m)), ...r.tags.filter((t) => !MEALS.includes(t) && t !== 'supper')] });
 
 /** Index version: an index written before this lacks the facts and feedback below and is rebuilt once. */
-export const SUMMARY_VERSION = 6;
+export const SUMMARY_VERSION = 7;
 
 /** What the index keeps per meal: enough to list, search and filter without opening each one. */
 export function recipeSummary(r) {
@@ -232,6 +255,8 @@ export function recipeSummary(r) {
     ingredientNames: r.ingredients.map((i) => i.name).slice(0, 40),
     tried: r.tried ?? false, rating: r.rating ?? null, prefs: r.prefs ?? {},
     variantOf: r.variantOf ?? '',
+    ways: (r.variations ?? []).map((x) => ({ id: x.id, name: x.name })),   // to choose which version of it another item uses
+    goesWith: r.goesWith ?? [],
     yield: r.yield ?? { qty: null, unit: '' },
   };
 }
@@ -576,7 +601,7 @@ export function expandIngredients(lines, factor, getRecipe = () => null, depth =
   for (const i of lines) {
     const sub = i.recipeId ? getRecipe(i.recipeId) : null;
     if (sub && sub.yield?.qty && i.qty != null && depth < 4 && !seen.has(sub.id)) {
-      out.push(...expandIngredients(sub.ingredients, (i.qty * factor) / sub.yield.qty, getRecipe, depth + 1, new Set([...seen, sub.id])));
+      out.push(...expandIngredients(subLines(sub, i), (i.qty * factor) / sub.yield.qty, getRecipe, depth + 1, new Set([...seen, sub.id])));
     } else out.push(scaleCarefully(i, factor));
   }
   return out;
@@ -698,7 +723,7 @@ export async function collectRecipes(lines, get, map = new Map(), depth = 0) {
     if (!r) continue;
     const rec = normaliseRecipe(r);
     map.set(rec.id ?? i.recipeId, rec);
-    await collectRecipes(rec.ingredients, get, map, depth + 1);
+    await collectRecipes([...rec.ingredients, ...rec.variations.flatMap((x) => x.add)], get, map, depth + 1);
   }
   return map;
 }

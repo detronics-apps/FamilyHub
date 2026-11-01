@@ -5,6 +5,7 @@ import { el } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
 import { fmtDay } from '../../dates.js';
 import { tabs, loading, failure, recordForm, saveRecord, nameOf } from '../kit.js';
+import { linksControl, linksView } from '../../ui/links-editor.js';
 import {
   monthId, monthOf, shiftMonth, normaliseMonth, monthSummary, copyMonth, addSpend, addLine, addIncome, removeFrom,
   normaliseGoal, goalSummary, projection, progress, recordAmount, goalTotals, GOAL_KINDS,
@@ -158,6 +159,7 @@ function goalScreen(hub, id) {
       el('p', { text: projectionText(g, hub.today()) }),
       el('p', { class: 'small muted', text: `Assumptions: ${money(g.monthly)} a month${g.ratePct != null ? `, ${g.ratePct}% a year ${g.kind === 'debt' ? 'interest' : 'growth'}, compounded monthly` : ', no interest or growth'}. Change them in Edit.` }),
       g.notes ? el('p', { text: g.notes }) : null,
+      linksView(hub, g),
     ]),
     el('div', { class: 'panel row' }, [
       el('span', { text: g.kind === 'saving' ? 'Put money in:' : 'Made a payment:' }),
@@ -190,10 +192,12 @@ function goalEdit(hub, id) {
         { key: 'ratePct', label: 'Yearly interest or growth (%)', type: 'number', more: true, hint: 'Optional. Used only for the projection, assumed to stay the same.' },
         { key: 'owner', label: 'Whose goal', type: 'select', options: [['household', 'The household'], ...hub.people.list().map((p) => [p.id, p.name])], more: true },
         { key: 'notes', label: 'Notes', type: 'textarea', more: true },
+        ...(hub.creators ? [{ key: 'links', label: 'Creators and videos', type: 'custom', more: true, control: () => linksControl(hub, g) }] : []),
       ],
       onCancel: () => (existing ? hub.go('goal', existing.id) : hub.go('goals')),
       onSave: async (values) => {
-        const saved = await saveRecord(hub, goals(hub), normaliseGoal({ ...g, ...values }));
+        const { links, ...rest } = values;
+        const saved = await saveRecord(hub, goals(hub), normaliseGoal({ ...g, ...rest, ...links }));
         if (saved) { hub.ui.notice('Saved.'); hub.go('goal', saved.id); }
       },
     }),

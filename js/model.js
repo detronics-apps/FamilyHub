@@ -4,7 +4,10 @@
 // Shape (schema 1):
 //   { schema, household: {id, name, createdAt},
 //     people: [Person], rooms: [Room], chores: [Chore], events: [Event],
-//     measurements: [Measurement] }
+//     measurements: [Measurement], creators: [Creator] }
+//
+// A Creator is someone whose work the family follows - a YouTuber, a pastor, a
+// cook: a name and a link, shared by every app (D-091).
 //
 // A Measurement is one dated height and/or weight for a person - a record of
 // its own, so entries added on two laptops merge without asking.
@@ -17,6 +20,7 @@
 // Personal dashboard preferences are NOT part of this model; see dashboard.js.
 
 import { isDay, toDay, dayDiff, addDays } from './dates.js';
+import { normaliseCreator } from './links.js';
 
 export const SCHEMA_VERSION = 1;
 
@@ -73,6 +77,7 @@ export function emptyHousehold(name = 'Our family', now = nowIso()) {
     chores: [],
     events: [],
     measurements: [],
+    creators: [],
   };
 }
 
@@ -269,6 +274,7 @@ export function normaliseHousehold(data) {
   const events = list(data.events).map(normaliseEvent).filter((e) => e.type && e.day && e.choreId);
   const measurements = list(data.measurements).map(normaliseMeasurement)
     .filter((m) => m.personId && m.day && (m.weightKg !== null || m.heightCm !== null));
+  const creators = list(data.creators).map((c) => normaliseCreator(c, () => newId('cr')));
   return {
     schema: SCHEMA_VERSION,
     household: {
@@ -281,6 +287,7 @@ export function normaliseHousehold(data) {
     chores,
     events,
     measurements,
+    creators,
   };
 }
 
@@ -289,7 +296,7 @@ export function validateHousehold(raw) {
   const errors = [];
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, errors: ['The file does not contain a household.'] };
   if (raw.schema !== undefined && !Number.isInteger(raw.schema)) errors.push('The data version is not a whole number.');
-  for (const key of ['people', 'rooms', 'chores', 'events', 'measurements']) {
+  for (const key of ['people', 'rooms', 'chores', 'events', 'measurements', 'creators']) {
     if (raw[key] !== undefined && !Array.isArray(raw[key])) errors.push(`"${key}" should be a list.`);
   }
   if (!raw.household && !Array.isArray(raw.chores)) errors.push('No household or chores were found in the file.');
@@ -321,6 +328,17 @@ export function addPerson(h, fields) {
 export function updatePerson(h, id, patch) {
   return touch(h, { people: h.people.map((p) => (p.id === id ? normalisePerson({ ...p, ...patch, id }) : p)) });
 }
+
+/** A creator, or the one already listed under the same name (so it is never in the list twice). */
+export function addCreator(h, fields) {
+  const fresh = normaliseCreator({ ...fields, id: newId('cr') });
+  const same = (h.creators ?? []).find((c) => c.name.toLowerCase() === fresh.name.toLowerCase());
+  if (same) return { household: h, creator: same };
+  return { household: touch(h, { creators: [...(h.creators ?? []), fresh] }), creator: fresh };
+}
+export const updateCreator = (h, id, patch) => touch(h, { creators: (h.creators ?? []).map((c) => (c.id === id ? normaliseCreator({ ...c, ...patch, id }) : c)) });
+/** Items that named this creator keep the id; they then show nothing for it. */
+export const removeCreator = (h, id) => touch(h, { creators: (h.creators ?? []).filter((c) => c.id !== id) });
 
 export function addMeasurement(h, fields) {
   const measurement = normaliseMeasurement({ ...fields, id: newId('m') });

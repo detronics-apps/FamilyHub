@@ -16,7 +16,7 @@ import { loading, failure, recordForm, saveRecord } from '../kit.js';
 import {
   ALLERGENS, NUTRIENTS, normaliseRecipe, recipeSummary, recipeText, nutritionRows,
   formatIngredient, TYPES, typeOf, typeName, keepFoodLinks, mealFromPlate, mealFromLink,
-  variationOf, asVariation, variationSays,
+  variationOf, asVariation, variationSays, setLinked,
   PREFS, ratingMeaning, ratingState, setRating, setTried, setPref, addNote, SUMMARY_VERSION,
   batchMultiplier, splitOwn, mergeOwn, collectRecipes, scaleCarefully, combineIngredients, goodFor, setGoodFor,
 } from './logic.js';
@@ -28,6 +28,9 @@ import { portionShares, portionPlan, fmtShare, LEFTOVERS } from '../../portions.
 import { sendHref } from '../shopping/logic.js';
 
 import { inSystem } from '../../units.js';
+import { importRecipe, remember } from './import.js';
+import { linksControl, linksView } from '../../ui/links-editor.js';
+import { SAMPLE_RECIPES, SAMPLE_GROUPS, samplesToAdd } from './samples.js';
 
 const ui = { query: '', avoid: [], kind: 'all', maxMinutes: null, servings: {}, limit: 50, who: {}, leftovers: {}, variation: {} };
 const TIMES = [[null, 'Any time'], [20, '≤ 20 min'], [30, '≤ 30 min'], [60, '≤ 1 hour']];
@@ -55,9 +58,12 @@ export function render(hub, route) {
   const screen = route.sub ?? 'recipes';
   if (screen === 'item') return recipeScreen(hub, route.rest[0], route.rest[1] ?? null);
   if (screen === 'new') return editScreen(hub, null, route.rest[0] ?? null);
+  if (screen === 'import') return importScreen(hub);
   if (screen === 'edit') return editScreen(hub, route.rest[0], route.rest[1] ?? null);
   if (screen === 'note') return noteScreen(hub, route.rest[0], route.rest[1] ?? '');
   if (screen === 'variations') return variationsScreen(hub, route.rest[0]);
+  if (screen === 'with') return goesWithScreen(hub, route.rest[0]);
+  if (screen === 'samples') return samplesScreen(hub);
   if (screen === 'goodfor') return goodForScreen(hub, route.rest[0], route.rest[1] ?? '');
   // The week and the shopping list moved to their own mini-apps (This Week, Shopping).
   if (screen === 'week' || screen === 'shopping') {
@@ -86,6 +92,8 @@ function recipesScreen(hub) {
         on: { change: (e) => { ui.query = e.target.value; ui.limit = 50; hub.render(); } },
       })]),
       el('a', { class: 'btn btn-primary', href: hub.href('new'), text: 'New item', 'data-field': 'add-recipe' }),
+      el('a', { class: 'btn', href: hub.href('import'), text: 'Import', title: 'Paste a recipe from a site or a message', 'data-field': 'import-recipe' }),
+      el('a', { class: 'btn', href: hub.href('samples'), text: 'Samples', title: 'Starter meals with their versions - burgers, pasta, stew, pizza and more', 'data-field': 'samples' }),
     ]),
     fold('cookbook-filters', 'Filters', [
     el('div', { class: 'chipset', role: 'group', 'aria-label': 'Show' }, Object.entries(KINDS).map(([k, label]) => el('button', {
@@ -152,10 +160,12 @@ function recipeScreen(hub, id, back) {
           class: 'chip', type: 'button', 'aria-pressed': String(v.id === vid), 'data-field': `variation:${v.id ?? 'none'}`, text: v.name,
           on: { click: () => { ui.variation[id] = v.id; hub.render(); } },
         }))),
-        shown.variation ? el('p', { class: 'small muted', style: { margin: 0 }, text: `${shown.variation.name}: ${variationSays(shown.variation)}.` }) : null,
+        shown.variation ? el('p', { class: 'small muted', style: { margin: 0 } }, [`${shown.variation.name}: ${variationSays(shown.variation)}.`,
+          shown.variation.from ? [' ', el('a', { href: hub.href('item', shown.variation.from), text: 'Open it' })] : null]) : null,
       ]) : null,
       rec.yield.qty ? el('p', { class: 'small', style: { margin: 0 }, text: `Makes ${fmtQtyText(rec.yield.qty * (serves / rec.servings))} ${rec.yield.unit}${serves !== rec.servings ? ` (for ${serves} servings)` : ''}.` }) : null,
       rec.type === 'own' && !rec.yield.qty ? el('p', { class: 'small', text: 'Edit it and say what one batch makes (e.g. 300 ml), so other entries can use part of it.' }) : null,
+      rec.goesWith.length ? goesWithLine(hub, rec) : null,
       rec.variantOf ? el('p', { class: 'small' }, ['A version of ', el('a', { href: hub.href('item', rec.variantOf), text: original?.data?.title ?? 'another item' }), ' - its notes and ratings are its own.']) : null,
       rec.description ? el('p', { text: rec.description }) : null,
       el('p', { class: 'small muted', text: [rec.prepMinutes != null ? `prep ${rec.prepMinutes} min` : null, rec.cookMinutes != null ? `cook ${rec.cookMinutes} min` : null, rec.tags.join(', ') || null, rec.allergens.length ? `contains ${rec.allergens.join(', ')}${shown.variation ? ' (as the recipe stands - check this variation)' : ''}` : null].filter(Boolean).join(' · ') }),
@@ -174,6 +184,7 @@ function recipeScreen(hub, id, back) {
       shown.instructions.length ? el('div', {}, [el('h2', { text: 'Method' }), el('ol', { class: 'howto-steps' }, shown.instructions.map((s) => el('li', { text: s })))])
         : el('p', { class: 'small' }, ['No method yet. ', el('a', { href: hub.href('edit', rec.id), text: 'Add the method', 'data-field': 'add-method' }), ' when you have it.']),
       rec.source ? el('p', { class: 'small muted', text: `Source: ${rec.source}` }) : null,
+      linksView(hub, rec),
     ]),
     feedbackPanel(hub, rec),
     el('div', { class: 'panel stack', 'aria-label': 'Nutrition' }, [
@@ -191,7 +202,8 @@ function recipeScreen(hub, id, back) {
       hub.data.installed('mealplan') ? el('a', { class: 'btn btn-primary', href: `#/mealplan/add/${encodeURIComponent(`${rec.id}~${serves}${vid ? `~${vid}` : ''}`)}`, text: 'Plan it', 'data-field': 'plan-meal' }) : null,
       hub.data.installed('shopping') && shown.ingredients.length ? el('a', { class: 'btn', href: sendHref({ source: `meal:${rec.id}${vid ? `:${vid}` : ''}`, from: shown.title, group: 'food', ...shopSplit(shown.ingredients, serves / rec.servings, getSub) }), text: 'To Shopping', title: 'Send the ingredients to the shopping list', 'data-field': 'send-shopping' }) : null,
       el('a', { class: 'btn', href: hub.href('edit', rec.id), text: 'Edit' }),
-      rec.type !== 'own' ? el('a', { class: 'btn', href: hub.href('variations', rec.id), text: 'Variations', title: 'Other ways of making this same meal - a cheese sauce, a pepper sauce', 'data-field': 'variations' }) : null,
+      el('a', { class: 'btn', href: hub.href('variations', rec.id), text: 'Variations', title: 'Other ways of making this same meal - a cheese sauce, a pepper sauce', 'data-field': 'variations' }),
+      rec.type === 'own' ? el('a', { class: 'btn', href: hub.href('with', rec.id), text: 'Goes with', title: 'The meals this filling or sauce can go in - each shows it as a choice', 'data-field': 'goes-with' }) : null,
       hub.data.installed('assistant') ? el('a', { class: 'btn', href: `#/assistant/meal/recipe:${encodeURIComponent(rec.id)}`, text: 'Improve', title: 'Ideas from the Meal Assistant', 'data-field': 'improve-recipe' }) : null,
       el('button', {
         class: 'btn btn-quiet', type: 'button', text: 'Delete',
@@ -214,14 +226,16 @@ function editScreen(hub, id, param = null) {
   const existing = r.data ? normaliseRecipe(r.data) : null;
   // Built in Calorie Checker and handed over in the link (`item:<json>`; older links say `plate:`).
   const fromPlate = !existing && /^(item|plate):/.test(param ?? '') ? mealFromPlate(param.slice(param.indexOf(':') + 1)) : null;
-  const base = existing ?? fromPlate ?? (handed && !id ? handed : null) ?? normaliseRecipe({ title: '' });
+  // Read from pasted text on the Import screen: its rows still say what each line was (D-092).
+  const fromImport = !existing && param === 'import' ? ui.imported : null;
+  const base = existing ?? fromPlate ?? (fromImport ? normaliseRecipe(fromImport) : null) ?? (handed && !id ? handed : null) ?? normaliseRecipe({ title: '' });
   const rec = existing && handed ? { ...existing, ingredients: handed.ingredients, servings: handed.servings } : base;
   // The ingredient rows being edited live here, so a redraw of the page never loses them.
   const draftKey = `${id ?? 'new'}:${param ?? ''}`;
   if (ui.draft?.key !== draftKey) {
     const known = UNIT_OPTIONS.some(([u]) => u === rec.yield.unit);
     ui.draft = {
-      key: draftKey, rows: rec.ingredients.map((i) => ({ ...i })),
+      key: draftKey, rows: (fromImport?.ingredients ?? rec.ingredients).map((i) => ({ ...i })),
       // A new meal is weighed in grams; a worked-out amount is left empty so it is worked out again.
       yield: { qty: rec.yield.auto ? null : rec.yield.qty, unit: !existing && !rec.yield.unit ? 'g' : known ? rec.yield.unit : 'other', other: known ? '' : rec.yield.unit },
     };
@@ -234,7 +248,7 @@ function editScreen(hub, id, param = null) {
   const ourSizes = hub.use('sizes', async () => loadSizes((await sizes(hub).list({ limit: 100000 })).items));
   const flat = {
     ...rec,
-    title: existing || ((fromPlate || handed) && rec.title !== 'Untitled item') ? rec.title : '',
+    title: existing || ((fromPlate || handed || fromImport) && rec.title !== 'Untitled item') ? rec.title : '',
     mealTypes: Object.keys(MEAL_TAGS).filter((t) => rec.tags.includes(t) || (t === 'dinner' && rec.tags.includes('supper'))),
     tags: rec.tags.filter((t) => !MEAL_TAGS[t] && t !== 'supper').join(', '),
     ...Object.fromEntries(NUTRIENTS.map(([k]) => [`n_${k}`, rec.nutrition[k] ?? null])),
@@ -244,6 +258,10 @@ function editScreen(hub, id, param = null) {
     fromPlate ? el('p', { class: 'small muted', text: 'From Calorie Checker. Give it a name, and say whether it is a meal, a recipe or an own ingredient - or leave it as an item for now.' }) : null,
     handed && !id ? el('p', { class: 'small muted', text: `A new version from ${changedIn}. It gets its own notes and ratings; the original stays as it is.` }) : null,
     handed && id ? el('p', { class: 'small', text: `These are the ingredients from ${changedIn}. Saving updates the saved recipe for every future time - its ratings and notes stay.` }) : null,
+    fromImport ? el('div', { class: 'panel panel--soft stack', style: { gap: 'var(--space-1)' }, 'data-field': 'import-check' }, [
+      el('strong', { text: `Imported: ${fromImport.ingredients.filter((x) => x.fdcId || x.recipeId).length} of ${fromImport.ingredients.length} ingredients matched` }),
+      el('p', { class: 'small', style: { margin: 0 }, text: 'Under each ingredient is what the recipe said. ✓ is matched to one of ours, ? is not yet. If one is wrong - "AP flour" is really our cake flour - type over it and pick the right one; it is remembered for the next import. Nothing is saved until you press Save.' }),
+    ]) : null,
     recordForm({
       record: flat,
       fields: [
@@ -273,6 +291,7 @@ function editScreen(hub, id, param = null) {
         ...NUTRIENTS.map(([k, unit]) => ({ key: `n_${k}`, label: `${k[0].toUpperCase() + k.slice(1)} per serving (${unit})`, type: 'number', more: true, placeholder: 'only if known' })),
         { key: 'notes', label: 'Family notes', type: 'textarea', more: true },
         { key: 'source', label: 'Where it came from', more: true },
+        { key: 'links', label: 'Creators and videos', type: 'custom', more: true, hint: 'The cook or channel it came from, and the video.', control: () => linksControl(hub, rec) },
       ],
       onCancel: () => { ui.draft = null; if (existing) hub.go('item', existing.id); else hub.go('recipes'); },
       onSave: async (values) => {
@@ -285,10 +304,16 @@ function editScreen(hub, id, param = null) {
         }
         if (values.type === 'own' && !values.yield.qty) { hub.ui.notice('Say what one batch of an own ingredient makes - or choose g and it is worked out from the ingredients.', 'warn'); return; }
         values.type = values.type ?? '';
+        Object.assign(values, values.links); delete values.links;
         values.tags = [...values.mealTypes, ...String(values.tags).split(',')];
         delete values.mealTypes;
         const next = normaliseRecipe({ ...rec, ...values, nutrition });
         const saved = await saveRecord(hub, recipes(hub), { ...next, ingredients: keepFoodLinks(next.ingredients, rec.ingredients) });
+        if (saved && fromImport) {
+          // What the family matched each imported line to, for next time ("AP flour" is our cake flour).
+          await hub.settings.set('aliases', remember(await hub.settings.get('aliases', {}), ui.draft.rows));
+          ui.imported = null; hub.invalidate('aliases');
+        }
         if (saved) { ui.draft = null; hub.invalidate('own-items'); hub.ui.notice(`Saved as ${aType(saved.type)}.`); hub.go('item', saved.id); }
       },
     }),
@@ -522,7 +547,8 @@ function variationsScreen(hub, id) {
   return el('section', { class: 'stack', 'aria-labelledby': 'var-title' }, [
     el('h1', { id: 'var-title', text: `Variations of ${rec.title}`, style: { margin: 0 } }),
     el('p', { class: 'muted', style: { margin: 0 }, text: 'Other ways of making this same meal. Each one starts from the recipe: leave out what it does not use, add what it needs - to swap, do both - and add any steps. Ratings and notes stay with the one recipe.' }),
-    ...list.map((v, ix) => el('div', { class: 'panel stack', 'data-field': `var:${ix}` }, [
+    ...list.map((v, ix) => { const { versionsBox, drawVersions } = versionPicks(v, own.data ?? []); return el('div', { class: 'panel stack', 'data-field': `var:${ix}` }, [
+      v.from ? el('p', { class: 'small muted', style: { margin: 0 } }, ['Put here by ', el('a', { href: hub.href('item', v.from), text: 'a filling or sauce' }), ' that goes with this meal. Untick it there to take it away.']) : null,
       el('div', { class: 'field' }, [
         el('label', { class: 'field__label', for: `var-name-${ix}`, text: 'Name' }),
         el('input', { class: 'input', id: `var-name-${ix}`, value: v.name, 'data-field': `var-name:${ix}`, on: { input: (e) => { v.name = e.target.value; } } }),
@@ -542,14 +568,15 @@ function variationsScreen(hub, id) {
         el('legend', { text: 'Add' }),
         el('p', { class: 'small muted', style: { margin: 0 }, text: `Amounts for ${rec.servings} servings, like the recipe.` }),
         ingredientEditor({ rows: v.add, db: f.data ?? null, own: own.data ?? [], selfId: rec.id, sizes: ourSizes.data ?? new Map(), system: hub.units(),
-          onAddSize: async ({ fdcId, label, grams }) => { await sizes(hub).put({ fdcId, label, grams, at: Date.now() }); } }),
+          onChange: () => drawVersions(), onAddSize: async ({ fdcId, label, grams }) => { await sizes(hub).put({ fdcId, label, grams, at: Date.now() }); } }),
+        versionsBox,
       ]),
       el('div', { class: 'field' }, [
         el('label', { class: 'field__label', for: `var-steps-${ix}`, text: 'Extra steps, after the method' }),
         el('textarea', { class: 'input', id: `var-steps-${ix}`, rows: 2, text: v.steps, placeholder: 'One per line, e.g. Stir in the cheese off the heat', on: { input: (e) => { v.steps = e.target.value; } } }),
       ]),
       el('div', {}, [el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': `Remove ${v.name || 'this variation'}`, on: { click: () => { list.splice(ix, 1); hub.render(); } } })]),
-    ])),
+    ]); }),
     el('div', { class: 'panel stack' }, [
       el('label', { class: 'field__label', for: 'var-new', text: list.length ? 'Another variation' : 'First variation' }),
       el('div', { class: 'row' }, [newName, el('button', { class: 'btn', type: 'button', text: 'Add', 'data-field': 'var-add', on: { click: () => {
@@ -561,6 +588,161 @@ function variationsScreen(hub, id) {
     el('div', { class: 'row form-actions' }, [
       el('button', { class: 'btn btn-primary', type: 'button', text: 'Save', 'data-field': 'var-save', on: { click: save } }),
       el('a', { class: 'btn', href: hub.href('item', id), text: 'Cancel', on: { click: () => { ui.vars = null; } } }),
+    ]),
+  ]);
+}
+
+/** For each of our own items a variation adds that has versions of its own: which one (the pepper sauce, D-093). */
+function versionPicks(v, own) {
+  const versionsBox = el('div', { class: 'stack', style: { gap: 'var(--space-1)' } });
+  const drawVersions = () => versionsBox.replaceChildren(...v.add.filter((x) => x.recipeId).map((x) => {
+    const item = own.find((o) => o.id === x.recipeId);
+    if (!item?.ways?.length) return null;
+    return el('label', { class: 'row small' }, [`Which ${item.title}:`, el('select', {
+      class: 'input', style: { maxWidth: '220px' }, 'data-field': `var-version:${x.recipeId}`,
+      on: { change: (e) => { if (e.target.value) x.variation = e.target.value; else delete x.variation; } },
+    }, [el('option', { value: '', text: 'As is', selected: !x.variation }), ...item.ways.map((w) => el('option', { value: w.id, text: w.name, selected: x.variation === w.id }))])]);
+  }));
+  drawVersions();
+  return { versionsBox, drawVersions };
+}
+
+/* ------------------------------------------------------------ goes with */
+
+/** "Goes with Pancakes, Toasted sandwiches" on a filling or sauce. */
+function goesWithLine(hub, rec) {
+  const all = hub.use('own-items', async () => (await recipes(hub).list({ limit: 100000 })).items);
+  const names = rec.goesWith.map((id) => [id, all.data?.find((s) => s.id === id)?.title]).filter(([, t]) => t);
+  if (!names.length) return null;
+  return el('p', { class: 'small', style: { margin: 0 }, 'data-field': 'goes-with-line' }, ['Goes with ', ...names.flatMap(([id, t], k) => [k ? ', ' : '', el('a', { href: hub.href('item', id), text: t })]), ' - a choice on each.']);
+}
+
+/** Tick the meals a filling or sauce goes in (D-093). Each ticked meal gets it as a variation; unticking takes it away. */
+function goesWithScreen(hub, id) {
+  const r = hub.use(`recipe:${id}`, () => recipes(hub).get(id));
+  const all = hub.use('own-items', async () => (await recipes(hub).list({ limit: 100000 })).items);
+  if (r.loading || all.loading) return loading();
+  if (r.error) return failure(r.error);
+  if (!r.data) return el('p', { class: 'panel', text: 'This item no longer exists.' });
+  const rec = normaliseRecipe(r.data);
+  if (ui.with?.id !== id) ui.with = { id, on: new Set(rec.goesWith), query: '' };
+  const w = ui.with;
+  const q = w.query.trim().toLowerCase();
+  const meals = all.data.filter((s) => s.id !== id && typeOf(s) !== 'own').sort((a, b) => a.title.localeCompare(b.title));
+  const shown = meals.filter((s) => w.on.has(s.id) || !q || s.title.toLowerCase().includes(q)).slice(0, 60);
+  const save = async () => {
+    const before = new Set(rec.goesWith);
+    for (const s of meals.filter((x) => before.has(x.id) !== w.on.has(x.id))) {
+      const m = await recipes(hub).get(s.id);
+      if (m) await recipes(hub).put(setLinked(normaliseRecipe(m), rec, w.on.has(s.id)));
+    }
+    await saveRecord(hub, recipes(hub), { ...r.data, goesWith: [...w.on] });
+    ui.with = null;
+    hub.ui.notice(w.on.size ? `${rec.title} is now a choice on ${w.on.size} meal${w.on.size === 1 ? '' : 's'}.` : `${rec.title} goes with no meals now.`);
+    hub.go('item', id);
+  };
+  return el('section', { class: 'stack', 'aria-labelledby': 'with-title' }, [
+    el('a', { href: hub.href('item', id), class: 'small', text: `‹ ${rec.title}` }),
+    el('h1', { id: 'with-title', text: `What ${rec.title} goes with`, style: { margin: 0 } }),
+    el('p', { class: 'muted', style: { margin: 0 }, text: `Tick the meals it goes in. Each shows it as a choice beside its own variations, a batch for the meal's servings${rec.yield.qty ? ` (this makes ${rec.yield.qty} ${rec.yield.unit} for ${rec.servings})` : ''}.` }),
+    rec.yield.qty ? null : el('p', { class: 'panel small', text: 'Say what one batch of it makes first (Edit), so the meals know how much to use.' }),
+    el('input', { class: 'input', type: 'search', placeholder: 'Find a meal', 'aria-label': 'Find a meal', value: w.query, 'data-field': 'with-search', on: { change: (e) => { w.query = e.target.value; hub.render(); } } }),
+    shown.length ? el('div', { class: 'chipset', role: 'group', 'aria-label': 'Meals' }, shown.map((s) => el('button', {
+      class: 'chip', type: 'button', 'aria-pressed': String(w.on.has(s.id)), text: s.title, 'data-field': `with:${s.id}`,
+      on: { click: (e) => { if (w.on.has(s.id)) w.on.delete(s.id); else w.on.add(s.id); e.currentTarget.setAttribute('aria-pressed', String(w.on.has(s.id))); } },
+    }))) : el('p', { class: 'small muted', text: 'No meals match.' }),
+    el('div', { class: 'row form-actions' }, [
+      el('button', { class: 'btn btn-primary', type: 'button', text: 'Save', 'data-field': 'with-save', on: { click: save } }),
+      el('a', { class: 'btn', href: hub.href('item', id), text: 'Cancel', on: { click: () => { ui.with = null; } } }),
+    ]),
+  ]);
+}
+
+/* ------------------------------------------------------------- samples */
+
+/** Starter meals with their versions (D-093), added as the family's own - change any of them after. */
+function samplesScreen(hub) {
+  const all = hub.use('own-items', async () => (await recipes(hub).list({ limit: 100000 })).items);
+  if (all.loading) return loading();
+  const have = new Set(all.data.map((s) => s.id));
+  ui.samples ??= new Set();
+  const add = async () => {
+    const records = samplesToAdd(SAMPLE_RECIPES.filter((r) => ui.samples.has(r.group)).map((r) => r.id), have);
+    for (const rec of records) await recipes(hub).put(rec);
+    // A filling added for a meal already in the Cookbook: put it on that meal too.
+    for (const item of records) {
+      for (const mealId of item.goesWith.filter((m) => have.has(m))) {
+        const m = await recipes(hub).get(mealId);
+        if (m) await recipes(hub).put(setLinked(normaliseRecipe(m), item, true));
+      }
+    }
+    hub.invalidate();
+    ui.samples = null;
+    hub.ui.notice(records.length ? `Added ${records.length} item${records.length === 1 ? '' : 's'} to the Cookbook.` : 'Those are all in the Cookbook already.');
+    hub.go('recipes');
+  };
+  const titleOf = (id) => SAMPLE_RECIPES.find((x) => x.id === id)?.title;
+  return el('section', { class: 'stack', 'aria-labelledby': 'samples-title' }, [
+    el('a', { href: hub.href('recipes'), class: 'small', text: '‹ Cookbook' }),
+    el('h1', { id: 'samples-title', text: 'Starter meals', style: { margin: 0 } }),
+    el('p', { class: 'muted', style: { margin: 0 }, text: 'One meal each, with its versions to choose from - not a separate meal for every kind. Fillings and sauces are made once and used by the meals they go with. Every ingredient is from the food list; amounts are for 4 and a starting point. Change anything after.' }),
+    ...SAMPLE_GROUPS.map((g) => el('label', { class: 'panel stack', style: { gap: 'var(--space-1)', cursor: 'pointer' } }, [
+      el('span', { class: 'row' }, [
+        el('input', { type: 'checkbox', checked: ui.samples.has(g), 'data-field': `sample:${g}`, on: { change: (e) => { if (e.target.checked) ui.samples.add(g); else ui.samples.delete(g); } } }),
+        el('strong', { text: g }),
+      ]),
+      ...SAMPLE_RECIPES.filter((r) => r.group === g).map((r) => el('span', { class: 'small' }, [
+        r.title,
+        r.variations?.length ? el('span', { class: 'muted', text: ` - ${r.variations.map((x) => x.name).join(', ')}` }) : null,
+        r.goesWith?.length ? el('span', { class: 'muted', text: ` - goes with ${r.goesWith.map(titleOf).join(', ')}` }) : null,
+        have.has(r.id) ? el('span', { class: 'badge', text: 'In the Cookbook', style: { marginLeft: '0.4em' } }) : null,
+      ])),
+    ])),
+    el('div', { class: 'row form-actions' }, [
+      el('button', { class: 'btn btn-primary', type: 'button', text: 'Add', 'data-field': 'samples-add', on: { click: add } }),
+      el('a', { class: 'btn', href: hub.href('recipes'), text: 'Cancel' }),
+    ]),
+  ]);
+}
+
+/* -------------------------------------------------------------- import */
+
+const CUPS = [[250, 'Metric cup (250 ml)'], [240, 'US cup (240 ml)']];
+
+/**
+ * Paste a recipe (D-092): it is read into a name, ingredients and a method, each ingredient
+ * matched to one of ours and put into our units, then opened in the recipe form to check.
+ */
+function importScreen(hub) {
+  const f = hub.use('food', () => hub.food.load());
+  const own = hub.use('own-items', async () => (await recipes(hub).list({ limit: 100000 })).items);
+  const ourSizes = hub.use('sizes', async () => loadSizes((await sizes(hub).list({ limit: 100000 })).items));
+  const aliases = hub.use('aliases', () => hub.settings.get('aliases', {}));
+  const cup = hub.use('cup', () => hub.settings.get('cup', 250));
+  if (f.loading || own.loading || ourSizes.loading || aliases.loading || cup.loading) return loading('Opening the food list…');
+  const text = el('textarea', {
+    class: 'input', rows: '14', id: 'import-text', 'data-field': 'import-text', text: ui.importText ?? '',
+    placeholder: 'Pancakes\nServes 4\n\nIngredients\n1 cup flour\n2 eggs\n1 ¼ cups milk\n\nMethod\n1. Whisk everything together.\n2. Fry in a hot pan.',
+    on: { input: (e) => { ui.importText = e.target.value; } },
+  });
+  const cupSel = el('select', { class: 'select', style: { width: 'auto' }, 'aria-label': 'Cup size', 'data-field': 'import-cup', on: { change: async (e) => { await hub.settings.set('cup', Number(e.target.value)); hub.invalidate('cup'); } } },
+    CUPS.map(([v, t]) => el('option', { value: String(v), text: t, selected: Number(cup.data) === v })));
+  const read = () => {
+    if (!text.value.trim()) { text.focus(); return; }
+    const r = importRecipe(text.value, { aliases: aliases.data ?? {}, own: own.data ?? [], db: f.data ?? null, sizes: ourSizes.data ?? new Map(), cupMl: Number(cup.data) || 250 });
+    if (!r.ingredients.length && !r.instructions.length) { hub.ui.notice('No ingredients or method found. Put "Ingredients" and "Method" on lines of their own and try again.', 'warn'); return; }
+    ui.imported = r; ui.draft = null; ui.importText = '';
+    hub.go('new', 'import');
+  };
+  return el('section', { class: 'stack' }, [
+    el('a', { href: hub.href('recipes'), class: 'small', text: '‹ Cookbook' }),
+    el('h1', { text: 'Import a recipe' }),
+    el('p', { class: 'muted', text: 'Paste a recipe from a site or a message: the name, the ingredients and the method. Each ingredient is matched to one of ours and its amount put into grams and ml - you check it all before it is saved.' }),
+    el('div', { class: 'panel stack' }, [
+      el('label', { class: 'sr-only', for: 'import-text', text: 'The recipe' }), text,
+      el('div', { class: 'row' }, [el('span', { class: 'small', text: 'Cups in this recipe are' }), cupSel]),
+      el('p', { class: 'small muted', style: { margin: 0 }, text: 'Weights and spoons convert exactly. A cup becomes grams only when we know what a cup of that food weighs (from the food list, or your own size for it); otherwise it stays in ml.' }),
+      el('div', { class: 'row' }, [el('button', { class: 'btn btn-primary', type: 'button', text: 'Read it', 'data-field': 'import-read', on: { click: read } })]),
     ]),
   ]);
 }

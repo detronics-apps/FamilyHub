@@ -26,6 +26,7 @@ export const PERMISSIONS = {
   'people:food': { label: 'See food details in people’s profiles: age, allergies, pregnancy, weight and food priorities', risk: 'high', firstParty: true },
   'household:chores': { label: 'Read and change chores and their history', risk: 'high', firstParty: true },
   'household:people:write': { label: 'Add and change people', risk: 'high', firstParty: true },
+  'household:creators': { label: 'See and add to the family’s list of creators (names and links)', risk: 'low', firstParty: true },
 };
 
 /**

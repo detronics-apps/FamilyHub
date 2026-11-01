@@ -4,6 +4,7 @@
 // streaks (plan sections 3.7 and 5.1). Pure - no DOM.
 
 import { addDays, dayDiff } from '../../dates.js';
+import { normaliseLinks } from '../../links.js';
 
 export const KINDS = {
   walk: 'Walk', run: 'Run', cycle: 'Cycle', swim: 'Swim', sport: 'Sport', play: 'Active play', gym: 'Gym', yoga: 'Yoga or stretching', other: 'Other',
@@ -15,10 +16,10 @@ const mins = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.min(1440
 const ids = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []);
 
 export function normaliseActivity(a = {}, today) {
-  return { ...a, day: day(a.day) ?? today, kind: KINDS[a.kind] ? a.kind : 'other', minutes: mins(a.minutes), who: ids(a.who), note: str(a.note) };
+  return { ...a, day: day(a.day) ?? today, kind: KINDS[a.kind] ? a.kind : 'other', minutes: mins(a.minutes), who: ids(a.who), note: str(a.note), ...normaliseLinks(a) };
 }
 
-export const activitySummary = (a) => ({ title: KINDS[a.kind], day: a.day, kind: a.kind, minutes: a.minutes, who: a.who });
+export const activitySummary = (a) => ({ title: KINDS[a.kind], day: a.day, kind: a.kind, minutes: a.minutes, who: a.who, creators: a.creators, videos: a.videos });
 
 export function normalisePlan(p = {}) {
   return {
@@ -29,10 +30,11 @@ export function normalisePlan(p = {}) {
     minutes: mins(p.minutes) || null,              // the shortest that counts; null = any
     who: ids(p.who),                               // empty: anyone in the household
     active: p.active !== false,
+    ...normaliseLinks(p),                          // creators and videos (D-091), e.g. the workout to follow
   };
 }
 
-export const planSummary = (p) => ({ title: p.title, kind: p.kind, timesPerWeek: p.timesPerWeek, minutes: p.minutes, who: p.who, active: p.active });
+export const planSummary = (p) => ({ title: p.title, kind: p.kind, timesPerWeek: p.timesPerWeek, minutes: p.minutes, who: p.who, active: p.active, creators: p.creators, videos: p.videos });
 
 const inWeek = (a, monday) => dayDiff(monday, a.day) >= 0 && dayDiff(a.day, addDays(monday, 6)) >= 0;
 

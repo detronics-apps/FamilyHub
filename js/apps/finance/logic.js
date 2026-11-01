@@ -4,6 +4,7 @@
 // promised outcome. Pure - no DOM.
 
 import { addMonths } from '../../dates.js';
+import { normaliseLinks } from '../../links.js';
 
 const str = (v, max = 300) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 const money = (v) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Math.round(Number(v) * 100) / 100);
@@ -71,6 +72,7 @@ export function normaliseGoal(g = {}) {
     owner: typeof g.owner === 'string' && g.owner ? g.owner : 'household',
     targetDay: /^\d{4}-\d{2}-\d{2}$/.test(g.targetDay ?? '') ? g.targetDay : null,
     notes: str(g.notes, 2000),
+    ...normaliseLinks(g),                               // creators and videos (D-091)
   };
 }
 

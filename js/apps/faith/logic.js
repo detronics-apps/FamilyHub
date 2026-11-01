@@ -3,6 +3,7 @@
 // Progress is shown as where you are - never as "behind" or a streak. Pure.
 
 import { dayDiff } from '../../dates.js';
+import { normaliseLinks } from '../../links.js';
 import { TOPICS } from './guide.js';
 
 const TOPIC_IDS = new Set(Object.keys(TOPICS));
@@ -178,6 +179,7 @@ export function normaliseNote(n = {}, today) {
     terms: terms(n.terms),
     day: typeof n.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(n.day) ? n.day : today,
     who: typeof n.who === 'string' ? n.who : null,
+    ...normaliseLinks(n),                           // the creators it draws on - a pastor, a channel - and videos (D-091)
     text: undefined,
   };
 }

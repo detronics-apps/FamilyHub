@@ -21,6 +21,7 @@
 
 import { amounts } from './food.js';
 import { parseMeal } from './apps/assistant/logic.js';
+import { subLines } from './apps/meals/logic.js';
 
 /* --------------------------------------------------------- the reference adult */
 
@@ -121,7 +122,7 @@ export function mealNutrition(ingredients, servings, db, { recipes = null, depth
     // One of our own items (home-made mayo): what it holds per unit of its batch, times the amount used.
     const sub = i.recipeId && recipes ? recipes.get(i.recipeId) : null;
     if (sub && sub.yield?.qty && i.qty != null && depth < 4) {
-      const inner = mealNutrition(sub.ingredients, 1, db, { recipes, depth: depth + 1 });
+      const inner = mealNutrition(subLines(sub, i), 1, db, { recipes, depth: depth + 1 });
       const share = i.qty / sub.yield.qty;
       const values = Object.fromEntries(Object.entries(inner.batch).map(([k, t]) => [k, t.missing ? null : t.value * share]));
       return { ingredient: i, food: null, grams: inner.counted ? 1 : null, how: 'own', approx: inner.approx, values };

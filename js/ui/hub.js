@@ -8,7 +8,7 @@
 
 import { createCollection } from '../collections.js';
 import { createFoodDb } from '../food.js';
-import { latestMeasure, roleOf } from '../model.js';
+import { latestMeasure, roleOf, addCreator } from '../model.js';
 
 // One copy of the food database for every app that reads it, fetched on first use.
 let foodDb = null;
@@ -169,6 +169,13 @@ export function createHubFactory(ctx) {
         const m = latestMeasure(ctx.app.household, p.id);
         return { ...food(p), weightKg: m.weightKg ?? p.weightKg, heightCm: m.heightCm };
       });
+    }
+    if (has('household:creators')) {
+      // The family's creators (D-091), shared by every app; adding one saves the household.
+      hub.creators = {
+        list: () => ctx.app.household?.creators ?? [],
+        add: (fields) => { const r = addCreator(ctx.app.household, fields); if (r.household !== ctx.app.household) ctx.commit(r.household, { quiet: true }); return r.creator; },
+      };
     }
     if (has('food:read')) hub.food = { load: loadFoodDb };
     if (has('rooms:read')) hub.rooms = { list: () => (ctx.app.household?.rooms ?? []).map(({ id, name }) => ({ id, name })) };
