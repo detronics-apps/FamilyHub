@@ -667,7 +667,11 @@ each with versions (D-071 variations). Three additions:
 - **Samples** (Cookbook › Samples): Sauce (pepper, garlic, mushroom, cheese), Burgers, Pasta
   (bolognese, creamy chicken, mac & cheese, tuna bake), Stew (lamb, chicken, bean & lentil),
   Pancakes, Toasted sandwiches, six fillings, Pizza dough and Pizza (six toppings), Flapjacks,
-  Porridge (peanut butter, berries, kids', white pap), Cooked rice (yellow) and Fried rice. Fixed ids
+  Porridge (peanut butter, berries, kids', white pap), Cooked rice (yellow) and Fried rice; then
+  Lasagne (on the cheese sauce; chicken & mushroom, spinach & butternut), Vetkoek (every pancake
+  filling goes with it too) and Plate of food - a balanced plate (protein, starch, vegetables,
+  something fresh) whose versions swap the parts: steak/sweet potato, fish/potatoes, yellow rice,
+  mince/pap. Fixed ids
   (`rec_s_…`), so adding twice changes nothing and what one needs (the sauce, the dough, the rice)
   comes along. Every ingredient is linked to a food in the food list (water apart; a test checks).
   Amounts are for 4 and are a starting point, not tested recipes. Rice is not linked to Stew: with

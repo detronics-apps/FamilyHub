@@ -22,12 +22,15 @@ const F = {
   bacon: 168277, greenPepper: 170427, redPepper: 170108, oregano: 171328, oats: 2708489, peanutButter: 324860, honey: 169640,
   banana: 173944, blueberry: 171711, strawberry: 167762, maize: 168922, rice: 168877, soy: 2707442, turmeric: 172231,
   raisins: 2709212, syrup: 2710273, bakingPowder: 172804, paprika: 171329, springOnion: 170005, tomatoSauce: 170054,
+  avocado: 171705, sweetPotato: 2346404, spinach: 168462, broccoli: 170379, greenBeans: 169961, fish: 171955, steak: 168726,
+  butternut: 169295, ricotta: 170851, jam: 2710301, nutmeg: 171326,
 };
 
 const ID = {
   sauce: 'rec_s_sauce', burgers: 'rec_s_burgers', pasta: 'rec_s_pasta', stew: 'rec_s_stew', pancakes: 'rec_s_pancakes',
   toasties: 'rec_s_toasties', dough: 'rec_s_pizzadough', pizza: 'rec_s_pizza', flapjacks: 'rec_s_flapjacks',
-  porridge: 'rec_s_porridge', rice: 'rec_s_rice', friedRice: 'rec_s_friedrice',
+  porridge: 'rec_s_porridge', rice: 'rec_s_rice', friedRice: 'rec_s_friedrice', lasagne: 'rec_s_lasagne', vetkoek: 'rec_s_vetkoek',
+  plate: 'rec_s_plate',
   chickenMayo: 'rec_s_chickenmayo', tunaMayo: 'rec_s_tunamayo', cheeseTomato: 'rec_s_cheesetomato',
   hamCheese: 'rec_s_hamcheese', mince: 'rec_s_mince', cinnamonSugar: 'rec_s_cinnamonsugar',
 };
@@ -92,22 +95,22 @@ export const SAMPLE_RECIPES = [
     ingredients: [i('White bread', 8, 'slice', F.bread, { each: 28 }), i('Butter', 40, 'g', F.butter)],
     instructions: ['Butter the bread on the outside.', 'Fill, close and toast until golden on both sides and hot in the middle.'] },
 
-  { id: ID.chickenMayo, group: 'Fillings', type: 'own', title: 'Chicken mayo filling', servings: 4, yield: { qty: 500, unit: 'g' }, cookMinutes: 15, goesWith: [ID.pancakes, ID.toasties],
+  { id: ID.chickenMayo, group: 'Fillings', type: 'own', title: 'Chicken mayo filling', servings: 4, yield: { qty: 500, unit: 'g' }, cookMinutes: 15, goesWith: [ID.pancakes, ID.toasties, ID.vetkoek],
     ingredients: [i('Chicken breast', 400, 'g', F.chicken), i('Mayonnaise', 120, 'ml', F.mayo), i('Spring onions', 2, '', F.springOnion, { note: 'sliced' }), i('Salt', 0.5, 'tsp', F.salt), i('Black pepper', 0.25, 'tsp', F.pepper)],
     instructions: ['Poach or fry the chicken through, cool and shred it.', 'Mix with the mayonnaise, spring onions, salt and pepper.'] },
-  { id: ID.tunaMayo, group: 'Fillings', type: 'own', title: 'Tuna mayo filling', servings: 4, yield: { qty: 420, unit: 'g' }, prepMinutes: 5, goesWith: [ID.pancakes, ID.toasties],
+  { id: ID.tunaMayo, group: 'Fillings', type: 'own', title: 'Tuna mayo filling', servings: 4, yield: { qty: 420, unit: 'g' }, prepMinutes: 5, goesWith: [ID.pancakes, ID.toasties, ID.vetkoek],
     ingredients: [i('Tuna', 340, 'g', F.tuna, { note: '2 tins, drained' }), i('Mayonnaise', 90, 'ml', F.mayo), i('Lemon juice', 1, 'tbsp', F.lemon), i('Black pepper', 0.25, 'tsp', F.pepper)],
     instructions: ['Flake the tuna and mix in the mayonnaise, lemon juice and pepper.'] },
   { id: ID.cheeseTomato, group: 'Fillings', type: 'own', title: 'Cheese & tomato filling', servings: 4, yield: { qty: 400, unit: 'g' }, prepMinutes: 5, goesWith: [ID.toasties],
     ingredients: [i('Cheddar', 200, 'g', F.cheddar, { note: 'grated' }), i('Tomatoes', 2, '', F.tomato, { note: 'sliced' })],
     instructions: ['Grate the cheese and slice the tomatoes.'] },
-  { id: ID.hamCheese, group: 'Fillings', type: 'own', title: 'Ham & cheese filling', servings: 4, yield: { qty: 350, unit: 'g' }, prepMinutes: 5, goesWith: [ID.toasties, ID.pancakes],
+  { id: ID.hamCheese, group: 'Fillings', type: 'own', title: 'Ham & cheese filling', servings: 4, yield: { qty: 350, unit: 'g' }, prepMinutes: 5, goesWith: [ID.toasties, ID.pancakes, ID.vetkoek],
     ingredients: [i('Ham', 200, 'g', F.ham, { note: 'sliced' }), i('Cheddar', 150, 'g', F.cheddar, { note: 'grated' })],
     instructions: ['Layer the ham and cheese.'] },
-  { id: ID.mince, group: 'Fillings', type: 'own', title: 'Savoury mince filling', servings: 4, yield: { qty: 650, unit: 'g' }, cookMinutes: 25, goesWith: [ID.pancakes],
+  { id: ID.mince, group: 'Fillings', type: 'own', title: 'Savoury mince filling', servings: 4, yield: { qty: 650, unit: 'g' }, cookMinutes: 25, goesWith: [ID.pancakes, ID.vetkoek],
     ingredients: [i('Beef mince', 500, 'g', F.mince), i('Onion', 1, '', F.onion, { note: 'chopped' }), i('Tomato sauce', 200, 'g', F.tomatoSauce), i('Oil', 1, 'tbsp', F.oil), i('Salt', 0.5, 'tsp', F.salt), i('Black pepper', 0.25, 'tsp', F.pepper)],
     instructions: ['Soften the onion in the oil, add the mince and brown it.', 'Stir in the tomato sauce and simmer 15 minutes. Season.'] },
-  { id: ID.cinnamonSugar, group: 'Fillings', type: 'own', title: 'Cinnamon sugar', servings: 4, yield: { qty: 110, unit: 'g' }, prepMinutes: 2, goesWith: [ID.pancakes, ID.flapjacks],
+  { id: ID.cinnamonSugar, group: 'Fillings', type: 'own', title: 'Cinnamon sugar', servings: 4, yield: { qty: 110, unit: 'g' }, prepMinutes: 2, goesWith: [ID.pancakes, ID.flapjacks, ID.vetkoek],
     ingredients: [i('Sugar', 100, 'g', F.sugar), i('Ground cinnamon', 4, 'tsp', F.cinnamon)],
     instructions: ['Mix the sugar and cinnamon. Sprinkle over, with a squeeze of lemon if you like.'] },
 
@@ -163,6 +166,42 @@ export const SAMPLE_RECIPES = [
     variations: [
       v('chicken', 'Chicken', { add: [i('Chicken breast', 300, 'g', F.chicken, { note: 'diced' })], steps: ['Fry the chicken through before the rice.'] }),
       v('veg', 'Veg', { add: [i('Carrots', 2, '', F.carrot, { note: 'diced' }), i('Red pepper', 1, '', F.redPepper, { note: 'diced' })], steps: ['Fry the carrot and pepper for 3 minutes before the rice.'] }),
+    ] },
+
+  { id: ID.lasagne, group: 'Lasagne', title: 'Lasagne', servings: 6, prepMinutes: 30, cookMinutes: 45, tags: ['dinner'],
+    description: 'Layers of pasta, a tomato mince sauce and our cheese sauce. The versions swap the mince for chicken or vegetables.',
+    ingredients: [i('Lasagne sheets', 250, 'g', F.pasta), i('Beef mince', 500, 'g', F.mince), i('Onion', 1, '', F.onion, { note: 'chopped' }), i('Garlic', 2, 'clove', F.garlic, { note: 'crushed' }),
+      i('Chopped tomatoes', 400, 'g', F.tinned), i('Tomato sauce', 200, 'g', F.tomatoSauce), i('Oil', 1, 'tbsp', F.oil), i('Salt', 1, 'tsp', F.salt),
+      own(ID.sauce, `${SAUCE} (cheese)`, 600, 'ml', 'cheese'), i('Cheddar', 100, 'g', F.cheddar, { note: 'grated, for the top' })],
+    instructions: ['Soften the onion and garlic in the oil, brown the mince, add the tomatoes and tomato sauce and simmer 15 minutes. Season.', 'Make the cheese sauce.',
+      'In a dish, layer sauce, sheets and cheese sauce three times, ending with cheese sauce. Top with the cheddar.', 'Bake at 180 °C for 40 to 45 minutes, until golden and the sheets are soft.'],
+    variations: [
+      v('chicken', 'Chicken & mushroom', { leaveOut: ['beef mince', 'chopped tomatoes'], add: [i('Chicken breast', 500, 'g', F.chicken, { note: 'diced' }), i('Mushrooms', 250, 'g', F.mushroom, { note: 'sliced' })], steps: ['Fry the chicken and mushrooms instead of the mince.'] }),
+      v('veggie', 'Spinach & butternut', { leaveOut: ['beef mince'], add: [i('Butternut', 600, 'g', F.butternut, { note: 'peeled, in small cubes' }), i('Spinach', 200, 'g', F.spinach), i('Ricotta', 250, 'g', F.ricotta), i('Nutmeg', 0.25, 'tsp', F.nutmeg)], steps: ['Roast the butternut at 200 °C for 25 minutes and stir it into the tomato sauce. Wilt the spinach, mix it with the ricotta and nutmeg and spread it on each layer.'] }),
+    ] },
+
+  { id: ID.vetkoek, group: 'Vetkoek', title: 'Vetkoek', servings: 4, prepMinutes: 15, cookMinutes: 20, tags: ['lunch', 'dinner'],
+    description: 'Fried bread, split open and filled. Every filling that goes with pancakes goes with vetkoek too, and shows here as a choice.',
+    ingredients: [i('Flour', 500, 'g', F.flour), i('Dry yeast', 7, 'g', F.yeast), i('Sugar', 1, 'tbsp', F.sugar), i('Salt', 1, 'tsp', F.salt), i('Warm water', 350, 'ml', null),
+      i('Oil', 100, 'ml', F.oil, { note: 'what soaks in; fry in a pot of oil about 5 cm deep' })],
+    instructions: ['Mix the flour, yeast, sugar and salt, add the warm water and knead to a soft dough.', 'Cover and leave to rise until doubled, about 1 hour.',
+      'Shape into 12 balls and fry in hot oil on a medium heat, 4 to 5 minutes a side, until golden and hollow-sounding.', 'Drain, split and fill.'],
+    variations: [
+      v('syrup', 'With syrup', { add: [i('Syrup', 120, 'ml', F.syrup)] }),
+      v('jamcheese', 'Jam & cheese', { add: [i('Jam', 150, 'g', F.jam), i('Cheddar', 150, 'g', F.cheddar, { note: 'grated' })] }),
+    ] },
+
+  { id: ID.plate, group: 'Plates', title: 'Plate of food', servings: 4, prepMinutes: 15, cookMinutes: 25, tags: ['lunch', 'dinner'],
+    description: 'A balanced plate: a quarter protein, a quarter starch, half vegetables, and something fresh. The versions swap each part.',
+    ingredients: [i('Chicken breast', 600, 'g', F.chicken), own(ID.rice, 'Cooked rice', 600, 'g'), i('Carrots', 4, '', F.carrot, { note: 'in sticks' }),
+      i('Eggs', 4, '', F.egg, { whole: true }), i('Avocados', 2, '', F.avocado), i('Lemon juice', 1, 'tbsp', F.lemon), i('Oil', 1, 'tbsp', F.oil), i('Paprika', 1, 'tsp', F.paprika), i('Salt', 1, 'tsp', F.salt)],
+    instructions: ['Cook the rice.', 'Rub the chicken with the oil, paprika and salt and grill or pan-fry 6 to 7 minutes a side, until cooked through. Slice.',
+      'Steam or boil the carrots until just tender, 8 to 10 minutes.', 'Boil the eggs 8 minutes, cool and halve.', 'Slice the avocado and squeeze the lemon over it. Plate everything side by side.'],
+    variations: [
+      v('steak', 'Steak, sweet potato & green beans', { leaveOut: ['chicken breast', 'cooked rice', 'carrots', 'eggs'], add: [i('Sirloin steak', 600, 'g', F.steak), i('Sweet potatoes', 800, 'g', F.sweetPotato, { note: 'in wedges' }), i('Green beans', 300, 'g', F.greenBeans)], steps: ['Roast the sweet potato wedges at 200 °C for 30 minutes. Fry the steak 3 to 4 minutes a side and rest it 5 minutes. Steam the beans 5 minutes.'] }),
+      v('fish', 'Fish, potatoes & broccoli', { leaveOut: ['chicken breast', 'cooked rice', 'carrots', 'eggs'], add: [i('White fish', 600, 'g', F.fish, { note: 'hake or cod fillets' }), i('Potatoes', 800, 'g', F.potato, { note: 'baby, or in chunks' }), i('Broccoli', 300, 'g', F.broccoli)], steps: ['Boil the potatoes until tender. Pan-fry or bake the fish 8 to 10 minutes. Steam the broccoli 4 minutes.'] }),
+      v('yellowrice', 'Chicken, yellow rice & butternut', { leaveOut: ['cooked rice', 'carrots', 'eggs'], add: [own(ID.rice, 'Cooked rice (yellow)', 600, 'g', 'yellow'), i('Butternut', 600, 'g', F.butternut, { note: 'in cubes' })], steps: ['Roast the butternut at 200 °C for 25 minutes with a little oil and salt.'] }),
+      v('mince', 'Mince, pap & spinach', { leaveOut: ['chicken breast', 'cooked rice', 'eggs', 'avocados', 'lemon juice'], add: [i('Beef mince', 500, 'g', F.mince), i('Tomato sauce', 200, 'g', F.tomatoSauce), i('White maize meal', 250, 'g', F.maize), i('Water', 1000, 'ml', null), i('Spinach', 300, 'g', F.spinach)], steps: ['Brown the mince, add the tomato sauce and simmer 15 minutes. For the pap, boil the water, whisk in the maize meal, cover and cook on low 20 minutes. Wilt the spinach.'] }),
     ] },
 ];
 

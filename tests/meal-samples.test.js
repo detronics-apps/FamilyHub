@@ -34,6 +34,12 @@ test('adding samples brings what they need and puts the fillings on their meals'
   assert.ok(!samplesToAdd(['rec_s_burgers'], new Set(['rec_s_sauce'])).some((r) => r.id === 'rec_s_sauce'));
 });
 
+test('every filling that goes with pancakes goes with vetkoek', () => {
+  const pancakeFillings = SAMPLE_RECIPES.filter((r) => r.goesWith?.includes('rec_s_pancakes')).map((r) => r.id);
+  const vetkoek = samplesToAdd(['rec_s_vetkoek', ...pancakeFillings]).find((r) => r.id === 'rec_s_vetkoek');
+  assert.deepEqual(vetkoek.variations.filter((v) => v.from).map((v) => v.from).sort(), pancakeFillings.sort());
+});
+
 test('a version naming a sauce version shops for that version', () => {
   const burgers = byId.get('rec_s_burgers');
   const lines = expandIngredients(asVariation(burgers, 'pepper').ingredients, 1, (id) => byId.get(id));

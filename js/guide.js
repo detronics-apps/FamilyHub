@@ -196,7 +196,7 @@ export const HOWTOS = [
     'Ounces and pounds become grams and spoons become ml, exactly. A cup becomes grams only when we know what a cup of that food weighs - from the food list, or a size of your own ("+ Add our own size", named cup). Otherwise it stays in ml, and liquids always do.',
   ] },
   { id: 'meal-samples', title: 'Start from sample meals, fillings and sauces', steps: [
-    'In the Cookbook, press Samples, tick the groups you want - Burgers, Pasta, Stew, Pizza, Breakfast and more - and press Add. They become your own items; change anything after.',
+    'In the Cookbook, press Samples, tick the groups you want - Burgers, Pasta, Lasagne, Vetkoek, Plates, Breakfast and more - and press Add. They become your own items; change anything after.',
     'Each is one meal with its versions: open Burgers and choose Cheese burger or Pepper steak burger above the ingredients. Plan it and Shopping follow the one you choose.',
     'A filling or sauce is made once. Open it and press "Goes with" to tick the meals it goes in - Chicken mayo filling on Pancakes and Toasted sandwiches - and it shows on each as a choice.',
     'A version can use a version of a sauce: under Variations, add the Sauce and pick "Which Sauce" - pepper, garlic, mushroom or cheese.',

@@ -668,6 +668,15 @@ function samplesScreen(hub) {
   ui.samples ??= new Set();
   const add = async () => {
     const records = samplesToAdd(SAMPLE_RECIPES.filter((r) => ui.samples.has(r.group)).map((r) => r.id), have);
+    // A meal added that a filling already in the Cookbook goes with (Vetkoek, after the fillings): put it on.
+    for (const [n, rec] of records.entries()) {
+      for (const s of SAMPLE_RECIPES.filter((x) => have.has(x.id) && x.goesWith?.includes(rec.id))) {
+        const item = await recipes(hub).get(s.id);
+        if (!item) continue;
+        records[n] = setLinked(records[n], normaliseRecipe(item), true);
+        await recipes(hub).put({ ...item, goesWith: [...new Set([...(item.goesWith ?? []), rec.id])] });
+      }
+    }
     for (const rec of records) await recipes(hub).put(rec);
     // A filling added for a meal already in the Cookbook: put it on that meal too.
     for (const item of records) {
