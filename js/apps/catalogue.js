@@ -318,6 +318,27 @@ const RAW = [
   },
   {
     manifest: {
+      fhManifest: 1, id: 'medical', section: 'medical', name: 'Medical', version: '1.0.0',
+      description: 'Every account, invoice and quote from a doctor or provider, for the whole family: paid or owed, claims to medical aid and gap cover, follow-ups, the SARS tax year, and where the proof is.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
+      screens: [
+        { id: 'outstanding', title: 'Outstanding' }, { id: 'followup', title: 'Follow-up' }, { id: 'aid', title: 'Medical aid' },
+        { id: 'gap', title: 'Gap cover' }, { id: 'all', title: 'All' }, { id: 'year', title: 'Tax year' },
+        { id: 'item', title: 'Account', nav: false }, { id: 'new', title: 'Add an account', nav: false },
+      ],
+      modes: [
+        { mode: 'note', screen: 'new', label: 'Log an account, invoice or quote', hint: 'From any doctor or provider' },
+        { mode: 'do', screen: 'outstanding', label: 'Pay, claim or follow up' },
+        { mode: 'plan', screen: 'year', label: 'Check the tax year is all logged' },
+      ],
+      data: { collections: [{ name: 'accounts', schema: 1 }] },
+      permissions: ['data:own', 'people:read', 'notify'],
+    },
+    load: () => import('./medical/app.js'),
+    tile: true,   // its module is loaded for Home, to say what is due under the tile
+  },
+  {
+    manifest: {
       fhManifest: 1, id: 'faith', section: 'faith', name: 'Faith', version: '1.2.0',
       description: 'Bible reading plans, a journal with the questions you are working through, and a guide to who wrote each book, when, to whom and why.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
@@ -340,10 +361,10 @@ const RAW = [
   },
 ];
 
-function check({ manifest, load, importer = null }) {
+function check({ manifest, load, importer = null, tile = false }) {
   const r = validateManifest(manifest, { source: 'starter' });
   if (!r.ok) throw new Error(`Starter app ${manifest.id} has an invalid manifest: ${r.errors.join(' ')}`);
-  return { manifest: r.manifest, load, importer };
+  return { manifest: r.manifest, load, importer, tile };
 }
 
 export const STARTERS = RAW.map(check);

@@ -39,7 +39,7 @@ import { openDoc } from './ui/views/docs.js';
 import { syncChip, syncNotices, phoneButtons } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.9.35';
+export const APP_VERSION = '0.9.36';
 
 const store = createLocalStore(window.localStorage);
 
@@ -174,8 +174,17 @@ function dashboardModules() {
   const installed = installedManifests();
   return [...activeSections([...starterManifests(), ...installed]).map((s) => {
     const on = appsIn(s.id, installed).filter((m) => app.registry.apps[m.id]?.enabled);
-    return { id: s.id, name: s.name, purpose: s.purpose, status: 'ready', href: on.length === 1 ? `#/${on[0].id}` : `#/section/${s.id}` };
+    return { id: s.id, name: s.name, purpose: s.purpose, status: 'ready', href: on.length === 1 ? `#/${on[0].id}` : `#/section/${s.id}`, note: on.map(tileNote).find(Boolean) ?? null };
   }), ...CORE_TILES];
+}
+
+/** A starter mini-app may name what is waiting, for the line under its tile (Medical: what is due). */
+function tileNote(m) {
+  const id = m.id;
+  if (!starter(id)?.tile) return null;
+  const mod = starterModule(id);
+  if (!mod || mod instanceof Error || !mod.tileNote) return null;
+  try { return mod.tileNote(ctx.hubFor(starter(id).manifest, app.registry.apps[id].granted)); } catch { return null; }
 }
 
 function manifestFor(id) {

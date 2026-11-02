@@ -677,6 +677,25 @@ each with versions (D-071 variations). Three additions:
   Amounts are for 4 and are a starting point, not tested recipes. Rice is not linked to Stew: with
   one variation at a time it would have replaced the lamb or chicken choice.
 
+**D-094 Medical: outstanding medical accounts (owner, 2026-11-02).** Not a medical history - no
+diagnoses, only the money and the paperwork. Its own section and Home tile. One entry is an account,
+invoice or quote from any doctor or provider, for one family member (or the family): its date,
+amount and due date; what we paid (any number of payments, each with a day, amount, reference and
+who was paid); medical aid and gap cover each with a status (not claimed, to send, sent, paid, part
+paid, declined), the day sent, what they paid and whether they paid the provider or us; a follow-up
+day and note; and where the proof is - the invoice, our payment and the claim statement - as a file
+name, a folder in the family's own Drive folder, or a link. Nothing is uploaded or opened. Owed =
+amount less our payments and anything paid to the provider for us; a quote owes nothing until
+"Now owed". Out of pocket = what we paid less what came back to us. Lists: Outstanding, Follow-up,
+Medical aid, Gap cover, All, by person. The Home tile says "2 due this week · 1 follow-up" (due
+within 7 days, follow-ups on or before today), and nothing when nothing waits - the first app to put
+a line under its tile, through `tileNote(hub)` in its module (`tile: true` in the catalogue).
+**Tax year** (SARS, 1 March - end of February, named by the year it ends): per person and the
+family, charged, paid by us, medical aid, gap cover, out of pocket and still owed; proof still to
+note; claims not settled; and paid accounts never sent to medical aid (they will not be on the
+scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
+the year of its own date, not of each payment (marked to split by payment day if that matters).
+
 **D-090 Tick the lines; a take-out's cost; today's money (owner, 2026-10-31).**
 - **Paid each month under half the minimum is counted as paid on top** - R1 000 against a R10 383
   minimum can only have been the extra. Between half and the minimum it is still raised to the

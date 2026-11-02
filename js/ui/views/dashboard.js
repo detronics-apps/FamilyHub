@@ -29,7 +29,7 @@ export function dashboardView(ctx, route, notices) {
       el('span', { class: 'tile__purpose', text: m.purpose }),
       m.id === 'chores'
         ? el('span', { class: 'tile__meta', text: ready ? `${ready} ready${person ? ' for you' : ''} now` : 'Nothing waiting right now' })
-        : null,
+        : m.note ? el('span', { class: 'tile__meta', text: m.note }) : null,
     ]))),
   ]);
 }

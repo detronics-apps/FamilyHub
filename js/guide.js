@@ -32,6 +32,7 @@ export const SEARCH_ALIASES = {
   variation: ['version', 'versions', 'variant', 'alteration', 'different way', 'swap', 'sauce', 'cheese sauce', 'without', 'instead of'],
   'shopping list': ['groceries', 'shop', 'buy', 'ingredients'],
   trip: ['holiday', 'vacation', 'travel', 'packing', 'itinerary'],
+  medical: ['doctor', 'dentist', 'hospital', 'pharmacy', 'account', 'invoice', 'quote', 'medical aid', 'gap cover', 'claim', 'refund', 'tax certificate', 'sars', 'tax year', 'out of pocket', 'proof', 'receipt'],
   budget: ['money', 'spending', 'expenses', 'finance', 'savings', 'debt'],
   'money plan': ['plan', 'goals', 'afford', 'can we afford', 'timeline', 'save each month', 'forecast', 'emergency fund', 'all our goals'],
   'children’s future': ['children', 'kids', 'school fees', 'university', 'studies', 'education', 'tuition', 'first car', 'wedding', 'save for school', 'baby'],
@@ -269,6 +270,13 @@ export const HOWTOS = [
     'Press "Change … list" on a child to tick what fits, put in your own school’s fees, choose "From budget" or "Save ahead" for each, and add your own (braces, a gap year).',
     'The year-by-year table shades the years when more than one child has costs, so a crowded year shows early.',
   ] },
+  { id: 'medical', title: 'Keep track of medical accounts and claims', steps: [
+    'Open Medical and press Add when an account, invoice or quote arrives from any doctor or provider. Say who it is for, the amount and when it is due.',
+    'When you pay, open it and add the payment: the day, amount, reference and who was paid. Part-payments add up; it shows what is still owed.',
+    'Under Medical aid and Gap cover, set where each claim stands - to send, sent, paid - and what they paid back, to the provider or to you. Set a follow-up day for anything to chase.',
+    'Under "Where the proof is", write the file name, the folder in your Drive folder, or a link for the invoice, the payment and the claim statement.',
+    'After February, open Tax year: totals per person, what you paid and what came back, the proof still to note, and anything never sent to medical aid. It lists what to gather; it is not tax advice.',
+  ] },
   { id: 'job', title: 'Compare a job offer with the job you have', steps: [
     'Open Finance, then Job offers. Fill in the job you have now: the salary, and the take-home from your payslip if you have it. Save it as "Staying".',
     'Change it for the offer: its salary (the take-home is estimated with the SARS tables until you have a payslip), the yearly increase you expect, travel and other costs it changes, and moving costs if it means moving. Save it with the company’s name.',
@@ -442,6 +450,8 @@ export const FAQS = [
 ];
 
 export const FEATURES = [
+  { name: 'Medical accounts', where: 'Medical', what: 'Every doctor’s account, invoice and quote for the whole family - what is owed and when, what medical aid and gap cover paid back, follow-ups, and where the proof is kept.' },
+  { name: 'The SARS tax year', where: 'Medical › Tax year', what: 'Everything from 1 March to the end of February, per person: what was paid, what came back, out of pocket, and what is still missing proof - so nothing is left out.' },
   { name: 'Your Drive folder', where: 'Settings › Google Drive', what: 'Everything saved as files in your own Google Drive, shared across your laptops, with backups and version history.' },
   { name: 'Timer and music', where: 'Chores › Start', what: 'A countdown for the chore you are doing, with optional music from your own files. Done works whenever you are ready.' },
   { name: 'Family meeting', where: 'Tickets › Family meeting', what: 'Appreciations first, then the concerns you choose - ending in a decision, a task, later, or closed.' },
