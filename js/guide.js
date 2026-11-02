@@ -32,6 +32,7 @@ export const SEARCH_ALIASES = {
   variation: ['version', 'versions', 'variant', 'alteration', 'different way', 'swap', 'sauce', 'cheese sauce', 'without', 'instead of'],
   'shopping list': ['groceries', 'shop', 'buy', 'ingredients'],
   trip: ['holiday', 'vacation', 'travel', 'packing', 'itinerary'],
+  track: ['temperature', 'fever', 'log', 'sleep', 'nappies', 'wet nappy', 'poo', 'vomit', 'doctor', 'record', 'every half hour', 'symptoms', 'rash', 'potty'],
   'screen time': ['tv', 'screens', 'shows', 'ipad', 'tablet', 'bluey', 'paw patrol', 'ms rachel', 'how long', 'cartoons', 'youtube'],
   activities: ['play', 'game', 'bored', 'something to do', 'fort', 'sprinkler', 'rainy day', 'rules', 'kids activity', 'entertain'],
   parenting: ['baby', 'toddler', 'child', 'partner', 'agree', 'dummy', 'formula', 'breastfeeding', 'co-sleeping', 'fever', 'choking', 'sunscreen', 'honey', 'monitor', 'milestones', 'grandparents', 'house rules', 'pregnant', 'due date'],
@@ -280,6 +281,12 @@ export const HOWTOS = [
     'Press Decide: the decision opens in Decisions with the ages it applies to. Fill in "What we agree" and it counts as agreed.',
     'Add your own topics, decisions or sections - the starting ones are only a starting point.',
   ] },
+  { id: 'track', title: 'Track a concern for the doctor', steps: [
+    'Open Parenting › Track, tap what to track (Fever, Tummy bug, Sleep…) and the child, then Start.',
+    'Each time, tap the values and Log - the time is now unless you change it. Fever asks for a reading every hour; the app says when the next is due.',
+    'For the doctor: every entry, a graph of the temperature, each day’s totals, and a summary to Copy.',
+    'Our own: write what to log, one per line, e.g. "Pain: choice None, Some, A lot". Stop when it is over.',
+  ] },
   { id: 'screentime', title: 'Keep an eye on screen time', steps: [
     'Agree a rule first: Parenting › Screen time › Decide - the ages it is for and, if you like, the minutes a day and the lowest show score you are happy with.',
     'After watching, press Log: who, what, about how long, and how they were afterwards. A few taps.',
@@ -474,6 +481,7 @@ export const FAQS = [
 
 export const FEATURES = [
   { name: 'Parenting', where: 'Parenting', what: 'Parenting topics as options, trade-offs and the science, with how sure each claim is. Each partner’s view side by side; what you agree goes to Decisions for the ages it applies to, and the dashboard shows what is agreed, in force now and coming up.' },
+  { name: 'Track', where: 'Parenting', what: 'Start tracking a concern for a child - a temperature every half hour, wees and poos, sleep - with a time and value each time, and a summary for the doctor.' },
   { name: 'Screen time', where: 'Parenting', what: 'A quick log of what was watched and how it left them, each child’s week beside the minutes you agreed, and shows ranked on your own values - each parent rating separately.' },
   { name: 'Ideas and Play now', where: 'Parenting', what: 'Activities and games by age, weather, setup time, how long they last and what they cost - planned with time to think, found in a few taps when you have none, and scored afterwards by the children and by you.' },
   { name: 'Decisions for an age', where: 'Decisions', what: 'A decision can apply from one age to another - in force while a child in the family is that age. Filter by Parenting or by topic.' },

@@ -696,6 +696,22 @@ note; claims not settled; and paid accounts never sent to medical aid (they will
 scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
 the year of its own date, not of each payment (marked to split by payment day if that matters).
 
+**D-100 Track: scenario trackers for a concern (owner, 2026-11-02).** A Track door in Parenting. When
+something worries you, pick a scenario and a child and Start; log a time (now unless changed) and the
+values in a tap or two; Stop when it is over. Several can run at once.
+- **Scenarios** (a starting point - removed, changed, or your own written one field per line, e.g.
+  "Pain: choice None, Some, A lot"): Fever (temperature, how they seem, medicine and dose, drinking;
+  a reading every hour), Tummy bug (wees, poos, vomiting, drinks, eating), Sleep, Eating, Rash (where,
+  spreading, fades under a pressed glass, itch, where the photo is), Potty, Behaviour.
+- **Fields**: a number with a unit, yes or no, one of a few, or a note.
+- **For the doctor**: every entry, a small graph of each number, each day's totals ("Drinking: 1",
+  "Temperature: highest 38.9 °C") and a summary to Copy - facts only: highest and last with times,
+  how many times yes, counts of each choice, notes with their times.
+- **Reminders** ("a reading every 30 minutes") show in the app and on the Parenting tile while it is
+  open - "next reading due now". Phone notifications would need the app installed; not in this step.
+- **Times are local clock times**, as they were when logged; the summary counts calendar days.
+- Fever, Tummy bug and Rash keep "If you are wondering whether to go, go", and link to the topic.
+
 **D-099 Play now: sliders, and fun ways to choose (owner, 2026-11-02).** The fixed 15 / 30 / 60
 minutes become three sliders, each showing its value as it moves and re-counting on release: **Set up
 in at most** (0-30 min), **Keeps them busy at least** (5-90 min) and **Worth the setup** (busy at least

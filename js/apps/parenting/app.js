@@ -15,19 +15,21 @@ import {
 import { activitiesOf, planned, plannedOn } from './activities.js';
 import { activitiesCol, playScreen, ideasScreen, ideaScreen, ideaEdit } from './play.js';
 import { loadScreen, screenHome, logScreen, showsScreen, showScreen, showEdit, todayMinutes } from './screens.js';
+import { loadTrack, trackHome, trackerScreen, scenarioEdit, trackNote } from './track.js';
 
 const topicsCol = (hub) => hub.data.collection('topics', { summary: (r) => normaliseRecord(r), text: (r) => [r.title, r.question, r.summary].join(' '), prefix: 'pt' });
 const sectionsCol = (hub) => hub.data.collection('sections', { summary: (r) => normaliseSection(r), prefix: 'ps' });
 const AGES = [-6, -3, -1, 0, 1, 2, 3, 4, 6, 9, 12, 18, 24, 36, 48, 60, 72, 96, 120, 144, 168, 192, 216];
 
 const load = (hub) => hub.use('all', async () => {
-  const [t, s, d, a, sc] = await Promise.all([
+  const [t, s, d, a, sc, tr] = await Promise.all([
     topicsCol(hub).list({ limit: 100000 }), sectionsCol(hub).list({ limit: 1000 }),
     hub.data.installed('decisions') ? hub.data.of('decisions', 'decisions').list({ limit: 100000 }) : { items: [] },
     activitiesCol(hub).list({ limit: 100000 }),
     loadScreen(hub),
+    loadTrack(hub),
   ]);
-  return { records: t.items, ownSections: s.items.map(normaliseSection), decisions: d.items, activities: activitiesOf(a.items), screen: sc };
+  return { records: t.items, ownSections: s.items.map(normaliseSection), decisions: d.items, activities: activitiesOf(a.items), screen: sc, track: tr };
 });
 const sectionsOf = (data) => [...SECTIONS, ...data.ownSections];
 
@@ -35,6 +37,8 @@ const sectionsOf = (data) => [...SECTIONS, ...data.ownSections];
 export function tileNote(hub) {
   const r = load(hub);
   if (!r.data) return null;
+  const due = trackNote(r.data.track, kidsOf(hub.people.list(), hub.today()));
+  if (due) return due;
   const today = plannedOn(r.data.activities, hub.today());
   if (today.length) return `Planned today: ${today[0].name}`;
   return noteFor(dashboard(topicsOf(r.data.records), r.data.decisions, kidsOf(hub.people.list(), hub.today()), sectionsOf(r.data)));
@@ -51,6 +55,10 @@ export function render(hub, route) {
   if (route.sub === 'idea') return ideaScreen(hub, r.data.activities, route.rest[0], ctx.kids);
   if (route.sub === 'idea-edit') return ideaEdit(hub, r.data.activities, route.rest[0]);
   if (route.sub === 'idea-new') return ideaEdit(hub, r.data.activities, null);
+  if (route.sub === 'track') return trackHome(hub, r.data.track, ctx.kids);
+  if (route.sub === 'tracker') return trackerScreen(hub, r.data.track, route.rest[0], ctx.kids);
+  if (route.sub === 'scenario-new') return scenarioEdit(hub, r.data.track, null);
+  if (route.sub === 'scenario-edit') return scenarioEdit(hub, r.data.track, route.rest[0]);
   if (route.sub === 'screen') return screenHome(hub, r.data.screen, ctx.kids, r.data.decisions);
   if (route.sub === 'screen-log') return logScreen(hub, r.data.screen, ctx.kids, r.data.decisions);
   if (route.sub === 'shows') return showsScreen(hub, r.data.screen, ctx.kids, r.data.decisions);
@@ -79,6 +87,7 @@ function doorsScreen(ctx) {
         [dash.worthAgreeing.length ? `${dash.worthAgreeing.length} worth agreeing now` : null, dash.comingUp.length ? `${dash.comingUp.length} coming up` : null, `${dash.agreed} of ${dash.total} agreed`].filter(Boolean).join(' · '), 'door:agree'),
       door('ideas', 'Ideas', 'Time to think: add activities and games, plan a day for one, adjust the rules.', soon.length ? `${soon.length} planned` : `${ctx.data.activities.length} ideas`, 'door:ideas'),
       door('play', 'Play now', 'No time to think: a few taps and something to do.', today.length ? `Planned today: ${today[0].name}` : null, 'door:play'),
+      door('track', 'Track', 'Something worrying you? Track it for a few days - for the doctor, or just to see.', trackNote(ctx.data.track, kids), 'door:track'),
       door('screen', 'Screen time', 'Notice, not judge: the week beside what you agreed, and shows ranked on your values.', (() => { const m = todayMinutes(ctx.data.screen.logs, hub.today()); return m ? `${m} min logged today` : null; })(), 'door:screen'),
     ]),
   ]);
