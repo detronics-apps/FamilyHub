@@ -82,7 +82,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'decisions', section: 'decisions', name: 'Decisions', version: '1.3.0',
+      fhManifest: 1, id: 'decisions', section: 'us', name: 'Decisions', version: '1.4.0',
       description: 'Agreements and experiments: try something, look back, adapt.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'list', title: 'Decisions' }, { id: 'item', title: 'Decision', nav: false }, { id: 'new', title: 'New decision', nav: false }],
@@ -94,6 +94,38 @@ const RAW = [
       permissions: ['data:own', 'people:read', 'notify', 'data:tickets:read', 'data:tasks:read', 'data:parenting:read', 'people:ages', 'household:creators'],
     },
     load: () => import('./decisions/app.js'),
+  },
+  {
+    manifest: {
+      fhManifest: 1, id: 'dates', section: 'us', name: 'Dates', version: '1.0.0',
+      description: 'Time for the two of you: date ideas that fit tonight and your own rule on who looks after the children, planned for a day and scored by you both.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
+      screens: [{ id: 'pick', title: 'Dates' }, { id: 'ideas', title: 'Date ideas' }, { id: 'date', title: 'Date', nav: false }, { id: 'edit', title: 'Edit a date', nav: false }, { id: 'new', title: 'A date idea', nav: false }],
+      modes: [
+        { mode: 'do', screen: 'pick', label: 'Find a date for tonight' },
+        { mode: 'plan', screen: 'ideas', label: 'Plan a date' },
+      ],
+      data: { collections: [{ name: 'dates', schema: 1 }] },
+      permissions: ['data:own', 'people:read', 'people:ages', 'notify', 'data:decisions:read', 'household:creators'],
+    },
+    load: () => import('./dates/app.js'),
+    tile: true,   // the next planned date under the tile
+  },
+  {
+    manifest: {
+      fhManifest: 1, id: 'goals', section: 'us', name: 'Goals', version: '1.0.0',
+      description: 'Dreams and goals the two of you share: why each matters, by when, the next small step - linked to its Finance goal or trip.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
+      screens: [{ id: 'list', title: 'Goals' }, { id: 'goal', title: 'Goal', nav: false }, { id: 'edit', title: 'Edit a goal', nav: false }, { id: 'new', title: 'A goal or dream', nav: false }],
+      modes: [
+        { mode: 'plan', screen: 'list', label: 'Look at the goals we share' },
+        { mode: 'note', screen: 'new', label: 'Add a dream or goal' },
+      ],
+      data: { collections: [{ name: 'goals', schema: 1 }] },
+      permissions: ['data:own', 'people:read', 'notify', 'data:finance:read', 'data:holidays:read'],
+    },
+    load: () => import('./goals/app.js'),
+    tile: true,
   },
   {
     manifest: {

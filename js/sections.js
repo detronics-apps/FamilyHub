@@ -12,7 +12,7 @@ export const SECTIONS = [
   { id: 'exercise', name: 'Exercise', purpose: 'Activity, flexible weekly plans, and what the family did together.' },
   { id: 'tickets', name: 'Tickets', purpose: 'Capture a concern, idea or appreciation - talk about it at the family meeting.' },
   { id: 'principles', name: 'Principles', purpose: 'Family values and agreements, with the reasons behind them.' },
-  { id: 'decisions', name: 'Decisions', purpose: 'Agreements and experiments: try something, look back, adapt.' },
+  { id: 'us', name: 'Us', purpose: 'The two of you: what you decide together, dates, and the goals you share.' },
   { id: 'holidays', name: 'Holidays', purpose: 'Big trips to plan, and places nearby to go on a free day.' },
   { id: 'finance', name: 'Finance', purpose: 'Budgets, goals, and what big decisions really cost - with the assumptions in plain view.' },
   { id: 'medical', name: 'Medical', purpose: 'Doctors’ accounts for the whole family: what is owed, what medical aid and gap cover paid back, and where the proof is.' },

@@ -217,3 +217,14 @@ export const setView = (views, url, me, view, note = '') => {
   const v = normaliseViews(views);
   return normaliseViews({ ...v, [url]: { ...(v[url] ?? {}), [me]: { view, note } } });
 };
+
+/**
+ * Who may look after the children now (D-102): the strictest agreed childcare rule in force for
+ * any child - 'us' (only the parents) before 'family', 'trusted', 'daycare'; null when none agreed.
+ */
+export function careRule(decisions, kids) {
+  const order = ['us', 'family', 'trusted', 'daycare'];
+  const on = decisions.filter((d) => d.source === 'parenting:childcare' && d.careBy && (d.hasAgreement || d.agreement)
+    && (!kids.length || timing(d.ageFrom ?? null, d.ageTo ?? null, kids).when === 'now'));
+  return on.length ? on.map((d) => d.careBy).sort((a, b) => order.indexOf(a) - order.indexOf(b))[0] : null;
+}

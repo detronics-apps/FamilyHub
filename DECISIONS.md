@@ -696,6 +696,24 @@ note; claims not settled; and paid accounts never sent to medical aid (they will
 scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
 the year of its own date, not of each payment (marked to split by payment day if that matters).
 
+**D-102 Us: Decisions, Dates and Goals; the childcare rule shapes the app (owner, 2026-11-02).** A
+homepage section **Us** for the two of you. Nothing is hidden from each other and nothing is
+duplicated: Tickets stays on the homepage for the whole family; **Decisions** moves into Us (the
+decisions you make as the parents - same app, same links from Tickets and Parenting).
+- **Who looks after the children** - a written Parenting topic laying out the options (only us,
+  family only, people we trust, daycare or a nanny) without judging any. Its decision records the
+  answer as **Who may look after the children**, for the ages it applies to. The app follows it: with
+  "Only us, always" in force, nothing ever asks about a babysitter and no date needing one is offered
+  (the owner's rule: one of the two of them is with the children at all times - their responsibility).
+- **Dates** - ideas with time to get ready, time together, cost, at home or out, energy (a tired
+  evening), and **The children**: asleep at home, with us, or (only when your rule allows) someone else
+  has them. A slider for the time you have; Spin, Surprise, This or that and Eeny meeny shared with Play
+  now (one chooser, D-099); Plan for a day; Shop; Done, where each of you scores it. 18 starting ideas,
+  15 of them needing nobody else.
+- **Goals** - dreams and goals you share: why it matters, the next small step, by when, and Someday /
+  Planning / Doing / Done. Money stays in Finance and trips in Holidays: a goal links to its Finance
+  goal (showing "R12 000 of R40 000") or trip, and copies nothing.
+
 **D-101 Creators and videos on activities, topics and decisions (owner, 2026-11-02).** The D-091
 creators list and video links, reused: an activity's (Ideas › Edit, shown on its card in Play now,
 to watch before setting it up), and on every Parenting topic and every decision a Videos panel. Each

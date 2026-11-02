@@ -32,6 +32,8 @@ export const SEARCH_ALIASES = {
   variation: ['version', 'versions', 'variant', 'alteration', 'different way', 'swap', 'sauce', 'cheese sauce', 'without', 'instead of'],
   'shopping list': ['groceries', 'shop', 'buy', 'ingredients'],
   trip: ['holiday', 'vacation', 'travel', 'packing', 'itinerary'],
+  dates: ['date night', 'date', 'romance', 'couple', 'spouse', 'husband', 'wife', 'partner', 'time together', 'us'],
+  goals: ['dreams', 'bucket list', 'together', 'plans', 'someday', 'goal'],
   track: ['temperature', 'fever', 'log', 'sleep', 'nappies', 'wet nappy', 'poo', 'vomit', 'doctor', 'record', 'every half hour', 'symptoms', 'rash', 'potty'],
   'screen time': ['tv', 'screens', 'shows', 'ipad', 'tablet', 'bluey', 'paw patrol', 'ms rachel', 'how long', 'cartoons', 'youtube'],
   activities: ['play', 'game', 'bored', 'something to do', 'fort', 'sprinkler', 'rainy day', 'rules', 'kids activity', 'entertain'],
@@ -481,6 +483,8 @@ export const FAQS = [
 
 export const FEATURES = [
   { name: 'Parenting', where: 'Parenting', what: 'Parenting topics as options, trade-offs and the science, with how sure each claim is. Each partner’s view side by side; what you agree goes to Decisions for the ages it applies to, and the dashboard shows what is agreed, in force now and coming up.' },
+  { name: 'Us', where: 'Home', what: 'The two of you: Decisions you make as the parents, Dates that fit tonight and your own rule on who looks after the children, and the Goals you share.' },
+  { name: 'Who looks after the children', where: 'Parenting › Decide together', what: 'Agree who, if anyone, looks after the children and from what age. The app follows it - with "Only us", nothing ever asks about a babysitter.' },
   { name: 'Videos to weigh up', where: 'Parenting and Decisions', what: 'Add the creators and videos that explain an activity, a topic or a decision. On a topic or decision, each of you says whether you agree with each video - the other’s view shows once you have given yours.' },
   { name: 'Track', where: 'Parenting', what: 'Start tracking a concern for a child - a temperature every half hour, wees and poos, sleep - with a time and value each time, and a summary for the doctor.' },
   { name: 'Screen time', where: 'Parenting', what: 'A quick log of what was watched and how it left them, each child’s week beside the minutes you agreed, and shows ranked on your own values - each parent rating separately.' },

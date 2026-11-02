@@ -7,12 +7,13 @@ import { confirmAction, modal } from '../../ui/common.js';
 import { recordForm, saveRecord } from '../kit.js';
 import { sendHref } from '../shopping/logic.js';
 import { linksControl, linksView } from '../../ui/links-editor.js';
+import { chooser } from './choose.js';
 import { rangeLabel, ageLabel } from './logic.js';
-import { WEATHER, PLACES, INVOLVE, normaliseActivity, toBuy, costOf, scores, pick, planned, plannedOn, changeRules, logDone, shopSend, payoff, rank, wheel, landOn, thisOrThat } from './activities.js';
+import { WEATHER, PLACES, INVOLVE, normaliseActivity, toBuy, costOf, scores, pick, planned, plannedOn, changeRules, logDone, shopSend, payoff, rank } from './activities.js';
 
 export const activitiesCol = (hub) => hub.data.collection('activities', { summary: (r) => normaliseActivity(r), text: (r) => [r.name, ...(r.steps ?? [])].join(' '), prefix: 'pa' });
 const AGES = [0, 6, 9, 12, 18, 24, 30, 36, 48, 60, 72, 96, 120, 144, 168, 192, 216];
-const rand = (x) => `R${Math.round(x).toLocaleString('en-ZA').replace(/,/g, ' ')}`;
+const rand = (x) => `R${Math.round(x).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}`;
 const save = (hub, a) => saveRecord(hub, activitiesCol(hub), normaliseActivity({ ...a, id: `pa_${a.activityId}` }));
 
 /** "Set up 10 min · keeps them busy about 45 min · R40 to buy". */
@@ -68,90 +69,12 @@ function doneDialog(hub, a, kids) {
 
 // Play now's answers, kept while the app is open (D-099: sliders, and ways to choose).
 const ask = { kids: null, place: null, weather: null, us: null, buy: false, maxSetup: 10, minLasts: 15, minPayoff: 0, mode: 'list', shown: 3, off: new Set(), chosen: null, queue: null, turn: 0, rolling: false };
-const MODES = [['list', 'List'], ['spin', 'Spin'], ['surprise', 'Surprise'], ['this', 'This or that'], ['eeny', 'Eeny meeny']];
-const calm = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-const shuffle = (xs) => { const a = [...xs]; for (let i = a.length - 1; i > 0; i -= 1) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-
 /** A slider whose figure moves as you slide; the list is worked out again when you let go. */
 function slider(hub, key, label, { min, max, step = 1, show }) {
   const out = el('strong', { text: show(ask[key]) });
   return el('label', { class: 'stack', style: { gap: '4px' } }, [el('span', {}, [`${label}: `, out]),
     el('input', { type: 'range', min, max, step, value: ask[key], 'data-field': `play-${key}`, 'aria-label': label, style: { width: '100%', accentColor: 'var(--accent-strong)' },
       on: { input: (e) => { out.textContent = show(Number(e.target.value)); }, change: (e) => { ask[key] = Number(e.target.value); ask.chosen = null; ask.queue = null; hub.render(); } } })]);
-}
-
-/** The wheel: a slice per activity, turning to where the spin lands. */
-function wheelPanel(hub, found, who) {
-  const on = found.filter((a) => !ask.off.has(a.activityId)).slice(0, 8);
-  const slices = wheel(on);
-  const R = 140; const C = 150;
-  const pt = (t, r = R) => [C + r * Math.sin(t * 2 * Math.PI), C - r * Math.cos(t * 2 * Math.PI)];
-  const fills = ['var(--accent-strong)', 'var(--ok)', 'var(--warn)', 'var(--text-dim)'];
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const mk = (tag, attrs, kids = []) => { const n = document.createElementNS(svgNS, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); n.append(...kids); return n; };
-  const g = mk('g', { style: `transform-origin: ${C}px ${C}px; transform: rotate(${ask.turn}deg)` }, slices.map((s, i) => {
-    const [x1, y1] = pt(s.from); const [x2, y2] = pt(s.to); const mid = (s.from + s.to) / 2; const [tx, ty] = pt(mid, R * 0.62);
-    const name = s.a.name.length > 14 ? `${s.a.name.slice(0, 13)}…` : s.a.name;
-    return mk('g', {}, [
-      mk('path', { d: slices.length === 1 ? `M ${C} ${C - R} A ${R} ${R} 0 1 1 ${C - 0.01} ${C - R} Z` : `M ${C} ${C} L ${x1} ${y1} A ${R} ${R} 0 ${s.to - s.from > 0.5 ? 1 : 0} 1 ${x2} ${y2} Z`, fill: fills[i % fills.length], stroke: 'var(--bg)', 'stroke-width': 2 }),
-      mk('text', { x: tx, y: ty, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: 'var(--bg)', 'font-size': 12, 'font-weight': 700, transform: `rotate(${mid * 360 - 90 + (mid > 0.5 ? 180 : 0)} ${tx} ${ty})` }, [name]),
-    ]);
-  }));
-  const svg = mk('svg', { viewBox: '0 0 300 320', role: 'img', 'aria-label': 'Activity wheel', style: 'width: 100%; max-width: 320px; display: block; margin: 0 auto' }, [g, mk('path', { d: `M ${C - 12} 2 L ${C + 12} 2 L ${C} 26 Z`, fill: 'var(--text)' })]);
-  const spin = () => {
-    if (!slices.length || ask.rolling) return;
-    const hit = landOn(slices, Math.random());
-    const at = (hit.from + hit.to) / 2;
-    const target = ask.turn - (ask.turn % 360) + 360 * 5 + (360 - at * 360);
-    ask.chosen = null; ask.rolling = true;
-    const done = () => { ask.turn = target % 360; ask.rolling = false; ask.chosen = hit.a.activityId; hub.render(); };
-    if (calm()) { done(); return; }
-    g.style.transition = 'transform 3.2s cubic-bezier(0.15, 0.85, 0.25, 1)';
-    requestAnimationFrame(() => { g.style.transform = `rotate(${target}deg)`; });
-    setTimeout(done, 3300);
-  };
-  return el('div', { class: 'panel stack', 'data-field': 'play-wheel' }, [
-    on.length ? svg : el('p', { class: 'muted', text: 'Nothing on the wheel - tick some below.' }),
-    el('div', { class: 'row', style: { justifyContent: 'center' } }, [el('button', { class: 'btn btn-primary', type: 'button', text: 'Spin', 'data-field': 'play-spin', disabled: !on.length, on: { click: spin } })]),
-    el('details', { class: 'more' }, [el('summary', { text: `On the wheel (${on.length})` }),
-      el('p', { class: 'small muted', text: 'Untick any you do not want; up to 8 fit.' }),
-      ...found.slice(0, 16).map((a) => el('label', { class: 'checkline' }, [el('input', { type: 'checkbox', checked: !ask.off.has(a.activityId), on: { change: (e) => { if (e.target.checked) ask.off.delete(a.activityId); else ask.off.add(a.activityId); hub.render(); } } }), a.name]))]),
-  ]);
-}
-
-/** This or that: two big cards; the winner stays until one is left. */
-function thisOrThatPanel(hub, found) {
-  if (!ask.queue) ask.queue = shuffle(found.map((a) => a.activityId)).slice(0, 8);
-  const byId = (id) => found.find((a) => a.activityId === id);
-  if (ask.queue.length < 2) { if (ask.queue[0]) ask.chosen = ask.queue[0]; return null; }
-  const card = (id) => el('button', { class: 'panel', type: 'button', 'data-field': `tot:${id}`, style: { flex: '1 1 140px', minHeight: '8rem', fontSize: '1.3em', fontWeight: 700, cursor: 'pointer' },
-    on: { click: () => { ask.queue = thisOrThat(ask.queue, id); if (ask.queue.length === 1) ask.chosen = id; hub.render(); } } }, [byId(id)?.name ?? '']);
-  return el('div', { class: 'stack', 'data-field': 'play-tot' }, [
-    el('p', { class: 'small muted', style: { margin: 0 }, text: `Read them out - they tap the one they want. ${ask.queue.length - 1} more round${ask.queue.length === 2 ? '' : 's'}.` }),
-    el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'stretch' } }, [card(ask.queue[0]), el('span', { style: { alignSelf: 'center' }, text: 'or' }), card(ask.queue[1])]),
-  ]);
-}
-
-/** Eeny meeny: the cards light up in turn, slowing down, until one stays lit. */
-function eenyPanel(hub, found) {
-  const xs = found.slice(0, 8);
-  const cards = xs.map((a) => el('div', { class: 'panel', 'data-field': `eeny:${a.activityId}`, style: { flex: '1 1 140px', margin: 0, fontWeight: 700, transition: 'background 0.1s' }, text: a.name }));
-  const go = () => {
-    if (!xs.length || ask.rolling) return;
-    const end = Math.floor(Math.random() * xs.length);
-    if (calm()) { ask.chosen = xs[end].activityId; hub.render(); return; }
-    const steps = xs.length * 3 + end; let i = 0; ask.rolling = true;
-    const tick = () => {
-      cards.forEach((c, j) => { c.style.background = j === i % xs.length ? 'var(--accent-soft)' : ''; });
-      if (i >= steps) { ask.rolling = false; setTimeout(() => { ask.chosen = xs[end].activityId; hub.render(); }, 500); return; }
-      i += 1; setTimeout(tick, 70 + (i / steps) ** 3 * 380);
-    };
-    tick();
-  };
-  return el('div', { class: 'stack', 'data-field': 'play-eeny' }, [
-    el('div', { class: 'row', style: { gap: '6px' } }, cards),
-    el('div', {}, [el('button', { class: 'btn btn-primary', type: 'button', text: 'Go', 'data-field': 'play-eeny-go', on: { click: go } })]),
-  ]);
 }
 
 export function playScreen(hub, list, kids) {
@@ -164,16 +87,7 @@ export function playScreen(hub, list, kids) {
   const who = kids.filter((k) => ask.kids.has(k.id));
   const found = pick(list, { kids: who.map((k) => k.months), place: ask.place, weather: ask.weather, buy: ask.buy, maxSetup: ask.maxSetup, minLasts: ask.minLasts, minPayoff: ask.minPayoff || null, us: ask.us });
   const todays = plannedOn(list, today);
-  const chosen = ask.chosen ? list.find((a) => a.activityId === ask.chosen) : null;
-  const surprise = () => { const pool = found.filter((a) => a.activityId !== ask.chosen); const a = pool[Math.floor(Math.random() * pool.length)] ?? found[0]; ask.chosen = a?.activityId ?? null; hub.render(); };
-  let choose;
-  if (!found.length) choose = el('div', { class: 'panel empty' }, [el('p', { text: 'Nothing fits all of that. Slide or untick something above.' })]);
-  else if (ask.mode === 'spin') choose = wheelPanel(hub, found, who);
-  else if (ask.mode === 'surprise') choose = el('div', {}, [el('button', { class: 'btn btn-primary', type: 'button', text: chosen ? 'Another' : 'Surprise me', 'data-field': 'play-surprise', on: { click: surprise } })]);
-  else if (ask.mode === 'this') choose = thisOrThatPanel(hub, found);
-  else if (ask.mode === 'eeny') choose = eenyPanel(hub, found);
-  else choose = el('div', { class: 'stack', 'data-field': 'play-found' }, [...found.slice(0, ask.shown).map((a) => doCard(hub, a, who)),
-    found.length > ask.shown ? el('div', {}, [el('button', { class: 'btn', type: 'button', text: 'More', on: { click: () => { ask.shown += 3; hub.render(); } } })]) : null]);
+  const c = chooser(hub, found, ask, { idOf: (a) => a.activityId, card: (a, big) => doCard(hub, a, who, { big }), prefix: 'play', thisHelp: 'Read them out - they tap the one they want.' });
   return el('section', { class: 'stack', 'aria-label': 'Play now' }, [
     el('a', { href: hub.href(), class: 'small', text: '‹ Parenting' }),
     el('h1', { text: 'Play now', style: { margin: 0 } }),
@@ -189,10 +103,9 @@ export function playScreen(hub, list, kids) {
     ]),
     chips('Buy anything?', [[false, 'Only what we have'], [true, 'Can buy']], 'buy', 'play-buy'),
     el('p', { style: { margin: 0, fontWeight: 600 }, 'data-field': 'play-count', text: `${found.length} fit${found.length === 1 ? 's' : ''}` }),
-    found.length > 1 ? chips('How to choose', MODES, 'mode', 'play-mode') : null,
-    choose,
-    chosen && ask.mode !== 'list' ? el('div', { class: 'stack', 'data-field': 'play-chosen' }, [doCard(hub, chosen, who, { big: true }),
-      el('div', {}, [el('button', { class: 'btn btn-quiet', type: 'button', text: 'Choose again', on: { click: () => { ask.chosen = null; ask.queue = null; hub.render(); } } })])]) : null,
+    found.length ? c.modes : null,
+    found.length ? c.panel : el('div', { class: 'panel empty' }, [el('p', { text: 'Nothing fits all of that. Slide or untick something above.' })]),
+    c.chosen,
   ]);
 }
 

@@ -7,7 +7,7 @@ import { fmtDay, addDays } from '../../dates.js';
 import { loading, failure, recordForm, saveRecord, nameOf } from '../kit.js';
 import {
   normaliseDecision, decisionSummary, decisionText, stage, startTrial, addObservation, recordOutcome, revise,
-  STAGES, STAGE_LABEL, OUTCOMES, categoryOf, CATEGORY_LABEL,
+  STAGES, STAGE_LABEL, OUTCOMES, categoryOf, CATEGORY_LABEL, CARE_LABEL,
 } from './logic.js';
 import { STARTER } from '../parenting/content.js';
 import { kidsOf, timing, rangeLabel, ageLabel } from '../parenting/logic.js';
@@ -125,6 +125,7 @@ function itemScreen(hub, id) {
       cycle(st),
       d.source?.startsWith('parenting:') ? el('p', { class: 'small' }, ['From Parenting: ', el('a', { href: `#/parenting/topic/${encodeURIComponent(d.source.slice(10))}`, text: parentingTopic(hub, d.source.slice(10)).data?.title ?? 'the topic' })]) : null,
       appliesLine(hub, d) ? el('p', { class: 'small', 'data-field': 'dec-applies', text: `Applies: ${appliesLine(hub, d)}.` }) : null,
+      d.careBy ? el('p', { class: 'small', text: `Who looks after the children: ${CARE_LABEL[d.careBy]}.` }) : null,
       d.screenMinutes != null || d.screenMinScore != null ? el('p', { class: 'small', text: `Screen time: ${[d.screenMinutes != null ? `up to ${d.screenMinutes} minutes a day` : null, d.screenMinScore != null ? `only shows scoring ${d.screenMinScore} or more` : null].filter(Boolean).join('; ')}.` }) : null,
       sourceTicket?.data ? el('p', { class: 'small' }, ['Started from a ticket: ', el('a', { href: `#/tickets/item/${encodeURIComponent(sourceTicket.data.id)}`, text: (sourceTicket.data.text || '').split('\n')[0].slice(0, 80) })]) : null,
       block('What is happening', d.issue),
@@ -253,6 +254,7 @@ function editScreen(hub, id, from = null) {
         { key: 'title', label: 'What is it about?', required: true, placeholder: 'e.g. Screen-time transitions' },
         { key: 'issue', label: 'What is happening', type: 'textarea' },
         { key: 'agreement', label: parenting ? 'What we agree' : 'What we agree to try', type: 'textarea', hint: 'Can stay empty while you talk it through.' },
+        record.source === 'parenting:childcare' ? { key: 'careBy', label: 'Who may look after the children', type: 'select', options: [['', 'Not set'], ...Object.entries(CARE_LABEL)], hint: 'The app follows this: with "Only us", nothing ever asks about a babysitter.' } : null,
         record.source === 'parenting:screens' ? { key: 'screenMinutes', label: 'Screen time a day, at most (minutes)', type: 'number', hint: 'Empty for none set. Screen time shows each day against it.' } : null,
         record.source === 'parenting:screens' ? { key: 'screenMinScore', label: 'Only shows scoring at least (out of 5)', type: 'number', placeholder: 'e.g. 3.5', hint: 'Your own scores under Screen time › Shows. Empty for no minimum.' } : null,
         ageField('ageFrom', 'Applies from the age of', 'Any age'),

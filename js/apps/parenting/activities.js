@@ -111,8 +111,10 @@ export function pick(list, { kids = [], place = null, weather = null, minutes = 
  * slice, from the scores), so a favourite comes up a little more often. Returns [{ a, from, to }]
  * in turns (0-1).
  */
-export function wheel(list) {
-  const w = list.map((a) => { const s = scores(a); const avg = s.kid != null || s.parent != null ? ((s.kid ?? s.parent) + (s.parent ?? s.kid)) / 2 : 3; return Math.max(0.6, Math.min(1.4, 1 + (avg - 3) / 5)); });
+export const loved = (a) => { const s = scores(a); return s.kid != null || s.parent != null ? ((s.kid ?? s.parent) + (s.parent ?? s.kid)) / 2 : null; };
+/** @param weightOf  how loved each is, 1-5 (null: not tried) - an activity's scores by default */
+export function wheel(list, weightOf = loved) {
+  const w = list.map((a) => { const avg = weightOf(a) ?? 3; return Math.max(0.6, Math.min(1.4, 1 + (avg - 3) / 5)); });
   const total = w.reduce((s, x) => s + x, 0) || 1;
   let at = 0;
   return list.map((a, i) => { const from = at; at += w[i] / total; return { a, from, to: at }; });

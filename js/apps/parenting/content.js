@@ -262,6 +262,20 @@ const WRITTEN = [
     align: ['What we want a monitor to do - and whether it would change what we do.', 'That a monitor never replaces safe sleep.'],
   },
   {
+    id: 'childcare', v: 1, section: 'decide', title: 'Who looks after the children', ages: { from: 0, to: 216 },
+    question: 'Will anyone other than the two of us look after the children - and if so, who, and from what age?',
+    summary: 'Families answer this very differently, and each answer has its reasons. Some keep it to the parents at all times, as part of the responsibility they hold for their children’s safety and the influence they want to be; others share care with family, trusted people or daycare. Whatever you agree here, the app follows it - for instance, Dates never asks about a babysitter if the answer is only the two of you.',
+    options: [
+      { name: 'Only us, always', strengths: ['The responsibility stays with the parents', 'The influence on the children is yours', 'No one else to brief or check'], weaknesses: ['Time as a couple has to fit around the children', 'Both of you are needed for every outing without them'], fits: 'Families who see care as the parents’ own responsibility' },
+      { name: 'Family only', strengths: ['People who know and love them', 'Shared values, often'], weaknesses: ['Their rules may differ from yours - see Grandparents'], timing: 'Often from a set age' },
+      { name: 'People we trust', strengths: ['Time out together', 'Children learn to trust other adults'], weaknesses: ['Finding and briefing someone', 'Less control over what happens'] },
+      { name: 'Daycare or a nanny', strengths: ['Lets both parents work', 'Structured days, other children'], weaknesses: ['Cost', 'Many hours in someone else’s care'], timing: 'See Daycare' },
+    ],
+    changes: ['The children’s ages.', 'Work.', 'Family nearby, and how aligned they are with you.', 'What each of you holds as the parents’ responsibility.'],
+    align: ['Who, if anyone, and from what age.', 'What happens in an emergency when one of you cannot be there.'],
+    family: ['Our rule on who looks after the children, and why - so nobody offers and is hurt by the answer.'],
+  },
+  {
     id: 'predelivery', v: 1, section: 'ready', title: 'Before the baby arrives', ages: { from: -4, to: 1 }, kind: 'checklist',
     question: 'What is easier to sort out before the birth than after it?',
     summary: 'A starting list - tick what is done, remove what does not apply and add your own.',
