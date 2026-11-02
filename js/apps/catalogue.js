@@ -82,7 +82,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'decisions', section: 'decisions', name: 'Decisions', version: '1.0.0',
+      fhManifest: 1, id: 'decisions', section: 'decisions', name: 'Decisions', version: '1.1.0',
       description: 'Agreements and experiments: try something, look back, adapt.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'list', title: 'Decisions' }, { id: 'item', title: 'Decision', nav: false }, { id: 'new', title: 'New decision', nav: false }],
@@ -91,7 +91,7 @@ const RAW = [
         { mode: 'plan', screen: 'new', label: 'Think through a decision or experiment' },
       ],
       data: { collections: [{ name: 'decisions', schema: 1 }] },
-      permissions: ['data:own', 'people:read', 'notify', 'data:tickets:read', 'data:tasks:read', 'data:parenting:read'],
+      permissions: ['data:own', 'people:read', 'notify', 'data:tickets:read', 'data:tasks:read', 'data:parenting:read', 'people:ages'],
     },
     load: () => import('./decisions/app.js'),
   },
@@ -339,19 +339,23 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'parenting', section: 'parenting', name: 'Parenting', version: '1.0.0',
+      fhManifest: 1, id: 'parenting', section: 'parenting', name: 'Parenting', version: '1.1.0',
       description: 'Parenting topics laid out as options, trade-offs, timing and how sure the science is - each partner’s view side by side, and what you agree kept in Decisions for the ages it applies to.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [
-        { id: 'home', title: 'Parenting' }, { id: 'section', title: 'Section', nav: false }, { id: 'topic', title: 'Topic', nav: false },
+        { id: 'home', title: 'Parenting' }, { id: 'agree', title: 'Agreements' }, { id: 'ideas', title: 'Ideas' }, { id: 'play', title: 'Play now' },
+        { id: 'section', title: 'Section', nav: false }, { id: 'topic', title: 'Topic', nav: false },
         { id: 'edit', title: 'Edit a topic', nav: false }, { id: 'new', title: 'Our own topic', nav: false },
+        { id: 'idea', title: 'Activity', nav: false }, { id: 'idea-edit', title: 'Edit an activity', nav: false }, { id: 'idea-new', title: 'A new activity', nav: false },
       ],
       modes: [
-        { mode: 'plan', screen: 'home', label: 'Talk through a parenting decision together' },
+        { mode: 'plan', screen: 'agree', label: 'Talk through a parenting decision together' },
+        { mode: 'plan', screen: 'ideas', label: 'Plan activities and games for the children' },
+        { mode: 'do', screen: 'play', label: 'Find something to do with the children right now' },
         { mode: 'note', screen: 'new', label: 'Add a topic of our own' },
       ],
-      data: { collections: [{ name: 'topics', schema: 1 }, { name: 'sections', schema: 1 }] },
-      permissions: ['data:own', 'people:read', 'notify', 'data:decisions:read'],
+      data: { collections: [{ name: 'topics', schema: 1 }, { name: 'sections', schema: 1 }, { name: 'activities', schema: 1 }] },
+      permissions: ['data:own', 'people:read', 'people:ages', 'notify', 'data:decisions:read'],
     },
     load: () => import('./parenting/app.js'),
     tile: true,   // its module is loaded for Home, to say what is worth agreeing now

@@ -10,7 +10,7 @@ export const SECTIONS = [
   { id: 'ages', name: 'Ages and stages', purpose: 'Leaps and milestones, and what becomes a decision when.' },
   { id: 'ready', name: 'Get ready', purpose: 'Before the birth: checklists, what to keep at home, and how many.' },
   { id: 'normal', name: 'What’s normal?', purpose: 'Poop, temperature, rashes - and when to have it checked.' },
-  { id: 'emergency', name: 'Emergencies', purpose: 'Falls, choking, stopped breathing: what to do, worked out ahead.' },
+  { id: 'emergency', name: 'Be prepared', purpose: 'Falls, choking, stopped breathing: what we will do, agreed and practised ahead of time.' },
   { id: 'rules', name: 'House rules', purpose: 'Our rules, grandparents and visitors, sleepovers.' },
   { id: 'out', name: 'Out and about', purpose: 'Sun, water and being out in public.' },
 ];
@@ -161,7 +161,7 @@ export function dashboard(topics, decisions, kids, sections = SECTIONS) {
     inForce: timed.filter((x) => x.t.when === 'now' || (x.t.when === 'none' && d0(x.d))),
     comingUp: timed.filter((x) => x.t.when === 'soon'),
     notNeeded: timed.filter((x) => x.t.when === 'past' || x.t.when === 'later'),
-    worthAgreeing: topics.filter((t) => status.get(t.id) !== 'agreed' && t.ages && ['now', 'soon'].includes(timing(t.ages.from, t.ages.to, kids).when)),
+    worthAgreeing: topics.filter((t) => !t.later && status.get(t.id) !== 'agreed' && t.ages && ['now', 'soon'].includes(timing(t.ages.from, t.ages.to, kids).when)),
   };
 }
 // Without children yet, a decision with no age limit still applies.

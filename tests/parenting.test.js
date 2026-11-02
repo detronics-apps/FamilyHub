@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { STARTER, SOURCES, LEVELS, OUTCOMES } from '../js/apps/parenting/content.js';
 import { monthsOld, kidsOf, timing, rangeLabel, topicsOf, dashboard, leaningsFor, topicStatus, parentingDecisions, tileNote, SECTIONS } from '../js/apps/parenting/logic.js';
+import { starter } from '../js/apps/catalogue.js';
 import { normaliseDecision, decisionSummary, categoryOf } from '../js/apps/decisions/logic.js';
 
 const TODAY = '2026-11-02';
@@ -92,4 +93,8 @@ test('the content keeps its own rules: every claim sourced and levelled, every f
   for (const t of STARTER.filter((x) => x.health)) for (const w of [t.summary, t.signs, ...(t.why ?? []).map((x) => x.text)]) {
     assert.ok(!/no need to (see|go)|stay home|do not need a doctor/i.test(w ?? ''), `${t.id}: never suggests not going`);
   }
+});
+
+test('Parenting and Decisions may see birthdays - without them every child reads as "no birthday yet"', () => {
+  for (const id of ['parenting', 'decisions']) assert.ok(starter(id).manifest.permissions.includes('people:ages'), id);
 });

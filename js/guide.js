@@ -32,6 +32,7 @@ export const SEARCH_ALIASES = {
   variation: ['version', 'versions', 'variant', 'alteration', 'different way', 'swap', 'sauce', 'cheese sauce', 'without', 'instead of'],
   'shopping list': ['groceries', 'shop', 'buy', 'ingredients'],
   trip: ['holiday', 'vacation', 'travel', 'packing', 'itinerary'],
+  activities: ['play', 'game', 'bored', 'something to do', 'fort', 'sprinkler', 'rainy day', 'rules', 'kids activity', 'entertain'],
   parenting: ['baby', 'toddler', 'child', 'partner', 'agree', 'dummy', 'formula', 'breastfeeding', 'co-sleeping', 'fever', 'choking', 'sunscreen', 'honey', 'monitor', 'milestones', 'grandparents', 'house rules', 'pregnant', 'due date'],
   medical: ['doctor', 'dentist', 'hospital', 'pharmacy', 'account', 'invoice', 'quote', 'medical aid', 'gap cover', 'claim', 'refund', 'tax certificate', 'sars', 'tax year', 'out of pocket', 'proof', 'receipt'],
   budget: ['money', 'spending', 'expenses', 'finance', 'savings', 'debt'],
@@ -278,6 +279,12 @@ export const HOWTOS = [
     'Press Decide: the decision opens in Decisions with the ages it applies to. Fill in "What we agree" and it counts as agreed.',
     'Add your own topics, decisions or sections - the starting ones are only a starting point.',
   ] },
+  { id: 'activities', title: 'Find something to do with the children', steps: [
+    'With time to think, open Parenting › Ideas: add activities and games, say what they need and what that costs, and plan a day for one. Shop sends what needs buying to the list.',
+    'When you need something now, open Parenting › Play now: tap who, inside or out, the weather and how long. What is planned for today comes first.',
+    'Afterwards press Done and give two scores - the children’s and yours. The best-loved come first next time.',
+    'For a game, change the rules under Ideas to make it more fun; the earlier rules are kept.',
+  ] },
   { id: 'medical', title: 'Keep track of medical accounts and claims', steps: [
     'Open Medical and press Add when an account, invoice or quote arrives from any doctor or provider. Say who it is for, the amount and when it is due.',
     'When you pay, open it and add the payment: the day, amount, reference and who was paid. Part-payments add up; it shows what is still owed.',
@@ -459,6 +466,7 @@ export const FAQS = [
 
 export const FEATURES = [
   { name: 'Parenting', where: 'Parenting', what: 'Parenting topics as options, trade-offs and the science, with how sure each claim is. Each partner’s view side by side; what you agree goes to Decisions for the ages it applies to, and the dashboard shows what is agreed, in force now and coming up.' },
+  { name: 'Ideas and Play now', where: 'Parenting', what: 'Activities and games by age, weather, setup time, how long they last and what they cost - planned with time to think, found in a few taps when you have none, and scored afterwards by the children and by you.' },
   { name: 'Decisions for an age', where: 'Decisions', what: 'A decision can apply from one age to another - in force while a child in the family is that age. Filter by Parenting or by topic.' },
   { name: 'Medical accounts', where: 'Medical', what: 'Every doctor’s account, invoice and quote for the whole family - what is owed and when, what medical aid and gap cover paid back, follow-ups, and where the proof is kept.' },
   { name: 'The SARS tax year', where: 'Medical › Tax year', what: 'Everything from 1 March to the end of February, per person: what was paid, what came back, out of pocket, and what is still missing proof - so nothing is left out.' },

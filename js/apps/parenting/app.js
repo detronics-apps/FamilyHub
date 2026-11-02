@@ -1,7 +1,7 @@
-// Parenting (D-095): understand it, then decide it together. Screens: the dashboard,
-// a section, a topic (options, why, how sure, each partner's leaning, our decisions),
-// and the form for the family's own topics and changes. Decisions themselves are made
-// and kept in the Decisions app; this reads them back.
+// Parenting (D-095, D-096): planned ahead, not opened in a crisis. It opens on three doors:
+// Agreements (topics talked through and decided together - the dashboard, sections, a topic,
+// the form for our own), Ideas (activities, with time to think) and Play now (no time to
+// think). Decisions themselves are kept in the Decisions app; this reads them back.
 
 import { el } from '../../ui/dom.js';
 import { confirmAction, modal } from '../../ui/common.js';
@@ -11,17 +11,20 @@ import {
   SECTIONS, topicsOf, dashboard, kidsOf, adultsOf, timing, rangeLabel, ageLabel, leaningsFor, topicStatus, parentingDecisions,
   normaliseRecord, normaliseSection, STATUS_LABEL, tileNote as noteFor, stepAt, ownId,
 } from './logic.js';
+import { activitiesOf, planned, plannedOn } from './activities.js';
+import { activitiesCol, playScreen, ideasScreen, ideaScreen, ideaEdit } from './play.js';
 
 const topicsCol = (hub) => hub.data.collection('topics', { summary: (r) => normaliseRecord(r), text: (r) => [r.title, r.question, r.summary].join(' '), prefix: 'pt' });
 const sectionsCol = (hub) => hub.data.collection('sections', { summary: (r) => normaliseSection(r), prefix: 'ps' });
 const AGES = [-6, -3, -1, 0, 1, 2, 3, 4, 6, 9, 12, 18, 24, 36, 48, 60, 72, 96, 120, 144, 168, 192, 216];
 
 const load = (hub) => hub.use('all', async () => {
-  const [t, s, d] = await Promise.all([
+  const [t, s, d, a] = await Promise.all([
     topicsCol(hub).list({ limit: 100000 }), sectionsCol(hub).list({ limit: 1000 }),
     hub.data.installed('decisions') ? hub.data.of('decisions', 'decisions').list({ limit: 100000 }) : { items: [] },
+    activitiesCol(hub).list({ limit: 100000 }),
   ]);
-  return { records: t.items, ownSections: s.items.map(normaliseSection), decisions: d.items };
+  return { records: t.items, ownSections: s.items.map(normaliseSection), decisions: d.items, activities: activitiesOf(a.items) };
 });
 const sectionsOf = (data) => [...SECTIONS, ...data.ownSections];
 
@@ -29,6 +32,8 @@ const sectionsOf = (data) => [...SECTIONS, ...data.ownSections];
 export function tileNote(hub) {
   const r = load(hub);
   if (!r.data) return null;
+  const today = plannedOn(r.data.activities, hub.today());
+  if (today.length) return `Planned today: ${today[0].name}`;
   return noteFor(dashboard(topicsOf(r.data.records), r.data.decisions, kidsOf(hub.people.list(), hub.today()), sectionsOf(r.data)));
 }
 
@@ -37,11 +42,36 @@ export function render(hub, route) {
   if (r.loading) return loading();
   if (r.error) return failure(r.error);
   const ctx = { hub, data: r.data, topics: topicsOf(r.data.records), sections: sectionsOf(r.data), kids: kidsOf(hub.people.list(), hub.today()), decisions: parentingDecisions(r.data.decisions) };
+  if (route.sub === 'agree') return dashScreen(ctx);
+  if (route.sub === 'play') return playScreen(hub, r.data.activities, ctx.kids);
+  if (route.sub === 'ideas') return ideasScreen(hub, r.data.activities);
+  if (route.sub === 'idea') return ideaScreen(hub, r.data.activities, route.rest[0], ctx.kids);
+  if (route.sub === 'idea-edit') return ideaEdit(hub, r.data.activities, route.rest[0]);
+  if (route.sub === 'idea-new') return ideaEdit(hub, r.data.activities, null);
   if (route.sub === 'section') return sectionScreen(ctx, route.rest[0]);
   if (route.sub === 'topic') return topicScreen(ctx, route.rest[0]);
   if (route.sub === 'edit') return editScreen(ctx, route.rest[0]);
   if (route.sub === 'new') return editScreen(ctx, null, route.rest[0]);
-  return dashScreen(ctx);
+  return doorsScreen(ctx);
+}
+
+/** The first page: think it through together, plan activities, or something to do right now. */
+function doorsScreen(ctx) {
+  const { hub, topics, kids } = ctx;
+  const dash = dashboard(topics, ctx.data.decisions, kids, ctx.sections);
+  const today = plannedOn(ctx.data.activities, hub.today());
+  const soon = planned(ctx.data.activities, hub.today());
+  const door = (screen, name, purpose, meta, field) => el('a', { class: 'tile', href: hub.href(screen), 'data-field': field, style: { minHeight: '9rem' } }, [
+    el('span', { class: 'tile__name', text: name }), el('span', { class: 'tile__purpose', text: purpose }), meta ? el('span', { class: 'tile__meta', text: meta }) : null]);
+  return el('section', { class: 'stack', 'aria-label': 'Parenting' }, [
+    el('p', { class: 'muted', style: { margin: 0 }, text: 'For planning ahead - so when something happens, you have already worked out together how you will handle it.' }),
+    el('div', { class: 'tiles' }, [
+      door('agree', 'Agreements', 'Talk it through and decide ahead, together: the options, the trade-offs and the science.',
+        [dash.worthAgreeing.length ? `${dash.worthAgreeing.length} worth agreeing now` : null, dash.comingUp.length ? `${dash.comingUp.length} coming up` : null, `${dash.agreed} of ${dash.total} agreed`].filter(Boolean).join(' · '), 'door:agree'),
+      door('ideas', 'Ideas', 'Time to think: add activities and games, plan a day for one, adjust the rules.', soon.length ? `${soon.length} planned` : `${ctx.data.activities.length} ideas`, 'door:ideas'),
+      door('play', 'Play now', 'No time to think: a few taps and something to do.', today.length ? `Planned today: ${today[0].name}` : null, 'door:play'),
+    ]),
+  ]);
 }
 
 const statusChip = (st) => el('span', { class: `small ${st === 'agreed' ? 'fin-better' : st === 'discussing' ? '' : 'muted'}`, text: `· ${STATUS_LABEL[st]}` });
@@ -63,7 +93,9 @@ function dashScreen(ctx) {
     el('span', { class: 'small muted', text: ` · ${rangeLabel(d.ageFrom, d.ageTo)}${t.now.length ? ` · ${kidsWord(t.now)}` : t.soon.length ? ` · soon for ${t.soon.map((k) => k.name).join(', ')}` : ''}${d.hasAgreement ? '' : ' · not agreed yet'}` })]);
   const list = (title, rows, help, field) => (rows.length ? el('div', { class: 'panel stack', 'data-field': field }, [el('h2', { text: title, style: { margin: 0 } }), help ? el('p', { class: 'small muted', style: { margin: 0 }, text: help }) : null, el('ul', { class: 'list' }, rows)]) : null);
   return el('section', { class: 'stack', 'aria-label': 'Parenting' }, [
-    el('p', { class: 'muted', style: { margin: 0 }, text: 'Not how to parent - what the options are, what each costs, how sure the science is, and what the two of you need to agree on. A starting point: change it, remove it, add your own.' }),
+    el('a', { href: hub.href(), class: 'small', text: '‹ Parenting' }),
+    el('h1', { text: 'Agreements', style: { margin: 0 } }),
+    el('p', { class: 'muted', style: { margin: 0 }, text: 'Decide how you will handle things before they happen, so you are not working it out at 3am. Not how to parent - the options, what each costs, how sure the science is, and what the two of you need to agree on. A starting point: change it, remove it, add your own.' }),
     el('div', { class: 'stats' }, [
       el('div', { class: 'stat', 'data-field': 'p-agreed' }, [el('div', { class: 'stat__value', text: `${dash.agreed} of ${dash.total}` }), el('div', { class: 'stat__label', text: 'topics agreed' })]),
       el('div', { class: 'stat' }, [el('div', { class: 'stat__value', text: String(dash.discussing) }), el('div', { class: 'stat__label', text: 'being discussed' })]),
@@ -113,7 +145,7 @@ function sectionScreen(ctx, id) {
   const written = mine.filter((t) => !t.later); const later = mine.filter((t) => t.later);
   const own = !SECTIONS.some((x) => x.id === id);
   return el('section', { class: 'stack' }, [
-    el('a', { href: hub.href(), class: 'small', text: '‹ Parenting' }),
+    el('a', { href: hub.href('agree'), class: 'small', text: '‹ Agreements' }),
     el('h1', { text: s.name, style: { margin: 0 } }),
     s.purpose ? el('p', { class: 'muted', style: { margin: 0 }, text: s.purpose }) : null,
     el('div', { class: 'row' }, [el('a', { class: 'btn btn-primary', href: hub.href('new', id), text: 'Add', title: 'Add our own topic here' }),
@@ -133,7 +165,7 @@ function sectionScreen(ctx, id) {
 const paths = new Map();
 
 function stepsPanel(t) {
-  const box = el('div', { class: 'panel stack', 'data-field': 'p-steps' });
+  const box = el('div', { class: 'stack', 'data-field': 'p-steps' });
   const draw = () => {
     const path = paths.get(t.id) ?? [t.steps.start];
     const node = stepAt(t.steps, path.at(-1));
@@ -145,7 +177,7 @@ function stepsPanel(t) {
       node.out === 'now' ? el('p', { style: { margin: '6px 0 0' }, text: `${EMERGENCY[0][0]}: ${EMERGENCY[0][1]} · ${EMERGENCY[1][0]}: ${EMERGENCY[1][1]}` }) : null,
     ]) : null;
     box.replaceChildren(...[
-      el('h2', { text: t.health ? 'Step by step' : 'Work it through', style: { margin: 0 } }),
+      el('p', { class: 'small muted', style: { margin: 0 }, text: 'Go through it together now, so it is familiar if it is ever needed.' }),
       node.q ? el('p', { style: { margin: 0, fontWeight: 600 }, text: node.q }) : null,
       out,
       node.say ? el('p', { style: { margin: 0 }, text: node.say }) : null,
@@ -208,7 +240,9 @@ function topicScreen(ctx, id) {
     t.later ? el('div', { class: 'panel empty' }, [el('p', { text: 'Not written yet - it will come in a later version. You can write your own version now, or decide on it straight away.' })]) : null,
     t.question ? el('p', { style: { margin: 0, fontSize: '1.1em', fontStyle: 'italic' }, text: t.question }) : null,
     t.summary ? el('p', { style: { margin: 0 }, text: t.summary }) : null,
-    t.steps ? stepsPanel(t) : null,
+    t.prepare ? el('div', { class: 'panel stack', 'data-field': 'p-prepare' }, [el('h2', { text: 'Prepare now', style: { margin: 0 } }),
+      ...[['Have ready', t.prepare.ready], ['Who does what', t.prepare.who], ['Practise', t.prepare.practise]].filter(([, xs]) => xs?.length).map(([h, xs]) => el('div', {}, [el('strong', { text: h }), el('ul', { style: { margin: 0, paddingLeft: '1.2em' } }, xs.map((x) => el('li', { text: x })))]))]) : null,
+    t.steps ? el('details', { class: 'panel more', 'data-field': 'p-practise' }, [el('summary', { text: 'Practise the steps' }), stepsPanel(t)]) : null,
     t.signs ? block('Signs to act on', el('p', { style: { margin: 0 }, text: t.signs }), 'p-signs') : null,
     t.health || t.section === 'emergency' ? block('Who to call', el('ul', { style: { margin: 0, paddingLeft: '1.2em' } }, EMERGENCY.map(([w, n]) => el('li', {}, [`${w}: `, el('a', { href: `tel:${n.replace(/\s/g, '')}`, text: n })]))), 'p-call') : null,
     items.length ? block('Checklist', el('div', { class: 'stack', style: { gap: '4px' } }, items.map((x) => el('label', { class: 'checkline' }, [

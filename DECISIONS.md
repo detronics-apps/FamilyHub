@@ -696,6 +696,29 @@ note; claims not settled; and paid accounts never sent to medical aid (they will
 scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
 the year of its own date, not of each payment (marked to split by payment day if that matters).
 
+**D-096 Parenting is planned ahead; Agreements, Ideas, Play now (owner, 2026-11-02).** Parents are
+not meant to open Parenting in a crisis but to work out beforehand how they will handle things. It
+opens on three doors, keeping time-to-think apart from no-time-to-think:
+- **Agreements** - the D-095 dashboard and sections. Its first line says why: decide before it
+  happens. "Emergencies" is now **Be prepared**; fever, choking and safe sleep open with **Prepare
+  now** (have ready, who does what, what to practise), and their steps are folded under **Practise
+  the steps** - to go through together beforehand. "If you are wondering whether to go, go" stays.
+- **Ideas** (time to think) - activities and games: ages, inside or out, the weather they suit,
+  setup time, how long they keep children busy, what is needed (have it, or to buy with a cost),
+  how to do it, safety, and for a game its rules - changed any time, earlier rules kept. Plan a day
+  for one; **Shop** sends what needs buying to Shopping. 18 starting ideas (peekaboo, cushion fort, sprinkler
+  game, treasure hunt...) to change, remove and add to.
+- **Play now** (no time to think) - big taps: who, inside or out, the weather, how long, buy
+  anything or only what we have. What is planned for today comes first; then the best-loved that
+  fit, each with everything needed to do it. **Done** asks two quick scores (each child, and us,
+  1-5) and what to change next time; scores rank Play now.
+- **Setup against busy time** (owner): every card shows the setup time, how long it keeps them busy and the cost as
+  three figures, and "Busy 6x as long as it takes to set up". 5 minutes for 30 busy (6x) ranks above 30 for 45
+  (1.5x). How it went still counts most; Ideas sorts by Best, Least effort, Quickest or Most loved.
+- Weather is chosen, not fetched - Family Hub makes no network requests for it.
+- **Birthdays**: Parenting and Decisions now ask for people:ages; without it every child read as
+  "no birthday yet" (0.10.1).
+
 **D-095 Parenting: understand it, then decide it together (owner, 2026-11-02).** Not "the correct
 way to parent": each topic lays out the question, the options (for, against, when it fits, when not,
 timing), why - with each claim marked Established, Supported, Being studied or Unknown and its source
