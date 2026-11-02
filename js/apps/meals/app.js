@@ -161,7 +161,7 @@ function recipeScreen(hub, id, back) {
           on: { click: () => { ui.variation[id] = v.id; hub.render(); } },
         }))),
         shown.variation ? el('p', { class: 'small muted', style: { margin: 0 } }, [`${shown.variation.name}: ${variationSays(shown.variation)}.`,
-          shown.variation.from ? [' ', el('a', { href: hub.href('item', shown.variation.from), text: 'Open it' })] : null]) : null,
+          ...(shown.variation.from ? [' ', el('a', { href: hub.href('item', shown.variation.from), text: 'Open it' })] : [])]) : null,
       ]) : null,
       rec.yield.qty ? el('p', { class: 'small', style: { margin: 0 }, text: `Makes ${fmtQtyText(rec.yield.qty * (serves / rec.servings))} ${rec.yield.unit}${serves !== rec.servings ? ` (for ${serves} servings)` : ''}.` }) : null,
       rec.type === 'own' && !rec.yield.qty ? el('p', { class: 'small', text: 'Edit it and say what one batch makes (e.g. 300 ml), so other entries can use part of it.' }) : null,
