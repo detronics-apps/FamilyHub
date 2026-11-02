@@ -696,6 +696,22 @@ note; claims not settled; and paid accounts never sent to medical aid (they will
 scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
 the year of its own date, not of each payment (marked to split by payment day if that matters).
 
+**D-097 Screen time: notice, not judge (owner, 2026-11-02).** A fourth door in Parenting.
+- **Log** in a few taps: who watched, what (from the show list, or named), about how long, afterwards
+  calm / fine / wound up, the day and time; who logged it is kept.
+- **Each child's week**: minutes a day as bars, the daily minutes agreed for their age, and plain
+  observations ("1 day over the 60 minutes you agreed", "Most of it after 5pm", "Wound up afterwards
+  2 times"). No streaks, badges or scores of the child.
+- **Rules are decisions** (topic "screens", Decide opens Decisions) with the ages and, new on those
+  decisions, "Screen time a day, at most (minutes)". Only agreed ones count.
+- **Shows ranked on our values**: six starting criteria (calm pace, language and learning, kindness,
+  easy to switch off, no buying push, we can stand it) - renamed, added to, weighted Ignore / Some /
+  More / Most. Each parent scores 1-5 per criterion; the other's shows once you have given yours. A
+  show's score is the weighted average per person, then the average of the people who rated it, with
+  each person's beside it and how often it left them wound up. 10 starting shows (Bluey, Paw Patrol,
+  Ms Rachel...) with the ages they are roughly made for - and no scores: those are the family's.
+- **If you watch today**: the best-ranked show made for the youngest child watching.
+
 **D-096 Parenting is planned ahead; Agreements, Ideas, Play now (owner, 2026-11-02).** Parents are
 not meant to open Parenting in a crisis but to work out beforehand how they will handle things. It
 opens on three doors, keeping time-to-think apart from no-time-to-think:

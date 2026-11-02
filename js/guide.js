@@ -32,6 +32,7 @@ export const SEARCH_ALIASES = {
   variation: ['version', 'versions', 'variant', 'alteration', 'different way', 'swap', 'sauce', 'cheese sauce', 'without', 'instead of'],
   'shopping list': ['groceries', 'shop', 'buy', 'ingredients'],
   trip: ['holiday', 'vacation', 'travel', 'packing', 'itinerary'],
+  'screen time': ['tv', 'screens', 'shows', 'ipad', 'tablet', 'bluey', 'paw patrol', 'ms rachel', 'how long', 'cartoons', 'youtube'],
   activities: ['play', 'game', 'bored', 'something to do', 'fort', 'sprinkler', 'rainy day', 'rules', 'kids activity', 'entertain'],
   parenting: ['baby', 'toddler', 'child', 'partner', 'agree', 'dummy', 'formula', 'breastfeeding', 'co-sleeping', 'fever', 'choking', 'sunscreen', 'honey', 'monitor', 'milestones', 'grandparents', 'house rules', 'pregnant', 'due date'],
   medical: ['doctor', 'dentist', 'hospital', 'pharmacy', 'account', 'invoice', 'quote', 'medical aid', 'gap cover', 'claim', 'refund', 'tax certificate', 'sars', 'tax year', 'out of pocket', 'proof', 'receipt'],
@@ -279,6 +280,12 @@ export const HOWTOS = [
     'Press Decide: the decision opens in Decisions with the ages it applies to. Fill in "What we agree" and it counts as agreed.',
     'Add your own topics, decisions or sections - the starting ones are only a starting point.',
   ] },
+  { id: 'screentime', title: 'Keep an eye on screen time', steps: [
+    'Agree a rule first: Parenting › Screen time › Decide - the ages it is for and, if you like, the minutes a day.',
+    'After watching, press Log: who, what, about how long, and how they were afterwards. A few taps.',
+    'Each child’s week shows the minutes each day beside what you agreed, and what stands out - to notice, not to judge.',
+    'Under Shows, each of you rates the shows on your own values and sets how much each value matters. The best-ranked show for the youngest watching is suggested.',
+  ] },
   { id: 'activities', title: 'Find something to do with the children', steps: [
     'With time to think, open Parenting › Ideas: add activities and games, say what they need and what that costs, and plan a day for one. Shop sends what needs buying to the list.',
     'When you need something now, open Parenting › Play now: tap who, inside or out, the weather and how long. What is planned for today comes first.',
@@ -466,6 +473,7 @@ export const FAQS = [
 
 export const FEATURES = [
   { name: 'Parenting', where: 'Parenting', what: 'Parenting topics as options, trade-offs and the science, with how sure each claim is. Each partner’s view side by side; what you agree goes to Decisions for the ages it applies to, and the dashboard shows what is agreed, in force now and coming up.' },
+  { name: 'Screen time', where: 'Parenting', what: 'A quick log of what was watched and how it left them, each child’s week beside the minutes you agreed, and shows ranked on your own values - each parent rating separately.' },
   { name: 'Ideas and Play now', where: 'Parenting', what: 'Activities and games by age, weather, setup time, how long they last and what they cost - planned with time to think, found in a few taps when you have none, and scored afterwards by the children and by you.' },
   { name: 'Decisions for an age', where: 'Decisions', what: 'A decision can apply from one age to another - in force while a child in the family is that age. Filter by Parenting or by topic.' },
   { name: 'Medical accounts', where: 'Medical', what: 'Every doctor’s account, invoice and quote for the whole family - what is owed and when, what medical aid and gap cover paid back, follow-ups, and where the proof is kept.' },

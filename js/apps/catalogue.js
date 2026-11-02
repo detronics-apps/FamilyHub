@@ -82,7 +82,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'decisions', section: 'decisions', name: 'Decisions', version: '1.1.0',
+      fhManifest: 1, id: 'decisions', section: 'decisions', name: 'Decisions', version: '1.2.0',
       description: 'Agreements and experiments: try something, look back, adapt.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'list', title: 'Decisions' }, { id: 'item', title: 'Decision', nav: false }, { id: 'new', title: 'New decision', nav: false }],
@@ -339,7 +339,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'parenting', section: 'parenting', name: 'Parenting', version: '1.1.0',
+      fhManifest: 1, id: 'parenting', section: 'parenting', name: 'Parenting', version: '1.2.0',
       description: 'Parenting topics laid out as options, trade-offs, timing and how sure the science is - each partner’s view side by side, and what you agree kept in Decisions for the ages it applies to.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [
@@ -347,14 +347,18 @@ const RAW = [
         { id: 'section', title: 'Section', nav: false }, { id: 'topic', title: 'Topic', nav: false },
         { id: 'edit', title: 'Edit a topic', nav: false }, { id: 'new', title: 'Our own topic', nav: false },
         { id: 'idea', title: 'Activity', nav: false }, { id: 'idea-edit', title: 'Edit an activity', nav: false }, { id: 'idea-new', title: 'A new activity', nav: false },
+        { id: 'screen', title: 'Screen time' }, { id: 'screen-log', title: 'Log screen time', nav: false }, { id: 'shows', title: 'Shows', nav: false },
+        { id: 'show', title: 'Show', nav: false }, { id: 'show-edit', title: 'Edit a show', nav: false }, { id: 'show-new', title: 'Add a show', nav: false },
       ],
       modes: [
         { mode: 'plan', screen: 'agree', label: 'Talk through a parenting decision together' },
         { mode: 'plan', screen: 'ideas', label: 'Plan activities and games for the children' },
         { mode: 'do', screen: 'play', label: 'Find something to do with the children right now' },
         { mode: 'note', screen: 'new', label: 'Add a topic of our own' },
+        { mode: 'note', screen: 'screen-log', label: 'Log screen time' },
+        { mode: 'plan', screen: 'shows', label: 'Choose a show by what matters to us' },
       ],
-      data: { collections: [{ name: 'topics', schema: 1 }, { name: 'sections', schema: 1 }, { name: 'activities', schema: 1 }] },
+      data: { collections: [{ name: 'topics', schema: 1 }, { name: 'sections', schema: 1 }, { name: 'activities', schema: 1 }, { name: 'screenlog', schema: 1 }, { name: 'shows', schema: 1 }, { name: 'screenset', schema: 1 }] },
       permissions: ['data:own', 'people:read', 'people:ages', 'notify', 'data:decisions:read'],
     },
     load: () => import('./parenting/app.js'),

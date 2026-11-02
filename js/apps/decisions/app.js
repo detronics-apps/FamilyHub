@@ -124,6 +124,7 @@ function itemScreen(hub, id) {
       cycle(st),
       d.source?.startsWith('parenting:') ? el('p', { class: 'small' }, ['From Parenting: ', el('a', { href: `#/parenting/topic/${encodeURIComponent(d.source.slice(10))}`, text: parentingTopic(hub, d.source.slice(10)).data?.title ?? 'the topic' })]) : null,
       appliesLine(hub, d) ? el('p', { class: 'small', 'data-field': 'dec-applies', text: `Applies: ${appliesLine(hub, d)}.` }) : null,
+      d.screenMinutes != null ? el('p', { class: 'small', text: `Screen time: up to ${d.screenMinutes} minutes a day.` }) : null,
       sourceTicket?.data ? el('p', { class: 'small' }, ['Started from a ticket: ', el('a', { href: `#/tickets/item/${encodeURIComponent(sourceTicket.data.id)}`, text: (sourceTicket.data.text || '').split('\n')[0].slice(0, 80) })]) : null,
       block('What is happening', d.issue),
       block('What we want', d.purpose),
@@ -250,6 +251,7 @@ function editScreen(hub, id, from = null) {
         { key: 'title', label: 'What is it about?', required: true, placeholder: 'e.g. Screen-time transitions' },
         { key: 'issue', label: 'What is happening', type: 'textarea' },
         { key: 'agreement', label: parenting ? 'What we agree' : 'What we agree to try', type: 'textarea', hint: 'Can stay empty while you talk it through.' },
+        record.source === 'parenting:screens' ? { key: 'screenMinutes', label: 'Screen time a day, at most (minutes)', type: 'number', hint: 'Empty for none set. Screen time shows each day against it.' } : null,
         ageField('ageFrom', 'Applies from the age of', 'Any age'),
         ageField('ageTo', 'Until the age of', 'No end'),
         { key: 'purpose', label: 'What we want to achieve', type: 'textarea', more: true },
@@ -258,7 +260,7 @@ function editScreen(hub, id, from = null) {
         { key: 'participants', label: 'Who agreed', type: 'people', more: true },
         { key: 'indicators', label: 'How we will know it is working', type: 'textarea', more: true },
         { key: 'reviewOn', label: 'Look back on', type: 'day', more: true },
-      ],
+      ].filter(Boolean),
       onCancel: () => (existing ? hub.go('item', existing.id) : hub.go(null)),
       onSave: async (values) => {
         const saved = await saveRecord(hub, col(hub), normaliseDecision({ ...record, ...values }));

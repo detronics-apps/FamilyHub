@@ -42,12 +42,14 @@ export function normaliseDecision(d = {}) {
     // The ages it applies to, in months (D-095): in force while a child in the family is that age.
     ageFrom: age(d.ageFrom),
     ageTo: age(d.ageTo),
+    // A screen-time rule's minutes a day (D-097), so Screen time can show each day against it.
+    screenMinutes: age(d.screenMinutes),
     history: (Array.isArray(d.history) ? d.history : []).filter((h) => h && typeof h.agreement === 'string').slice(-20),
   };
 }
 
 export function decisionSummary(d) {
-  return { title: d.title, status: d.status, reviewOn: d.reviewOn, outcome: d.outcome, source: d.source, hasAgreement: Boolean(d.agreement), ageFrom: d.ageFrom ?? null, ageTo: d.ageTo ?? null };
+  return { title: d.title, status: d.status, reviewOn: d.reviewOn, outcome: d.outcome, source: d.source, hasAgreement: Boolean(d.agreement), ageFrom: d.ageFrom ?? null, ageTo: d.ageTo ?? null, screenMinutes: d.screenMinutes ?? null };
 }
 
 /** Where a decision came from, as a category to filter by: 'parenting', 'tickets' or '' (D-095). */

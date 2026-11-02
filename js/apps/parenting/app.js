@@ -1,7 +1,8 @@
-// Parenting (D-095, D-096): planned ahead, not opened in a crisis. It opens on three doors:
+// Parenting (D-095, D-096, D-097): planned ahead, not opened in a crisis. It opens on four doors:
 // Agreements (topics talked through and decided together - the dashboard, sections, a topic,
-// the form for our own), Ideas (activities, with time to think) and Play now (no time to
-// think). Decisions themselves are kept in the Decisions app; this reads them back.
+// the form for our own), Ideas (activities, with time to think), Play now (no time to think)
+// and Screen time (awareness, and shows rated on our values). Decisions themselves are kept in
+// the Decisions app; this reads them back.
 
 import { el } from '../../ui/dom.js';
 import { confirmAction, modal } from '../../ui/common.js';
@@ -13,18 +14,20 @@ import {
 } from './logic.js';
 import { activitiesOf, planned, plannedOn } from './activities.js';
 import { activitiesCol, playScreen, ideasScreen, ideaScreen, ideaEdit } from './play.js';
+import { loadScreen, screenHome, logScreen, showsScreen, showScreen, showEdit, todayMinutes } from './screens.js';
 
 const topicsCol = (hub) => hub.data.collection('topics', { summary: (r) => normaliseRecord(r), text: (r) => [r.title, r.question, r.summary].join(' '), prefix: 'pt' });
 const sectionsCol = (hub) => hub.data.collection('sections', { summary: (r) => normaliseSection(r), prefix: 'ps' });
 const AGES = [-6, -3, -1, 0, 1, 2, 3, 4, 6, 9, 12, 18, 24, 36, 48, 60, 72, 96, 120, 144, 168, 192, 216];
 
 const load = (hub) => hub.use('all', async () => {
-  const [t, s, d, a] = await Promise.all([
+  const [t, s, d, a, sc] = await Promise.all([
     topicsCol(hub).list({ limit: 100000 }), sectionsCol(hub).list({ limit: 1000 }),
     hub.data.installed('decisions') ? hub.data.of('decisions', 'decisions').list({ limit: 100000 }) : { items: [] },
     activitiesCol(hub).list({ limit: 100000 }),
+    loadScreen(hub),
   ]);
-  return { records: t.items, ownSections: s.items.map(normaliseSection), decisions: d.items, activities: activitiesOf(a.items) };
+  return { records: t.items, ownSections: s.items.map(normaliseSection), decisions: d.items, activities: activitiesOf(a.items), screen: sc };
 });
 const sectionsOf = (data) => [...SECTIONS, ...data.ownSections];
 
@@ -48,6 +51,12 @@ export function render(hub, route) {
   if (route.sub === 'idea') return ideaScreen(hub, r.data.activities, route.rest[0], ctx.kids);
   if (route.sub === 'idea-edit') return ideaEdit(hub, r.data.activities, route.rest[0]);
   if (route.sub === 'idea-new') return ideaEdit(hub, r.data.activities, null);
+  if (route.sub === 'screen') return screenHome(hub, r.data.screen, ctx.kids, r.data.decisions);
+  if (route.sub === 'screen-log') return logScreen(hub, r.data.screen, ctx.kids);
+  if (route.sub === 'shows') return showsScreen(hub, r.data.screen);
+  if (route.sub === 'show') return showScreen(hub, r.data.screen, route.rest[0]);
+  if (route.sub === 'show-edit') return showEdit(hub, r.data.screen, route.rest[0]);
+  if (route.sub === 'show-new') return showEdit(hub, r.data.screen, null);
   if (route.sub === 'section') return sectionScreen(ctx, route.rest[0]);
   if (route.sub === 'topic') return topicScreen(ctx, route.rest[0]);
   if (route.sub === 'edit') return editScreen(ctx, route.rest[0]);
@@ -70,6 +79,7 @@ function doorsScreen(ctx) {
         [dash.worthAgreeing.length ? `${dash.worthAgreeing.length} worth agreeing now` : null, dash.comingUp.length ? `${dash.comingUp.length} coming up` : null, `${dash.agreed} of ${dash.total} agreed`].filter(Boolean).join(' · '), 'door:agree'),
       door('ideas', 'Ideas', 'Time to think: add activities and games, plan a day for one, adjust the rules.', soon.length ? `${soon.length} planned` : `${ctx.data.activities.length} ideas`, 'door:ideas'),
       door('play', 'Play now', 'No time to think: a few taps and something to do.', today.length ? `Planned today: ${today[0].name}` : null, 'door:play'),
+      door('screen', 'Screen time', 'Notice, not judge: the week beside what you agreed, and shows ranked on your values.', (() => { const m = todayMinutes(ctx.data.screen.logs, hub.today()); return m ? `${m} min logged today` : null; })(), 'door:screen'),
     ]),
   ]);
 }
