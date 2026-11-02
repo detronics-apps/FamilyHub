@@ -696,6 +696,14 @@ note; claims not settled; and paid accounts never sent to medical aid (they will
 scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
 the year of its own date, not of each payment (marked to split by payment day if that matters).
 
+**D-098 Only shows scoring above what we agreed (owner, 2026-11-02).** A screen-time decision can set
+"Only shows scoring at least" (out of 5) beside the minutes a day, for its ages. The family score (the
+average of the parents who rated it) is what counts; the strictest rule in force for a child applies.
+Shows marks each show per child: Within what we agreed, Below what we agreed, or Not checked yet (not
+rated - rate it first). "If you watch today" only suggests what clears the bar for the youngest
+watching. Logging a show below it says so before saving and still logs it; the week notes "1 time a
+show below the 3.5 you agreed" - to notice, not to judge.
+
 **D-097 Screen time: notice, not judge (owner, 2026-11-02).** A fourth door in Parenting.
 - **Log** in a few taps: who watched, what (from the show list, or named), about how long, afterwards
   calm / fine / wound up, the day and time; who logged it is kept.

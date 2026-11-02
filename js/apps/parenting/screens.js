@@ -5,7 +5,7 @@ import { el } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
 import { recordForm, saveRecord } from '../kit.js';
 import { rangeLabel, ageLabel, adultsOf } from './logic.js';
-import { AFTER, normaliseLog, normaliseShow, criteriaOf, showsOf, ranking, suggest, week, limitFor, personScore, afterEffect, todayMinutes } from './screen.js';
+import { AFTER, normaliseLog, normaliseShow, criteriaOf, showsOf, ranking, suggest, week, limitFor, personScore, afterEffect, todayMinutes, allowed, minScoreFor, ALLOWED_LABEL } from './screen.js';
 
 export const logCol = (hub) => hub.data.collection('screenlog', { summary: (r) => normaliseLog(r), prefix: 'sl' });
 export const showsCol = (hub) => hub.data.collection('shows', { summary: (r) => normaliseShow(r), text: (r) => r.name ?? '', prefix: 'sh' });
@@ -27,16 +27,18 @@ export function screenHome(hub, sc, kids, decisions) {
   const today = hub.today();
   const criteria = criteriaOf(sc.settings);
   const ranked = ranking(sc.shows, criteria, sc.logs, adultsOf(hub.people.list(), today));
-  const pickNow = suggest(ranked, kids);
+  const pickNow = suggest(ranked, kids, decisions);
+  const scoreOf = (id) => ranked.find((r) => r.show.showId === id)?.score ?? null;
   const rules = decisions.filter((d) => d.source === 'parenting:screens');
   return el('section', { class: 'stack', 'aria-label': 'Screen time' }, [
     el('a', { href: hub.href(), class: 'small', text: '‹ Parenting' }),
     el('h1', { text: 'Screen time', style: { margin: 0 } }),
     el('p', { class: 'muted', style: { margin: 0 }, text: 'Not to judge - to notice. What was watched, for how long and how it left them, beside what you agreed; and if you do watch, a show chosen by what matters to you.' }),
     el('div', { class: 'row' }, [el('a', { class: 'btn btn-primary', href: hub.href('screen-log'), text: 'Log', 'data-field': 'scr-log' }), el('a', { class: 'btn', href: hub.href('shows'), text: 'Shows', 'data-field': 'scr-shows' })]),
-    pickNow ? el('div', { class: 'panel', 'data-field': 'scr-suggest' }, [el('strong', { text: 'If you watch today: ' }), `${pickNow.show.name} - ${pickNow.score}/5 on your values${pickNow.after.times ? `, wound up after ${pickNow.after.wound} of ${pickNow.after.times} times` : ''}.`]) : null,
+    pickNow ? el('div', { class: 'panel', 'data-field': 'scr-suggest' }, [el('strong', { text: 'If you watch today: ' }), `${pickNow.show.name} - ${pickNow.score}/5 on your values${pickNow.after.times ? `, wound up after ${pickNow.after.wound} of ${pickNow.after.times} times` : ''}.`])
+      : ranked.some((r) => r.score != null) ? el('p', { class: 'small muted', style: { margin: 0 }, 'data-field': 'scr-suggest', text: 'Nothing rated so far clears what you agreed for the youngest - rate a few more under Shows.' }) : null,
     ...kids.map((k) => {
-      const w = week(k, sc.logs, decisions, today);
+      const w = week(k, sc.logs, decisions, today, scoreOf);
       const top = Math.max(w.limit ?? 0, ...w.days.map((d) => d.minutes), 1);
       return el('div', { class: 'panel stack', 'data-field': `scr-week:${k.id}` }, [
         el('h2', { text: `${k.name}${k.months != null ? `, ${ageLabel(k.months)}` : ''}`, style: { margin: 0 } }),
@@ -52,19 +54,23 @@ export function screenHome(hub, sc, kids, decisions) {
     kids.length ? null : el('p', { class: 'small muted', text: 'Add the children on the People page to see each one’s week.' }),
     el('div', { class: 'panel stack', 'data-field': 'scr-rules' }, [el('h2', { text: 'What we agreed', style: { margin: 0 } }),
       rules.length ? el('ul', { class: 'list' }, rules.map((d) => el('li', {}, [el('a', { href: `#/decisions/item/${encodeURIComponent(d.id)}`, text: d.title }),
-        el('span', { class: 'small muted', text: ` · ${rangeLabel(d.ageFrom, d.ageTo)}${d.screenMinutes != null ? ` · up to ${mins(d.screenMinutes)} a day` : ''}${d.hasAgreement ? '' : ' · not agreed yet'}` })])))
+        el('span', { class: 'small muted', text: ` · ${rangeLabel(d.ageFrom, d.ageTo)}${d.screenMinutes != null ? ` · up to ${mins(d.screenMinutes)} a day` : ''}${d.screenMinScore != null ? ` · shows scoring ${d.screenMinScore}+` : ''}${d.hasAgreement ? '' : ' · not agreed yet'}` })])))
         : el('p', { class: 'small muted', style: { margin: 0 }, text: 'Nothing agreed yet. For example: under 2 none except video calls; 2 to 5 up to an hour, not in the hour before bed.' }),
       hub.data.installed('decisions') ? el('div', {}, [el('a', { class: 'btn', href: decideHref, text: 'Decide', title: 'A screen-time rule for an age, in Decisions' })]) : null]),
   ]);
 }
 
-export function logScreen(hub, sc, kids) {
-  const ranked = sc.shows.slice().sort((a, b) => a.name.localeCompare(b.name));
+export function logScreen(hub, sc, kids, decisions = []) {
+  const ranked = ranking(sc.shows, criteriaOf(sc.settings), sc.logs, adultsOf(hub.people.list(), hub.today()));
+  const below = (id) => kids.map((k) => [k, minScoreFor(k, decisions), ranked.find((r) => r.show.showId === id)?.score ?? null]).filter(([, bar, s]) => bar != null && s != null && s < bar);
+  const shows = sc.shows.slice().sort((a, b) => a.name.localeCompare(b.name));
   const now = new Date();
   const record = { day: hub.today(), time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`, kids: kids.map((k) => k.id), minutes: 30, after: 'fine' };
   const showPick = () => {
-    const s = el('select', { class: 'select', style: { maxWidth: '280px' }, 'data-field': 'scr-show' }, [el('option', { value: '', text: 'Something else' }), ...ranked.map((x) => el('option', { value: x.showId, text: x.name }))]);
-    return { node: s, get: () => s.value || null };
+    const note = el('p', { class: 'small fin-worse', style: { margin: '4px 0 0' }, 'data-field': 'scr-below' });
+    const say = () => { const b = below(s.value); note.textContent = b.length ? b.map(([k, bar, sc2]) => `Below the ${bar} you agreed for ${k.name} (${sc2}/5)`).join('; ') : ''; };
+    const s = el('select', { class: 'select', style: { maxWidth: '280px' }, 'data-field': 'scr-show', on: { change: say } }, [el('option', { value: '', text: 'Something else' }), ...shows.map((x) => el('option', { value: x.showId, text: x.name }))]);
+    return { node: el('div', {}, [s, note]), get: () => s.value || null };
   };
   return el('section', { class: 'stack' }, [
     el('h1', { text: 'Log screen time' }),
@@ -87,7 +93,7 @@ export function logScreen(hub, sc, kids) {
   ]);
 }
 
-export function showsScreen(hub, sc) {
+export function showsScreen(hub, sc, kids = [], decisions = []) {
   const today = hub.today();
   const criteria = criteriaOf(sc.settings);
   const raters = adultsOf(hub.people.list(), today);
@@ -107,6 +113,7 @@ export function showsScreen(hub, sc) {
     el('ul', { class: 'list panel', 'data-field': 'scr-ranking' }, ranked.map((r, i) => el('li', {}, [el('a', { class: 'list__main', href: hub.href('show', r.show.showId), style: { color: 'inherit', textDecoration: 'none' }, 'data-field': `show:${r.show.showId}` }, [
       el('strong', { text: `${r.score != null ? `${i + 1}. ` : ''}${r.show.name}` }), r.score != null ? el('span', { text: ` · ${r.score}/5` }) : el('span', { class: 'small muted', text: ' · not rated yet' }),
       el('div', { class: 'small muted', text: [rangeLabel(r.show.ageFrom, r.show.ageTo), ...r.each.filter((x) => x.score != null).map((x) => `${x.name} ${x.score}`), r.after.times ? `wound up ${r.after.wound} of ${r.after.times} times` : null].filter(Boolean).join(' · ') }),
+      ...kids.map((k) => [k, allowed(r.score, k, decisions)]).filter(([, a]) => a).map(([k, a]) => el('div', { class: `small ${a === 'ok' ? 'fin-better' : a === 'below' ? 'fin-worse' : 'muted'}`, 'data-field': `allowed:${r.show.showId}:${k.id}`, text: `${k.name}: ${ALLOWED_LABEL[a]}${a === 'unrated' ? ' - rate it first' : ''}` })),
     ])]))),
     el('details', { class: 'panel more', 'data-field': 'scr-values' }, [el('summary', { text: 'Our values and how much each matters' }),
       el('p', { class: 'small muted', text: 'Changing a weight re-ranks every show straight away.' }), weights,

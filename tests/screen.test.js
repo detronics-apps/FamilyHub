@@ -1,7 +1,7 @@
 // Screen time (D-097): the week against what was agreed, and shows ranked on the family's values.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normaliseLog, showsOf, criteriaOf, personScore, ranking, suggest, week, limitFor, CRITERIA } from '../js/apps/parenting/screen.js';
+import { normaliseLog, allowed, minScoreFor, showsOf, criteriaOf, personScore, ranking, suggest, week, limitFor, CRITERIA } from '../js/apps/parenting/screen.js';
 import { normaliseDecision, decisionSummary } from '../js/apps/decisions/logic.js';
 
 const TODAY = '2026-11-02';
@@ -45,4 +45,22 @@ test('shows ranked on our values: weights count, each parent apart, unrated last
   assert.equal(suggest(r, [{ months: 40 }]).show.showId, 'bluey');
   assert.equal(suggest(r, [{ months: 12 }]), null, 'nothing rated is made for a 1-year-old');
   assert.equal(criteriaOf(null).length, CRITERIA.length);
+});
+
+test('only shows scoring above what we agreed: marked per child, kept out of the suggestion, noted in the week', () => {
+  const ds = [rule({ id: 'a', ageFrom: 24, ageTo: 72, screenMinScore: 4 }), rule({ id: 'b', ageFrom: 0, ageTo: 216, screenMinScore: 3 })];
+  assert.equal(minScoreFor(kid, ds), 4, 'the strictest rule in force');
+  assert.equal(minScoreFor({ ...kid, months: 100 }, ds), 3);
+  assert.equal(allowed(4.3, kid, ds), 'ok');
+  assert.equal(allowed(3.5, kid, ds), 'below');
+  assert.equal(allowed(null, kid, ds), 'unrated');
+  assert.equal(allowed(2, kid, []), null, 'no bar agreed: nothing to mark');
+  const crit = criteriaOf(null);
+  const shows = showsOf([{ showId: 'pawpatrol', ratings: { a: { pace: 4, learning: 4, kindness: 4, ending: 4, ads: 4, parents: 4 } } }, { showId: 'bluey', ratings: { a: { pace: 5, learning: 4, kindness: 5, ending: 4, ads: 5, parents: 5 } } }]);
+  const r = ranking(shows, crit, [], [{ id: 'a', name: 'Sam' }]);
+  assert.equal(suggest(r, [kid], [rule({ ageFrom: 24, ageTo: 72, screenMinScore: 4.9 })]), null, 'nothing clears 4.9');
+  assert.equal(suggest(r, [kid], ds).show.showId, 'bluey');
+  const logs = [{ day: TODAY, kids: ['k'], showId: 'pawpatrol', minutes: 20 }].map(normaliseLog);
+  const w = week(kid, logs, [rule({ ageFrom: 24, ageTo: 72, screenMinScore: 4.5 })], TODAY, (id) => r.find((x) => x.show.showId === id)?.score ?? null);
+  assert.deepEqual(w.notes, ['1 time a show below the 4.5 you agreed']);
 });

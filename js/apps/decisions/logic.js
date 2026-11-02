@@ -44,12 +44,14 @@ export function normaliseDecision(d = {}) {
     ageTo: age(d.ageTo),
     // A screen-time rule's minutes a day (D-097), so Screen time can show each day against it.
     screenMinutes: age(d.screenMinutes),
+    // And the lowest show score it allows, out of 5 (D-098).
+    screenMinScore: Number.isFinite(Number(d.screenMinScore)) && d.screenMinScore !== null && d.screenMinScore !== '' ? Math.max(0, Math.min(5, Math.round(Number(d.screenMinScore) * 10) / 10)) : null,
     history: (Array.isArray(d.history) ? d.history : []).filter((h) => h && typeof h.agreement === 'string').slice(-20),
   };
 }
 
 export function decisionSummary(d) {
-  return { title: d.title, status: d.status, reviewOn: d.reviewOn, outcome: d.outcome, source: d.source, hasAgreement: Boolean(d.agreement), ageFrom: d.ageFrom ?? null, ageTo: d.ageTo ?? null, screenMinutes: d.screenMinutes ?? null };
+  return { title: d.title, status: d.status, reviewOn: d.reviewOn, outcome: d.outcome, source: d.source, hasAgreement: Boolean(d.agreement), ageFrom: d.ageFrom ?? null, ageTo: d.ageTo ?? null, screenMinutes: d.screenMinutes ?? null, screenMinScore: d.screenMinScore ?? null };
 }
 
 /** Where a decision came from, as a category to filter by: 'parenting', 'tickets' or '' (D-095). */

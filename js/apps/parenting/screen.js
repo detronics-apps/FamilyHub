@@ -103,12 +103,27 @@ export function ranking(shows, criteria, logs, raters) {
   }).sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || a.show.name.localeCompare(b.show.name));
 }
 
-/** If you do watch today: the best-ranked show made for the youngest child watching. */
-export function suggest(ranked, kids) {
-  const ages = kids.map((k) => k.months).filter((m) => m != null);
-  const youngest = ages.length ? Math.min(...ages) : null;
-  return ranked.find((r) => r.score != null && (youngest == null || inRange(youngest, r.show.ageFrom, r.show.ageTo))) ?? null;
+/** If you do watch today: the best-ranked show made for the youngest child watching, that clears the bar you agreed for them. */
+export function suggest(ranked, kids, decisions = []) {
+  const known = kids.filter((k) => k.months != null);
+  const youngest = known.length ? known.reduce((a, b) => (b.months < a.months ? b : a)) : null;
+  const bar = youngest ? minScoreFor(youngest, decisions) : null;
+  return ranked.find((r) => r.score != null && (!youngest || inRange(youngest.months, r.show.ageFrom, r.show.ageTo)) && (bar == null || r.score >= bar)) ?? null;
 }
+
+/** The lowest show score agreed for a child now (D-098): the strictest in-force rule's, else null. */
+export function minScoreFor(kid, decisions) {
+  const rules = decisions.filter((d) => d.source === 'parenting:screens' && d.screenMinScore != null && (d.hasAgreement || d.agreement) && timing(d.ageFrom ?? null, d.ageTo ?? null, [kid]).when === 'now');
+  return rules.length ? Math.max(...rules.map((d) => d.screenMinScore)) : null;
+}
+
+/** For one child: 'ok' (clears the bar), 'below', 'unrated' (not checked yet), or null (no bar agreed). */
+export function allowed(score, kid, decisions) {
+  const bar = minScoreFor(kid, decisions);
+  if (bar == null) return null;
+  return score == null ? 'unrated' : score >= bar ? 'ok' : 'below';
+}
+export const ALLOWED_LABEL = { ok: 'Within what we agreed', below: 'Below what we agreed', unrated: 'Not checked yet' };
 
 /** The minutes a day agreed for a child now: the in-force screen-time decision with a figure, else null. */
 export function limitFor(kid, decisions) {
@@ -122,7 +137,7 @@ const addDays = (day, n) => { const d = new Date(`${day}T00:00:00Z`); d.setUTCDa
  * One child's last 7 days, ending today: minutes each day, the agreed limit, and plain
  * observations - no judgement, no streaks.
  */
-export function week(kid, logs, decisions, today) {
+export function week(kid, logs, decisions, today, scoreOf = () => null) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
   const mine = logs.filter((l) => l.kids.includes(kid.id) && days.includes(l.day));
   const byDay = days.map((day) => ({ day, minutes: mine.filter((l) => l.day === day).reduce((s, l) => s + l.minutes, 0) }));
@@ -136,6 +151,11 @@ export function week(kid, logs, decisions, today) {
     const all = timed.reduce((s, l) => s + l.minutes, 0);
     if (all && late / all >= 0.6) notes.push('Most of it after 5pm');
     else if (all && late / all <= 0.2) notes.push('Mostly before 5pm');
+  }
+  const bar = minScoreFor(kid, decisions);
+  if (bar != null) {
+    const low = mine.filter((l) => l.showId && scoreOf(l.showId) != null && scoreOf(l.showId) < bar).length;
+    if (low) notes.push(`${low} time${low === 1 ? '' : 's'} a show below the ${bar} you agreed`);
   }
   const wound = mine.filter((l) => l.after === 'wound').length;
   if (wound) notes.push(`Wound up afterwards ${wound} time${wound === 1 ? '' : 's'}`);

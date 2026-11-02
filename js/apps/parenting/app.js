@@ -52,8 +52,8 @@ export function render(hub, route) {
   if (route.sub === 'idea-edit') return ideaEdit(hub, r.data.activities, route.rest[0]);
   if (route.sub === 'idea-new') return ideaEdit(hub, r.data.activities, null);
   if (route.sub === 'screen') return screenHome(hub, r.data.screen, ctx.kids, r.data.decisions);
-  if (route.sub === 'screen-log') return logScreen(hub, r.data.screen, ctx.kids);
-  if (route.sub === 'shows') return showsScreen(hub, r.data.screen);
+  if (route.sub === 'screen-log') return logScreen(hub, r.data.screen, ctx.kids, r.data.decisions);
+  if (route.sub === 'shows') return showsScreen(hub, r.data.screen, ctx.kids, r.data.decisions);
   if (route.sub === 'show') return showScreen(hub, r.data.screen, route.rest[0]);
   if (route.sub === 'show-edit') return showEdit(hub, r.data.screen, route.rest[0]);
   if (route.sub === 'show-new') return showEdit(hub, r.data.screen, null);

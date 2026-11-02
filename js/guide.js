@@ -281,7 +281,7 @@ export const HOWTOS = [
     'Add your own topics, decisions or sections - the starting ones are only a starting point.',
   ] },
   { id: 'screentime', title: 'Keep an eye on screen time', steps: [
-    'Agree a rule first: Parenting › Screen time › Decide - the ages it is for and, if you like, the minutes a day.',
+    'Agree a rule first: Parenting › Screen time › Decide - the ages it is for and, if you like, the minutes a day and the lowest show score you are happy with.',
     'After watching, press Log: who, what, about how long, and how they were afterwards. A few taps.',
     'Each child’s week shows the minutes each day beside what you agreed, and what stands out - to notice, not to judge.',
     'Under Shows, each of you rates the shows on your own values and sets how much each value matters. The best-ranked show for the youngest watching is suggested.',
