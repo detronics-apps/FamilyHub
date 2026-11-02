@@ -45,6 +45,24 @@ export const EMERGENCY = [
   ['Poisons Information Helpline', '0861 555 777'],
 ];
 
+// Starting numbers by country (D-103) - the family edits, removes and adds (their doctor, the
+// clinic, the after-hours line). Check them for where you live.
+export const COUNTRY_NUMBERS = {
+  za: { name: 'South Africa', numbers: EMERGENCY },
+  uk: { name: 'United Kingdom', numbers: [['Emergency', '999'], ['From any phone in Europe', '112'], ['NHS advice (not an emergency)', '111']] },
+  us: { name: 'United States', numbers: [['Emergency', '911'], ['Poison Control', '1-800-222-1222']] },
+  ca: { name: 'Canada', numbers: [['Emergency', '911']] },
+  eu: { name: 'European Union', numbers: [['Emergency', '112']] },
+  au: { name: 'Australia', numbers: [['Emergency', '000'], ['From a mobile', '112'], ['Poisons Information', '13 11 26']] },
+  nz: { name: 'New Zealand', numbers: [['Emergency', '111'], ['Healthline', '0800 611 116']] },
+};
+
+/** The family's numbers: their own list, or South Africa's to start. */
+export function numbersOf(settings) {
+  const own = Array.isArray(settings?.numbers) ? settings.numbers.filter((x) => Array.isArray(x) && String(x[1] ?? '').trim()).map(([l, n]) => [String(l ?? '').trim().slice(0, 60) || 'Number', String(n).trim().slice(0, 30)]) : null;
+  return own && own.length ? own : EMERGENCY;
+}
+
 // Outcomes of a health flowchart. There is no "stay home": the gentlest is still "see someone".
 export const OUTCOMES = {
   now: 'Call for help now',

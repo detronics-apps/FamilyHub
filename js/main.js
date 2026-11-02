@@ -39,7 +39,7 @@ import { openDoc } from './ui/views/docs.js';
 import { syncChip, syncNotices, phoneButtons } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.16.0';
+export const APP_VERSION = '0.17.0';
 
 const store = createLocalStore(window.localStorage);
 
@@ -276,11 +276,18 @@ function applyTheme() {
   else document.documentElement.setAttribute('data-theme', app.device.theme);
 }
 
+// Buy Me a Coffee (owner's request, 2026-11-02): a line-drawn cup in currentColor, never the emoji.
+export const COFFEE_URL = 'https://buymeacoffee.com/detronics';
+const COFFEE_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 8 H15.5 V13 A4.5 4.5 0 0 1 6.5 13 Z"/><path d="M15.5 9.5 h1.8 a2.6 2.6 0 0 1 0 5.2 h-1.8"/><path d="M4 19.5 Q 11 21.8 18 19.5"/><path d="M9.3 5.2 q -1.4 -1.1 0 -2.2 q 1.4 -1.1 0 -2.2"/><path d="M12.7 5.2 q -1.4 -1.1 0 -2.2 q 1.4 -1.1 0 -2.2"/></svg>';
+
 function buildHeader() {
   const person = currentPerson();
   const theme = app.device.theme;
+  // The brand goes home from anywhere; on the home page itself it opens the Detronics site.
+  const onHome = parseRoute().name === 'home';
   return el('header', { class: 'app-header' }, [
-    el('a', { class: 'brand', href: '#/', 'aria-label': 'Family Hub - home' }, [
+    el('a', { class: 'brand', href: onHome ? 'https://www.detronics.co.za/' : '#/', 'data-field': 'brand',
+      ...(onHome ? { target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Family Hub - opens detronics.co.za in a new tab' } : { 'aria-label': 'Family Hub - home' }) }, [
       el('span', { class: 'brand__mark', html: HOUSE_ICON, 'aria-hidden': 'true' }),
       el('span', { class: 'brand__text' }, [
         el('span', { class: 'brand__name', text: 'Family Hub' }),
@@ -294,6 +301,8 @@ function buildHeader() {
         title: 'Who is using Family Hub? (a convenience, not a login)',
         on: { click: openWho },
       }, [avatar(person), el('span', { class: 'who-btn__name', text: person ? person.name : 'Who are you?' })]) : null,
+      el('a', { class: 'btn btn-icon', href: COFFEE_URL, target: '_blank', rel: 'noopener noreferrer', 'data-field': 'coffee',
+        'aria-label': 'Buy me a coffee (opens in a new tab)', title: 'Buy me a coffee (opens in a new tab)', html: COFFEE_ICON }),
       el('button', {
         class: 'btn btn-icon', type: 'button', 'data-field': 'theme',
         title: `${THEME_LABEL[theme]}. Click to change.`, 'aria-label': THEME_LABEL[theme],
@@ -374,8 +383,10 @@ function buildFooter() {
       el('a', { href: '#/connect', text: 'Phone and laptop', 'data-field': 'footer-connect' }),
       el('button', { class: 'linkish', type: 'button', text: 'Privacy', on: { click: () => openDoc('privacy') } }),
       el('button', { class: 'linkish', type: 'button', text: 'About', on: { click: () => openDoc('about') } }),
+      el('button', { class: 'linkish', type: 'button', text: 'Licence & terms', 'data-field': 'footer-licence', on: { click: () => openDoc('licence') } }),
       el('button', { class: 'btn btn-small', type: 'button', text: 'New here?', 'data-field': 'new-here', on: { click: () => openWelcome(ctx) } }),
       el('span', { class: 'muted', text: `v${APP_VERSION}` }),
+      el('a', { class: 'linkish', href: COFFEE_URL, target: '_blank', rel: 'noopener noreferrer', text: 'Buy me a coffee', 'data-field': 'footer-coffee' }),
     ]),
   ]);
 }

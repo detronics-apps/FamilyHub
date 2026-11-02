@@ -10,16 +10,30 @@ import {
   STAGES, STAGE_LABEL, OUTCOMES, categoryOf, CATEGORY_LABEL, CARE_LABEL,
 } from './logic.js';
 import { STARTER } from '../parenting/content.js';
-import { kidsOf, timing, rangeLabel, ageLabel } from '../parenting/logic.js';
+import { QUESTIONS } from '../parenting/questions.js';
+import { kidsOf, timing, rangeLabel, ageLabel, planText } from '../parenting/logic.js';
 import { videosPanel } from '../parenting/videos.js';
 
 const ui = { cat: '', topic: '' };   // the list's filters (D-095)
 // Ages a decision can apply from and to, in months.
 const AGES = [-6, -3, 0, 1, 2, 3, 4, 6, 9, 12, 18, 24, 36, 48, 60, 72, 96, 120, 144, 168, 192, 216];
 
-/** A Parenting topic's title and question: a starting one, or the family's own (read from Parenting). */
-function parentingTopic(hub, id) {
+/**
+ * A Parenting topic's title and question: a starting one, or the family's own (read from Parenting).
+ * "topic:question" is one question of it (D-106); "fever:plan" is the fever plan the parents wrote.
+ */
+function parentingTopic(hub, ref) {
+  const [id, qid] = String(ref ?? '').split(':');
   const s = STARTER.find((t) => t.id === id);
+  if (s && qid === 'plan') {
+    if (!hub.data.installed('parenting')) return { data: { ...s, title: `${s.title}: our plan` } };
+    return hub.use(`pplan:${id}`, async () => {
+      const { items } = await hub.data.of('parenting', 'topics').list({ filter: (r) => r.topicId === id, limit: 1 });
+      return { ...s, title: `Our ${s.title.toLowerCase()} plan`, question: 'Our plan, by age: what we do at what temperature, and when we go to a doctor.', agreementText: planText(items[0]?.plan ?? {}), options: [] };
+    });
+  }
+  const q = s && qid ? (QUESTIONS[id] ?? []).find((x) => x.id === qid) : null;
+  if (q) return { data: { ...s, title: `${s.title}: ${q.ask}`, question: [q.ask, ...q.think.map((x) => `- ${x}`)].join('\n'), options: q.options } };
   if (s) return { data: s };
   if (!id || !hub.data.installed('parenting')) return { data: null };
   return hub.use(`ptopic:${id}`, async () => {
@@ -58,14 +72,14 @@ function listScreen(hub) {
   const today = hub.today();
   const cats = [...new Set(list.data.map(categoryOf).filter((c) => CATEGORY_LABEL[c]))];
   if (ui.cat && !cats.includes(ui.cat)) { ui.cat = ''; ui.topic = ''; }
-  const shown = list.data.filter((s) => (!ui.cat || categoryOf(s) === ui.cat) && (!ui.topic || s.source === `parenting:${ui.topic}`));
+  const shown = list.data.filter((s) => (!ui.cat || categoryOf(s) === ui.cat) && (!ui.topic || (s.source ?? '').slice(10).split(':')[0] === ui.topic));
   const topicIds = [...new Set(list.data.filter((s) => categoryOf(s) === 'parenting').map((s) => s.source.slice(10)))];
   const filters = cats.length ? el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' } }, [
     el('div', { class: 'chipset', role: 'group', 'aria-label': 'Show' }, [['', 'All'], ...cats.map((c) => [c, CATEGORY_LABEL[c]])].map(([c, label]) => el('button', {
       class: 'chip', type: 'button', 'aria-pressed': String(ui.cat === c), text: label, 'data-field': `dec-cat:${c || 'all'}`,
       on: { click: () => { ui.cat = c; ui.topic = ''; hub.render(); } } }))),
-    ui.cat === 'parenting' && topicIds.length > 1 ? el('select', { class: 'select', 'aria-label': 'Topic', 'data-field': 'dec-topic', style: { maxWidth: '240px' }, on: { change: (e) => { ui.topic = e.target.value; hub.render(); } } },
-      [el('option', { value: '', text: 'Every topic', selected: !ui.topic }), ...topicIds.map((id) => el('option', { value: id, text: STARTER.find((t) => t.id === id)?.title ?? (id ? 'Our own topic' : 'No topic'), selected: ui.topic === id }))]) : null,
+    ui.cat === 'parenting' && new Set(topicIds.map((id) => id.split(':')[0])).size > 1 ? el('select', { class: 'select', 'aria-label': 'Topic', 'data-field': 'dec-topic', style: { maxWidth: '240px' }, on: { change: (e) => { ui.topic = e.target.value; hub.render(); } } },
+      [el('option', { value: '', text: 'Every topic', selected: !ui.topic }), ...[...new Set(topicIds.map((id) => id.split(':')[0]))].map((id) => el('option', { value: id, text: STARTER.find((t) => t.id === id)?.title ?? (id ? 'Our own topic' : 'No topic'), selected: ui.topic === id }))]) : null,
   ]) : null;
   const by = (st) => shown.filter((s) => stage(s, today) === st || (st === 'discuss' && ['observe', 'discuss', 'decide'].includes(stage(s, today))));
   const section = (title, items, help) => (items.length ? el('div', { class: 'panel' }, [
@@ -123,7 +137,7 @@ function itemScreen(hub, id) {
     el('article', { class: 'panel stack' }, [
       el('h1', { text: d.title, style: { margin: 0 } }),
       cycle(st),
-      d.source?.startsWith('parenting:') ? el('p', { class: 'small' }, ['From Parenting: ', el('a', { href: `#/parenting/topic/${encodeURIComponent(d.source.slice(10))}`, text: parentingTopic(hub, d.source.slice(10)).data?.title ?? 'the topic' })]) : null,
+      d.source?.startsWith('parenting:') ? el('p', { class: 'small' }, ['From Parenting: ', el('a', { href: `#/parenting/topic/${encodeURIComponent(d.source.slice(10).split(':')[0])}`, text: parentingTopic(hub, d.source.slice(10).split(':')[0]).data?.title ?? 'the topic' })]) : null,
       appliesLine(hub, d) ? el('p', { class: 'small', 'data-field': 'dec-applies', text: `Applies: ${appliesLine(hub, d)}.` }) : null,
       d.careBy ? el('p', { class: 'small', text: `Who looks after the children: ${CARE_LABEL[d.careBy]}.` }) : null,
       d.screenMinutes != null || d.screenMinScore != null ? el('p', { class: 'small', text: `Screen time: ${[d.screenMinutes != null ? `up to ${d.screenMinutes} minutes a day` : null, d.screenMinScore != null ? `only shows scoring ${d.screenMinScore} or more` : null].filter(Boolean).join('; ')}.` }) : null,
@@ -134,6 +148,7 @@ function itemScreen(hub, id) {
       block('Our reasoning', d.reasoning),
       d.agreement ? el('div', { class: 'done-panel' }, [el('h3', { text: 'What we agreed' }), el('p', { text: d.agreement, style: { whiteSpace: 'pre-wrap', margin: 0 } })]) : null,
       d.participants.length ? el('p', { class: 'small muted', text: `Agreed by ${d.participants.map((x) => nameOf(people, x)).join(', ')}` }) : null,
+      block('What would change our mind', d.changeMind),
       block('How we will know it is working', d.indicators),
       d.status === 'trying' && d.reviewOn ? el('p', { class: 'small', text: st === 'review' ? `The trial period ended ${fmtDay(d.reviewOn, today)} - time to look back.` : `Look back on ${fmtDay(d.reviewOn, today)}.` }) : null,
       d.outcome ? el('p', { text: `Outcome: ${OUTCOMES[d.outcome]}.` }) : null,
@@ -236,6 +251,7 @@ function editScreen(hub, id, from = null) {
     alternatives: pt?.options?.map((o) => o.name) ?? [],
     source: t ? `tickets:${t.id}` : from?.startsWith('parenting:') ? from : null,
     ageFrom: pt?.ages?.from ?? null, ageTo: pt?.ages?.to ?? null,
+    agreement: pt?.agreementText ?? '',
   });
   const ageField = (key, label, none) => ({ key, label, type: 'custom', control: () => {
     const s = el('select', { class: 'select', 'data-field': `dec-${key}`, style: { maxWidth: '240px' } }, [el('option', { value: '', text: none, selected: record[key] == null }),
@@ -254,14 +270,15 @@ function editScreen(hub, id, from = null) {
         { key: 'title', label: 'What is it about?', required: true, placeholder: 'e.g. Screen-time transitions' },
         { key: 'issue', label: 'What is happening', type: 'textarea' },
         { key: 'agreement', label: parenting ? 'What we agree' : 'What we agree to try', type: 'textarea', hint: 'Can stay empty while you talk it through.' },
-        record.source === 'parenting:childcare' ? { key: 'careBy', label: 'Who may look after the children', type: 'select', options: [['', 'Not set'], ...Object.entries(CARE_LABEL)], hint: 'The app follows this: with "Only us", nothing ever asks about a babysitter.' } : null,
+        record.source?.startsWith('parenting:childcare') ? { key: 'careBy', label: 'Who may look after the children', type: 'select', options: [['', 'Not set'], ...Object.entries(CARE_LABEL)], hint: 'The app follows this: with "Only us", nothing ever asks about a babysitter.' } : null,
         record.source === 'parenting:screens' ? { key: 'screenMinutes', label: 'Screen time a day, at most (minutes)', type: 'number', hint: 'Empty for none set. Screen time shows each day against it.' } : null,
         record.source === 'parenting:screens' ? { key: 'screenMinScore', label: 'Only shows scoring at least (out of 5)', type: 'number', placeholder: 'e.g. 3.5', hint: 'Your own scores under Screen time › Shows. Empty for no minimum.' } : null,
         ageField('ageFrom', 'Applies from the age of', 'Any age'),
         ageField('ageTo', 'Until the age of', 'No end'),
         { key: 'purpose', label: 'What we want to achieve', type: 'textarea', more: true },
         { key: 'alternatives', label: 'Options we considered', type: 'lines', more: true },
-        { key: 'reasoning', label: 'Our reasoning and trade-offs', type: 'textarea', more: true },
+        { key: 'reasoning', label: parenting ? 'Why we chose it' : 'Our reasoning and trade-offs', type: 'textarea', more: !parenting },
+        parenting ? { key: 'changeMind', label: 'What would change our mind', type: 'textarea', hint: 'The signs you are watching for - so a tired night can check them.' } : null,
         { key: 'participants', label: 'Who agreed', type: 'people', more: true },
         { key: 'indicators', label: 'How we will know it is working', type: 'textarea', more: true },
         { key: 'reviewOn', label: 'Look back on', type: 'day', more: true },

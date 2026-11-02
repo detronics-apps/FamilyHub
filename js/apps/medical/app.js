@@ -11,6 +11,7 @@ import {
   normaliseAccount, accountSummary, accountText, owed, paidByUs, outOfPocket, nextStep, sortAccounts, followUpDue,
   FILTERS, KINDS, KIND_LABEL, CLAIM, CLAIM_LABEL, tileNote as noteFor, yearView, yearsOf, taxYear, taxYearSpan, missingProof,
 } from './logic.js';
+import { notesScreen } from './notes.js';
 
 const ui = { person: '', year: null };
 
@@ -29,6 +30,7 @@ export function render(hub, route) {
   if (screen === 'new') return editScreen(hub, null);
   if (screen === 'edit') return editScreen(hub, route.rest[0]);
   if (screen === 'year') return yearScreen(hub);
+  if (screen === 'notes') return notesScreen(hub, nav(hub, 'notes'));
   return listScreen(hub, FILTERS[screen] ? screen : 'outstanding');
 }
 
@@ -36,7 +38,7 @@ function nav(hub, current) {
   return tabs(hub, [
     { screen: null, label: 'Outstanding' }, { screen: 'followup', label: 'Follow-up' },
     { screen: 'aid', label: 'Medical aid' }, { screen: 'gap', label: 'Gap cover' },
-    { screen: 'all', label: 'All' }, { screen: 'year', label: 'Tax year' },
+    { screen: 'all', label: 'All' }, { screen: 'year', label: 'Tax year' }, { screen: 'notes', label: 'Notes' },
   ], current === 'outstanding' ? null : current);
 }
 

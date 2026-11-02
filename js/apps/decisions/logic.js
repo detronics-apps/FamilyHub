@@ -44,6 +44,8 @@ export function normaliseDecision(d = {}) {
     ageTo: age(d.ageTo),
     // A screen-time rule's minutes a day (D-097), so Screen time can show each day against it.
     screenMinutes: age(d.screenMinutes),
+    // What would make us change our mind (D-106) - the signs we are watching for.
+    changeMind: str(d.changeMind, 2000),
     // Who may look after the children, for the childcare rule (D-102): 'us' | 'family' | 'trusted' | 'daycare'.
     careBy: ['us', 'family', 'trusted', 'daycare'].includes(d.careBy) ? d.careBy : null,
     // And the lowest show score it allows, out of 5 (D-098).

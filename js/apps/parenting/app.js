@@ -7,30 +7,39 @@
 import { el } from '../../ui/dom.js';
 import { confirmAction, modal } from '../../ui/common.js';
 import { loading, failure, recordForm, saveRecord } from '../kit.js';
-import { LEVELS, SOURCES, EMERGENCY, OUTCOMES, GO_LINE } from './content.js';
+import { LEVELS, SOURCES, OUTCOMES, GO_LINE, COUNTRY_NUMBERS, numbersOf } from './content.js';
 import {
   SECTIONS, topicsOf, dashboard, kidsOf, adultsOf, timing, rangeLabel, ageLabel, leaningsFor, topicStatus, parentingDecisions,
-  normaliseRecord, normaliseSection, STATUS_LABEL, tileNote as noteFor, stepAt, ownId,
+  normaliseRecord, normaliseSection, STATUS_LABEL, careRule, tileNote as noteFor, stepAt, ownId,
 } from './logic.js';
 import { activitiesOf, planned, plannedOn } from './activities.js';
 import { activitiesCol, playScreen, ideasScreen, ideaScreen, ideaEdit } from './play.js';
 import { loadScreen, screenHome, logScreen, showsScreen, showScreen, showEdit, todayMinutes } from './screens.js';
 import { loadTrack, trackHome, trackerScreen, scenarioEdit, trackNote } from './track.js';
 import { videosPanel } from './videos.js';
+import { loadRoutines, routinesHome, routineRun, routineEdit } from './kidtasks.js';
+import { loadPlanner, plannerScreen, planEdit } from './plannerview.js';
+import { questionsPanel, feverPlanPanel, chartPanel } from './questionsview.js';
 
 const topicsCol = (hub) => hub.data.collection('topics', { summary: (r) => normaliseRecord(r), text: (r) => [r.title, r.question, r.summary].join(' '), prefix: 'pt' });
+const settingsCol = (hub) => hub.data.collection('settings', { summary: (r) => r, prefix: 'pset' });
+// The family's emergency numbers, read on each render (D-103).
+let EMERGENCY = numbersOf(null);
 const sectionsCol = (hub) => hub.data.collection('sections', { summary: (r) => normaliseSection(r), prefix: 'ps' });
 const AGES = [-6, -3, -1, 0, 1, 2, 3, 4, 6, 9, 12, 18, 24, 36, 48, 60, 72, 96, 120, 144, 168, 192, 216];
 
 const load = (hub) => hub.use('all', async () => {
-  const [t, s, d, a, sc, tr] = await Promise.all([
+  const [t, s, d, a, sc, tr, st, rt, pl] = await Promise.all([
     topicsCol(hub).list({ limit: 100000 }), sectionsCol(hub).list({ limit: 1000 }),
     hub.data.installed('decisions') ? hub.data.of('decisions', 'decisions').list({ limit: 100000 }) : { items: [] },
     activitiesCol(hub).list({ limit: 100000 }),
     loadScreen(hub),
     loadTrack(hub),
+    settingsCol(hub).list({ limit: 10 }),
+    loadRoutines(hub),
+    loadPlanner(hub),
   ]);
-  return { records: t.items, ownSections: s.items.map(normaliseSection), decisions: d.items, activities: activitiesOf(a.items), screen: sc, track: tr };
+  return { records: t.items, ownSections: s.items.map(normaliseSection), decisions: d.items, activities: activitiesOf(a.items), screen: sc, track: tr, settings: st.items.find((x) => x.id === 'numbers') ?? null, routines: rt, planner: pl };
 });
 const sectionsOf = (data) => [...SECTIONS, ...data.ownSections];
 
@@ -49,6 +58,7 @@ export function render(hub, route) {
   const r = load(hub);
   if (r.loading) return loading();
   if (r.error) return failure(r.error);
+  EMERGENCY = numbersOf(r.data.settings);
   const ctx = { hub, data: r.data, topics: topicsOf(r.data.records), sections: sectionsOf(r.data), kids: kidsOf(hub.people.list(), hub.today()), decisions: parentingDecisions(r.data.decisions) };
   if (route.sub === 'agree') return dashScreen(ctx);
   if (route.sub === 'play') return playScreen(hub, r.data.activities, ctx.kids);
@@ -56,8 +66,16 @@ export function render(hub, route) {
   if (route.sub === 'idea') return ideaScreen(hub, r.data.activities, route.rest[0], ctx.kids);
   if (route.sub === 'idea-edit') return ideaEdit(hub, r.data.activities, route.rest[0]);
   if (route.sub === 'idea-new') return ideaEdit(hub, r.data.activities, null);
+  if (route.sub === 'planner') return plannerScreen(hub, r.data.planner, r.data.activities, careRule(r.data.decisions, ctx.kids));
+  if (route.sub === 'plan-new') return planEdit(hub, r.data.planner, null);
+  if (route.sub === 'plan-edit') return planEdit(hub, r.data.planner, route.rest[0]);
+  if (route.sub === 'routines') return routinesHome(hub, r.data.routines, ctx.kids);
+  if (route.sub === 'routine') return routineRun(hub, r.data.routines, route.rest[0], ctx.kids);
+  if (route.sub === 'routine-edit') return routineEdit(hub, r.data.routines, route.rest[0], ctx.kids);
+  if (route.sub === 'routine-new') return routineEdit(hub, r.data.routines, null, ctx.kids);
+  if (route.sub === 'numbers') return numbersScreen(hub, r.data.settings);
   if (route.sub === 'track') return trackHome(hub, r.data.track, ctx.kids);
-  if (route.sub === 'tracker') return trackerScreen(hub, r.data.track, route.rest[0], ctx.kids);
+  if (route.sub === 'tracker') return trackerScreen(hub, r.data.track, route.rest[0], ctx.kids, Object.fromEntries(r.data.records.filter((x) => x.plan).map((x) => [x.topicId, x.plan])));
   if (route.sub === 'scenario-new') return scenarioEdit(hub, r.data.track, null);
   if (route.sub === 'scenario-edit') return scenarioEdit(hub, r.data.track, route.rest[0]);
   if (route.sub === 'screen') return screenHome(hub, r.data.screen, ctx.kids, r.data.decisions);
@@ -88,6 +106,8 @@ function doorsScreen(ctx) {
         [dash.worthAgreeing.length ? `${dash.worthAgreeing.length} worth agreeing now` : null, dash.comingUp.length ? `${dash.comingUp.length} coming up` : null, `${dash.agreed} of ${dash.total} agreed`].filter(Boolean).join(' · '), 'door:agree'),
       door('ideas', 'Ideas', 'Time to think: add activities and games, plan a day for one, adjust the rules.', soon.length ? `${soon.length} planned` : `${ctx.data.activities.length} ideas`, 'door:ideas'),
       door('play', 'Play now', 'No time to think: a few taps and something to do.', today.length ? `Planned today: ${today[0].name}` : null, 'door:play'),
+      door('planner', 'Planner', 'What is on this week - each child and each of you, with trips and plans alongside.', null, 'door:planner'),
+      door('routines', 'Routines', 'Leaving the house, bedtime, the morning - each child ticks off their own list.', null, 'door:routines'),
       door('track', 'Track', 'Something worrying you? Track it for a few days - for the doctor, or just to see.', trackNote(ctx.data.track, kids), 'door:track'),
       door('screen', 'Screen time', 'Notice, not judge: the week beside what you agreed, and shows ranked on your values.', (() => { const m = todayMinutes(ctx.data.screen.logs, hub.today()); return m ? `${m} min logged today` : null; })(), 'door:screen'),
     ]),
@@ -168,6 +188,7 @@ function sectionScreen(ctx, id) {
     el('a', { href: hub.href('agree'), class: 'small', text: '‹ Agreements' }),
     el('h1', { text: s.name, style: { margin: 0 } }),
     s.purpose ? el('p', { class: 'muted', style: { margin: 0 }, text: s.purpose }) : null,
+    id === 'emergency' ? el('div', {}, [el('a', { class: 'btn', href: hub.href('numbers'), text: 'Numbers', title: 'Who to call, where you live', 'data-field': 'p-numbers' })]) : null,
     el('div', { class: 'row' }, [el('a', { class: 'btn btn-primary', href: hub.href('new', id), text: 'Add', title: 'Add our own topic here' }),
       own ? el('button', { class: 'btn btn-quiet', type: 'button', text: 'Remove', on: { click: async () => {
         if (!await confirmAction({ title: `Remove "${s.name}"?`, text: mine.length ? 'Its topics move to Decide together.' : 'It is empty.', confirmLabel: 'Remove', danger: true })) return;
@@ -194,7 +215,7 @@ function stepsPanel(t) {
     const again = path.length > 1 ? el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Start again', on: { click: () => { paths.delete(t.id); draw(); } } }) : null;
     const out = node.out ? el('div', { class: `panel ${node.out === 'now' ? 'fin-worse' : ''}`, style: { borderWidth: '2px' }, 'data-field': `p-out:${node.out}` }, [
       el('strong', { text: OUTCOMES[node.out] }),
-      node.out === 'now' ? el('p', { style: { margin: '6px 0 0' }, text: `${EMERGENCY[0][0]}: ${EMERGENCY[0][1]} · ${EMERGENCY[1][0]}: ${EMERGENCY[1][1]}` }) : null,
+      node.out === 'now' ? el('p', { style: { margin: '6px 0 0' }, text: EMERGENCY.slice(0, 2).map(([w, n]) => `${w}: ${n}`).join(' · ') }) : null,
     ]) : null;
     box.replaceChildren(...[
       el('p', { class: 'small muted', style: { margin: 0 }, text: 'Go through it together now, so it is familiar if it is ever needed.' }),
@@ -262,9 +283,15 @@ function topicScreen(ctx, id) {
     t.summary ? el('p', { style: { margin: 0 }, text: t.summary }) : null,
     t.prepare ? el('div', { class: 'panel stack', 'data-field': 'p-prepare' }, [el('h2', { text: 'Prepare now', style: { margin: 0 } }),
       ...[['Have ready', t.prepare.ready], ['Who does what', t.prepare.who], ['Practise', t.prepare.practise]].filter(([, xs]) => xs?.length).map(([h, xs]) => el('div', {}, [el('strong', { text: h }), el('ul', { style: { margin: 0, paddingLeft: '1.2em' } }, xs.map((x) => el('li', { text: x })))]))]) : null,
-    t.steps ? el('details', { class: 'panel more', 'data-field': 'p-practise' }, [el('summary', { text: 'Practise the steps' }), stepsPanel(t)]) : null,
+    t.id === 'fever' ? feverPlanPanel(hub, t, put) : null,
+    t.id === 'stock' ? chartPanel(hub, t, put, { key: 'meds', title: 'Our medicine chart', help: 'What each medicine is for, from what age, and how much - copied from the label and checked with your pharmacist for each child’s weight. Print it every few months as they grow.', printNote: 'From the labels and our pharmacist - check the label before every dose. If you are wondering whether to see a doctor, go.',
+      columns: [['name', 'Medicine', 'e.g. Children’s paracetamol'], ['for', 'For', 'e.g. fever, pain'], ['age', 'From what age', 'e.g. 3 months'], ['dose', 'How much', 'as on the label'], ['often', 'How often / most a day', 'e.g. every 6 h, 4 a day'], ['note', 'Note', '']] }) : null,
+    t.id === 'clothes' ? chartPanel(hub, t, put, { key: 'layers', title: 'What they wear at what temperature', help: 'Your own chart for the room temperature the thermometer shows - by age if it changes.',
+      columns: [['age', 'Age', 'e.g. 0-6 months'], ['temp', 'Room temperature', 'e.g. 16-18 °C'], ['wear', 'What they wear', 'e.g. vest, sleepsuit, sleeping bag'], ['note', 'Note', '']] }) : null,
+    t.steps ? el('details', { class: 'panel more', 'data-field': 'p-practise' }, [el('summary', { text: t.id === 'fever' ? 'What health services advise - to practise and compare with your plan' : 'Practise the steps' }), stepsPanel(t)]) : null,
     t.signs ? block('Signs to act on', el('p', { style: { margin: 0 }, text: t.signs }), 'p-signs') : null,
-    t.health || t.section === 'emergency' ? block('Who to call', el('ul', { style: { margin: 0, paddingLeft: '1.2em' } }, EMERGENCY.map(([w, n]) => el('li', {}, [`${w}: `, el('a', { href: `tel:${n.replace(/\s/g, '')}`, text: n })]))), 'p-call') : null,
+    t.health || t.section === 'emergency' ? block('Who to call', el('div', { class: 'stack' }, [el('ul', { style: { margin: 0, paddingLeft: '1.2em' } }, EMERGENCY.map(([w, n]) => el('li', {}, [`${w}: `, el('a', { href: `tel:${n.replace(/[^\d+]/g, '')}`, text: n })]))),
+      el('div', {}, [el('a', { class: 'btn btn-small', href: hub.href('numbers'), text: 'Change', title: 'Your numbers, for where you live' })])]), 'p-call') : null,
     items.length ? block('Checklist', el('div', { class: 'stack', style: { gap: '4px' } }, items.map((x) => el('label', { class: 'checkline' }, [
       el('input', { type: 'checkbox', checked: done.has(x), on: { change: (e) => { const next = new Set(done); if (e.target.checked) next.add(x); else next.delete(x); put({ done: [...next] }); } } }), x]))), 'p-check') : null,
     t.options?.length ? block('The options', el('div', { class: 'stack' }, t.options.map((o) => el('div', { class: 'panel panel--soft stack', style: { gap: '4px' } }, [
@@ -282,7 +309,7 @@ function topicScreen(ctx, id) {
     ])]))), 'p-why') : null,
     t.changes?.length ? block('What changes the answer', ul(t.changes), 'p-changes') : null,
     t.kind !== 'checklist' ? videosPanel(hub, { creators: rec.creators, videos: rec.videos, views: rec.views }, (changes) => put(changes)) : null,
-    t.kind !== 'checklist' && !t.later ? leaningPanel(ctx, t) : null,
+    t.questions?.length ? questionsPanel(hub, t, ctx.decisions, put) : t.kind !== 'checklist' && !t.later ? leaningPanel(ctx, t) : null,
     t.align?.length ? block('Align on together', ul(t.align), 'p-align') : null,
     t.family?.length ? block('Discuss with family', el('div', { class: 'stack' }, [ul(t.family),
       el('div', {}, [el('button', { class: 'btn btn-small', type: 'button', text: 'Copy', title: 'Copy these for the family', on: { click: async () => { try { await navigator.clipboard.writeText(`${t.title}\n${t.family.map((x) => `- ${x}`).join('\n')}`); hub.ui.notice('Copied.'); } catch { hub.ui.notice('Could not copy - select the text instead.'); } } } })])]), 'p-family') : null,
@@ -340,5 +367,32 @@ function editScreen(ctx, id, sectionId = null) {
         if (saved) { hub.ui.notice('Saved.'); hub.go('topic', topicId); }
       },
     }),
+  ]);
+}
+
+/** The family's emergency numbers (D-103): start from a country, then change, remove and add your own. */
+function numbersScreen(hub, settings) {
+  const rows = numbersOf(settings).map(([l, n]) => ({ l, n }));
+  const box = el('div', { class: 'stack', 'data-field': 'num-rows' });
+  const draw = () => box.replaceChildren(...rows.map((r, i) => el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' } }, [
+    el('input', { class: 'input', value: r.l, 'aria-label': 'What it is', style: { flex: '2 1 160px' }, 'data-field': `num-l:${i}`, on: { input: (e) => { r.l = e.target.value; } } }),
+    el('input', { class: 'input', value: r.n, inputmode: 'tel', 'aria-label': 'Number', style: { flex: '1 1 110px' }, 'data-field': `num-n:${i}`, on: { input: (e) => { r.n = e.target.value; } } }),
+    el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', on: { click: () => { rows.splice(i, 1); draw(); } } }),
+  ])));
+  draw();
+  const country = el('select', { class: 'select', style: { maxWidth: '240px' }, 'aria-label': 'Country', 'data-field': 'num-country' }, [el('option', { value: '', text: 'Start from a country…' }), ...Object.entries(COUNTRY_NUMBERS).map(([k, c]) => el('option', { value: k, text: c.name }))]);
+  country.addEventListener('change', () => { const c = COUNTRY_NUMBERS[country.value]; if (!c) return; rows.splice(0, rows.length, ...c.numbers.map(([l, n]) => ({ l, n }))); draw(); });
+  return el('section', { class: 'stack' }, [
+    el('a', { href: hub.href('section', 'emergency'), class: 'small', text: '‹ Be prepared' }),
+    el('h1', { text: 'Who to call', style: { margin: 0 } }),
+    el('p', { class: 'muted', style: { margin: 0 }, text: 'The numbers shown on every health topic and plan. Start from your country, check them for where you live, and add your own doctor, clinic and after-hours line.' }),
+    country, box,
+    el('div', { class: 'row' }, [
+      el('button', { class: 'btn', type: 'button', text: 'Add', on: { click: () => { rows.push({ l: '', n: '' }); draw(); } } }),
+      el('button', { class: 'btn btn-primary', type: 'button', text: 'Save', 'data-field': 'num-save', on: { click: async () => {
+        const numbers = rows.filter((r) => r.n.trim()).map((r) => [r.l.trim() || 'Number', r.n.trim()]);
+        if (await saveRecord(hub, settingsCol(hub), { ...(settings ?? {}), id: 'numbers', numbers })) hub.ui.notice('Saved.');
+      } } }),
+    ]),
   ]);
 }

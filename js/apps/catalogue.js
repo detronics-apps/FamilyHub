@@ -350,28 +350,29 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'medical', section: 'medical', name: 'Medical', version: '1.0.0',
+      fhManifest: 1, id: 'medical', section: 'medical', name: 'Medical', version: '1.1.0',
       description: 'Every account, invoice and quote from a doctor or provider, for the whole family: paid or owed, claims to medical aid and gap cover, follow-ups, the SARS tax year, and where the proof is.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [
         { id: 'outstanding', title: 'Outstanding' }, { id: 'followup', title: 'Follow-up' }, { id: 'aid', title: 'Medical aid' },
-        { id: 'gap', title: 'Gap cover' }, { id: 'all', title: 'All' }, { id: 'year', title: 'Tax year' },
+        { id: 'gap', title: 'Gap cover' }, { id: 'all', title: 'All' }, { id: 'year', title: 'Tax year' }, { id: 'notes', title: 'Notes' },
         { id: 'item', title: 'Account', nav: false }, { id: 'new', title: 'Add an account', nav: false },
       ],
       modes: [
         { mode: 'note', screen: 'new', label: 'Log an account, invoice or quote', hint: 'From any doctor or provider' },
         { mode: 'do', screen: 'outstanding', label: 'Pay, claim or follow up' },
         { mode: 'plan', screen: 'year', label: 'Check the tax year is all logged' },
+        { mode: 'note', screen: 'notes', label: 'Allergies, medicines and each person’s doctor' },
       ],
-      data: { collections: [{ name: 'accounts', schema: 1 }] },
-      permissions: ['data:own', 'people:read', 'notify'],
+      data: { collections: [{ name: 'accounts', schema: 1 }, { name: 'notes', schema: 1 }] },
+      permissions: ['data:own', 'people:read', 'notify', 'people:food'],
     },
     load: () => import('./medical/app.js'),
     tile: true,   // its module is loaded for Home, to say what is due under the tile
   },
   {
     manifest: {
-      fhManifest: 1, id: 'parenting', section: 'parenting', name: 'Parenting', version: '1.4.0',
+      fhManifest: 1, id: 'parenting', section: 'parenting', name: 'Parenting', version: '1.6.0',
       description: 'Parenting topics laid out as options, trade-offs, timing and how sure the science is - each partner’s view side by side, and what you agree kept in Decisions for the ages it applies to.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [
@@ -381,6 +382,9 @@ const RAW = [
         { id: 'idea', title: 'Activity', nav: false }, { id: 'idea-edit', title: 'Edit an activity', nav: false }, { id: 'idea-new', title: 'A new activity', nav: false },
         { id: 'screen', title: 'Screen time' }, { id: 'screen-log', title: 'Log screen time', nav: false }, { id: 'shows', title: 'Shows', nav: false },
         { id: 'show', title: 'Show', nav: false }, { id: 'show-edit', title: 'Edit a show', nav: false }, { id: 'show-new', title: 'Add a show', nav: false },
+        { id: 'numbers', title: 'Who to call', nav: false },
+        { id: 'planner', title: 'Planner' }, { id: 'plan-new', title: 'Something on', nav: false }, { id: 'plan-edit', title: 'Change it', nav: false },
+        { id: 'routines', title: 'Routines' }, { id: 'routine', title: 'Routine', nav: false }, { id: 'routine-edit', title: 'Change a routine', nav: false }, { id: 'routine-new', title: 'A routine of our own', nav: false },
         { id: 'track', title: 'Track' }, { id: 'tracker', title: 'Tracker', nav: false }, { id: 'scenario-new', title: 'Our own tracker', nav: false }, { id: 'scenario-edit', title: 'Edit a tracker', nav: false },
       ],
       modes: [
@@ -390,10 +394,12 @@ const RAW = [
         { mode: 'note', screen: 'new', label: 'Add a topic of our own' },
         { mode: 'note', screen: 'screen-log', label: 'Log screen time' },
         { mode: 'plan', screen: 'shows', label: 'Choose a show by what matters to us' },
+        { mode: 'plan', screen: 'planner', label: 'See what is on this week' },
+        { mode: 'do', screen: 'routines', label: 'Get the children ready - leaving the house, bedtime' },
         { mode: 'note', screen: 'track', label: 'Track a temperature, sleep, wees and poos - for the doctor' },
       ],
-      data: { collections: [{ name: 'topics', schema: 1 }, { name: 'sections', schema: 1 }, { name: 'activities', schema: 1 }, { name: 'screenlog', schema: 1 }, { name: 'shows', schema: 1 }, { name: 'screenset', schema: 1 }, { name: 'scenarios', schema: 1 }, { name: 'trackers', schema: 1 }] },
-      permissions: ['data:own', 'people:read', 'people:ages', 'notify', 'data:decisions:read', 'household:creators'],
+      data: { collections: [{ name: 'topics', schema: 1 }, { name: 'sections', schema: 1 }, { name: 'activities', schema: 1 }, { name: 'screenlog', schema: 1 }, { name: 'shows', schema: 1 }, { name: 'screenset', schema: 1 }, { name: 'scenarios', schema: 1 }, { name: 'trackers', schema: 1 }, { name: 'settings', schema: 1 }, { name: 'routines', schema: 1 }, { name: 'events', schema: 1 }] },
+      permissions: ['data:own', 'people:read', 'people:ages', 'notify', 'data:decisions:read', 'household:creators', 'data:holidays:read', 'data:dates:read'],
     },
     load: () => import('./parenting/app.js'),
     tile: true,   // its module is loaded for Home, to say what is worth agreeing now
@@ -433,7 +439,6 @@ export const starterManifests = () => STARTERS.map((s) => s.manifest);
 export const starter = (id) => STARTERS.find((s) => s.manifest.id === id) ?? null;
 
 /** On the roadmap, not built. Shown in the library so nobody mistakes them for working apps. */
-export const COMING_LATER = [
-  { id: 'planner', name: 'Planner', purpose: 'A family calendar: the week at a glance, with chores, tasks, meals, trips and review dates from the other mini-apps in one place.' },
-  { id: 'medical', name: 'Medical', purpose: 'Emergency summary and medical records - only once private records and access rules exist.' },
-];
+// Nothing announced for later: the Planner is in Parenting (D-104), and medical records will not come -
+// Medical keeps accounts and each person's notes (D-103).
+export const COMING_LATER = [];

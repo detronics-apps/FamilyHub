@@ -32,6 +32,8 @@ export const SEARCH_ALIASES = {
   variation: ['version', 'versions', 'variant', 'alteration', 'different way', 'swap', 'sauce', 'cheese sauce', 'without', 'instead of'],
   'shopping list': ['groceries', 'shop', 'buy', 'ingredients'],
   trip: ['holiday', 'vacation', 'travel', 'packing', 'itinerary'],
+  routines: ['bedtime', 'leaving the house', 'morning', 'checklist', 'kids tasks', 'get ready', 'tick off', 'responsibilities'],
+  planner: ['calendar', 'schedule', 'sport', 'after school', 'concert', 'week', 'activities', 'diary'],
   dates: ['date night', 'date', 'romance', 'couple', 'spouse', 'husband', 'wife', 'partner', 'time together', 'us'],
   goals: ['dreams', 'bucket list', 'together', 'plans', 'someday', 'goal'],
   track: ['temperature', 'fever', 'log', 'sleep', 'nappies', 'wet nappy', 'poo', 'vomit', 'doctor', 'record', 'every half hour', 'symptoms', 'rash', 'potty'],
@@ -483,6 +485,11 @@ export const FAQS = [
 
 export const FEATURES = [
   { name: 'Parenting', where: 'Parenting', what: 'Parenting topics as options, trade-offs and the science, with how sure each claim is. Each partner’s view side by side; what you agree goes to Decisions for the ages it applies to, and the dashboard shows what is agreed, in force now and coming up.' },
+  { name: 'Questions to decide', where: 'Parenting › Agreements', what: 'Each topic is a set of questions to decide while calm - each of you answers why, and what would change your mind, then you Decide together. For a fever, you write your own plan by age.' },
+  { name: 'Routines', where: 'Parenting', what: 'Leaving the house, bedtime, the morning: the screen splits per child and each ticks off their own list.' },
+  { name: 'Planner', where: 'Parenting', what: 'The week for each child and each of you - sport, after school, concerts - with trips and plans alongside, and clashes pointed out.' },
+  { name: 'Who to call', where: 'Parenting › Be prepared', what: 'Your own emergency numbers - start from your country and add your doctor.' },
+  { name: 'Medical notes', where: 'Medical › Notes', what: 'Allergies, regular medicines, conditions, blood group and their doctor, for each person.' },
   { name: 'Us', where: 'Home', what: 'The two of you: Decisions you make as the parents, Dates that fit tonight and your own rule on who looks after the children, and the Goals you share.' },
   { name: 'Who looks after the children', where: 'Parenting › Decide together', what: 'Agree who, if anyone, looks after the children and from what age. The app follows it - with "Only us", nothing ever asks about a babysitter.' },
   { name: 'Videos to weigh up', where: 'Parenting and Decisions', what: 'Add the creators and videos that explain an activity, a topic or a decision. On a topic or decision, each of you says whether you agree with each video - the other’s view shows once you have given yours.' },
@@ -558,12 +565,27 @@ export const PRIVACY = {
   ],
 };
 
+// The licence (the same text as LICENSE) and the terms of use, in plain words.
+export const LICENCE = {
+  title: 'Licence & terms',
+  sections: [
+    ['Terms', 'Family Hub is free to use. It guides your own decisions - it is not medical, financial, legal or tax advice. In an emergency, call for help; if you are wondering whether to see a doctor, go. Your data stays in this browser or your own Drive folder.'],
+    ['MIT License', `Copyright (c) 2026 Detronics
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.`],
+  ],
+};
+
 export const ABOUT = {
   title: 'About Family Hub',
   sections: [
     ['What it is', 'A calm place for a household to share the everyday load. Capture quickly, think deeply later, and keep the useful outcome.'],
     ['What this version does', 'Chores with a timer and optional music; Tasks and projects; Tickets and the family meeting; Principles; Decisions as experiments; Meals: a recipe book with weekly plan and shopping list, a calorie checker and a meal assistant; Holidays; Finance; Exercise; Faith reading plans and journal. Your data can live in your own Google Drive folder, and existing data can be brought in from spreadsheets. Each section is made of mini-apps that can be turned off, removed and added.'],
-    ['Coming later', 'A Planner (a family calendar gathering everything dated) and Medical (once private records exist).'],
+
     ['What it will not do', 'Streaks, scores, leaderboards, or piling missed work onto tomorrow. Missed tasks are information about workload and systems.'],
   ],
 };

@@ -112,11 +112,11 @@ export function libraryView(ctx) {
 
     folderPanel(ctx, folderMode),
 
-    el('div', { class: 'panel panel--soft' }, [
+    COMING_LATER.length ? el('div', { class: 'panel panel--soft' }, [
       el('h2', { text: 'Coming later' }),
       el('p', { class: 'small muted', text: 'Planned, not built yet. They will appear here as installable mini-apps.' }),
       el('ul', { class: 'list' }, COMING_LATER.map((p) => el('li', {}, [el('div', { class: 'list__main' }, [el('strong', { text: p.name }), el('div', { class: 'small muted', text: p.purpose })])]))),
-    ]),
+    ]) : null,
     el('p', { class: 'small' }, ['Building your own? ', el('a', { href: 'MINIAPPS.md', target: '_blank', rel: 'noopener', text: 'The mini-app developer guide' }), ' explains the package format and the hub interface.']),
   ]);
 }

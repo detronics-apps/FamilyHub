@@ -696,6 +696,44 @@ note; claims not settled; and paid accounts never sent to medical aid (they will
 scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
 the year of its own date, not of each payment (marked to split by payment day if that matters).
 
+**D-106 Topics are questions you decide, calmly, together (owner, 2026-11-02).** The purpose behind
+every Parenting topic: decide with a clear head, before the time, so partners do not argue in the
+moment - and on a tired night you can open it and follow what you agreed. So a topic is a set of
+questions (bottles: breast, bottle or both; glass, plastic or silicone; how to sterilise; until when).
+For each: what to think about, the options with their for and against, each parent's answer - why,
+and what would change their mind - the other shown once you have given yours, and Decide, which makes
+it its own decision (source parenting:<topic>:<question>; Decisions gains "What would change our
+mind"). A topic is agreed when every question is; a whole-topic decision from before still counts.
+The app has no right answer.
+- **Our fever plan**, written by the parents: per age band, from what temperature for how long, what
+  we do and how often we check, and when we go straight to a doctor - at what temperature for how
+  long, or any of the warning signs health services use, chosen by them. The app never fills in the
+  numbers. Print it; Decide it; a Fever tracker shows the plan for that child's age.
+- **Charts you fill in and print** (or save as PDF): Our medicine chart (what for, from what age, how
+  much, how often - from the labels and your pharmacist) and what they wear at what room temperature.
+- Questions written for 16 topics, including (from the owner) new or second-hand (safety and hygiene
+  things new; clothes, toys, bikes second-hand), nappies and when to potty train, medicines, creams and
+  wipes, powders (make aware, do not frighten), and clothes, layers and a room thermometer you both
+  trust. docs/parenting-questions.md lists them all for review.
+
+**D-105 Routines: the children tick off their own list (owner, 2026-11-02).** Leaving the house,
+bedtime, the morning - and your own. Start one and the screen splits, a column per child, big cards
+with a simple line picture for children who cannot read yet; each ticks their own; "Ready!" when done.
+Tasks go by age or to chosen children. No races or scores between children; each start is fresh.
+
+**D-104 Planner, in Parenting (owner, 2026-11-02).** The family's week: sport, after-school
+activities, concerts - for each child and each parent, weekly ones until the end of term - in each
+person's colour, with trips from Holidays, planned activities and planned dates alongside (read, not
+copied). Two things at the same time for different people are pointed out ("which of you takes whom?").
+
+**D-103 Small things (owner, 2026-11-02).** Emergency numbers are the family's own: start from a
+country (South Africa, UK, US, Canada, EU, Australia, New Zealand), change, remove, add your doctor;
+every health topic uses them. The Buy Me a Coffee cup sits left of the theme button, in the footer and
+on the new Licence & terms page (the MIT licence, also in LICENSE). The Family Hub brand goes home from
+anywhere; on the home page it opens detronics.co.za. "Coming later" is gone: medical records will not
+come; Medical gains Notes per person (allergies, medicines, conditions, blood group, their doctor -
+food allergies from People shown, not retyped), visible to the whole family.
+
 **D-102 Us: Decisions, Dates and Goals; the childcare rule shapes the app (owner, 2026-11-02).** A
 homepage section **Us** for the two of you. Nothing is hidden from each other and nothing is
 duplicated: Tickets stays on the homepage for the whole family; **Decisions** moves into Us (the

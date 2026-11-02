@@ -4,13 +4,14 @@
 // while a child in the family is that age. Pure - no DOM.
 
 import { STARTER } from './content.js';
+import { QUESTIONS, ABOUT_LATER } from './questions.js';
 
 export const SECTIONS = [
   { id: 'decide', name: 'Decide together', purpose: 'The choices: options, trade-offs, timing and the science.' },
   { id: 'ages', name: 'Ages and stages', purpose: 'Leaps and milestones, and what becomes a decision when.' },
   { id: 'ready', name: 'Get ready', purpose: 'Before the birth: checklists, what to keep at home, and how many.' },
   { id: 'normal', name: 'What’s normal?', purpose: 'Poop, temperature, rashes - and when to have it checked.' },
-  { id: 'emergency', name: 'Be prepared', purpose: 'Falls, choking, stopped breathing: what we will do, agreed and practised ahead of time.' },
+  { id: 'emergency', name: 'Be prepared', purpose: 'Falls, choking, stopped breathing: what we will do, agreed and practised ahead of time - and who to call where you live.' },
   { id: 'rules', name: 'House rules', purpose: 'Our rules, grandparents and visitors, sleepovers.' },
   { id: 'out', name: 'Out and about', purpose: 'Sun, water and being out in public.' },
 ];
@@ -114,7 +115,9 @@ export function topicsOf(records, starter = STARTER) {
       align: rec.align.length ? rec.align : t.align, family: rec.family.length ? rec.family : t.family, items: rec.items.length ? rec.items : t.items,
       ...(rec.options.length ? { options: parseOptions(rec.options) } : {}),
     } : {};
-    out.push({ ...t, ...mine, record: rec, newer: !!rec?.edited && (t.v ?? 0) > rec.baseV, later: t.later && !rec?.edited });
+    // A topic with questions to decide (D-106) is written, even before its longer write-up.
+    const questions = QUESTIONS[t.id] ?? null;
+    out.push({ ...t, ...(questions && t.later ? ABOUT_LATER[t.id] ?? {} : {}), ...mine, questions, record: rec, newer: !!rec?.edited && (t.v ?? 0) > rec.baseV, later: t.later && !rec?.edited && !questions });
   }
   for (const rec of byTopic.values()) {
     if (!rec.own || rec.removed) continue;
@@ -131,16 +134,72 @@ export function topicsOf(records, starter = STARTER) {
 /** "Name: what we think of it" lines into options. */
 const parseOptions = (xs) => xs.map((x) => { const [name, ...rest] = x.split(':'); return { name: name.trim(), note: rest.join(':').trim() }; });
 
-/** The decisions from Parenting, with the topic each came from ('' when made without one). */
+/**
+ * The decisions from Parenting, with the topic each came from ('' when made without one) and the
+ * question it answers (D-106): source "parenting:<topic>" or "parenting:<topic>:<question>".
+ */
 export const parentingDecisions = (decisions) => decisions.filter((d) => typeof d.source === 'string' && d.source.startsWith('parenting:'))
-  .map((d) => ({ ...d, topicId: d.source.slice('parenting:'.length) }));
+  .map((d) => { const [topicId, questionId = null] = d.source.slice('parenting:'.length).split(':'); return { ...d, topicId, questionId }; });
 
-/** 'agreed' (a decision with an agreement), 'discussing' (leanings or a decision being worked out) or 'new'. */
+const agreed = (d) => d.hasAgreement || str(d.agreement);
+/** The questions of a topic that have an agreed decision. */
+export const decidedQuestions = (topic, decisions) => new Set(decisions.filter((d) => d.topicId === topic.id && d.questionId && agreed(d)).map((d) => d.questionId));
+
+/**
+ * 'agreed', 'discussing' or 'new'. A topic with questions is agreed once every question has an
+ * agreed decision; one without, once any decision from it is agreed.
+ */
 export function topicStatus(topic, decisions) {
   const ds = decisions.filter((d) => d.topicId === topic.id);
-  if (ds.some((d) => d.hasAgreement || str(d.agreement))) return 'agreed';
+  // A decision on the whole topic (made before it had questions) still settles it.
+  if (ds.some((d) => !d.questionId && agreed(d))) return 'agreed';
+  if (topic.questions?.length) {
+    const done = decidedQuestions(topic, decisions);
+    if (topic.questions.every((q) => done.has(q.id))) return 'agreed';
+    if (done.size || ds.length || Object.keys(topic.record?.answers ?? {}).length || Object.keys(topic.record?.leanings ?? {}).length) return 'discussing';
+    return 'new';
+  }
+  if (ds.some(agreed)) return 'agreed';
   if (ds.length || Object.keys(topic.record?.leanings ?? {}).length || (topic.record?.done ?? []).length) return 'discussing';
   return 'new';
+}
+
+/** Mine and the others' answers to one question - theirs shown once I have given mine. */
+export function answersFor(record, qid, adults, me) {
+  const on = record?.answers?.[qid] ?? {};
+  const mine = me ? on[me] ?? null : null;
+  return { mine, others: adults.filter((p) => p.id !== me).map((p) => ({ id: p.id, name: p.name, answered: !!on[p.id], shown: mine ? on[p.id] ?? null : null })) };
+}
+/** Set my answer: { pick, why, change }. */
+export const setAnswer = (record, qid, me, a) => ({ ...(record?.answers ?? {}), [qid]: { ...(record?.answers?.[qid] ?? {}), [me]: { pick: str(a.pick, 200), why: str(a.why, 2000), change: str(a.change, 1000), at: a.at ?? '' } } });
+
+/**
+ * Our fever plan (D-106), written by the parents: per age band, what we do at what temperature
+ * for how long and how often we check, and when we go straight to a doctor. The app never fills
+ * in the numbers.
+ */
+export function normalisePlan(p = {}) {
+  const n = (v) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
+  return {
+    bands: (Array.isArray(p.bands) ? p.bands : []).slice(0, 8).map((b) => ({
+      from: n(b.from), to: n(b.to),
+      steps: (Array.isArray(b.steps) ? b.steps : []).slice(0, 8).map((s) => ({ temp: n(s.temp), forMins: n(s.forMins), every: n(s.every), actions: str(s.actions, 400) })),
+      goTemp: n(b.goTemp), goMins: n(b.goMins),
+      signs: (Array.isArray(b.signs) ? b.signs : []).filter((x) => typeof x === 'string').slice(0, 20), own: str(b.own, 600),
+    })),
+  };
+}
+/** The band for a child of this age, or null. */
+export const bandFor = (plan, months) => normalisePlan(plan).bands.find((b) => months != null && (b.from == null || months >= b.from) && (b.to == null || months < b.to)) ?? null;
+/** The plan in words - for the card, the decision and Track. */
+export function planText(plan) {
+  const dot = (x) => (/[.!?]$/.test(x) ? x : `${x}.`);
+  return normalisePlan(plan).bands.map((b) => ({ ...b, steps: b.steps.filter((s) => s.temp != null || s.actions) }))
+    .filter((b) => b.steps.length || b.goTemp != null || b.signs.length || b.own).map((b) => [
+    `${rangeLabel(b.from, b.to)}:`,
+    ...b.steps.map((s) => `- From ${s.temp ?? '?'} °C${s.forMins ? ` for ${s.forMins} min` : ''}: ${dot(s.actions || '…')}${s.every ? ` Check every ${s.every} min.` : ''}`),
+    `- We go to a doctor or hospital straight away${b.goTemp != null ? ` at ${b.goTemp} °C${b.goMins ? ` for ${b.goMins} min` : ''}` : ''}${b.signs.length || b.own ? `${b.goTemp != null ? ', or' : ''} if: ${[...b.signs, b.own].filter(Boolean).join('; ')}` : ''}.`,
+  ].join('\n')).join('\n\n');
 }
 export const STATUS_LABEL = { new: 'Not started', discussing: 'Discussing', agreed: 'Agreed' };
 
@@ -151,11 +210,14 @@ export const STATUS_LABEL = { new: 'Not started', discussing: 'Discussing', agre
 export function dashboard(topics, decisions, kids, sections = SECTIONS) {
   const ds = parentingDecisions(decisions);
   const status = new Map(topics.map((t) => [t.id, topicStatus(t, ds)]));
+  const qs = topics.flatMap((t) => (t.questions ?? []).map((q) => ({ t, q })));
+  const qDone = qs.filter(({ t, q }) => decidedQuestions(t, ds).has(q.id)).length;
   const count = (list) => ({ total: list.length, agreed: list.filter((t) => status.get(t.id) === 'agreed').length, discussing: list.filter((t) => status.get(t.id) === 'discussing').length });
   const bySection = sections.map((s) => ({ ...s, ...count(topics.filter((t) => t.section === s.id)) }));
   const timed = ds.map((d) => ({ d, t: timing(d.ageFrom ?? null, d.ageTo ?? null, kids) }));
   return {
     ...count(topics),
+    questions: qs.length, decided: qDone,
     status,
     bySection,
     inForce: timed.filter((x) => x.t.when === 'now' || (x.t.when === 'none' && d0(x.d))),
@@ -224,7 +286,7 @@ export const setView = (views, url, me, view, note = '') => {
  */
 export function careRule(decisions, kids) {
   const order = ['us', 'family', 'trusted', 'daycare'];
-  const on = decisions.filter((d) => d.source === 'parenting:childcare' && d.careBy && (d.hasAgreement || d.agreement)
+  const on = decisions.filter((d) => d.source?.startsWith('parenting:childcare') && d.careBy && (d.hasAgreement || d.agreement)
     && (!kids.length || timing(d.ageFrom ?? null, d.ageTo ?? null, kids).when === 'now'));
   return on.length ? on.map((d) => d.careBy).sort((a, b) => order.indexOf(a) - order.indexOf(b))[0] : null;
 }

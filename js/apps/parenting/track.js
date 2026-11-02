@@ -6,6 +6,7 @@ import { el } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
 import { recordForm, saveRecord } from '../kit.js';
 import { GO_LINE } from './content.js';
+import { bandFor, planText } from './logic.js';
 import { KINDS, scenariosOf, normaliseScenario, normaliseTracker, running, nextDue, series, perDay, summary, localTime, parseField, fieldLine } from './tracking.js';
 
 export const scenariosCol = (hub) => hub.data.collection('scenarios', { summary: (r) => normaliseScenario(r), prefix: 'sc' });
@@ -84,7 +85,7 @@ function graph(points, unit) {
   ]);
 }
 
-export function trackerScreen(hub, tr, id, kids) {
+export function trackerScreen(hub, tr, id, kids, plans = {}) {
   const t = tr.trackers.find((x) => x.trackerId === id);
   if (!t) return el('div', { class: 'panel empty' }, [el('p', { text: 'This tracker was removed.' }), el('a', { class: 'btn', href: hub.href('track'), text: 'Track' })]);
   const s = tr.scenarios.find((x) => x.scenarioId === t.scenarioId) ?? normaliseScenario({ name: 'Tracker', fields: [] });
@@ -117,6 +118,10 @@ export function trackerScreen(hub, tr, id, kids) {
     el('h1', { text: `${s.name} - ${kid}`, style: { margin: 0 } }),
     el('p', { class: 'small muted', style: { margin: 0 }, text: `Started ${when(t.started)}${t.stopped ? ` · stopped ${when(t.stopped)}` : ''}${t.remindEvery ? ` · a reading every ${t.remindEvery >= 60 ? `${t.remindEvery / 60} h` : `${t.remindEvery} min`}` : ''}` }),
     s.health ? el('p', { class: 'panel', style: { margin: 0, fontWeight: 600 }, text: GO_LINE }) : null,
+    // The plan the two of you agreed for this child's age (D-106) - to follow on a tired night.
+    (() => { const band = s.topicId && plans[s.topicId] ? bandFor(plans[s.topicId], kids.find((k) => k.id === t.kidId)?.months) : null; return band ? el('div', { class: 'panel stack', 'data-field': 'trk-plan', style: { borderWidth: '2px' } }, [
+      el('strong', { text: `Our plan for ${kid}` }), el('pre', { class: 'small', style: { whiteSpace: 'pre-wrap', fontFamily: 'inherit', margin: 0 }, text: planText({ bands: [band] }) }),
+      el('a', { class: 'small', href: hub.href('topic', s.topicId), text: 'Change the plan' })]) : s.topicId === 'fever' ? el('p', { class: 'small muted', style: { margin: 0 }, text: 'No fever plan agreed for this age yet - write one under Temperature and fever, with a clear head.' }) : null; })(),
     due ? el('p', { class: due <= now ? 'fin-worse' : 'small', style: { margin: 0, fontWeight: due <= now ? 600 : 400 }, 'data-field': 'trk-due', text: due <= now ? 'The next reading is due now.' : `Next reading at ${due.slice(11, 16)}.` }) : null,
     running(t, now) ? el('div', { class: 'panel stack', 'data-field': 'trk-log' }, [el('h2', { text: 'Log', style: { margin: 0 } }),
       ...s.fields.map((f) => el('div', { class: 'stack', style: { gap: '4px' } }, [el('strong', { text: `${f.name}${f.kind === 'number' && f.unit ? ` (${f.unit})` : ''}` }), control(f)])),

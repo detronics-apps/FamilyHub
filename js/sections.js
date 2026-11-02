@@ -15,7 +15,7 @@ export const SECTIONS = [
   { id: 'us', name: 'Us', purpose: 'The two of you: what you decide together, dates, and the goals you share.' },
   { id: 'holidays', name: 'Holidays', purpose: 'Big trips to plan, and places nearby to go on a free day.' },
   { id: 'finance', name: 'Finance', purpose: 'Budgets, goals, and what big decisions really cost - with the assumptions in plain view.' },
-  { id: 'medical', name: 'Medical', purpose: 'Doctors’ accounts for the whole family: what is owed, what medical aid and gap cover paid back, and where the proof is.' },
+  { id: 'medical', name: 'Medical', purpose: 'Doctors’ accounts for the whole family - what is owed, what came back, and where the proof is - and a few notes for each person, like allergies.' },
   { id: 'parenting', name: 'Parenting', purpose: 'The options, the trade-offs and the science - so the two of you can decide together, for the ages your children are.' },
   { id: 'faith', name: 'Faith', purpose: 'Bible reading plans, a journal of questions and reflections, and a guide to every book.' },
   { id: 'more', name: 'More', purpose: 'Mini-apps that do not belong to one of the other sections.' },
