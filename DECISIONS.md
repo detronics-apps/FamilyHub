@@ -696,6 +696,31 @@ note; claims not settled; and paid accounts never sent to medical aid (they will
 scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
 the year of its own date, not of each payment (marked to split by payment day if that matters).
 
+**D-095 Parenting: understand it, then decide it together (owner, 2026-11-02).** Not "the correct
+way to parent": each topic lays out the question, the options (for, against, when it fits, when not,
+timing), why - with each claim marked Established, Supported, Being studied or Unknown and its source
+and date checked - what changes the answer, and what to align on with your partner and discuss with
+family. Seven sections: Decide together, Ages and stages, Get ready, What's normal?, Emergencies,
+House rules, Out and about.
+- **Decisions live in Decisions.** "Decide" opens a new decision there with source parenting:<topic>,
+  the topic's options and ages filled in; Parenting reads them back. Parenting is the dashboard: how
+  many topics agreed and discussed, per section; decisions in force now, coming up (a child reaches
+  the age within 3 months) and not needed now; topics worth agreeing now. Decisions has an "All /
+  Parenting / From a ticket" filter and a topic filter.
+- **A decision applies for ages** (from - to, in months): in force while a child in the family is
+  that age, from the birthdays (or due date) in People. One topic can hold several, e.g. sugar under
+  1 and sugar at 4-5.
+- **Each partner's leaning** is given first and hidden from the other until they give theirs.
+- **The family's own**: topics, decisions without a topic, and sections. Starting topics can be
+  edited, moved or removed; an edited one is never overwritten - an improved version offers "Keep mine"
+  or "Take new".
+- **Never discourage seeing a doctor.** Health flowcharts end at Call for help now, See a doctor today,
+  or See your doctor or clinic - sooner if worried. No "stay home". Every health topic opens and ends
+  with "If you are wondering whether to go, go." A test checks every flowchart against this.
+- **0.10.0** writes honey, water, breast milk/formula, co-sleeping, fever, choking, sun and vitamin
+  D, baby monitors and the before-the-birth checklist; the other 35 topics show as "Not written yet".
+  Emergency numbers checked 2026-11-02: 10177, 112, ER24 084 124, Netcare 911 082 911, Poisons 0861 555 777.
+
 **D-090 Tick the lines; a take-out's cost; today's money (owner, 2026-10-31).**
 - **Paid each month under half the minimum is counted as paid on top** - R1 000 against a R10 383
   minimum can only have been the extra. Between half and the minimum it is still raised to the

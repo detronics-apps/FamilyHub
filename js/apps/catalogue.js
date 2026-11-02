@@ -91,7 +91,7 @@ const RAW = [
         { mode: 'plan', screen: 'new', label: 'Think through a decision or experiment' },
       ],
       data: { collections: [{ name: 'decisions', schema: 1 }] },
-      permissions: ['data:own', 'people:read', 'notify', 'data:tickets:read', 'data:tasks:read'],
+      permissions: ['data:own', 'people:read', 'notify', 'data:tickets:read', 'data:tasks:read', 'data:parenting:read'],
     },
     load: () => import('./decisions/app.js'),
   },
@@ -336,6 +336,25 @@ const RAW = [
     },
     load: () => import('./medical/app.js'),
     tile: true,   // its module is loaded for Home, to say what is due under the tile
+  },
+  {
+    manifest: {
+      fhManifest: 1, id: 'parenting', section: 'parenting', name: 'Parenting', version: '1.0.0',
+      description: 'Parenting topics laid out as options, trade-offs, timing and how sure the science is - each partner’s view side by side, and what you agree kept in Decisions for the ages it applies to.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
+      screens: [
+        { id: 'home', title: 'Parenting' }, { id: 'section', title: 'Section', nav: false }, { id: 'topic', title: 'Topic', nav: false },
+        { id: 'edit', title: 'Edit a topic', nav: false }, { id: 'new', title: 'Our own topic', nav: false },
+      ],
+      modes: [
+        { mode: 'plan', screen: 'home', label: 'Talk through a parenting decision together' },
+        { mode: 'note', screen: 'new', label: 'Add a topic of our own' },
+      ],
+      data: { collections: [{ name: 'topics', schema: 1 }, { name: 'sections', schema: 1 }] },
+      permissions: ['data:own', 'people:read', 'notify', 'data:decisions:read'],
+    },
+    load: () => import('./parenting/app.js'),
+    tile: true,   // its module is loaded for Home, to say what is worth agreeing now
   },
   {
     manifest: {

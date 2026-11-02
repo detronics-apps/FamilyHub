@@ -32,6 +32,7 @@ export const SEARCH_ALIASES = {
   variation: ['version', 'versions', 'variant', 'alteration', 'different way', 'swap', 'sauce', 'cheese sauce', 'without', 'instead of'],
   'shopping list': ['groceries', 'shop', 'buy', 'ingredients'],
   trip: ['holiday', 'vacation', 'travel', 'packing', 'itinerary'],
+  parenting: ['baby', 'toddler', 'child', 'partner', 'agree', 'dummy', 'formula', 'breastfeeding', 'co-sleeping', 'fever', 'choking', 'sunscreen', 'honey', 'monitor', 'milestones', 'grandparents', 'house rules', 'pregnant', 'due date'],
   medical: ['doctor', 'dentist', 'hospital', 'pharmacy', 'account', 'invoice', 'quote', 'medical aid', 'gap cover', 'claim', 'refund', 'tax certificate', 'sars', 'tax year', 'out of pocket', 'proof', 'receipt'],
   budget: ['money', 'spending', 'expenses', 'finance', 'savings', 'debt'],
   'money plan': ['plan', 'goals', 'afford', 'can we afford', 'timeline', 'save each month', 'forecast', 'emergency fund', 'all our goals'],
@@ -270,6 +271,13 @@ export const HOWTOS = [
     'Press "Change … list" on a child to tick what fits, put in your own school’s fees, choose "From budget" or "Save ahead" for each, and add your own (braces, a gap year).',
     'The year-by-year table shades the years when more than one child has costs, so a crowded year shows early.',
   ] },
+  { id: 'parenting', title: 'Decide a parenting question together', steps: [
+    'Add the children - or the due date - on the People page, so Parenting knows their ages.',
+    'Open Parenting. "Worth agreeing now" lists the topics that matter for a child this age, or within 3 months.',
+    'Open a topic: the options, why, and how sure the science is. Each of you gives where you lean - the other’s shows once you have given yours.',
+    'Press Decide: the decision opens in Decisions with the ages it applies to. Fill in "What we agree" and it counts as agreed.',
+    'Add your own topics, decisions or sections - the starting ones are only a starting point.',
+  ] },
   { id: 'medical', title: 'Keep track of medical accounts and claims', steps: [
     'Open Medical and press Add when an account, invoice or quote arrives from any doctor or provider. Say who it is for, the amount and when it is due.',
     'When you pay, open it and add the payment: the day, amount, reference and who was paid. Part-payments add up; it shows what is still owed.',
@@ -450,6 +458,8 @@ export const FAQS = [
 ];
 
 export const FEATURES = [
+  { name: 'Parenting', where: 'Parenting', what: 'Parenting topics as options, trade-offs and the science, with how sure each claim is. Each partner’s view side by side; what you agree goes to Decisions for the ages it applies to, and the dashboard shows what is agreed, in force now and coming up.' },
+  { name: 'Decisions for an age', where: 'Decisions', what: 'A decision can apply from one age to another - in force while a child in the family is that age. Filter by Parenting or by topic.' },
   { name: 'Medical accounts', where: 'Medical', what: 'Every doctor’s account, invoice and quote for the whole family - what is owed and when, what medical aid and gap cover paid back, follow-ups, and where the proof is kept.' },
   { name: 'The SARS tax year', where: 'Medical › Tax year', what: 'Everything from 1 March to the end of February, per person: what was paid, what came back, out of pocket, and what is still missing proof - so nothing is left out.' },
   { name: 'Your Drive folder', where: 'Settings › Google Drive', what: 'Everything saved as files in your own Google Drive, shared across your laptops, with backups and version history.' },

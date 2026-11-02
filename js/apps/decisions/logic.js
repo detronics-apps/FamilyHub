@@ -17,6 +17,7 @@ export const STATUSES = ['discussing', 'trying', 'settled'];
 
 const str = (v, max = 4000) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 const day = (v) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+const age = (v) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Math.round(Number(v)));
 const lines = (v) => (Array.isArray(v) ? v : String(v ?? '').split('\n')).map((x) => String(x).trim()).filter(Boolean).slice(0, 20);
 
 export function normaliseDecision(d = {}) {
@@ -37,14 +38,21 @@ export function normaliseDecision(d = {}) {
     outcome: OUTCOMES[d.outcome] ? d.outcome : null,
     lessons: str(d.lessons),
     status: STATUSES.includes(d.status) ? d.status : 'discussing',
-    source: typeof d.source === 'string' ? d.source : null,       // e.g. 'tickets:tkt_...'
+    source: typeof d.source === 'string' ? d.source : null,       // e.g. 'tickets:tkt_...', 'parenting:honey'
+    // The ages it applies to, in months (D-095): in force while a child in the family is that age.
+    ageFrom: age(d.ageFrom),
+    ageTo: age(d.ageTo),
     history: (Array.isArray(d.history) ? d.history : []).filter((h) => h && typeof h.agreement === 'string').slice(-20),
   };
 }
 
 export function decisionSummary(d) {
-  return { title: d.title, status: d.status, reviewOn: d.reviewOn, outcome: d.outcome, source: d.source, hasAgreement: Boolean(d.agreement) };
+  return { title: d.title, status: d.status, reviewOn: d.reviewOn, outcome: d.outcome, source: d.source, hasAgreement: Boolean(d.agreement), ageFrom: d.ageFrom ?? null, ageTo: d.ageTo ?? null };
 }
+
+/** Where a decision came from, as a category to filter by: 'parenting', 'tickets' or '' (D-095). */
+export const categoryOf = (d) => (typeof d.source === 'string' && d.source.includes(':') ? d.source.split(':')[0] : '');
+export const CATEGORY_LABEL = { parenting: 'Parenting', tickets: 'From a ticket' };
 
 export const decisionText = (d) => [d.title, d.issue, d.purpose, d.agreement, d.reasoning, ...d.alternatives, d.lessons].join(' ');
 

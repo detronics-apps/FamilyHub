@@ -7,8 +7,32 @@ import { fmtDay, addDays } from '../../dates.js';
 import { loading, failure, recordForm, saveRecord, nameOf } from '../kit.js';
 import {
   normaliseDecision, decisionSummary, decisionText, stage, startTrial, addObservation, recordOutcome, revise,
-  STAGES, STAGE_LABEL, OUTCOMES,
+  STAGES, STAGE_LABEL, OUTCOMES, categoryOf, CATEGORY_LABEL,
 } from './logic.js';
+import { STARTER } from '../parenting/content.js';
+import { kidsOf, timing, rangeLabel, ageLabel } from '../parenting/logic.js';
+
+const ui = { cat: '', topic: '' };   // the list's filters (D-095)
+// Ages a decision can apply from and to, in months.
+const AGES = [-6, -3, 0, 1, 2, 3, 4, 6, 9, 12, 18, 24, 36, 48, 60, 72, 96, 120, 144, 168, 192, 216];
+
+/** A Parenting topic's title and question: a starting one, or the family's own (read from Parenting). */
+function parentingTopic(hub, id) {
+  const s = STARTER.find((t) => t.id === id);
+  if (s) return { data: s };
+  if (!id || !hub.data.installed('parenting')) return { data: null };
+  return hub.use(`ptopic:${id}`, async () => {
+    const { items } = await hub.data.of('parenting', 'topics').list({ filter: (r) => r.topicId === id, limit: 1 });
+    return items[0] ? { id, title: items[0].title, question: items[0].question, ages: { from: items[0].ageFrom ?? null, to: items[0].ageTo ?? null } } : null;
+  });
+}
+/** "From birth to 12 months - now to Emma (8 months)". */
+function appliesLine(hub, d) {
+  if (d.ageFrom == null && d.ageTo == null) return null;
+  const t = timing(d.ageFrom, d.ageTo, kidsOf(hub.people.list(), hub.today()));
+  const who = t.now.length ? ` - now to ${t.now.map((k) => `${k.name} (${ageLabel(k.months)})`).join(', ')}` : t.soon.length ? ` - soon for ${t.soon.map((k) => k.name).join(', ')}` : t.when === 'past' ? ' - not needed now' : '';
+  return `${rangeLabel(d.ageFrom, d.ageTo)}${who}`;
+}
 
 const col = (hub) => hub.data.collection('decisions', { summary: decisionSummary, text: decisionText, prefix: 'dec' });
 const all = (hub) => hub.use('all', async () => (await col(hub).list({ limit: 100000 })).items);
@@ -31,24 +55,36 @@ function listScreen(hub) {
   if (list.loading) return loading();
   if (list.error) return failure(list.error);
   const today = hub.today();
-  const by = (st) => list.data.filter((s) => stage(s, today) === st || (st === 'discuss' && ['observe', 'discuss', 'decide'].includes(stage(s, today))));
+  const cats = [...new Set(list.data.map(categoryOf).filter((c) => CATEGORY_LABEL[c]))];
+  if (ui.cat && !cats.includes(ui.cat)) { ui.cat = ''; ui.topic = ''; }
+  const shown = list.data.filter((s) => (!ui.cat || categoryOf(s) === ui.cat) && (!ui.topic || s.source === `parenting:${ui.topic}`));
+  const topicIds = [...new Set(list.data.filter((s) => categoryOf(s) === 'parenting').map((s) => s.source.slice(10)))];
+  const filters = cats.length ? el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' } }, [
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Show' }, [['', 'All'], ...cats.map((c) => [c, CATEGORY_LABEL[c]])].map(([c, label]) => el('button', {
+      class: 'chip', type: 'button', 'aria-pressed': String(ui.cat === c), text: label, 'data-field': `dec-cat:${c || 'all'}`,
+      on: { click: () => { ui.cat = c; ui.topic = ''; hub.render(); } } }))),
+    ui.cat === 'parenting' && topicIds.length > 1 ? el('select', { class: 'select', 'aria-label': 'Topic', 'data-field': 'dec-topic', style: { maxWidth: '240px' }, on: { change: (e) => { ui.topic = e.target.value; hub.render(); } } },
+      [el('option', { value: '', text: 'Every topic', selected: !ui.topic }), ...topicIds.map((id) => el('option', { value: id, text: STARTER.find((t) => t.id === id)?.title ?? (id ? 'Our own topic' : 'No topic'), selected: ui.topic === id }))]) : null,
+  ]) : null;
+  const by = (st) => shown.filter((s) => stage(s, today) === st || (st === 'discuss' && ['observe', 'discuss', 'decide'].includes(stage(s, today))));
   const section = (title, items, help) => (items.length ? el('div', { class: 'panel' }, [
     el('h2', { text: title }),
     help ? el('p', { class: 'small muted', text: help }) : null,
     el('ul', { class: 'list' }, items.map((s) => el('li', {}, [
       el('a', { class: 'list__main', href: hub.href('item', s.id), style: { color: 'inherit', textDecoration: 'none' } }, [
         el('strong', { text: s.title }),
-        el('div', { class: 'small muted', text: [STAGE_LABEL[stage(s, today)], s.reviewOn && s.status === 'trying' ? `look back ${fmtDay(s.reviewOn, today)}` : null, s.outcome ? OUTCOMES[s.outcome] : null].filter(Boolean).join(' · ') }),
+        el('div', { class: 'small muted', text: [STAGE_LABEL[stage(s, today)], appliesLine(hub, s), s.reviewOn && s.status === 'trying' ? `look back ${fmtDay(s.reviewOn, today)}` : null, s.outcome ? OUTCOMES[s.outcome] : null].filter(Boolean).join(' · ') }),
       ]),
     ]))),
   ]) : null);
-  const settled = list.data.filter((s) => s.status === 'settled');
+  const settled = shown.filter((s) => s.status === 'settled');
 
   return el('section', { class: 'stack', 'aria-label': 'Decisions' }, [
     el('div', { class: 'row' }, [
       el('p', { class: 'muted', style: { margin: 0, flex: '1 1 260px' }, text: 'Agreements and experiments. Each is the best idea for now - try it, look back, and change it if it is not working.' }),
       el('a', { class: 'btn btn-primary', href: hub.href('new'), text: 'New decision', 'data-field': 'add-decision' }),
     ]),
+    filters,
     list.data.length ? null : el('div', { class: 'panel empty' }, [el('p', { text: 'Nothing yet. A decision often starts from a ticket discussed at the family meeting - or start one here.' })]),
     section('Time to look back', by('review'), 'The trial period is up. How did it go?'),
     section('Trying now', by('experiment')),
@@ -86,6 +122,8 @@ function itemScreen(hub, id) {
     el('article', { class: 'panel stack' }, [
       el('h1', { text: d.title, style: { margin: 0 } }),
       cycle(st),
+      d.source?.startsWith('parenting:') ? el('p', { class: 'small' }, ['From Parenting: ', el('a', { href: `#/parenting/topic/${encodeURIComponent(d.source.slice(10))}`, text: parentingTopic(hub, d.source.slice(10)).data?.title ?? 'the topic' })]) : null,
+      appliesLine(hub, d) ? el('p', { class: 'small', 'data-field': 'dec-applies', text: `Applies: ${appliesLine(hub, d)}.` }) : null,
       sourceTicket?.data ? el('p', { class: 'small' }, ['Started from a ticket: ', el('a', { href: `#/tickets/item/${encodeURIComponent(sourceTicket.data.id)}`, text: (sourceTicket.data.text || '').split('\n')[0].slice(0, 80) })]) : null,
       block('What is happening', d.issue),
       block('What we want', d.purpose),
@@ -182,25 +220,38 @@ function editScreen(hub, id, from = null) {
   const ticket = !id && from?.startsWith('tickets:') && hub.data.installed('tickets')
     ? hub.use(`ticket:${from}`, () => hub.data.of('tickets', 'tickets').get(from.slice(8)))
     : null;
-  if (r.loading || ticket?.loading) return loading();
+  const topic = !id && from?.startsWith('parenting:') ? parentingTopic(hub, from.slice(10)) : null;
+  if (r.loading || ticket?.loading || topic?.loading) return loading();
   if (r.error) return failure(r.error);
   const existing = r.data ? normaliseDecision(r.data) : null;
   const t = ticket?.data;
+  const pt = topic?.data;
   const record = existing ?? normaliseDecision({
-    title: t ? t.text.split('\n')[0].slice(0, 80) : '',
-    issue: t ? t.text : '',
-    source: t ? `tickets:${t.id}` : null,
+    title: t ? t.text.split('\n')[0].slice(0, 80) : pt ? pt.title : '',
+    issue: t ? t.text : pt?.question ?? '',
+    alternatives: pt?.options?.map((o) => o.name) ?? [],
+    source: t ? `tickets:${t.id}` : from?.startsWith('parenting:') ? from : null,
+    ageFrom: pt?.ages?.from ?? null, ageTo: pt?.ages?.to ?? null,
   });
+  const ageField = (key, label, none) => ({ key, label, type: 'custom', control: () => {
+    const s = el('select', { class: 'select', 'data-field': `dec-${key}`, style: { maxWidth: '240px' } }, [el('option', { value: '', text: none, selected: record[key] == null }),
+      ...AGES.map((m) => el('option', { value: m, text: m === 0 ? 'Birth' : ageLabel(m).replace(/^./, (c) => c.toUpperCase()), selected: record[key] === m }))]);
+    return { node: s, get: () => (s.value === '' ? null : Number(s.value)) };
+  } });
+  const parenting = record.source?.startsWith('parenting:');
   return el('section', { class: 'stack' }, [
     el('h1', { text: existing ? `Edit ${existing.title}` : 'New decision' }),
     t ? el('p', { class: 'small muted', text: 'Started from a ticket - the ticket is linked, and will show this decision.' }) : null,
+    !existing && parenting ? el('p', { class: 'small muted', text: `From Parenting${pt ? `: ${pt.title}` : ''}. It shows there as agreed once "What we agree" is filled in.` }) : null,
     recordForm({
-      record: { ...record, title: existing || t ? record.title : '' },
+      record: { ...record, title: existing || t || pt ? record.title : '' },
       people: hub.people.list(),
       fields: [
         { key: 'title', label: 'What is it about?', required: true, placeholder: 'e.g. Screen-time transitions' },
         { key: 'issue', label: 'What is happening', type: 'textarea' },
-        { key: 'agreement', label: 'What we agree to try', type: 'textarea', hint: 'Can stay empty while you talk it through.' },
+        { key: 'agreement', label: parenting ? 'What we agree' : 'What we agree to try', type: 'textarea', hint: 'Can stay empty while you talk it through.' },
+        ageField('ageFrom', 'Applies from the age of', 'Any age'),
+        ageField('ageTo', 'Until the age of', 'No end'),
         { key: 'purpose', label: 'What we want to achieve', type: 'textarea', more: true },
         { key: 'alternatives', label: 'Options we considered', type: 'lines', more: true },
         { key: 'reasoning', label: 'Our reasoning and trade-offs', type: 'textarea', more: true },
