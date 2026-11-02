@@ -481,6 +481,7 @@ export const FAQS = [
 
 export const FEATURES = [
   { name: 'Parenting', where: 'Parenting', what: 'Parenting topics as options, trade-offs and the science, with how sure each claim is. Each partner’s view side by side; what you agree goes to Decisions for the ages it applies to, and the dashboard shows what is agreed, in force now and coming up.' },
+  { name: 'Videos to weigh up', where: 'Parenting and Decisions', what: 'Add the creators and videos that explain an activity, a topic or a decision. On a topic or decision, each of you says whether you agree with each video - the other’s view shows once you have given yours.' },
   { name: 'Track', where: 'Parenting', what: 'Start tracking a concern for a child - a temperature every half hour, wees and poos, sleep - with a time and value each time, and a summary for the doctor.' },
   { name: 'Screen time', where: 'Parenting', what: 'A quick log of what was watched and how it left them, each child’s week beside the minutes you agreed, and shows ranked on your own values - each parent rating separately.' },
   { name: 'Ideas and Play now', where: 'Parenting', what: 'Activities and games by age, weather, setup time, how long they last and what they cost - planned with time to think, found in a few taps when you have none, and scored afterwards by the children and by you.' },

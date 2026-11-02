@@ -4,6 +4,8 @@
 // a game's rules with their history, when it is planned, and how it went (child and parent).
 // Ages in months. Pure - no DOM.
 
+import { normaliseLinks } from '../../links.js';
+
 export const WEATHER = { any: 'Any weather', sun: 'Sunny or hot', cool: 'Cool or cloudy', rain: 'Rainy', wind: 'Windy' };
 export const PLACES = { inside: 'Inside', outside: 'Outside', either: 'Either' };
 // How much of us it needs (D-099): playing with them, or getting something done while they play.
@@ -44,6 +46,7 @@ export function normaliseActivity(a = {}) {
       parent: score(l.parent), note: str(l.note, 1000),
     })).slice(-100),
     own: a.own === true, removed: a.removed === true,
+    ...normaliseLinks(a),   // the creators and videos that explain it (D-101)
   };
 }
 

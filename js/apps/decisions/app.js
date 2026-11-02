@@ -11,6 +11,7 @@ import {
 } from './logic.js';
 import { STARTER } from '../parenting/content.js';
 import { kidsOf, timing, rangeLabel, ageLabel } from '../parenting/logic.js';
+import { videosPanel } from '../parenting/videos.js';
 
 const ui = { cat: '', topic: '' };   // the list's filters (D-095)
 // Ages a decision can apply from and to, in months.
@@ -146,6 +147,7 @@ function itemScreen(hub, id) {
       d.status !== 'discussing' ? el('button', { class: 'btn', type: 'button', text: 'Edit agreement', on: { click: () => reviseDialog(hub, d, save, today) } }) : null,
       el('a', { class: 'btn', href: hub.href('edit', d.id), text: 'Edit' }),
     ]),
+    videosPanel(hub, d, (changes) => save({ ...d, ...changes }, 'Saved.'), { help: 'Videos that explain a side of this decision - watch, then say where you each stand.' }),
     el('div', { class: 'panel stack' }, [
       el('h2', { text: 'Observations' }),
       d.observations.length ? el('ul', { class: 'list' }, d.observations.map((o) => el('li', {}, [

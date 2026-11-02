@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { STARTER, SOURCES, LEVELS, OUTCOMES } from '../js/apps/parenting/content.js';
-import { monthsOld, kidsOf, timing, rangeLabel, topicsOf, dashboard, leaningsFor, topicStatus, parentingDecisions, tileNote, SECTIONS } from '../js/apps/parenting/logic.js';
+import { setView, viewsOn, normaliseViews, monthsOld, kidsOf, timing, rangeLabel, topicsOf, dashboard, leaningsFor, topicStatus, parentingDecisions, tileNote, SECTIONS } from '../js/apps/parenting/logic.js';
 import { starter } from '../js/apps/catalogue.js';
 import { normaliseDecision, decisionSummary, categoryOf } from '../js/apps/decisions/logic.js';
 
@@ -97,4 +97,14 @@ test('the content keeps its own rules: every claim sourced and levelled, every f
 
 test('Parenting and Decisions may see birthdays - without them every child reads as "no birthday yet"', () => {
   for (const id of ['parenting', 'decisions']) assert.ok(starter(id).manifest.permissions.includes('people:ages'), id);
+});
+
+test('a video: each parent agrees, is not sure or disagrees - the other shown once you have given yours', () => {
+  const url = 'https://youtu.be/x';
+  const adults = [{ id: 'a', name: 'Sam' }, { id: 'b', name: 'Lee' }];
+  let v = setView({}, url, 'b', 'disagree', 'too strict');
+  assert.deepEqual(viewsOn(v, url, adults, 'a').others[0], { id: 'b', name: 'Lee', answered: true, shown: null });
+  v = setView(v, url, 'a', 'agree');
+  assert.equal(viewsOn(v, url, adults, 'a').others[0].shown.note, 'too strict');
+  assert.deepEqual(normaliseViews({ [url]: { a: { view: 'maybe' } } }), {}, 'only agree, not sure or disagree');
 });

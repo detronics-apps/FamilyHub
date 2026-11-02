@@ -91,3 +91,9 @@ test('and us: play with them, or get something done while they play', () => {
   const free = pick(list, { us: 'free' });
   assert.ok(free.some((a) => a.activityId === 'fort') && free.every((a) => a.involve !== 'together'));
 });
+
+test('an activity keeps its creators and videos, and only safe links', () => {
+  const a = normaliseActivity({ activityId: 'x', name: 'Fort', creators: ['cr_1'], videos: [{ url: 'youtu.be/fort', title: 'How to' }, { url: 'javascript:alert(1)' }] });
+  assert.deepEqual(a.creators, ['cr_1']);
+  assert.deepEqual(a.videos, [{ url: 'https://youtu.be/fort', title: 'How to' }]);
+});

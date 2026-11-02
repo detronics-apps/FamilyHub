@@ -189,3 +189,31 @@ export const stepAt = (steps, id) => steps?.nodes?.[id ?? steps.start] ?? null;
 
 /** A new id for the family's own topic. */
 export const ownId = (title, now = Date.now()) => `own-${str(title, 40).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'topic'}-${now.toString(36)}`;
+
+// Each parent's view on a video (D-101): agree, not sure, or disagree, and why - kept per video
+// link and per person, the other's shown once you have given yours (as with leanings).
+export const VIEWS = { agree: 'Agree', unsure: 'Not sure', disagree: 'Disagree' };
+
+/** { [url]: { [personId]: { view, note } } }, cleaned. */
+export function normaliseViews(v = {}) {
+  const out = {};
+  for (const [url, people] of Object.entries(v && typeof v === 'object' ? v : {})) {
+    const ps = {};
+    for (const [pid, x] of Object.entries(people ?? {})) if (x && VIEWS[x.view]) ps[pid] = { view: x.view, note: str(x.note, 1000) };
+    if (Object.keys(ps).length) out[str(url, 2000)] = ps;
+  }
+  return out;
+}
+
+/** Mine and the others' on one video - theirs hidden until I have given mine. */
+export function viewsOn(views, url, adults, me) {
+  const on = normaliseViews(views)[url] ?? {};
+  const mine = me ? on[me] ?? null : null;
+  return { mine, others: adults.filter((p) => p.id !== me).map((p) => ({ id: p.id, name: p.name, answered: !!on[p.id], shown: mine ? on[p.id] ?? null : null })) };
+}
+
+/** Set my view on a video, returning the new views. */
+export const setView = (views, url, me, view, note = '') => {
+  const v = normaliseViews(views);
+  return normaliseViews({ ...v, [url]: { ...(v[url] ?? {}), [me]: { view, note } } });
+};

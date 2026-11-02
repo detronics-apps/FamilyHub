@@ -16,6 +16,7 @@ import { activitiesOf, planned, plannedOn } from './activities.js';
 import { activitiesCol, playScreen, ideasScreen, ideaScreen, ideaEdit } from './play.js';
 import { loadScreen, screenHome, logScreen, showsScreen, showScreen, showEdit, todayMinutes } from './screens.js';
 import { loadTrack, trackHome, trackerScreen, scenarioEdit, trackNote } from './track.js';
+import { videosPanel } from './videos.js';
 
 const topicsCol = (hub) => hub.data.collection('topics', { summary: (r) => normaliseRecord(r), text: (r) => [r.title, r.question, r.summary].join(' '), prefix: 'pt' });
 const sectionsCol = (hub) => hub.data.collection('sections', { summary: (r) => normaliseSection(r), prefix: 'ps' });
@@ -280,6 +281,7 @@ function topicScreen(ctx, id) {
       el('div', { class: 'small muted' }, [el('strong', { text: LEVELS[w.level]?.name ?? '', title: LEVELS[w.level]?.text ?? '' }), SOURCES[w.source] ? [' · ', el('a', { href: SOURCES[w.source].url, target: '_blank', rel: 'noopener', text: SOURCES[w.source].name })] : null].flat().filter(Boolean)),
     ])]))), 'p-why') : null,
     t.changes?.length ? block('What changes the answer', ul(t.changes), 'p-changes') : null,
+    t.kind !== 'checklist' ? videosPanel(hub, { creators: rec.creators, videos: rec.videos, views: rec.views }, (changes) => put(changes)) : null,
     t.kind !== 'checklist' && !t.later ? leaningPanel(ctx, t) : null,
     t.align?.length ? block('Align on together', ul(t.align), 'p-align') : null,
     t.family?.length ? block('Discuss with family', el('div', { class: 'stack' }, [ul(t.family),

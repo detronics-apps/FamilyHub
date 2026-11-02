@@ -6,6 +6,7 @@ import { el } from '../../ui/dom.js';
 import { confirmAction, modal } from '../../ui/common.js';
 import { recordForm, saveRecord } from '../kit.js';
 import { sendHref } from '../shopping/logic.js';
+import { linksControl, linksView } from '../../ui/links-editor.js';
 import { rangeLabel, ageLabel } from './logic.js';
 import { WEATHER, PLACES, INVOLVE, normaliseActivity, toBuy, costOf, scores, pick, planned, plannedOn, changeRules, logDone, shopSend, payoff, rank, wheel, landOn, thisOrThat } from './activities.js';
 
@@ -35,6 +36,7 @@ function figures(a) {
 function doCard(hub, a, kids, { big = false } = {}) {
   return el('div', { class: 'panel stack', 'data-field': `act:${a.activityId}`, style: big ? { borderWidth: '2px' } : null }, [
     el('h2', { text: a.name, style: { margin: 0 } }),
+    linksView(hub, a),
     figures(a),
     a.needs.length ? el('p', { style: { margin: 0 } }, [el('strong', { text: 'You need: ' }), a.needs.map((x) => `${x.name}${x.have ? '' : ' (to buy)'}`).join(', ')]) : null,
     a.steps.length ? el('ol', { style: { margin: 0, paddingLeft: '1.2em' } }, a.steps.map((s) => el('li', { text: s }))) : null,
@@ -277,9 +279,11 @@ export function ideaEdit(hub, list, id) {
         { key: 'game', label: 'It is a game with rules', type: 'check' },
         { key: 'rules', label: 'Rules', type: 'lines' },
         { key: 'safety', label: 'Safety', type: 'textarea', more: true },
+        ...(hub.creators ? [{ key: 'links', label: 'Creators and videos', type: 'custom', more: true, hint: 'Whoever explains it best - a video to watch before you set it up.', control: () => linksControl(hub, a ?? {}) }] : []),
       ],
       onCancel: () => (a ? hub.go('idea', a.activityId) : hub.go('ideas')),
-      onSave: async (v) => {
+      onSave: async ({ links, ...v }) => {
+        Object.assign(v, links ?? {});
         const activityId = a?.activityId ?? `act-${Date.now().toString(36)}`;
         const next = a ? changeRules({ ...a, ...v, rules: a.rules }, v.rules) : { ...v, activityId, own: true };
         if (await save(hub, { ...next, activityId, own: a ? a.own : true })) { hub.ui.notice('Saved.'); hub.go('idea', activityId); }

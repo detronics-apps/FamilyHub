@@ -696,6 +696,13 @@ note; claims not settled; and paid accounts never sent to medical aid (they will
 scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
 the year of its own date, not of each payment (marked to split by payment day if that matters).
 
+**D-101 Creators and videos on activities, topics and decisions (owner, 2026-11-02).** The D-091
+creators list and video links, reused: an activity's (Ideas › Edit, shown on its card in Play now,
+to watch before setting it up), and on every Parenting topic and every decision a Videos panel. Each
+video there takes each parent's own view - Agree, Not sure or Disagree, and why - the other's shown
+once you have given yours, as with leanings, so a video can be watched and weighed together. Plain
+links only; nothing is embedded or fetched.
+
 **D-100 Track: scenario trackers for a concern (owner, 2026-11-02).** A Track door in Parenting. When
 something worries you, pick a scenario and a child and Start; log a time (now unless changed) and the
 values in a tap or two; Stop when it is over. Several can run at once.

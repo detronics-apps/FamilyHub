@@ -82,7 +82,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'decisions', section: 'decisions', name: 'Decisions', version: '1.2.0',
+      fhManifest: 1, id: 'decisions', section: 'decisions', name: 'Decisions', version: '1.3.0',
       description: 'Agreements and experiments: try something, look back, adapt.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'list', title: 'Decisions' }, { id: 'item', title: 'Decision', nav: false }, { id: 'new', title: 'New decision', nav: false }],
@@ -91,7 +91,7 @@ const RAW = [
         { mode: 'plan', screen: 'new', label: 'Think through a decision or experiment' },
       ],
       data: { collections: [{ name: 'decisions', schema: 1 }] },
-      permissions: ['data:own', 'people:read', 'notify', 'data:tickets:read', 'data:tasks:read', 'data:parenting:read', 'people:ages'],
+      permissions: ['data:own', 'people:read', 'notify', 'data:tickets:read', 'data:tasks:read', 'data:parenting:read', 'people:ages', 'household:creators'],
     },
     load: () => import('./decisions/app.js'),
   },
@@ -339,7 +339,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'parenting', section: 'parenting', name: 'Parenting', version: '1.3.0',
+      fhManifest: 1, id: 'parenting', section: 'parenting', name: 'Parenting', version: '1.4.0',
       description: 'Parenting topics laid out as options, trade-offs, timing and how sure the science is - each partner’s view side by side, and what you agree kept in Decisions for the ages it applies to.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [
@@ -361,7 +361,7 @@ const RAW = [
         { mode: 'note', screen: 'track', label: 'Track a temperature, sleep, wees and poos - for the doctor' },
       ],
       data: { collections: [{ name: 'topics', schema: 1 }, { name: 'sections', schema: 1 }, { name: 'activities', schema: 1 }, { name: 'screenlog', schema: 1 }, { name: 'shows', schema: 1 }, { name: 'screenset', schema: 1 }, { name: 'scenarios', schema: 1 }, { name: 'trackers', schema: 1 }] },
-      permissions: ['data:own', 'people:read', 'people:ages', 'notify', 'data:decisions:read'],
+      permissions: ['data:own', 'people:read', 'people:ages', 'notify', 'data:decisions:read', 'household:creators'],
     },
     load: () => import('./parenting/app.js'),
     tile: true,   // its module is loaded for Home, to say what is worth agreeing now
