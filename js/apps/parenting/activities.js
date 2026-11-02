@@ -6,6 +6,8 @@
 
 export const WEATHER = { any: 'Any weather', sun: 'Sunny or hot', cool: 'Cool or cloudy', rain: 'Rainy', wind: 'Windy' };
 export const PLACES = { inside: 'Inside', outside: 'Outside', either: 'Either' };
+// How much of us it needs (D-099): playing with them, or getting something done while they play.
+export const INVOLVE = { together: 'We play too', nearby: 'Nearby, keeping an eye', alone: 'They manage on their own' };
 
 const str = (v, max = 400) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 const num = (v) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
@@ -26,6 +28,7 @@ export function normaliseActivity(a = {}) {
     name: str(a.name, 120) || 'An activity',
     ageFrom: num(a.ageFrom), ageTo: num(a.ageTo),
     place: PLACES[a.place] ? a.place : 'either',
+    involve: INVOLVE[a.involve] ? a.involve : 'together',
     weather: (Array.isArray(a.weather) ? a.weather : ['any']).filter((w) => WEATHER[w]),
     setup: Math.max(0, num(a.setup) ?? 5),
     lasts: Math.max(1, num(a.lasts) ?? 20),
@@ -79,19 +82,43 @@ export function activitiesOf(records, starter = STARTER_ACTIVITIES) {
 
 /**
  * Play now: what fits, best first.
- * @param ask { kids: [months], place: 'inside'|'outside'|null, weather, minutes, buy: false (only what we have) }
+ * @param ask { kids: [months], place: 'inside'|'outside'|null, weather, buy: false (only what we have),
+ *   maxSetup (minutes), minLasts (minutes), minPayoff (busy this many times the setup) - D-099 sliders;
+ *   minutes: the older "how long" (kept for old links) }
  */
-export function pick(list, { kids = [], place = null, weather = null, minutes = null, buy = true } = {}) {
+export function pick(list, { kids = [], place = null, weather = null, minutes = null, buy = true, maxSetup = null, minLasts = null, minPayoff = null, us = null } = {}) {
   const ok = (a) => {
     if (kids.length && !kids.some((m) => m != null && (a.ageFrom == null || m >= a.ageFrom) && (a.ageTo == null || m < a.ageTo))) return false;
     if (place && a.place !== 'either' && a.place !== place) return false;
     if (place === 'outside' && weather && !a.weather.includes('any') && !a.weather.includes(weather)) return false;
     if (minutes && (a.setup > Math.max(10, minutes / 2) || a.lasts < minutes * 0.6)) return false;
     if (!buy && toBuy(a).length) return false;
+    if (us === 'with' && a.involve !== 'together') return false;
+    if (us === 'free' && a.involve === 'together') return false;
+    if (maxSetup != null && a.setup > maxSetup) return false;
+    if (minLasts != null && a.lasts < minLasts) return false;
+    if (minPayoff && payoff(a) < minPayoff) return false;
     return true;
   };
   return list.filter(ok).sort((a, b) => rank(b) - rank(a));
 }
+
+/**
+ * The wheel (D-099): a slice each, a little wider for the better-loved (0.6 to 1.4 of a plain
+ * slice, from the scores), so a favourite comes up a little more often. Returns [{ a, from, to }]
+ * in turns (0-1).
+ */
+export function wheel(list) {
+  const w = list.map((a) => { const s = scores(a); const avg = s.kid != null || s.parent != null ? ((s.kid ?? s.parent) + (s.parent ?? s.kid)) / 2 : 3; return Math.max(0.6, Math.min(1.4, 1 + (avg - 3) / 5)); });
+  const total = w.reduce((s, x) => s + x, 0) || 1;
+  let at = 0;
+  return list.map((a, i) => { const from = at; at += w[i] / total; return { a, from, to: at }; });
+}
+/** Where a spin lands for a number r in [0, 1): the slice it falls in. */
+export const landOn = (slices, r) => slices.find((s) => r >= s.from && r < s.to) ?? slices.at(-1);
+
+/** This or that: the winner stays, the next one comes in; done when one is left. */
+export const thisOrThat = (queue, winner) => [winner, ...queue.filter((x) => x !== queue[0] && x !== queue[1])];
 
 /** Planned for a day, and coming up (from today on). */
 export const plannedOn = (list, day) => list.filter((a) => a.plannedOn === day);
@@ -114,10 +141,10 @@ export const shopSend = (a) => ({ source: `activity:${a.activityId}`, from: a.na
 
 // Starting ideas - a starting point to change, remove and add to. Safety notes where it matters.
 export const STARTER_ACTIVITIES = [
-  { id: 'fort', name: 'Cushion fort', ageFrom: 18, ageTo: 144, place: 'inside', weather: ['any'], setup: 10, lasts: 45,
+  { id: 'fort', involve: 'nearby', name: 'Cushion fort', ageFrom: 18, ageTo: 144, place: 'inside', weather: ['any'], setup: 10, lasts: 45,
     needs: ['Couch cushions', 'Blankets or sheets', 'Pegs or clips', 'A torch'], steps: ['Make walls from cushions against the couch.', 'Throw a sheet over the top; peg it down.', 'Torch, books and snacks inside.'],
     safety: 'Nothing heavy on top - sheets only, so it can fall without hurting anyone.' },
-  { id: 'sprinkler', name: 'Sprinkler game', ageFrom: 24, ageTo: 144, place: 'outside', weather: ['sun'], setup: 10, lasts: 40, game: true,
+  { id: 'sprinkler', involve: 'nearby', name: 'Sprinkler game', ageFrom: 24, ageTo: 144, place: 'outside', weather: ['sun'], setup: 10, lasts: 40, game: true,
     needs: ['Hose and sprinkler', 'Towels', 'Sunscreen and hats'], steps: ['Set the sprinkler on the lawn, away from paving.', 'Play a round, then towel off in the shade.'],
     rules: ['Run through without being caught by the spray.', 'Whoever stays driest picks the next round.'],
     safety: 'An adult watching all the time; on grass, not paving - wet paving is slippery. Mind water restrictions.' },
@@ -129,14 +156,14 @@ export const STARTER_ACTIVITIES = [
     rules: ['Touch every obstacle.', 'Beat your own time, not each other’s.'] },
   { id: 'kitchenband', name: 'Kitchen band', ageFrom: 9, ageTo: 96, place: 'inside', weather: ['any'], setup: 5, lasts: 20,
     needs: ['Pots and wooden spoons', 'A container with rice or beans, lid taped'], steps: ['Everyone picks an instrument.', 'Copy the leader’s rhythm; swap leaders.'] },
-  { id: 'waterpaint', name: 'Painting with water', ageFrom: 12, ageTo: 72, place: 'outside', weather: ['sun'], setup: 2, lasts: 25,
+  { id: 'waterpaint', involve: 'nearby', name: 'Painting with water', ageFrom: 12, ageTo: 72, place: 'outside', weather: ['sun'], setup: 2, lasts: 25,
     needs: ['A bucket of water', 'Old paintbrushes'], steps: ['"Paint" walls, paving and fences.', 'Watch it disappear in the sun.'] },
   { id: 'picnic', name: 'Indoor picnic', ageFrom: 12, ageTo: 144, place: 'inside', weather: ['any', 'rain'], setup: 10, lasts: 40,
     needs: ['A blanket', 'Snacks', 'Teddies as guests'], steps: ['Spread the blanket in a new spot.', 'Everyone brings a guest.'] },
   { id: 'hideseek', name: 'Hide and seek', ageFrom: 30, ageTo: 144, place: 'either', weather: ['any', 'sun', 'cool'], setup: 0, lasts: 30, game: true,
     needs: [], steps: ['Agree the boundaries first.'], rules: ['The seeker counts to 20 with eyes closed.', 'Not inside cupboards, the car or anywhere that locks.'],
     safety: 'Agree out-of-bounds places first: cars, appliances, anything that latches.' },
-  { id: 'playdough', name: 'Home-made playdough', ageFrom: 24, ageTo: 96, place: 'inside', weather: ['any', 'rain'], setup: 15, lasts: 40,
+  { id: 'playdough', involve: 'nearby', name: 'Home-made playdough', ageFrom: 24, ageTo: 96, place: 'inside', weather: ['any', 'rain'], setup: 15, lasts: 40,
     needs: ['2 cups flour', '1 cup salt', '1 cup water', '2 tbsp oil', 'Food colouring - R25'], steps: ['Mix, knead, colour.', 'Cookie cutters and a rolling pin.'],
     safety: 'Very salty - not for eating; keep away from pets.' },
   { id: 'nature', name: 'Nature hunt', ageFrom: 24, ageTo: 144, place: 'outside', weather: ['sun', 'cool'], setup: 5, lasts: 30, game: true,
@@ -147,9 +174,9 @@ export const STARTER_ACTIVITIES = [
     safety: 'Burst balloon pieces are a choking risk - pick them up straight away; not for under 3s unattended.' },
   { id: 'bath', name: 'Bubble bath disco', ageFrom: 9, ageTo: 72, place: 'inside', weather: ['any', 'cool', 'rain'], setup: 5, lasts: 20,
     needs: ['Bubble bath', 'Cups and jugs', 'Music'], steps: ['Bubbles, music, pouring games.'], safety: 'An adult within arm’s reach the whole time.' },
-  { id: 'chalk', name: 'Chalk town', ageFrom: 30, ageTo: 120, place: 'outside', weather: ['sun', 'cool'], setup: 5, lasts: 40,
+  { id: 'chalk', involve: 'nearby', name: 'Chalk town', ageFrom: 30, ageTo: 120, place: 'outside', weather: ['sun', 'cool'], setup: 5, lasts: 40,
     needs: ['Sidewalk chalk - R50', 'Toy cars or bikes'], steps: ['Draw roads, a shop, a car wash on the paving.', 'Drive through it.'] },
-  { id: 'sorting', name: 'Sorting basket', ageFrom: 9, ageTo: 30, place: 'inside', weather: ['any'], setup: 3, lasts: 15,
+  { id: 'sorting', involve: 'nearby', name: 'Sorting basket', ageFrom: 9, ageTo: 30, place: 'inside', weather: ['any'], setup: 3, lasts: 15,
     needs: ['A basket of safe household things', 'Bowls'], steps: ['Sort by colour, size or "soft and hard".'], safety: 'Nothing small enough to fit through a toilet-roll tube for under 3s.' },
   { id: 'peekaboo', name: 'Peekaboo', ageFrom: 3, ageTo: 24, place: 'either', weather: ['any', 'sun', 'cool'], setup: 0, lasts: 10, game: true,
     needs: ['A light cloth or your hands'], steps: ['Hide your face, then "boo!"', 'Hide a toy under the cloth for them to find.'], rules: ['Their turn: let them hide you.'] },

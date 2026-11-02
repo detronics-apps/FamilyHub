@@ -1,7 +1,7 @@
 // Activities (D-096): Ideas to plan them, Play now to find one fast, scores and a game's rules.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { activitiesOf, pick, payoff, normaliseActivity, normaliseNeed, costOf, scores, changeRules, logDone, planned, shopSend, STARTER_ACTIVITIES } from '../js/apps/parenting/activities.js';
+import { activitiesOf, pick, payoff, normaliseActivity, wheel, landOn, thisOrThat, normaliseNeed, costOf, scores, changeRules, logDone, planned, shopSend, STARTER_ACTIVITIES } from '../js/apps/parenting/activities.js';
 
 const all = () => activitiesOf([]);
 
@@ -56,4 +56,38 @@ test('5 minutes to set up for 30 busy beats 30 to set up for 45 busy', () => {
   assert.equal(payoff(quick), 6);
   assert.equal(payoff(slow), 1.5);
   assert.deepEqual(pick([slow, quick]).map((a) => a.activityId), ['q', 's']);
+});
+
+test('sliders: set up in at most, busy at least, and worth the setup', () => {
+  const list = all();
+  const five = pick(list, { maxSetup: 5 });
+  assert.ok(five.length && five.every((a) => a.setup <= 5), 'only 5 minutes to set up');
+  assert.ok(pick(list, { minLasts: 40 }).every((a) => a.lasts >= 40));
+  assert.ok(pick(list, { minPayoff: 6 }).every((a) => payoff(a) >= 6));
+  assert.ok(!pick(list, { minPayoff: 6 }).some((a) => a.activityId === 'fort'), 'a fort is 4.5x');
+});
+
+test('the wheel: a slice each, the better-loved a little wider; a spin lands in a slice', () => {
+  const [a, b] = all();
+  const loved = logDone(a, { day: '2026-11-02', kids: [{ id: 'k', score: 5 }], parent: 5 });
+  const slices = wheel([loved, b]);
+  assert.equal(slices.at(-1).to, 1);
+  assert.ok(slices[0].to - slices[0].from > slices[1].to - slices[1].from);
+  assert.equal(landOn(slices, 0).a, loved);
+  assert.equal(landOn(slices, 0.999).a, b);
+});
+
+test('this or that: the winner stays and the next comes in, until one is left', () => {
+  let q = ['a', 'b', 'c'];
+  q = thisOrThat(q, 'b');
+  assert.deepEqual(q, ['b', 'c']);
+  q = thisOrThat(q, 'c');
+  assert.deepEqual(q, ['c']);
+});
+
+test('and us: play with them, or get something done while they play', () => {
+  const list = all();
+  assert.ok(pick(list, { us: 'with' }).every((a) => a.involve === 'together'));
+  const free = pick(list, { us: 'free' });
+  assert.ok(free.some((a) => a.activityId === 'fort') && free.every((a) => a.involve !== 'together'));
 });

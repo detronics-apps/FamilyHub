@@ -696,6 +696,18 @@ note; claims not settled; and paid accounts never sent to medical aid (they will
 scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
 the year of its own date, not of each payment (marked to split by payment day if that matters).
 
+**D-099 Play now: sliders, and fun ways to choose (owner, 2026-11-02).** The fixed 15 / 30 / 60
+minutes become three sliders, each showing its value as it moves and re-counting on release: **Set up
+in at most** (0-30 min), **Keeps them busy at least** (5-90 min) and **Worth the setup** (busy at least
+N times as long as the setup; off by default). "N fit" shows how many match. When more than one does,
+**How to choose**: **List** (best first), **Spin** (a wheel of up to 8, unticked ones left off; a
+better-loved activity gets a slightly wider slice), **Surprise** (one at random, then Another), **This
+or that** (two big cards, the children tap one, the winner stays until one is left) and **Eeny meeny**
+(the cards light up in turn and slow down until one stays). The wheel and Eeny meeny go straight to
+the answer for anyone whose device asks for reduced motion. **And us?** (owner): each activity says how
+much of us it needs - We play too, Nearby keeping an eye, or They manage on their own - and Play now
+can ask for "We play too" or "We need to get things done". Under-3s always need someone nearby.
+
 **D-098 Only shows scoring above what we agreed (owner, 2026-11-02).** A screen-time decision can set
 "Only shows scoring at least" (out of 5) beside the minutes a day, for its ages. The family score (the
 average of the parents who rated it) is what counts; the strictest rule in force for a child applies.

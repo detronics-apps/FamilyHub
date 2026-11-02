@@ -288,7 +288,8 @@ export const HOWTOS = [
   ] },
   { id: 'activities', title: 'Find something to do with the children', steps: [
     'With time to think, open Parenting › Ideas: add activities and games, say what they need and what that costs, and plan a day for one. Shop sends what needs buying to the list.',
-    'When you need something now, open Parenting › Play now: tap who, inside or out, the weather and how long. What is planned for today comes first.',
+    'When you need something now, open Parenting › Play now: tap who and inside or out, and slide how long you have to set up and how long it should keep them busy. What is planned for today comes first.',
+    'If several fit, choose how to choose: a list, spin the wheel, a surprise, This or that for the children to pick, or Eeny meeny.',
     'Afterwards press Done and give two scores - the children’s and yours. The best-loved come first next time.',
     'For a game, change the rules under Ideas to make it more fun; the earlier rules are kept.',
   ] },
