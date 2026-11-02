@@ -1,4 +1,4 @@
-﻿// Boot, app state, routing and the frame. Screens live in js/ui/views/ (core)
+// Boot, app state, routing and the frame. Screens live in js/ui/views/ (core)
 // and js/apps/<id>/ (mini-apps).
 //
 // The household is only ever changed through `commit(next)`: saved on this
@@ -233,7 +233,7 @@ function appView(route, notices) {
   if (entry.source === 'folder') return renderThirdParty(ctx, id, route, failed);
 
   const mod = starterModule(id);
-  if (!mod) return el('p', { class: 'muted', text: `Opening ${label}â€¦` });
+  if (!mod) return el('p', { class: 'muted', text: `Opening ${label}…` });
   if (mod instanceof Error) return failed(mod);
   try {
     const hub = ctx.hubFor(starter(id).manifest, entry.granted);
@@ -260,7 +260,7 @@ function go(hash) {
 
 const THEME_ORDER = ['system', 'light', 'dark'];
 const THEME_LABEL = { system: 'Theme: follows your device', light: 'Theme: light', dark: 'Theme: dark' };
-const THEME_GLYPH = { system: 'â—', light: 'â˜€ï¸Ž', dark: 'â˜¾ï¸Ž' };
+const THEME_GLYPH = { system: '◐', light: '☀︎', dark: '☾︎' };
 
 function applyTheme() {
   if (app.device.theme === 'system') document.documentElement.removeAttribute('data-theme');
@@ -333,8 +333,8 @@ function buildCrumbs(route) {
   const m = manifestFor(route.name);
   const s = m ? section(sectionOf(m)) : null;
   return el('nav', { class: 'crumbs', 'aria-label': 'You are here' }, [
-    el('a', { href: '#/', text: 'Home' }), ' â€º ',
-    ...(s && s.name !== label ? [el('a', { href: `#/section/${s.id}`, text: s.name }), ' â€º '] : []),
+    el('a', { href: '#/', text: 'Home' }), ' › ',
+    ...(s && s.name !== label ? [el('a', { href: `#/section/${s.id}`, text: s.name }), ' › '] : []),
     // On one of its inner screens (a recipe), the mini-app's name leads back to its first screen.
     m && route.sub && route.sub !== m.screens[0]?.id ? el('a', { href: `#/${route.name}`, text: label }) : el('span', { text: label }),
   ]);
@@ -351,12 +351,12 @@ function buildBack(route) {
   const [href, to] = m && route.sub && route.sub !== m.screens[0]?.id ? [`#/${route.name}`, routeLabel(route)]
     : s && s.name !== routeLabel(route) ? [`#/section/${s.id}`, s.name]
       : ['#/', 'Home'];
-  return el('nav', { class: 'page-back no-print', 'aria-label': 'Back' }, [el('a', { class: 'btn', href, text: `â€¹ Back`, title: `Back to ${to}`, 'data-field': 'page-back' })]);
+  return el('nav', { class: 'page-back no-print', 'aria-label': 'Back' }, [el('a', { class: 'btn', href, text: `‹ Back`, title: `Back to ${to}`, 'data-field': 'page-back' })]);
 }
 
 function buildFooter() {
   const where = app.device.storageMode === 'folder'
-    ? 'Your familyâ€™s data lives in your own Google Drive folder. Nothing goes anywhere else.'
+    ? 'Your family’s data lives in your own Google Drive folder. Nothing goes anywhere else.'
     : 'Everything stays in this browser - nothing is uploaded.';
   return el('footer', { class: 'app-footer' }, [
     el('span', { text: where }),
