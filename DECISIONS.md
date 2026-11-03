@@ -696,6 +696,49 @@ note; claims not settled; and paid accounts never sent to medical aid (they will
 scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
 the year of its own date, not of each payment (marked to split by payment day if that matters).
 
+**D-110 Workouts are not due on a day: I have 25 minutes, a round, tallies (owner, 2026-11-03).**
+The owner, a parent of twins: an hour planned today can go to a child who needs you. As
+everywhere else in the app, a missed day must not pile up, and getting started must be as easy as
+possible - the detailed planning can come once people are in.
+- **Workouts are ready to use, not given days.** "How long, in minutes" is on the form, so a 15,
+  25 or 45-minute one is easy to make. The days of the week are gone from the form and the screens
+  (D-108's week grid and Today panel are replaced).
+- **I have…** on This week: 15 / 25 / 45 / 60 min or your own number shows every workout that
+  fits - the round's undone ones first, then the least done this year - each with Done.
+- **This round:** tick a few workouts; each is done whenever, in any order; "2 of 5 done". When all
+  are done, **New round** starts them again from today (a setting, roundFrom); change which in
+  Workouts. Nothing is missed and nothing is due.
+- **Tallies never reset:** each workout says how many times it was done this year; This week says
+  "This week: 3 workouts. This month: 9." - and an empty week says "A new week - any time you have
+  15 minutes." No streaks, no "missed", no "behind".
+- Done can be pressed again the same day - a workout done twice counts twice.
+- The Parenting Planner shows workouts on the days they were done.
+- **Later:** a Month view, and optionally setting workouts on days, alongside the round.
+
+**D-109 What each exercise works, tags, where, and exercises with the children (owner, 2026-11-03).**
+- **Muscles:** a fixed list of twelve (the body figure draws them), each Mainly or Also.
+- **The little human:** a front and back figure, shaded - on an exercise (Mainly dark, Also light),
+  on a workout (darker where more sets land, and what it leaves out named), and on This week per
+  person from the workouts marked Done ("Shoulders: 3 times, 12 sets"; "Not this week: …"). A
+  record of what happened, not a target. Done first asks which exercises you did, all ticked to
+  start, so a skipped one does not count. Walks and swims logged on their own carry no muscles.
+- **Tags:** your own, any word - Sciatica, Before work - with Add tag; "Our tags" offers Muscle
+  building, Endurance, Mobility, Low impact, With the children, Pregnancy to start, each removable.
+  The app never says an exercise is safe or suggested for anyone: Pregnancy is the family's label,
+  with "Who said so" beside it, and filtering on it says to check with your doctor or midwife.
+- **Where:** Body weight, At home, Gym. "Our equipment at home" is a list (Add item / Remove), and
+  "What we have" shows exercises needing nothing else. Gym starts empty, for anyone who goes to load
+  their own.
+- **Filters:** where, tags, muscles, what we have - "N of M shown"; **Make workout** starts a
+  workout with the exercises shown (Sciatica → a Sciatica workout, then set its days).
+- **With the children:** choose which children; their latest weights from People add up
+  ("about 32 kg, weighed 2 Oct") and follow them as they grow. Exercise gets a new permission,
+  people:weights - each person's latest weight and its date, nothing else. Weight moved = their
+  weight × reps × sets; a hold (a dead hang with a child on your feet) has no reps, so its weight
+  and time are said instead. The owner's three are added once as editable examples: squats holding
+  your child, push-ups with your child on your back, a dead hang with your child on your feet.
+- **Creators and videos** sit in plain view on every exercise - YouTube, TikTok, any link.
+
 **D-108 Exercise works like meals: your own exercises, workouts, a weekly plan (owner, 2026-11-03).**
 The owner wanted to plan and create exercises the way meals and the children's activities are
 planned, and build an exercise plan from them.

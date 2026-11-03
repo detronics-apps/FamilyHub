@@ -334,8 +334,8 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'exercise', section: 'exercise', name: 'Exercise', version: '1.2.0',
-      description: 'Your own exercises and workouts made from them, on the days you choose; log activity, keep flexible weekly plans, and see what the family did together.',
+      fhManifest: 1, id: 'exercise', section: 'exercise', name: 'Exercise', version: '1.3.0',
+      description: 'Your own exercises and workouts made from them - pick one that fits the time you have, work through a round whenever; log activity, keep flexible weekly plans, and see what the family did together.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'week', title: 'This week' }, { id: 'log', title: 'Log activity' }, { id: 'exercises', title: 'Exercises' }, { id: 'workouts', title: 'Workouts' }, { id: 'plans', title: 'Plans and goals' },
         { id: 'exercise', title: 'Exercise', nav: false }, { id: 'exercise-new', title: 'A new exercise', nav: false }, { id: 'exercise-edit', title: 'Edit an exercise', nav: false },
@@ -347,7 +347,7 @@ const RAW = [
         { mode: 'plan', screen: 'workouts', label: 'Plan workouts from our own exercises' },
       ],
       data: { collections: [{ name: 'activities', schema: 1 }, { name: 'plans', schema: 1 }, { name: 'exercises', schema: 1 }, { name: 'workouts', schema: 1 }] },
-      permissions: ['data:own', 'people:read', 'notify', 'household:creators'],
+      permissions: ['data:own', 'people:read', 'notify', 'household:creators', 'people:weights'],
     },
     load: () => import('./exercise/app.js'),
   },

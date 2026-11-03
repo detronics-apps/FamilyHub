@@ -12,9 +12,9 @@ export async function loadPlanner(hub) {
     eventsCol(hub).list({ limit: 100000 }),
     hub.data.installed('holidays') ? hub.data.of('holidays', 'trips').list({ limit: 1000 }) : { items: [] },
     hub.data.installed('dates') ? hub.data.of('dates', 'dates').list({ limit: 10000 }) : { items: [] },
-    hub.data.installed('exercise') ? hub.data.of('exercise', 'workouts').list({ limit: 1000 }).catch(() => ({ items: [] })) : { items: [] },
+    hub.data.installed('exercise') ? hub.data.of('exercise', 'activities').list({ limit: 5000 }).catch(() => ({ items: [] })) : { items: [] },
   ]);
-  return { events: e.items.map(normaliseEvent), trips: t.items, dates: d.items.filter((x) => x.plannedOn && !x.removed), workouts: w.items };
+  return { events: e.items.map(normaliseEvent), trips: t.items, dates: d.items.filter((x) => x.plannedOn && !x.removed), workouts: w.items.filter((a) => a.workoutId) };
 }
 
 const week = { from: null };   // the week shown, kept while the app is open

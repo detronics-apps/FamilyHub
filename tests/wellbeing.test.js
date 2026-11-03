@@ -126,3 +126,62 @@ test('exercise: your own exercises, workouts from them, the days they are on, an
   assert.equal(ex.doneOn([act], 'wko_1', '2026-11-06'), false);
   assert.equal(ex.weekMinutes([act], '2026-11-02', 'a'), 4);      // counts in the week like any activity
 });
+
+test('exercise: muscles, tags, where, equipment, filters, the figure, the week, and the children’s weight', () => {
+  const sq = ex.normaliseExercise({ name: 'Squats', place: 'body', sets: 3, reps: 10, tags: ['Muscle building', 'Sciatica', 'Sciatica'], muscles: { quads: 'main', core: 'also', nose: 'main', calves: 'maybe' }, kids: ['k1', 'k2'] });
+  assert.deepEqual(sq.muscles, { quads: 'main', core: 'also' });
+  assert.deepEqual(sq.tags, ['Muscle building', 'Sciatica']);           // your own tag kept, once
+  const curl = ex.normaliseExercise({ name: 'Curls', place: 'home', need: ['Dumbbells'], muscles: { biceps: 'main' }, sets: 3, reps: 12 });
+  const press = ex.normaliseExercise({ name: 'Leg press', place: 'gym', need: ['Leg press machine'], muscles: { quads: 'main' } });
+  const all = [sq, curl, press];
+  assert.deepEqual(ex.filterExercises(all, { tags: ['Sciatica'] }).map((x) => x.name), ['Squats']);
+  assert.deepEqual(ex.filterExercises(all, { muscles: ['quads'] }).map((x) => x.name), ['Squats', 'Leg press']);
+  assert.deepEqual(ex.filterExercises(all, { place: 'gym' }).map((x) => x.name), ['Leg press']);
+  assert.deepEqual(ex.filterExercises(all, { have: ['dumbbells'] }).map((x) => x.name), ['Squats', 'Curls']);  // body weight needs nothing
+  assert.deepEqual(ex.exerciseShade(sq), { quads: 1, core: 0.4 });
+  const ids = { ...sq, id: 's' }; const c = { ...curl, id: 'c' };
+  const w = ex.normaliseWorkout({ name: 'Mix', items: [{ exerciseId: 's', sets: 4, reps: 10 }, { exerciseId: 'c' }] });
+  assert.deepEqual(ex.workoutMuscles(w, [ids, c]), { quads: { main: 4, also: 0 }, core: { main: 0, also: 4 }, biceps: { main: 3, also: 0 } });
+  assert.deepEqual(ex.workoutMuscles(w, [ids, c], ['c']), { biceps: { main: 3, also: 0 } });     // only what was ticked as done
+  assert.deepEqual(ex.shade({ quads: { main: 4, also: 0 }, core: { main: 0, also: 4 } }), { quads: 1, core: 0.5 });
+  const weights = [{ id: 'k1', name: 'Mia', kg: 16, day: '2026-10-02' }, { id: 'k2', name: 'Leo', kg: 16.4, day: '2026-09-30' }];
+  assert.deepEqual(ex.kidsLoad(sq, weights), { kg: 32.4, day: '2026-09-30', names: ['Mia', 'Leo'] });
+  assert.equal(ex.kidsLoad({ kids: ['k1'] }, [{ id: 'k1', kg: null }]), null);
+  assert.equal(ex.kidsMoved(w, [ids, c], weights), Math.round(32.4 * 10 * 4));
+  const hang = { ...ex.normaliseExercise({ name: 'Hang', seconds: 30, kids: ['k1'] }), id: 'h' };
+  assert.equal(ex.kidsMoved(ex.normaliseWorkout({ items: [{ exerciseId: 'h' }] }), [hang], weights), 0);   // a hold: no reps to multiply
+  const acts = [
+    ex.normaliseActivity({ day: '2026-11-03', who: ['a'], minutes: 20, muscles: ex.workoutMuscles(w, [ids, c]) }),
+    ex.normaliseActivity({ day: '2026-11-05', who: ['a'], minutes: 20, muscles: { quads: { main: 3, also: 0 } } }),
+    ex.normaliseActivity({ day: '2026-11-05', who: ['b'], minutes: 20, muscles: { chest: { main: 3, also: 0 } } }),
+  ];
+  const wk = ex.weekMuscles(acts, '2026-11-02', 'a');
+  assert.deepEqual(wk.quads, { times: 2, main: 7, also: 0 });
+  assert.equal(wk.chest, undefined);
+  assert.equal(ex.KIDS_EXAMPLES.length, 3);
+  for (const x of ex.KIDS_EXAMPLES) assert.ok(ex.normaliseExercise(x).tags.includes(ex.KIDS_TAG));
+});
+
+test('exercise: I have 25 minutes, a round to work through, and tallies that never reset (D-110)', () => {
+  const w = (id, minutes, inRound = false) => ({ ...ex.normaliseWorkout({ name: id, minutes, inRound }), id });
+  const all = [w('long', 45, true), w('short', 15), w('mid', 25, true), w('notime', null)];
+  const acts = [
+    ex.normaliseActivity({ day: '2026-03-01', workoutId: 'short', who: ['a'] }),
+    ex.normaliseActivity({ day: '2026-11-02', workoutId: 'short', who: ['a'] }),
+    ex.normaliseActivity({ day: '2025-12-30', workoutId: 'mid', who: ['a'] }),
+  ];
+  // fits 25: the round's undone one first, then the least done; the 45 and the untimed are left out
+  assert.deepEqual(ex.fitsIn(all, 25, { activities: acts, roundFrom: '2026-11-01', year: 2026 }).map((x) => x.id), ['mid', 'short']);
+  assert.equal(ex.yearCount(acts, 'short', 2026), 2);
+  assert.equal(ex.yearCount(acts, 'mid', 2026), 0);                    // last year's does not count this year
+  const st = ex.roundStatus(all, [...acts, ex.normaliseActivity({ day: '2026-11-04', workoutId: 'mid', who: ['a'] })], '2026-11-01');
+  assert.deepEqual([st.done, st.of, st.finished], [1, 2, false]);
+  assert.equal(ex.doneInRound(acts, 'mid', '2026-11-01'), false);      // done before the round began
+  const morning = ex.normaliseActivity({ day: '2026-11-05', at: '2026-11-05T07:00:00.000Z', workoutId: 'mid', who: ['a'] });
+  assert.equal(ex.doneInRound([morning], 'mid', '2026-11-05T09:00:00.000Z'), false);   // New round at 9 - this morning's is the old round
+  assert.equal(ex.doneInRound([morning], 'mid', '2026-11-05T06:00:00.000Z'), true);
+  assert.deepEqual(ex.workoutCounts(acts, '2026-11-05', 'a'), { week: 1, month: 1 });
+  assert.equal(ex.countsLine({ week: 3, month: 9 }), 'This week: 3 workouts. This month: 9.');
+  assert.equal(ex.countsLine({ week: 0, month: 0 }), 'A new week - any time you have 15 minutes.');
+  assert.ok(!/missed|behind|overdue|streak/i.test(ex.countsLine({ week: 0, month: 4 })));
+});

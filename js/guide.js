@@ -339,7 +339,8 @@ export const HOWTOS = [
     'Open Exercise, then "Log activity". Tick everyone who took part - doing it together counts for the family.',
     'In "Plans and goals", add a flexible plan like "walk three times a week", and set your own weekly minutes goal.',
     'In "Exercises", press "Add exercise" for each one your family does - the steps, sets and reps or seconds, and what you need.',
-    'In "Workouts", press "Add workout", add exercises in order, tick the days and who. This week shows today’s - press Done when finished.',
+    'In "Workouts", press "Add workout", add exercises in order and say how long it takes - a 15, a 25, a 45-minute one. Tick "This round" on a few.',
+    'When you have time, open This week and tap "I have 25 min": the workouts that fit show, the round’s first. Press Done when finished - there are no days to keep up with, and nothing piles up.',
   ] },
   { id: 'reading', title: 'Follow a Bible reading plan', steps: [
     'Open Faith and press "New plan". Choose the Gospels, a book, or your own selection, and how many chapters at a time.',
@@ -487,7 +488,8 @@ export const FAQS = [
 
 export const FEATURES = [
   { name: 'Parenting', where: 'Parenting', what: 'Parenting topics as options, trade-offs and the science, with how sure each claim is. Each partner’s view side by side; what you agree goes to Decisions for the ages it applies to, and the dashboard shows what is agreed, in force now and coming up.' },
-  { name: 'Exercises and workouts', where: 'Exercise › Exercises, Workouts', what: 'Keep your own exercises - how to do each, how much, what you need - and put them together into workouts on the days you choose. Today’s show on This week: press Done and it is logged.' },
+  { name: 'What each exercise works', where: 'Exercise › Exercises', what: 'Mark the muscles each exercise works, mainly or also, and see them on a little figure - for an exercise, a workout, and your week. Tag them your own way (Sciatica, Pregnancy, With the children), filter, and press Make workout to plan around a tag. Exercises with your children use their latest weight from People.' },
+  { name: 'Exercises and workouts', where: 'Exercise › Exercises, Workouts', what: 'Keep your own exercises - how to do each, how much, what you need - and put them together into workouts of different lengths. When you have 25 minutes, tap "I have 25 min" and do one that fits. A round is a few to work through whenever; each workout keeps count for the year.' },
   { name: 'Questions to decide', where: 'Parenting › Agreements', what: 'Each topic asks "have you considered…?" - the app gives no verdicts. Each of you writes what draws you, what worries you, why, and what would change your mind, then you Decide together. Change any question, approach or suggestion to make it yours.' },
   { name: 'Routines', where: 'Parenting', what: 'Leaving the house, bedtime, the morning: the screen splits per child and each ticks off their own list.' },
   { name: 'Planner', where: 'Parenting', what: 'The week for each child and each of you - sport, after school, concerts - with trips and plans alongside, and clashes pointed out.' },

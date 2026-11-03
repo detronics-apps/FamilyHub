@@ -24,6 +24,7 @@ export const PERMISSIONS = {
   'timer': { label: 'Use the shared timer', risk: 'low' },
   'food:read': { label: 'Look up foods in the shared food database', risk: 'low', firstParty: true },
   'people:food': { label: 'See food details in people’s profiles: age, allergies, pregnancy, weight and food priorities', risk: 'high', firstParty: true },
+  'people:weights': { label: 'See each person’s latest weight and the date it was taken - nothing else from their history', risk: 'medium', firstParty: true },
   'household:chores': { label: 'Read and change chores and their history', risk: 'high', firstParty: true },
   'household:people:write': { label: 'Add and change people', risk: 'high', firstParty: true },
   'household:creators': { label: 'See and add to the family’s list of creators (names and links)', risk: 'low', firstParty: true },

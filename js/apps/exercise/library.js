@@ -1,25 +1,39 @@
 // Exercise screens for the library (D-108): your own exercises, workouts put together from
-// them, and the days each one is on. Every list here adds and removes.
+// them, and which are in this round (D-110). Every list here adds and removes. Muscles, tags, where it is
+// done, equipment at home, and exercises done with the children (D-109).
 
 import { el } from '../../ui/dom.js';
-import { confirmAction } from '../../ui/common.js';
+import { confirmAction, modal } from '../../ui/common.js';
 import { recordForm, saveRecord, nameOf } from '../kit.js';
 import { linksControl, linksView } from '../../ui/links-editor.js';
 import {
-  KINDS, WORKS, DAYS, worksName, amountText, normaliseExercise, exerciseSummary, normaliseWorkout, workoutSummary, workoutTime,
+  KINDS, WORKS, worksName, amountText, normaliseExercise, exerciseSummary, normaliseWorkout, workoutSummary, workoutTime,
+  MUSCLES, PLACES, START_TAGS, PREGNANCY_TAG, KIDS_EXAMPLES, muscleName, filterExercises, workoutMuscles, shade, exerciseShade, kidsLoad, kidsMoved,
+  normaliseActivity, activityFromWorkout, yearCount,
 } from './logic.js';
+import { bodyFigure } from './body.js';
 
 export const exercisesCol = (hub) => hub.data.collection('exercises', { summary: exerciseSummary, text: (x) => [x.name, x.works, ...(x.how ?? [])].join(' '), prefix: 'exc' });
 export const workoutsCol = (hub) => hub.data.collection('workouts', { summary: workoutSummary, text: (w) => w.name, prefix: 'wko' });
 
 export const useLibrary = (hub) => hub.use('library', async () => {
-  const [x, w] = await Promise.all([exercisesCol(hub).list({ limit: 5000 }), workoutsCol(hub).list({ limit: 1000 })]);
-  return { exercises: x.items.map((i) => ({ ...normaliseExercise(i), id: i.id })), workouts: w.items.map((i) => ({ ...normaliseWorkout(i), id: i.id })) };
+  // The owner's examples with the children, added once - edit or remove them like any other.
+  if (!await hub.settings.get('examplesAdded', false)) {
+    for (const x of KIDS_EXAMPLES) await exercisesCol(hub).put(normaliseExercise(x));
+    await hub.settings.set('examplesAdded', true);
+  }
+  const [x, w, tags, have, roundFrom] = await Promise.all([exercisesCol(hub).list({ limit: 5000 }), workoutsCol(hub).list({ limit: 1000 }),
+    hub.settings.get('exerciseTags', START_TAGS), hub.settings.get('homeEquipment', []), hub.settings.get('roundFrom', null)]);
+  return {
+    exercises: x.items.map((i) => ({ ...normaliseExercise(i), id: i.id })), workouts: w.items.map((i) => ({ ...normaliseWorkout(i), id: i.id })),
+    tags, have, roundFrom, get weights() { return hub.people.weights?.() ?? []; },   // read fresh: a new weight on People shows at once
+  };
 });
+const kidsText = (load) => `about ${load.kg} kg${load.day ? ` (weighed ${new Date(`${load.day}T12:00:00Z`).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })})` : ''}`;
+const ASK = 'Your own tags - check with your doctor or midwife.';
 
 const back = (hub, screen, text, param = null) => el('a', { href: hub.href(screen, param), class: 'small', text });
 const timeText = (t) => `${t.minutes ? `About ${t.minutes} min` : 'Time not set'}${t.untimed ? ` plus ${t.untimed} counted in reps` : ''}`;
-const dayText = (days) => (days.length === 7 ? 'Every day' : DAYS.filter(([d]) => days.includes(d)).map(([, n]) => n).join(', ') || 'No days yet');
 
 /** A list of lines that adds and removes: Add step / Remove step. */
 function linesControl(values, { add, remove, placeholder }) {
@@ -34,23 +48,61 @@ function linesControl(values, { add, remove, placeholder }) {
   return { node, get: () => [...box.querySelectorAll('input')].map((i) => i.value.trim()).filter(Boolean) };
 }
 
+/** A list kept in the app's settings - our tags, our equipment - with Add and Remove. */
+function settingsList(hub, key, list, { title, add, remove, placeholder, hint }) {
+  const save = async (next) => { await hub.settings.set(key, next); hub.invalidate(); };
+  const input = el('input', { class: 'input', placeholder, maxlength: 40, 'aria-label': add });
+  const addIt = () => { const v = input.value.trim(); if (v && !list.includes(v)) save([...list, v]); };
+  return el('details', { class: 'panel more', 'data-field': `list:${key}` }, [el('summary', { text: `${title} (${list.length})` }),
+    hint ? el('p', { class: 'small muted', text: hint }) : null,
+    el('ul', { class: 'list' }, list.map((t) => el('li', {}, [el('span', { class: 'list__main', text: t }),
+      el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: remove, on: { click: () => save(list.filter((x) => x !== t)) } })]))),
+    el('div', { class: 'row', style: { flexWrap: 'nowrap' } }, [input, el('button', { class: 'btn btn-small', type: 'button', text: add, on: { click: addIt } })]),
+  ]);
+}
+
+const flt = { tags: [], muscles: [], place: null, have: false };   // the filters, kept while the app is open
+let startWith = null;   // Make workout: the exercises shown, and the tag they were filtered on
+const chip = (text, on, click, field) => el('button', { class: 'chip', type: 'button', text, 'aria-pressed': String(on), 'data-field': field, on: { click } });
+const toggle = (list, v) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+
 // ---- Exercises -------------------------------------------------------------------------------
 
 export function exercisesScreen(hub, lib, nav) {
   const people = hub.people.list();
-  const xs = lib.exercises.slice().sort((a, b) => a.name.localeCompare(b.name));
+  const all = lib.exercises.slice().sort((a, b) => a.name.localeCompare(b.name));
+  const tags = [...new Set([...lib.tags, ...all.flatMap((x) => x.tags)])];
+  const xs = filterExercises(all, { ...flt, tags: flt.tags.filter((t) => tags.includes(t)), have: flt.have ? lib.have : null });
+  const set = (k, v) => { flt[k] = v; hub.render(); };
+  const any = flt.tags.length || flt.muscles.length || flt.place || flt.have;
+  const filters = el('div', { class: 'panel stack', style: { gap: '8px' }, 'data-field': 'exercise-filters' }, [
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Where' }, [
+      ...Object.entries(PLACES).map(([k, n]) => chip(n, flt.place === k, () => set('place', flt.place === k ? null : k), `f-place:${k}`)),
+      chip('What we have', flt.have, () => set('have', !flt.have), 'f-have')]),
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Tags' }, tags.map((t) => chip(t, flt.tags.includes(t), () => set('tags', toggle(flt.tags, t)), `f-tag:${t}`))),
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Muscles' }, MUSCLES.map(([m, n]) => chip(n, flt.muscles.includes(m), () => set('muscles', toggle(flt.muscles, m)), `f-muscle:${m}`))),
+    el('div', { class: 'row' }, [el('span', { class: 'small muted', style: { flex: '1' }, 'data-field': 'exercise-count', text: `${xs.length} of ${all.length} shown` }),
+      any && xs.length ? el('button', { class: 'btn btn-small', type: 'button', text: 'Make workout', 'data-field': 'make-workout', title: 'A new workout with the exercises shown', on: { click: () => { startWith = { ids: xs.map((x) => x.id), name: flt.tags.join(' and ') }; hub.go('workout-new'); } } }) : null,
+      any ? el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Clear', on: { click: () => { Object.assign(flt, { tags: [], muscles: [], place: null, have: false }); hub.render(); } } }) : null]),
+    flt.tags.includes(PREGNANCY_TAG) ? el('p', { class: 'small', style: { margin: 0 }, text: ASK }) : null,
+    flt.have && !lib.have.length ? el('p', { class: 'small muted', style: { margin: 0 }, text: 'Add your equipment below - until then only exercises that need nothing show.' }) : null,
+  ]);
   return el('section', { class: 'stack', 'aria-label': 'Exercises' }, [
     nav,
     el('div', { class: 'row' }, [
       el('p', { class: 'small muted', style: { flex: '1', margin: 0 }, text: 'Your own exercises - how to do each one, how much, and what you need. Put them together in Workouts.' }),
       el('a', { class: 'btn btn-primary', href: hub.href('exercise-new'), text: 'Add exercise', 'data-field': 'exercise-add' }),
     ]),
-    xs.length ? el('ul', { class: 'list panel' }, xs.map((x) => el('li', {}, [
+    filters,
+    xs.length ? el('ul', { class: 'list panel' }, xs.map((x) => { const load = kidsLoad(x, lib.weights); return el('li', {}, [
       el('a', { class: 'list__main', href: hub.href('exercise', x.id), style: { color: 'inherit', textDecoration: 'none' }, 'data-field': `exercise:${x.name}` }, [
         el('strong', { text: x.name }),
-        el('div', { class: 'small muted', text: [x.works ? worksName(x.works) : null, amountText(x), x.who.length ? x.who.map((w) => nameOf(people, w)).join(', ') : null].filter(Boolean).join(' · ') }),
+        el('div', { class: 'small muted', text: [PLACES[x.place], amountText(x), Object.keys(x.muscles).map(muscleName).join(', '), load ? `with ${load.names.join(' and ')}, ${kidsText(load)}` : null, x.who.length ? x.who.map((w) => nameOf(people, w)).join(', ') : null].filter(Boolean).join(' · ') }),
+        x.tags.length ? el('div', { class: 'small', text: x.tags.join(' · ') }) : null,
       ]),
-    ]))) : el('p', { class: 'panel small muted', text: 'No exercises yet. Add the ones your family does - a stretch, squats, a skipping game.' }),
+    ]); })) : el('p', { class: 'panel small muted', text: all.length ? 'None match - clear a filter.' : 'No exercises yet. Add the ones your family does - a stretch, squats, a skipping game.' }),
+    settingsList(hub, 'exerciseTags', lib.tags, { title: 'Our tags', add: 'Add tag', remove: 'Remove', placeholder: 'e.g. Before work', hint: 'Offered when you tag an exercise. Removing one here leaves it on the exercises that have it.' }),
+    settingsList(hub, 'homeEquipment', lib.have, { title: 'Our equipment at home', add: 'Add item', remove: 'Remove', placeholder: 'e.g. Dumbbells', hint: '"What we have" shows exercises that need nothing else. Spell items the same as in "What you need".' }),
   ]);
 }
 
@@ -62,7 +114,12 @@ export function exerciseScreen(hub, lib, id) {
   return el('section', { class: 'stack', 'aria-label': x.name }, [
     back(hub, 'exercises', '‹ Exercises'),
     el('div', { class: 'row' }, [el('h1', { text: x.name, style: { margin: 0, flex: '1' } }), el('a', { class: 'btn', href: hub.href('exercise-edit', id), text: 'Edit' })]),
-    el('p', { class: 'small muted', text: [x.works ? worksName(x.works) : null, amountText(x), x.who.length ? `For ${x.who.map((w) => nameOf(people, w)).join(', ')}` : null].filter(Boolean).join(' · ') }),
+    el('p', { class: 'small muted', text: [PLACES[x.place], x.works ? worksName(x.works) : null, amountText(x), x.who.length ? `For ${x.who.map((w) => nameOf(people, w)).join(', ')}` : null].filter(Boolean).join(' · ') }),
+    x.tags.length ? el('div', { class: 'chipset' }, x.tags.map((t) => el('span', { class: 'chip', text: t }))) : null,
+    x.tags.includes(PREGNANCY_TAG) ? el('p', { class: 'small', text: ASK }) : null,
+    x.source ? el('p', { class: 'small', text: `Who said so: ${x.source}` }) : null,
+    (() => { const load = kidsLoad(x, lib.weights); return x.kids.length ? el('p', { 'data-field': 'kids-load', text: load ? `With ${load.names.join(' and ')}: ${kidsText(load)}${x.seconds && !x.reps ? ` for ${x.seconds} s` : ''}.` : `With ${x.kids.map((k) => nameOf(people, k)).join(' and ')} - add their weight on the People page to see it here.` }) : null; })(),
+    el('div', { class: 'panel' }, [el('h2', { text: 'What it works' }), bodyFigure(exerciseShade(x), { text: (m) => (x.muscles[m] === 'main' ? 'mainly' : 'also'), none: 'No muscles chosen yet - press Edit.' })]),
     x.how.length ? el('div', { class: 'panel' }, [el('h2', { text: 'How' }), el('ol', {}, x.how.map((s) => el('li', { text: s })))]) : null,
     x.need.length ? el('div', { class: 'panel' }, [el('h2', { text: 'What you need' }), el('ul', {}, x.need.map((s) => el('li', { text: s })))]) : null,
     linksView(hub, x, { small: false }),
@@ -75,24 +132,33 @@ export function exerciseEdit(hub, lib, id) {
   const how = linesControl(x?.how ?? [], { add: 'Add step', remove: 'Remove step', placeholder: 'e.g. Feet hip-width apart' });
   const need = linesControl(x?.need ?? [], { add: 'Add item', remove: 'Remove item', placeholder: 'e.g. A mat' });
   const usedIn = x ? lib.workouts.filter((w) => w.items.some((i) => i.exerciseId === id)) : [];
+  const ms = musclesControl(x?.muscles ?? {});
+  const tg = tagsControl([...new Set([...lib.tags, ...lib.exercises.flatMap((e) => e.tags)])], x?.tags ?? []);
+  const people = hub.people.list();
+  const kids = people.filter((p) => p.role === 'child');
   return el('section', { class: 'stack' }, [
     back(hub, x ? 'exercise' : 'exercises', '‹ Back', x ? id : null),
     el('h1', { text: x ? `Edit ${x.name}` : 'A new exercise', style: { margin: 0 } }),
     recordForm({
       record: x ?? { sets: null, reps: null },
-      people: hub.people.list(),
+      people,
       saveLabel: 'Save',
       fields: [
         { key: 'name', label: 'Name', required: true, placeholder: 'e.g. Wall push-ups' },
+        { key: 'place', label: 'Where', type: 'select', options: [['', 'Anywhere'], ...Object.entries(PLACES)] },
         { key: 'works', label: 'What it works', placeholder: 'Strength, stretch, or your own word', suggest: [...Object.values(WORKS), ...new Set(lib.exercises.map((e) => worksName(e.works)).filter(Boolean))] },
+        { key: 'muscles', label: 'Muscles', type: 'custom', control: () => ms },
+        { key: 'tags', label: 'Tags', type: 'custom', control: () => tg },
         { key: 'sets', label: 'Sets', type: 'number' },
         { key: 'reps', label: 'Reps in a set', type: 'number' },
         { key: 'seconds', label: 'Or seconds in a set', type: 'number' },
         { key: 'distance', label: 'Or a distance', placeholder: 'e.g. 1 km' },
         { key: 'how', label: 'How', type: 'custom', control: () => how },
         { key: 'need', label: 'What you need', type: 'custom', more: true, control: () => need },
+        { key: 'kids', label: 'Done with which children', type: 'choices', options: (kids.length ? kids : people).map((p) => [p.id, p.name]), more: true, hint: 'Their latest weights from the People page add up, and update as they grow.' },
+        { key: 'source', label: 'Who said so', more: true, placeholder: 'e.g. Our physio, March 2026', hint: 'Where a tag like Pregnancy came from.' },
         { key: 'who', label: 'Who it is for', type: 'people', more: true, hint: 'None ticked: anyone.' },
-        ...(hub.creators ? [{ key: 'links', label: 'Creators and videos', type: 'custom', more: true, hint: 'Where you learnt it, and a video showing it.', control: () => linksControl(hub, x ?? {}) }] : []),
+        ...(hub.creators ? [{ key: 'links', label: 'Creators and videos', type: 'custom', hint: 'Who you learnt it from, and a video showing it - YouTube, TikTok, any link.', control: () => linksControl(hub, x ?? {}) }] : []),
       ],
       extra: x ? [el('button', { class: 'btn btn-quiet', type: 'button', text: 'Remove', 'data-field': 'exercise-remove', on: { click: async () => {
         if (!await confirmAction({ title: `Remove "${x.name}"?`, text: usedIn.length ? `It comes out of ${usedIn.map((w) => w.name).join(', ')} too.` : 'It goes from your exercises.', confirmLabel: 'Remove', danger: true })) return;
@@ -111,29 +177,71 @@ export function exerciseEdit(hub, lib, id) {
   ]);
 }
 
+/** Each muscle: not worked, Mainly or Also. */
+function musclesControl(value) {
+  const sels = MUSCLES.map(([m, n]) => [m, el('select', { class: 'select', 'aria-label': n, 'data-field': `muscle:${m}`, style: { maxWidth: '110px' } },
+    [['', '-'], ['main', 'Mainly'], ['also', 'Also']].map(([v, t]) => el('option', { value: v, text: t, selected: (value[m] ?? '') === v })))]);
+  const node = el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '6px 12px' } },
+    sels.map(([m, s]) => el('label', { class: 'row', style: { flexWrap: 'nowrap', justifyContent: 'space-between' } }, [el('span', { class: 'small', text: muscleName(m) }), s])));
+  return { node, get: () => Object.fromEntries(sels.filter(([, s]) => s.value).map(([m, s]) => [m, s.value])) };
+}
+
+/** Tags: tap ours to put on or take off; Add tag for one of your own. */
+function tagsControl(offered, value) {
+  let on = [...value];
+  const box = el('div', { class: 'chipset' });
+  const draw = () => { box.replaceChildren(...[...new Set([...offered, ...on])].map((t) => chip(t, on.includes(t), () => { on = toggle(on, t); draw(); }, `tag:${t}`))); };
+  draw();
+  const input = el('input', { class: 'input', placeholder: 'A tag of your own', maxlength: 40, 'aria-label': 'A tag of your own' });
+  const node = el('div', { class: 'stack', style: { gap: '6px' } }, [box, el('div', { class: 'row', style: { flexWrap: 'nowrap' } }, [input,
+    el('button', { class: 'btn btn-small', type: 'button', text: 'Add tag', on: { click: () => { const v = input.value.trim(); if (v && !on.includes(v)) { on = [...on, v]; input.value = ''; draw(); } } } })])]);
+  return { node, get: () => on };
+}
+
+/**
+ * Done: tick the exercises you did (all to start), then it is logged with the muscles worked
+ * and the weight moved with the children - so the week counts only what happened.
+ */
+export function doneButton(hub, w, lib, activities, actsCol) {
+  if (!w) return null;
+  const today = hub.today();
+  const me = hub.people.current();
+  const open = () => {
+    const boxes = w.items.map((i) => { const x = lib.exercises.find((e) => e.id === i.exerciseId); const b = el('input', { type: 'checkbox', checked: true, value: i.exerciseId });
+      return { b, node: el('label', { class: 'checkline' }, [b, `${x?.name ?? 'A removed exercise'} ${amountText(i)}`]) }; });
+    const { close } = modal({
+      title: `${w.name} - what you did`,
+      body: [el('p', { class: 'small muted', text: 'Untick anything you skipped.' }), ...boxes.map((x) => x.node)],
+      foot: [el('button', { class: 'btn', type: 'button', text: 'Cancel', on: { click: () => close() } }),
+        el('button', { class: 'btn btn-primary', type: 'button', text: 'Log it', 'data-field': 'done-log', on: { click: async () => {
+          const did = boxes.filter((x) => x.b.checked).map((x) => x.b.value);
+          const act = { ...activityFromWorkout(w, w.id, today, w.who.length ? w.who : me ? [me.id] : []), muscles: workoutMuscles(w, lib.exercises, did), kidsKg: kidsMoved(w, lib.exercises, lib.weights, did) };
+          close();
+          await saveRecord(hub, actsCol, normaliseActivity(act, today));
+          hub.invalidate(); hub.ui.notice(`${w.name} logged.`);
+        } } })],
+    });
+  };
+  return el('button', { class: 'btn btn-small btn-primary', type: 'button', text: 'Done', 'data-field': `done:${w.name}`, on: { click: open } });
+}
+
 // ---- Workouts --------------------------------------------------------------------------------
 
-export function workoutsScreen(hub, lib, nav) {
-  const people = hub.people.list();
+export function workoutsScreen(hub, lib, nav, activities = []) {
+  const year = hub.today().slice(0, 4);
+  const round = async (w) => { await saveRecord(hub, workoutsCol(hub), normaliseWorkout({ ...w, inRound: !w.inRound })); hub.invalidate(); };
   return el('section', { class: 'stack', 'aria-label': 'Workouts' }, [
     nav,
     el('div', { class: 'row' }, [
-      el('p', { class: 'small muted', style: { flex: '1', margin: 0 }, text: 'Put exercises together in order, set the days and who. They show in This week, to tick off.' }),
+      el('p', { class: 'small muted', style: { flex: '1', margin: 0 }, text: 'Put exercises together in order - a 15, a 25, a 45-minute one. Tick a few for This round, and do them whenever you have the time.' }),
       el('a', { class: 'btn btn-primary', href: hub.href('workout-new'), text: 'Add workout', 'data-field': 'workout-add' }),
-    ]),
-    el('div', { class: 'panel' }, [
-      el('h2', { text: 'The week' }),
-      el('ul', { class: 'list' }, DAYS.map(([d, n]) => {
-        const on = lib.workouts.filter((w) => w.active && w.days.includes(d));
-        return el('li', { 'data-field': `week-day:${d}` }, [el('strong', { text: n, style: { minWidth: '3em' } }),
-          el('span', { class: 'list__main' }, on.length ? on.flatMap((w, i) => [i ? ' · ' : '', el('a', { href: hub.href('workout', w.id), text: w.name }), w.who.length ? el('span', { class: 'small muted', text: ` (${w.who.map((p) => nameOf(people, p)).join(', ')})` }) : null]) : [el('span', { class: 'small muted', text: 'Rest' })])]);
-      })),
     ]),
     lib.workouts.length ? el('ul', { class: 'list panel' }, lib.workouts.map((w) => el('li', {}, [
       el('a', { class: 'list__main', href: hub.href('workout', w.id), style: { color: 'inherit', textDecoration: 'none' }, 'data-field': `workout:${w.name}` }, [
         el('strong', { text: `${w.name}${w.active ? '' : ' (paused)'}` }),
-        el('div', { class: 'small muted', text: [`${w.items.length} exercise${w.items.length === 1 ? '' : 's'}`, timeText(workoutTime(w)), dayText(w.days)].join(' · ') }),
+        el('div', { class: 'small muted', text: [`${w.items.length} exercise${w.items.length === 1 ? '' : 's'}`, timeText(workoutTime(w)), timesText(yearCount(activities, w.id, year))].join(' · ') }),
       ]),
+      el('button', { class: 'chip', type: 'button', text: 'This round', 'aria-pressed': String(w.inRound), 'data-field': `round:${w.name}`, title: 'In the batch to work through', on: { click: () => round(w) } }),
     ]))) : el('p', { class: 'panel small muted', text: lib.exercises.length ? 'No workouts yet.' : 'Add some exercises first, then put them together here.' }),
   ]);
 }
@@ -146,7 +254,7 @@ export function workoutScreen(hub, lib, id, done) {
   return el('section', { class: 'stack', 'aria-label': w.name }, [
     back(hub, 'workouts', '‹ Workouts'),
     el('div', { class: 'row' }, [el('h1', { text: w.name, style: { margin: 0, flex: '1' } }), done, el('a', { class: 'btn', href: hub.href('workout-edit', id), text: 'Edit' })]),
-    el('p', { class: 'small muted', text: [timeText(workoutTime(w)), dayText(w.days), w.who.length ? w.who.map((p) => nameOf(people, p)).join(', ') : 'Anyone', w.rest ? `${w.rest} s rest` : null].filter(Boolean).join(' · ') }),
+    el('p', { class: 'small muted', text: [timeText(workoutTime(w)), w.inRound ? 'in this round' : null, w.who.length ? w.who.map((p) => nameOf(people, p)).join(', ') : 'Anyone', w.rest ? `${w.rest} s rest` : null].filter(Boolean).join(' · ') }),
     el('ol', { class: 'panel' }, w.items.map((i) => {
       const e = ex(i.exerciseId);
       return el('li', { style: { marginBottom: '6px' } }, [
@@ -154,6 +262,10 @@ export function workoutScreen(hub, lib, id, done) {
         el('span', { class: 'small muted', text: ` ${amountText(i) || (e ? amountText(e) : '')}` }),
       ]);
     })),
+    (() => { const kg = kidsMoved(w, lib.exercises, lib.weights); return kg ? el('p', { class: 'small', text: `With the children: about ${kg} kg moved in all (their weight × reps × sets).` }) : null; })(),
+    el('div', { class: 'panel' }, [el('h2', { text: 'What it works' }), (() => { const load = workoutMuscles(w, lib.exercises);
+      return bodyFigure(shade(load), { text: (m) => [load[m].main ? `${load[m].main} set${load[m].main === 1 ? '' : 's'} mainly` : null, load[m].also ? `${load[m].also} also` : null].filter(Boolean).join(', '), none: 'Choose muscles on its exercises to see them here.' }); })(),
+      (() => { const out = MUSCLES.filter(([m]) => !workoutMuscles(w, lib.exercises)[m]).map(([, n]) => n); return out.length && out.length < MUSCLES.length ? el('p', { class: 'small muted', text: `Not in this workout: ${out.join(', ')}.` }) : null; })()]),
     w.note ? el('p', { text: w.note }) : null,
     linksView(hub, w, { small: false }),
   ]);
@@ -186,24 +298,24 @@ function itemsControl(lib, items) {
 
 export function workoutEdit(hub, lib, id) {
   const w = id ? lib.workouts.find((x) => x.id === id) : null;
-  const items = itemsControl(lib, w?.items ?? []);
+  const start = w ? null : startWith; startWith = null;
+  const items = itemsControl(lib, w?.items ?? start?.ids.map((exerciseId) => ({ exerciseId })) ?? []);
   const me = hub.people.current();
   return el('section', { class: 'stack' }, [
     back(hub, w ? 'workout' : 'workouts', '‹ Back', w ? id : null),
     el('h1', { text: w ? `Edit ${w.name}` : 'A new workout', style: { margin: 0 } }),
     recordForm({
-      record: w ?? { kind: 'gym', days: [], who: me ? [me.id] : [], active: true },
+      record: w ?? { name: start?.name ?? '', kind: 'gym', who: me ? [me.id] : [], active: true, inRound: true },
       people: hub.people.list(),
       saveLabel: 'Save',
       fields: [
         { key: 'name', label: 'Name', required: true, placeholder: 'e.g. Morning stretch' },
         { key: 'items', label: 'Exercises, in order', type: 'custom', control: () => items },
-        { key: 'days', label: 'Which days', type: 'choices', options: DAYS },
+        { key: 'minutes', label: 'How long, in minutes', type: 'number', hint: 'e.g. 25 - so it shows when you have 25 minutes. Empty: the timed parts added up.' },
+        { key: 'inRound', label: 'In this round', type: 'check' },
         { key: 'who', label: 'Who does it', type: 'people', hint: 'None ticked: anyone.' },
         { key: 'rest', label: 'Rest between, in seconds', type: 'number', more: true },
-        { key: 'minutes', label: 'How long, in minutes', type: 'number', more: true, hint: 'Leave empty to add up the timed parts.' },
         { key: 'kind', label: 'Logged as', type: 'select', options: Object.entries(KINDS), more: true },
-        { key: 'active', label: 'On the plan (untick to pause)', type: 'check', more: true },
         { key: 'note', label: 'Note', type: 'textarea', more: true },
         ...(hub.creators ? [{ key: 'links', label: 'Creators and videos', type: 'custom', more: true, hint: 'The coach or channel, and the video to follow.', control: () => linksControl(hub, w ?? {}) }] : []),
       ],

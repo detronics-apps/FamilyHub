@@ -1,15 +1,17 @@
 // Exercise: log activity, keep a few flexible weekly plans, see your own week
 // and what the family did together. Screens: week (default), log, plans - and your own exercises,
-// workouts made from them and the days each is on (D-108).
+// workouts made from them (D-108); "I have 25 minutes", a round to work through, and tallies
+// that never reset (D-110).
 
 import { el } from '../../ui/dom.js';
 import { fmtDay, addDays, weekStart } from '../../dates.js';
 import { tabs, loading, failure, recordForm, saveRecord, nameOf } from '../kit.js';
 import { linksControl, linksView } from '../../ui/links-editor.js';
 import {
-  KINDS, IDEAS, workoutsOn, doneOn, activityFromWorkout, workoutTime, normaliseActivity, activitySummary, normalisePlan, planSummary, weekMinutes, together, planProgress, goalLine,
+  KINDS, IDEAS, MUSCLES, workoutTime, fitsIn, roundStatus, yearCount, timesText, workoutCounts, countsLine, weekMuscles, shade, normaliseActivity, activitySummary, normalisePlan, planSummary, weekMinutes, together, planProgress, goalLine,
 } from './logic.js';
-import { useLibrary, exercisesScreen, exerciseScreen, exerciseEdit, workoutsScreen, workoutScreen, workoutEdit } from './library.js';
+import { useLibrary, exercisesScreen, exerciseScreen, exerciseEdit, workoutsScreen, workoutScreen, workoutEdit, doneButton } from './library.js';
+import { bodyFigure } from './body.js';
 
 const acts = (hub) => hub.data.collection('activities', { summary: activitySummary, text: (a) => `${KINDS[a.kind]} ${a.note}`, prefix: 'act' });
 const plans = (hub) => hub.data.collection('plans', { summary: planSummary, text: (p) => p.title, prefix: 'xpl' });
@@ -25,8 +27,8 @@ export function render(hub, route) {
   if (route.sub === 'exercise') return exerciseScreen(hub, lib.data, id);
   if (route.sub === 'exercise-new') return exerciseEdit(hub, lib.data, null);
   if (route.sub === 'exercise-edit') return exerciseEdit(hub, lib.data, id);
-  if (route.sub === 'workouts') return workoutsScreen(hub, lib.data, nav(hub, 'workouts'));
-  if (route.sub === 'workout') { const a = recent(hub); return workoutScreen(hub, lib.data, id, a.data ? doneButton(hub, lib.data.workouts.find((w) => w.id === id), a.data) : null); }
+  if (route.sub === 'workouts') { const a = recent(hub); return workoutsScreen(hub, lib.data, nav(hub, 'workouts'), a.data ?? []); }
+  if (route.sub === 'workout') { const a = recent(hub); return workoutScreen(hub, lib.data, id, a.data ? doneButton(hub, lib.data.workouts.find((w) => w.id === id), lib.data, a.data, acts(hub)) : null); }
   if (route.sub === 'workout-new') return workoutEdit(hub, lib.data, null);
   if (route.sub === 'workout-edit') return workoutEdit(hub, lib.data, id);
   return weekScreen(hub);
@@ -53,13 +55,16 @@ function weekScreen(hub) {
 
   return el('section', { class: 'stack', 'aria-label': 'Exercise' }, [
     nav(hub, null),
+    // First on the screen: the easiest way in (D-110).
+    timePanel(hub, lib.data, a.data, me),
+    roundPanel(hub, lib.data, a.data),
     el('div', { class: 'stats' }, [
       me ? stat(String(mine), `minutes for ${me.name} this week`) : null,
       stat(String(t.count), 'times the family moved together'),
       stat(String(t.minutes), 'minutes together'),
     ]),
     me ? el('p', { text: goalLine(mine, goals.data?.[me.id]) }) : el('p', { class: 'small muted', text: 'Say who you are (top right) to see your own week.' }),
-    todayPanel(hub, lib.data?.workouts ?? [], a.data, people),
+    me ? musclesPanel(a.data, monday, me) : null,
     active.length ? el('div', { class: 'panel' }, [
       el('h2', { text: 'Plans this week' }),
       el('ul', { class: 'list' }, active.map((pl) => {
@@ -80,32 +85,62 @@ function weekScreen(hub) {
   ]);
 }
 
-/** Today's workouts from the plan, each ticked off with Done - which logs it as an activity. */
-function todayPanel(hub, workouts, activities, people) {
-  const today = hub.today();
-  const on = workoutsOn(workouts, today);
-  if (!on.length) return null;
-  return el('div', { class: 'panel', 'data-field': 'today-workouts' }, [
-    el('h2', { text: 'Today' }),
-    el('ul', { class: 'list' }, on.map((w) => el('li', {}, [
-      el('a', { class: 'list__main', href: hub.href('workout', w.id), style: { color: 'inherit', textDecoration: 'none' } }, [
-        el('strong', { text: w.name }),
-        el('div', { class: 'small muted', text: [workoutTime(w).minutes ? `About ${workoutTime(w).minutes} min` : null, w.who.map((p) => nameOf(people, p)).join(', ')].filter(Boolean).join(' · ') }),
-      ]),
-      doneButton(hub, w, activities),
-    ]))),
+const have = { minutes: null };   // "I have … minutes", kept while the app is open
+const MINUTES = [15, 25, 45, 60];
+
+/** I have … minutes: the workouts that fit, the round's undone ones first. Done any time, as often as you like. */
+function timePanel(hub, lib, activities, me) {
+  const today = hub.today(); const year = today.slice(0, 4);
+  const pick = (m) => { have.minutes = have.minutes === m ? null : m; hub.render(); };
+  const own = el('input', { class: 'input', type: 'number', min: '1', max: '600', placeholder: 'Other', 'aria-label': 'Minutes you have', style: { maxWidth: '90px' }, value: have.minutes && !MINUTES.includes(have.minutes) ? String(have.minutes) : '',
+    on: { change: (e) => { const m = Math.round(Number(e.target.value)); have.minutes = m > 0 ? m : null; hub.render(); } } });
+  const fit = have.minutes ? fitsIn(lib.workouts, have.minutes, { activities, roundFrom: lib.roundFrom, year }) : [];
+  const unset = lib.workouts.filter((w) => !workoutTime(w).minutes);
+  return el('div', { class: 'panel stack', 'data-field': 'have-minutes' }, [
+    el('h2', { text: 'I have…', style: { margin: 0 } }),
+    el('div', { class: 'row' }, [el('div', { class: 'chipset', role: 'group', 'aria-label': 'Minutes you have' }, MINUTES.map((m) => el('button', {
+      class: 'chip', type: 'button', text: `${m} min`, 'aria-pressed': String(have.minutes === m), 'data-field': `have:${m}`, on: { click: () => pick(m) } }))), own]),
+    el('p', { class: 'small muted', style: { margin: 0 }, 'data-field': 'counts', text: countsLine(workoutCounts(activities, today, me?.id)) }),
+    !have.minutes ? null
+      : fit.length ? el('ul', { class: 'list' }, fit.map((w) => el('li', {}, [
+        el('a', { class: 'list__main', href: hub.href('workout', w.id), style: { color: 'inherit', textDecoration: 'none' }, 'data-field': `fit:${w.name}` }, [
+          el('strong', { text: w.name }),
+          el('div', { class: 'small muted', text: [`About ${workoutTime(w).minutes} min`, w.inRound ? 'in this round' : null, timesText(yearCount(activities, w.id, year))].filter(Boolean).join(' · ') }),
+        ]),
+        doneButton(hub, w, lib, activities, acts(hub)),
+      ])))
+        : el('p', { class: 'small muted', text: lib.workouts.length ? `None of your workouts fits ${have.minutes} minutes${unset.length ? ` - ${unset.length} have no time set yet` : ''}. Make a short one in Workouts.` : 'Make a workout first, in Workouts - a 15-minute one is a good start.' }),
   ]);
 }
 
-function doneButton(hub, w, activities) {
-  if (!w) return null;
-  const today = hub.today();
-  if (doneOn(activities, w.id, today)) return el('span', { class: 'small', text: 'Done today', 'data-field': `done:${w.name}` });
-  const me = hub.people.current();
-  return el('button', { class: 'btn btn-small btn-primary', type: 'button', text: 'Done', 'data-field': `done:${w.name}`, on: { click: async () => {
-    await saveRecord(hub, acts(hub), normaliseActivity(activityFromWorkout(w, w.id, today, w.who.length ? w.who : me ? [me.id] : []), today));
-    hub.invalidate(); hub.ui.notice(`${w.name} logged.`);
-  } } });
+/** This round: a batch to work through, whenever. No days, nothing missed; New round when it is done. */
+function roundPanel(hub, lib, activities) {
+  const st = roundStatus(lib.workouts, activities, lib.roundFrom);
+  if (!st.of) return lib.workouts.length ? el('p', { class: 'small muted', text: 'Tick workouts for "This round" in Workouts - a few to work through, whenever you have time.' }) : null;
+  return el('div', { class: 'panel', 'data-field': 'round' }, [
+    el('div', { class: 'row' }, [el('h2', { text: 'This round', style: { margin: 0, flex: '1' } }), el('span', { class: 'small', 'data-field': 'round-count', text: `${st.done} of ${st.of} done` })]),
+    el('ul', { class: 'list' }, st.list.map(({ w, done }) => el('li', {}, [
+      el('a', { class: 'list__main', href: hub.href('workout', w.id), text: `${done ? '✓ ' : ''}${w.name}`, style: { color: 'inherit', textDecoration: done ? 'line-through' : 'none' } }),
+      el('span', { class: 'small muted', text: workoutTime(w).minutes ? `${workoutTime(w).minutes} min` : '' }),
+    ]))),
+    st.finished ? el('div', { class: 'row' }, [el('span', { style: { flex: '1' }, text: 'Round finished.' }),
+      el('button', { class: 'btn btn-primary btn-small', type: 'button', text: 'New round', 'data-field': 'new-round', on: { click: async () => { await hub.settings.set('roundFrom', new Date().toISOString()); hub.invalidate(); hub.ui.notice('A new round - the same workouts, all to do again. Change which in Workouts.'); } } })])
+      : el('p', { class: 'small muted', style: { margin: 0 }, text: 'In any order, on any day. Not today? Then another day.' }),
+  ]);
+}
+
+/** What each muscle got this week, from the workouts marked Done - a record, not a target. */
+function musclesPanel(activities, monday, me) {
+  const wk = weekMuscles(activities, monday, me.id);
+  const kids = activities.filter((x) => x.kidsKg && x.who.includes(me.id) && x.day >= monday).reduce((s, x) => s + x.kidsKg, 0);
+  if (!Object.keys(wk).length && !kids) return null;
+  const out = MUSCLES.filter(([m]) => !wk[m]).map(([, n]) => n);
+  return el('div', { class: 'panel', 'data-field': 'week-muscles' }, [
+    el('h2', { text: `What ${me.name} worked this week` }),
+    bodyFigure(shade(wk), { text: (m) => `${wk[m].times} time${wk[m].times === 1 ? '' : 's'}${wk[m].main ? `, ${wk[m].main} set${wk[m].main === 1 ? '' : 's'}` : ''}` }),
+    out.length ? el('p', { class: 'small muted', text: `Not this week: ${out.join(', ')}.` }) : null,
+    kids ? el('p', { class: 'small', text: `With the children: about ${kids} kg moved.` }) : null,
+  ]);
 }
 
 const stat = (value, label) => el('div', { class: 'stat' }, [el('div', { class: 'stat__value', text: value }), el('div', { class: 'stat__label', text: label })]);

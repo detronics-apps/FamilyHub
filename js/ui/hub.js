@@ -170,6 +170,10 @@ export function createHubFactory(ctx) {
         return { ...food(p), weightKg: m.weightKg ?? p.weightKg, heightCm: m.heightCm };
       });
     }
+    if (has('people:weights') && hub.people) {
+      // Only the latest weight and its date (D-109), e.g. a child's weight in an exercise done with them.
+      hub.people.weights = () => (ctx.app.household?.people ?? []).map((p) => { const m = latestMeasure(ctx.app.household, p.id); return { id: p.id, name: p.name, kg: m.weightKg, day: m.weightDay }; });
+    }
     if (has('household:creators')) {
       // The family's creators (D-091), shared by every app; adding one saves the household.
       hub.creators = {
