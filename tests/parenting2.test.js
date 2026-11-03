@@ -87,3 +87,10 @@ test('planner: weekly things repeat until their end; clashes said; trips and pla
   assert.equal(occurrences(ev, '2026-12-07', 7).find((d) => d.day === '2026-12-08').items.length, 0, 'past its end');
   assert.equal(alongside('2026-11-12', { trips: [{ id: 't', title: 'Coast', startDay: '2026-11-11', endDay: '2026-11-14' }] })[0].kind, 'trip');
 });
+
+test('planner: workouts from Exercise on their weekdays', () => {
+  const w = { id: 'wko_1', name: 'Morning stretch', days: ['tue'] };
+  assert.deepEqual(alongside('2026-11-03', { workouts: [w] }).map((x) => x.kind), ['workout']);
+  assert.equal(alongside('2026-11-04', { workouts: [w] }).length, 0);
+  assert.equal(alongside('2026-11-03', { workouts: [{ ...w, active: false }] }).length, 0);
+});

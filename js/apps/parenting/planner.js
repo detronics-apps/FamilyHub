@@ -32,11 +32,14 @@ export function occurrences(events, from, n = 7) {
 }
 
 /** Other apps' dated things, for one day: trips (all day), planned activities and dates. */
-export function alongside(day, { trips = [], activities = [], dates = [] }) {
+const WEEKDAY = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+export function alongside(day, { trips = [], activities = [], dates = [], workouts = [] }) {
+  const wd = WEEKDAY[new Date(`${day}T12:00:00Z`).getUTCDay()];
   return [
     ...trips.filter((t) => isDay(t.startDay) && t.startDay <= day && day <= (isDay(t.endDay) ? t.endDay : t.startDay)).map((t) => ({ kind: 'trip', title: t.title, href: `#/holidays/item/${encodeURIComponent(t.id)}` })),
     ...activities.filter((a) => a.plannedOn === day).map((a) => ({ kind: 'activity', title: a.name, href: `#/parenting/idea/${encodeURIComponent(a.activityId)}` })),
     ...dates.filter((d) => d.plannedOn === day).map((d) => ({ kind: 'date', title: d.name, href: `#/dates/date/${encodeURIComponent(d.dateId)}` })),
+    ...workouts.filter((w) => w.active !== false && (w.days ?? []).includes(wd)).map((w) => ({ kind: 'workout', title: w.name, href: `#/exercise/workout/${encodeURIComponent(w.id)}` })),
   ];
 }
 

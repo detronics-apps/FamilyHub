@@ -334,16 +334,19 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'exercise', section: 'exercise', name: 'Exercise', version: '1.1.0',
-      description: 'Log activity, keep flexible weekly plans, and see what the family did together.',
+      fhManifest: 1, id: 'exercise', section: 'exercise', name: 'Exercise', version: '1.2.0',
+      description: 'Your own exercises and workouts made from them, on the days you choose; log activity, keep flexible weekly plans, and see what the family did together.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
-      screens: [{ id: 'week', title: 'This week' }, { id: 'log', title: 'Log activity' }, { id: 'plans', title: 'Plans and goals' }],
+      screens: [{ id: 'week', title: 'This week' }, { id: 'log', title: 'Log activity' }, { id: 'exercises', title: 'Exercises' }, { id: 'workouts', title: 'Workouts' }, { id: 'plans', title: 'Plans and goals' },
+        { id: 'exercise', title: 'Exercise', nav: false }, { id: 'exercise-new', title: 'A new exercise', nav: false }, { id: 'exercise-edit', title: 'Edit an exercise', nav: false },
+        { id: 'workout', title: 'Workout', nav: false }, { id: 'workout-new', title: 'A new workout', nav: false }, { id: 'workout-edit', title: 'Edit a workout', nav: false }],
       modes: [
         { mode: 'note', screen: 'log', label: 'Log some activity' },
         { mode: 'note', screen: 'week', label: 'See this week' },
         { mode: 'plan', screen: 'plans', label: 'Plan how we move each week' },
+        { mode: 'plan', screen: 'workouts', label: 'Plan workouts from our own exercises' },
       ],
-      data: { collections: [{ name: 'activities', schema: 1 }, { name: 'plans', schema: 1 }] },
+      data: { collections: [{ name: 'activities', schema: 1 }, { name: 'plans', schema: 1 }, { name: 'exercises', schema: 1 }, { name: 'workouts', schema: 1 }] },
       permissions: ['data:own', 'people:read', 'notify', 'household:creators'],
     },
     load: () => import('./exercise/app.js'),
@@ -372,8 +375,8 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'parenting', section: 'parenting', name: 'Parenting', version: '1.6.0',
-      description: 'Parenting topics laid out as options, trade-offs, timing and how sure the science is - each partner’s view side by side, and what you agree kept in Decisions for the ages it applies to.',
+      fhManifest: 1, id: 'parenting', section: 'parenting', name: 'Parenting', version: '1.7.0',
+      description: 'Parenting topics as questions to decide together while calm - each of you writes your own reasons, and what you agree is kept in Decisions for the ages it applies to.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [
         { id: 'home', title: 'Parenting' }, { id: 'agree', title: 'Agreements' }, { id: 'ideas', title: 'Ideas' }, { id: 'play', title: 'Play now' },
@@ -399,7 +402,7 @@ const RAW = [
         { mode: 'note', screen: 'track', label: 'Track a temperature, sleep, wees and poos - for the doctor' },
       ],
       data: { collections: [{ name: 'topics', schema: 1 }, { name: 'sections', schema: 1 }, { name: 'activities', schema: 1 }, { name: 'screenlog', schema: 1 }, { name: 'shows', schema: 1 }, { name: 'screenset', schema: 1 }, { name: 'scenarios', schema: 1 }, { name: 'trackers', schema: 1 }, { name: 'settings', schema: 1 }, { name: 'routines', schema: 1 }, { name: 'events', schema: 1 }] },
-      permissions: ['data:own', 'people:read', 'people:ages', 'notify', 'data:decisions:read', 'household:creators', 'data:holidays:read', 'data:dates:read'],
+      permissions: ['data:own', 'people:read', 'people:ages', 'notify', 'data:decisions:read', 'household:creators', 'data:holidays:read', 'data:dates:read', 'data:exercise:read'],
     },
     load: () => import('./parenting/app.js'),
     tile: true,   // its module is loaded for Home, to say what is worth agreeing now

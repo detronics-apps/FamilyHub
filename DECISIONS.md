@@ -696,6 +696,22 @@ note; claims not settled; and paid accounts never sent to medical aid (they will
 scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
 the year of its own date, not of each payment (marked to split by payment day if that matters).
 
+**D-108 Exercise works like meals: your own exercises, workouts, a weekly plan (owner, 2026-11-03).**
+The owner wanted to plan and create exercises the way meals and the children's activities are
+planned, and build an exercise plan from them.
+- **Exercises:** a library of the family's own - name, what it works (Strength, Stretch, Cardio,
+  Balance, Play, or your own word), how to do it (Add step / Remove step), sets with reps or seconds
+  or a distance, what you need (Add item / Remove item), who it is for, creators and videos.
+- **Workouts:** exercises in order (Add exercise, Up, Remove), each with its own sets, reps and
+  seconds for that workout; rest between; the days of the week it is on; who does it. Its length
+  is the timed parts plus the rests - parts counted in reps have no time, so they are counted and
+  said, not guessed; your own minutes win when given. Pause takes it off the plan.
+- **The plan:** the week, Monday to Sunday, in Workouts; today's workouts on This week with
+  **Done**, which logs an activity (linked to the workout) so it counts in the week, the goals and
+  the flexible plans like any other. The Parenting Planner shows workouts on their days.
+- Removing an exercise takes it out of the workouts it is in, after saying which.
+- The app suggests no exercise and says nothing about what is good for anyone (D-107).
+
 **D-107 Awareness, not direction; every add has a remove (owner, 2026-11-03).** The owner: the app
 is a tool to help parents find their own balance - it asks, it does not push. Where people do not
 agree (sunscreen, sun exposure, plastics, powders, feeding), recommending either way risks a family

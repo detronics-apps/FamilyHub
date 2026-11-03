@@ -8,12 +8,13 @@ import { normaliseEvent, occurrences, alongside, clashes, weekOf, addDays } from
 
 export const eventsCol = (hub) => hub.data.collection('events', { summary: (r) => normaliseEvent(r), text: (r) => r.title ?? '', prefix: 'ev' });
 export async function loadPlanner(hub) {
-  const [e, t, d] = await Promise.all([
+  const [e, t, d, w] = await Promise.all([
     eventsCol(hub).list({ limit: 100000 }),
     hub.data.installed('holidays') ? hub.data.of('holidays', 'trips').list({ limit: 1000 }) : { items: [] },
     hub.data.installed('dates') ? hub.data.of('dates', 'dates').list({ limit: 10000 }) : { items: [] },
+    hub.data.installed('exercise') ? hub.data.of('exercise', 'workouts').list({ limit: 1000 }).catch(() => ({ items: [] })) : { items: [] },
   ]);
-  return { events: e.items.map(normaliseEvent), trips: t.items, dates: d.items.filter((x) => x.plannedOn && !x.removed) };
+  return { events: e.items.map(normaliseEvent), trips: t.items, dates: d.items.filter((x) => x.plannedOn && !x.removed), workouts: w.items };
 }
 
 const week = { from: null };   // the week shown, kept while the app is open
@@ -40,11 +41,11 @@ export function plannerScreen(hub, pl, activities, rule) {
       el('a', { class: 'btn btn-primary', href: hub.href('plan-new'), text: 'Add', 'data-field': 'plan-add', title: 'Add something to the planner' }),
     ]),
     ...days.map(({ day, items }) => {
-      const extra = alongside(day, { trips: pl.trips, activities, dates: pl.dates });
+      const extra = alongside(day, { trips: pl.trips, activities, dates: pl.dates, workouts: pl.workouts });
       const clash = clashes(items);
       return el('div', { class: 'panel stack', 'data-field': `plan-day:${day}`, style: { gap: '6px', borderWidth: day === today ? '2px' : null } }, [
         el('strong', { text: `${label(day)}${day === today ? ' · today' : ''}` }),
-        ...extra.map((x) => el('div', { class: 'small' }, [el('span', { class: 'muted', text: `${{ trip: 'Trip', activity: 'Activity', date: 'Date' }[x.kind]}: ` }), el('a', { href: x.href, text: x.title })])),
+        ...extra.map((x) => el('div', { class: 'small' }, [el('span', { class: 'muted', text: `${{ trip: 'Trip', activity: 'Activity', date: 'Date', workout: 'Workout' }[x.kind]}: ` }), el('a', { href: x.href, text: x.title })])),
         ...items.map((e) => el('a', { href: hub.href('plan-edit', e.eventId), 'data-field': `plan-ev:${e.eventId}`, style: { color: 'inherit', textDecoration: 'none' } }, [
           el('div', {}, [el('strong', { text: `${e.start ?? 'All day'}${e.end ? `-${e.end}` : ''} ` }), e.title, e.where ? el('span', { class: 'muted', text: ` · ${e.where}` }) : null, e.weekly ? el('span', { class: 'muted small', text: ' · every week' }) : null]),
           el('div', {}, who(e.who).map(chip)),

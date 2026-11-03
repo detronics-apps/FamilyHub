@@ -338,6 +338,8 @@ export const HOWTOS = [
   { id: 'exercise', title: 'Log exercise and plan to move more', steps: [
     'Open Exercise, then "Log activity". Tick everyone who took part - doing it together counts for the family.',
     'In "Plans and goals", add a flexible plan like "walk three times a week", and set your own weekly minutes goal.',
+    'In "Exercises", press "Add exercise" for each one your family does - the steps, sets and reps or seconds, and what you need.',
+    'In "Workouts", press "Add workout", add exercises in order, tick the days and who. This week shows today’s - press Done when finished.',
   ] },
   { id: 'reading', title: 'Follow a Bible reading plan', steps: [
     'Open Faith and press "New plan". Choose the Gospels, a book, or your own selection, and how many chapters at a time.',
@@ -485,6 +487,7 @@ export const FAQS = [
 
 export const FEATURES = [
   { name: 'Parenting', where: 'Parenting', what: 'Parenting topics as options, trade-offs and the science, with how sure each claim is. Each partner’s view side by side; what you agree goes to Decisions for the ages it applies to, and the dashboard shows what is agreed, in force now and coming up.' },
+  { name: 'Exercises and workouts', where: 'Exercise › Exercises, Workouts', what: 'Keep your own exercises - how to do each, how much, what you need - and put them together into workouts on the days you choose. Today’s show on This week: press Done and it is logged.' },
   { name: 'Questions to decide', where: 'Parenting › Agreements', what: 'Each topic asks "have you considered…?" - the app gives no verdicts. Each of you writes what draws you, what worries you, why, and what would change your mind, then you Decide together. Change any question, approach or suggestion to make it yours.' },
   { name: 'Routines', where: 'Parenting', what: 'Leaving the house, bedtime, the morning: the screen splits per child and each ticks off their own list.' },
   { name: 'Planner', where: 'Parenting', what: 'The week for each child and each of you - sport, after school, concerts - with trips and plans alongside, and clashes pointed out.' },

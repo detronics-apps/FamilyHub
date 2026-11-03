@@ -100,3 +100,29 @@ test('faith journal: heading, questions with where they stand, picked passages, 
   const books = new Set(faith.BOOKS.map(([b]) => b).concat(['Psalm']));
   for (const t of Object.values(TOPICS)) for (const ref of t.start) assert.ok(books.has(ref.replace(/ \d.*$/, '')), ref);
 });
+
+test('exercise: your own exercises, workouts from them, the days they are on, and Done logs it', () => {
+  const sq = ex.normaliseExercise({ name: 'Squats', works: 'strength', sets: 3, reps: 10, how: ['Feet apart', ' ', 'Sit back'] });
+  assert.deepEqual(sq.how, ['Feet apart', 'Sit back']);
+  assert.equal(ex.amountText(sq), '3 × 10');
+  assert.equal(ex.amountText({ sets: 2, seconds: 30 }), '2 × 30 s');
+  assert.equal(ex.worksName('strength'), 'Strength');
+  assert.equal(ex.worksName('Mobility'), 'Mobility');            // your own word kept
+  const w = ex.normaliseWorkout({ name: 'Morning', rest: 30, days: ['mon', 'thu', 'xyz'], who: ['a'],
+    items: [{ exerciseId: 'sq', sets: 3, reps: 10 }, { exerciseId: 'plank', sets: 2, seconds: 60 }, { nope: 1 }] });
+  assert.deepEqual(w.days, ['mon', 'thu']);
+  assert.equal(w.items.length, 2);
+  // 2 × 60 s timed, plus 4 rests of 30 s between 5 sets = 240 s; the squats are counted in reps
+  assert.deepEqual(ex.workoutTime(w), { minutes: 4, own: false, untimed: 1 });
+  assert.deepEqual(ex.workoutTime({ ...w, minutes: 20 }), { minutes: 20, own: true, untimed: 0 });
+  assert.equal(ex.weekdayOf('2026-11-02'), 'mon');
+  assert.equal(ex.workoutsOn([w], '2026-11-05').length, 1);       // a Thursday
+  assert.equal(ex.workoutsOn([w], '2026-11-04').length, 0);
+  assert.equal(ex.workoutsOn([w], '2026-11-05', 'b').length, 0);  // not for b
+  assert.equal(ex.workoutsOn([{ ...w, active: false }], '2026-11-05').length, 0);
+  const act = ex.normaliseActivity(ex.activityFromWorkout({ ...w, kind: 'gym' }, 'wko_1', '2026-11-05', []), '2026-11-05');
+  assert.deepEqual([act.kind, act.minutes, act.who, act.workoutId], ['gym', 4, ['a'], 'wko_1']);
+  assert.equal(ex.doneOn([act], 'wko_1', '2026-11-05'), true);
+  assert.equal(ex.doneOn([act], 'wko_1', '2026-11-06'), false);
+  assert.equal(ex.weekMinutes([act], '2026-11-02', 'a'), 4);      // counts in the week like any activity
+});

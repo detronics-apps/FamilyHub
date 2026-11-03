@@ -1,13 +1,15 @@
 // Exercise: log activity, keep a few flexible weekly plans, see your own week
-// and what the family did together. Screens: week (default), log, plans.
+// and what the family did together. Screens: week (default), log, plans - and your own exercises,
+// workouts made from them and the days each is on (D-108).
 
 import { el } from '../../ui/dom.js';
 import { fmtDay, addDays, weekStart } from '../../dates.js';
 import { tabs, loading, failure, recordForm, saveRecord, nameOf } from '../kit.js';
 import { linksControl, linksView } from '../../ui/links-editor.js';
 import {
-  KINDS, IDEAS, normaliseActivity, activitySummary, normalisePlan, planSummary, weekMinutes, together, planProgress, goalLine,
+  KINDS, IDEAS, workoutsOn, doneOn, activityFromWorkout, workoutTime, normaliseActivity, activitySummary, normalisePlan, planSummary, weekMinutes, together, planProgress, goalLine,
 } from './logic.js';
+import { useLibrary, exercisesScreen, exerciseScreen, exerciseEdit, workoutsScreen, workoutScreen, workoutEdit } from './library.js';
 
 const acts = (hub) => hub.data.collection('activities', { summary: activitySummary, text: (a) => `${KINDS[a.kind]} ${a.note}`, prefix: 'act' });
 const plans = (hub) => hub.data.collection('plans', { summary: planSummary, text: (p) => p.title, prefix: 'xpl' });
@@ -15,17 +17,30 @@ const plans = (hub) => hub.data.collection('plans', { summary: planSummary, text
 export function render(hub, route) {
   if (route.sub === 'log') return logScreen(hub);
   if (route.sub === 'plans') return plansScreen(hub);
+  const lib = useLibrary(hub);
+  if (lib.loading) return el('section', { class: 'stack' }, [loading()]);
+  if (lib.error) return el('section', { class: 'stack' }, [failure(lib.error)]);
+  const id = route.rest?.[0];
+  if (route.sub === 'exercises') return exercisesScreen(hub, lib.data, nav(hub, 'exercises'));
+  if (route.sub === 'exercise') return exerciseScreen(hub, lib.data, id);
+  if (route.sub === 'exercise-new') return exerciseEdit(hub, lib.data, null);
+  if (route.sub === 'exercise-edit') return exerciseEdit(hub, lib.data, id);
+  if (route.sub === 'workouts') return workoutsScreen(hub, lib.data, nav(hub, 'workouts'));
+  if (route.sub === 'workout') { const a = recent(hub); return workoutScreen(hub, lib.data, id, a.data ? doneButton(hub, lib.data.workouts.find((w) => w.id === id), a.data) : null); }
+  if (route.sub === 'workout-new') return workoutEdit(hub, lib.data, null);
+  if (route.sub === 'workout-edit') return workoutEdit(hub, lib.data, id);
   return weekScreen(hub);
 }
 
-const nav = (hub, current) => tabs(hub, [{ screen: null, label: 'This week' }, { screen: 'log', label: 'Log activity' }, { screen: 'plans', label: 'Plans and goals' }], current);
+const nav = (hub, current) => tabs(hub, [{ screen: null, label: 'This week' }, { screen: 'log', label: 'Log activity' }, { screen: 'exercises', label: 'Exercises' }, { screen: 'workouts', label: 'Workouts' }, { screen: 'plans', label: 'Plans and goals' }], current);
 const recent = (hub) => hub.use('acts', async () => (await acts(hub).list({ limit: 2000 })).items);
 
 function weekScreen(hub) {
   const a = recent(hub);
   const p = hub.use('plans', async () => (await plans(hub).list({ limit: 200 })).items);
   const goals = hub.use('goals', () => hub.settings.get('weeklyGoals', {}));
-  if (a.loading || p.loading || goals.loading) return el('section', { class: 'stack' }, [nav(hub, null), loading()]);
+  const lib = useLibrary(hub);
+  if (a.loading || p.loading || goals.loading || lib.loading) return el('section', { class: 'stack' }, [nav(hub, null), loading()]);
   if (a.error || p.error) return el('section', { class: 'stack' }, [nav(hub, null), failure(a.error ?? p.error)]);
   const monday = weekStart(hub.today());
   const me = hub.people.current();
@@ -44,6 +59,7 @@ function weekScreen(hub) {
       stat(String(t.minutes), 'minutes together'),
     ]),
     me ? el('p', { text: goalLine(mine, goals.data?.[me.id]) }) : el('p', { class: 'small muted', text: 'Say who you are (top right) to see your own week.' }),
+    todayPanel(hub, lib.data?.workouts ?? [], a.data, people),
     active.length ? el('div', { class: 'panel' }, [
       el('h2', { text: 'Plans this week' }),
       el('ul', { class: 'list' }, active.map((pl) => {
@@ -55,13 +71,41 @@ function weekScreen(hub) {
     el('div', { class: 'panel' }, [
       el('h2', { text: 'This week' }),
       thisWeek.length ? el('ul', { class: 'list' }, thisWeek.map((x) => el('li', {}, [
-        el('span', { class: 'list__main' }, [`${KINDS[x.kind]}${x.minutes ? ` - ${x.minutes} min` : ''}`, linksView(hub, x)]),
+        el('span', { class: 'list__main' }, [`${x.title || KINDS[x.kind]}${x.minutes ? ` - ${x.minutes} min` : ''}`, linksView(hub, x)]),
         el('span', { class: 'small muted', text: [fmtDay(x.day, hub.today()), x.who.map((w) => nameOf(people, w)).join(', ')].filter(Boolean).join(' · ') }),
       ]))) : el('p', { class: 'small muted', text: 'Nothing logged yet this week.' }),
       el('a', { class: 'btn btn-primary', href: hub.href('log'), text: 'Log activity', 'data-field': 'log-activity' }),
     ]),
     el('div', { class: 'panel panel--soft' }, [el('h3', { text: 'An idea for today' }), el('p', { text: idea })]),
   ]);
+}
+
+/** Today's workouts from the plan, each ticked off with Done - which logs it as an activity. */
+function todayPanel(hub, workouts, activities, people) {
+  const today = hub.today();
+  const on = workoutsOn(workouts, today);
+  if (!on.length) return null;
+  return el('div', { class: 'panel', 'data-field': 'today-workouts' }, [
+    el('h2', { text: 'Today' }),
+    el('ul', { class: 'list' }, on.map((w) => el('li', {}, [
+      el('a', { class: 'list__main', href: hub.href('workout', w.id), style: { color: 'inherit', textDecoration: 'none' } }, [
+        el('strong', { text: w.name }),
+        el('div', { class: 'small muted', text: [workoutTime(w).minutes ? `About ${workoutTime(w).minutes} min` : null, w.who.map((p) => nameOf(people, p)).join(', ')].filter(Boolean).join(' · ') }),
+      ]),
+      doneButton(hub, w, activities),
+    ]))),
+  ]);
+}
+
+function doneButton(hub, w, activities) {
+  if (!w) return null;
+  const today = hub.today();
+  if (doneOn(activities, w.id, today)) return el('span', { class: 'small', text: 'Done today', 'data-field': `done:${w.name}` });
+  const me = hub.people.current();
+  return el('button', { class: 'btn btn-small btn-primary', type: 'button', text: 'Done', 'data-field': `done:${w.name}`, on: { click: async () => {
+    await saveRecord(hub, acts(hub), normaliseActivity(activityFromWorkout(w, w.id, today, w.who.length ? w.who : me ? [me.id] : []), today));
+    hub.invalidate(); hub.ui.notice(`${w.name} logged.`);
+  } } });
 }
 
 const stat = (value, label) => el('div', { class: 'stat' }, [el('div', { class: 'stat__value', text: value }), el('div', { class: 'stat__label', text: label })]);
