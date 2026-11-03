@@ -1,451 +1,322 @@
 # Parenting: the questions to decide
 
-Each topic is a set of questions the two of you decide while calm. The app gives the options, the trade-offs and what to think about; the answer, the reason and what would change your mind are yours. Correct anything here - questions, options, wording - and it changes in the app.
+The app only asks. It lists approaches without saying which is better, says where people disagree, and leaves the research, the reasons and the decision with the two of you. For every question each of you writes what draws you, what worries you, why, and what would change your mind; then you Decide together. Every question, approach and line here can be changed, added to or removed in the app (Change questions). Mark up anything below and it changes for everyone starting fresh.
 
-## Honey before 12 months
+## Honey
 
-### 1. Until what age do we keep honey - and anything made with it - away from the baby?
+> Many families keep honey from young babies. Look into why, and decide together - and make sure everyone who feeds the baby knows.
 
-- **Until 12 months** — for: What health bodies advise; the gut copes after that
-- **Until later, e.g. 2 years** — for: Extra margin; less added sugar too — against: Not needed for botulism after 12 months
+### 1. Have you talked about honey for your baby - whether, and from what age?
 
-*Think about:*
-- Baked or cooked honey is not reliably safe either.
-- Honey on a dummy is an old habit some grandparents still have.
-- Breakfast cereals and rusks can contain honey - read labels.
+*Have you considered:* Not until a certain age · From when solids start · Our own way
 
-*What might change your mind:* A doctor’s advice for this child.
+- Have you looked into why many families keep honey from young babies?
+- Does it apply to foods cooked or baked with honey, and to rusks or cereals that contain it?
 
-### 2. How do we make sure everyone who feeds the baby knows?
+### 2. How will everyone who feeds the baby know what you decided?
 
-- **We tell them in person** — for: Room for questions — against: Easy to forget
-- **A short note to send or put on the fridge** — for: Nothing lost — against: Can feel formal
-- **Both** — for: Clear and kind
+*Have you considered:* We tell them ourselves · A note for them · Both · Our own way
 
-*Think about:*
-- Who feeds the baby besides us?
+- Who besides you feeds the baby - grandparents, friends, anyone else?
 
 ## Water for babies
 
-### 1. Before solids, do we give the baby water at all?
+> Families differ on when babies have water. Look into it, and decide together what you will do - including on hot days and when the baby is ill.
 
-- **Milk only** — for: All the fluid a breastfed baby needs; no risk of too much water — against: More feeds on hot days
-- **A little cooled boiled water on hot days (formula-fed)** — for: Extra fluid in the heat — against: Small amounts only; never instead of a feed
+### 1. Have you considered whether, and when, your baby has water?
 
-*Think about:*
-- Too much plain water can lower a baby’s blood sodium (hyponatraemia).
-- Formula made with extra water does the same - always exactly to the tin.
+*Have you considered:* Only milk for now · A little water on hot days · With meals once solids start · Our own way
 
-*What might change your mind:* Illness with vomiting or diarrhoea - then we ask the clinic.
+- Have you looked into why some families give no water to young babies, and others do?
+- What will you do on very hot days, or when the baby is ill?
 
-### 2. From when, how and how much water with meals?
+### 2. If you use formula, who makes it up, and how will you both make it the same way?
 
-- **Sips from a cup from about 6 months** — for: Learning to drink from a cup — against: Milk stays the main drink to 12 months
-- **From when solids start, whenever that is** — for: Fits our own pace
+*Have you considered:* One of us always · Both of us, the same steps · Our own way
 
-*Think about:*
-- Open or free-flow cups are easier on teeth than bottles.
+- Have you read the steps on the tin together?
 
-### 3. Who makes up formula, and how do we make sure it is always exactly right?
+## Feeding: breast, bottle, or both
 
-- **One of us always** — for: One person, one habit — against: Not always possible
-- **Both, with the tin’s steps on the fridge** — for: Shared and checked
+> One of the first and biggest decisions, and a personal one. The questions below go through how, with what, and until when - the reasons are yours.
 
-## Breast milk, formula, or both
+### 1. Have you considered how your baby will be fed?
 
-### 1. Breastfeeding, bottles, or both?
+*Have you considered:* Breastfeeding · Bottles · Both · Our own way
 
-- **Breastfeeding** — for: The living parts of milk; nothing to prepare — against: Only mum can feed; pain, mastitis, broken sleep
-- **Bottles** — for: Anyone can feed; intake can be seen — against: Preparation, sterilising, cost
-- **Both** — for: Shared feeds while keeping breast milk — against: Supply can drop if breastfeeds drop
+- What matters most to each of you here?
+- What would each way ask of mum, and of dad?
+- How will night feeds be shared?
 
-*Think about:*
-- Mum’s health, medicines and recovery.
-- Return to work.
-- How the other parent takes night feeds either way.
+### 2. If bottles, what goes in them?
 
-*What might change your mind:* Supply, latch, the baby’s weight gain, mum’s wellbeing.
+*Have you considered:* Expressed breast milk · Formula · Both · Our own way
 
-### 2. If bottles: breast milk, formula, or both?
+- Have you looked into the different kinds of formula, and who makes them?
 
-- **Expressed breast milk** — for: Most of the nutrition and immune parts — against: Pumping time, storage
-- **Formula** — for: Consistent and measurable — against: Lacks the living parts of human milk; cost
-- **Both** — for: Flexible — against: Two things to manage
+### 3. Have you considered what the bottles are made of?
 
-*Think about:*
-- Freezing and heating change some parts of breast milk.
+*Have you considered:* Glass · Plastic · Silicone · Stainless steel · Different ones at different ages · Our own way
 
-### 3. Glass, plastic or silicone bottles?
+- There is ongoing discussion about plastics touching warm milk - have you looked into it?
+- Weight, breaking, and the baby holding it themselves.
 
-- **Glass** — for: No plastic in contact with warm milk — against: Heavy; can break and hurt; slippery
-- **Plastic (BPA-free)** — for: Light, cheap, unbreakable — against: Heating can release microplastics - the effect on babies is still being studied
-- **Silicone** — for: Light and soft — against: Can hold smells; cost
-- **Glass now, something else when they hold it themselves** — for: Plastic-free early on — against: Two sets to buy
+### 4. How will you clean and sterilise bottles - and until when?
 
-*Think about:*
-- Microplastics: plastic bottles shed more when heated or sterilised hot - evidence of harm is still being studied.
-- Glass is heavy for a baby to hold and can break.
-- Teats are silicone either way.
+*Have you considered:* Boiling · A steam steriliser · A microwave steriliser · A steriliser without plastic · Our own way
 
-*What might change your mind:* New evidence about microplastics; the baby holding the bottle.
+- What is each steriliser made of?
+- Until what age will you keep sterilising?
 
-### 4. How do we sterilise, and until what age?
+### 5. Until when do you see yourselves breastfeeding, and what changes after that?
 
-- **Electric steam steriliser** — for: Quick, consistent — against: Usually plastic inside
-- **Microwave steam steriliser** — for: Cheap, quick — against: Plastic, heated
-- **Boiling in a pot** — for: No extra equipment, no plastic — against: Takes watching
-- **A glass or steel steriliser with no plastic** — for: Plastic-free — against: Cost; fewer to choose from
+*Have you considered:* A few months · About a year · Two years or more · As long as it works for us · Our own way
 
-*Think about:*
-- Most guidance is to sterilise feeding equipment until about 12 months.
+- What would make you change course - for mum, for the baby, for work?
 
-### 5. Until what age do we breastfeed, and what changes then?
+## Where the baby sleeps
 
-- **About 6 months**
-- **About 12 months**
-- **Up to 2 years or beyond** — for: WHO’s recommendation
-- **As long as it works for both mum and baby**
+> Families choose very differently here. Decide together where the baby sleeps, and agree what you will never do, however tired you are.
 
-*Think about:*
-- There is no single age at which breastfeeding stops being worthwhile.
-- What replaces the feeds - and when they can hold a cup or bottle themselves.
+### 1. Have you considered where your baby will sleep?
 
-## Co-sleeping and safe sleep
+*Have you considered:* A cot in our room · A bedside cot · Our bed · Their own room · Our own way
 
-### 1. Where does the baby sleep for the first 6 months?
+- Have you looked into why families choose differently here?
+- What would make each of you uneasy?
 
-- **Own cot in our room** — for: Recommended for the first 6 months — against: Up for every feed
-- **Bedside cot** — for: Close, on their own surface — against: Must be fixed with no gap
-- **Our bed** — for: Easier night feeds — against: Advised against by the AAP; never with the dangers below
-- **Own room** — for: Parents may sleep better — against: Earlier than recommended
+### 2. Is there anything you will never do around sleep, however tired you are?
 
-*Think about:*
-- Back to sleep, firm flat surface, nothing soft in the cot.
+*Have you considered:* Our own list
 
-*What might change your mind:* Prematurity, a medical reason, how we are coping.
+- Sofas and armchairs, alcohol, smoking, medicines that make you drowsy - have you talked about each?
 
-### 2. What will we never do, however tired we are?
+### 3. What will you do at 3am when you are both exhausted?
 
-- **Never sleep with the baby on a sofa or armchair**
-- **Never bed-share after alcohol or sedating medicine**
-- **No smoking in the house or car**
-- **All of these**
+*Have you considered:* Take turns · One feeds, one settles · Our own way
 
-*Think about:*
-- These are where the risk is greatest - not in dispute.
+- What if one of you falls asleep feeding?
 
-### 3. What do we do at 3am when we are exhausted?
+### 4. When, if ever, does the baby move to their own room?
 
-- **Take turns: one sleeps, one is on** — for: Each gets proper sleep
-- **The one who is not feeding does the settling** — for: Shares the load
-- **Our own plan**
-
-*Think about:*
-- Plan for the night you might fall asleep feeding - make the bed safe or feed in a chair you cannot fall asleep in.
-
-### 4. When does the baby move to their own room?
-
-- **At 6 months** — for: The end of the recommended time
-- **At 12 months**
-- **When it feels right for us**
+*Have you considered:* A set age · When it feels right · Our own way
 
 ## Temperature and fever
 
-### 1. When do we give medicine for a fever, which one, and how much?
+> Agree your plan while everyone is calm: what you do at what temperature, how often you check, and when you go to a doctor. Then, on the night, you follow what you decided - and talk it over again afterwards.
 
-- **When they are distressed, not just for the number** — for: Matches the guidance
-- **Paracetamol first**
-- **Ibuprofen or paracetamol, not both at once unless a doctor says**
+### 1. Have you talked about medicine for a fever - whether, which, how much?
 
-*Think about:*
-- Medicine is for comfort; it does not prevent febrile fits.
-- The dose goes by weight - write it on the box, checked with a pharmacist.
+*Have you considered:* Only when they are uncomfortable · By the temperature · Not unless a doctor says · Our own way
 
-*What might change your mind:* A doctor’s advice for this child.
+- Have you read the label and asked a pharmacist about your child’s weight?
+- Write what you decide in the medicine chart, so nobody works it out at 3am.
 
-### 2. Who does what: who stays, who phones, who drives, and where do we go?
+### 2. Who does what when a child has a high temperature?
 
-- **One stays, one phones and drives**
-- **Whoever is with them stays; the other comes**
+*Have you considered:* One stays, the other phones or drives · Whoever is with them stays · Our own way
 
-*Think about:*
-- Which after-hours doctor or emergency unit is nearest, and its number.
+- Which doctor, clinic or hospital will you go to, and are the numbers saved?
 
 ### Our fever plan (you write it)
 
-Per age band: from what temperature, for how long, what you do, how often you check; and when you go straight to a doctor - at what temperature for how long, or any of these signs you choose:
+Per age band: from what temperature, for how long, what you do, how often you check - and when you go straight to a doctor. Signs some families include (add, change or remove):
 
 - Hard to wake, floppy or unusually drowsy
-- Struggling to breathe, or grunting
+- Struggling to breathe
 - Blue, grey or very pale lips or skin
 - A fit
 - A rash that does not fade when a glass is pressed on it
 - A stiff neck
 - Not drinking, or far fewer wet nappies
-- Under 3 months old with 38 °C or more
-- A fever lasting 5 days or more
 - Getting worse
 
 ## Choking
 
-### 1. Who does an infant first-aid course, and how often do we refresh it?
+> Worth knowing before it ever happens. A first-aid course, with a practice doll, is where this is best learnt.
 
-- **Both of us, before the birth** — for: Both ready
-- **Both, and again every year or two** — for: Stays fresh
-- **Our own plan**
+### 1. Have you considered a first-aid course?
 
-*Think about:*
-- Practice on a doll is what makes it stick.
+*Have you considered:* Both of us, soon · Both, and again every year or two · Our own way
 
-### 2. Which foods do we cut up or avoid, and until what age?
+- Who else who looks after the children would benefit from one?
 
-- **Grapes and cherry tomatoes cut lengthwise until 5**
-- **No whole nuts until 5**
-- **No popcorn or hard sweets for small children**
-- **Our own list**
+### 2. Which foods will you cut up or keep away, and until what age?
 
-*Think about:*
-- Round, firm foods the size of a child’s airway are the risk.
+*Have you considered:* Our own list
 
-### 3. What small things do we put away, and where?
+- Have you looked into which foods are most often a choking risk for small children?
 
-- **Button batteries, coins, magnets, small toy parts**
-- **Our own list**
+### 3. Which small things will you keep out of reach, and where?
 
-*Think about:*
-- Button batteries swallowed can burn within hours - an emergency.
+*Have you considered:* Our own list
 
-## Sun, sunscreen and vitamin D
+- Batteries, coins, magnets, small toy parts - have you looked around at their height?
 
-### 1. Under 6 months: how do we protect them from the sun?
+### What first-aid courses commonly teach (editable)
 
-- **Shade and clothing only** — for: The usual advice — against: Planning outings around it
-- **Shade and clothing, a little mineral sunscreen on small areas if needed**
+- If they are coughing hard, let them cough and stay with them.
+- If they cannot cough, cry or breathe: shout for someone to call for help.
+- Under 1 year: face down along your arm, head lower - up to 5 back blows; then face up, 2 fingers on the middle of the chest - up to 5 chest thrusts. Repeat.
+- Over 1 year: leaning forward - up to 5 back blows; then from behind, a fist above the belly button - up to 5 pulls in and up. Repeat.
+- Only take out what you can see.
+- If they stop responding: call for help on speaker and start CPR as the call-taker says.
+- Afterwards, have them checked by a doctor.
 
-*Think about:*
-- Babies under 6 months are best kept out of direct sun.
+## Sun and skin
 
-### 2. From 6 months: what is our usual combination?
+> There is ongoing discussion about sun exposure and about sunscreen. Look into it, and decide together what you are comfortable with - shade, clothing, the time of day, short spells in the sun, sunscreen, or your own mix.
 
-- **Shade + hat + clothing, sunscreen on what is left**
-- **Avoid the middle of the day**
-- **Our own**
+### 1. Have you considered how you will balance time in the sun and protecting their skin?
 
-*Think about:*
-- In much of South Africa the UV index is high most of the year.
+*Have you considered:* Shade · Long sleeves and a hat · Choosing the time of day · Short spells in the sun, then shade · Sunscreen · A mix · Our own way
 
-### 3. Which sunscreen, and why?
+- There is ongoing discussion about sun exposure and about sunscreen - have you looked into it?
+- What draws each of you to your way, and what worries you about the others?
+- Does it change with age, or with how strong the sun is?
 
-- **Mineral (zinc oxide, titanium dioxide)** — for: The strongest safety data — against: Can leave a white film
-- **Chemical filters** — for: Rubs in clear — against: Some filters are still being reviewed by regulators
+### 2. If you use sunscreen, have you considered which kind and why?
 
-*Think about:*
-- Neither is a reason to stay out longer.
+*Have you considered:* We do not use it · Our own choice
 
-### 4. Vitamin D: from the sun, a supplement, or formula?
-
-- **Ask the clinic, then decide**
-- **A supplement for a breastfed baby** — for: AAP: 400 IU a day
-- **Formula already has it**
-
-*Think about:*
-- There is no established "minutes of sun a day" rule for children.
+- Have you read the ingredients, and looked into them?
 
 ## Baby monitors
 
-### 1. Do we use a monitor, and which kind?
+> Some families use a monitor, some do not. Think about what you would want it to do, and whether it would change what you do.
 
-- **None - the baby sleeps near us** — for: Nothing to fail or misread
-- **Audio** — for: Simple
-- **Video** — for: See without going in — against: Constant watching
-- **A consumer health monitor** — for: Some feel reassured — against: Not shown to prevent SIDS; false alarms
+### 1. Have you considered whether you want a baby monitor, and what kind?
 
-*Think about:*
-- Would it change what we do?
-- More information is not always more useful information.
+*Have you considered:* None · Sound · Video · One that tracks breathing or heart rate · Our own way
 
-### 2. If we use a health monitor: what do we do when it alarms?
+- What would you want it to do - and would it change what you do?
+- How do each of you feel about alarms and numbers at night?
 
-- **Check the baby first, the numbers second**
-- **Our own plan**
+### 2. If it alarms, what will you do first?
 
-*Think about:*
-- False alarms are common; a real problem can also be missed.
+*Have you considered:* Go to the baby first · Our own way
 
 ## Who looks after the children
 
+> Families answer this very differently, and each answer has its reasons. Whatever you agree here, the app follows it - for instance, Dates never asks about a babysitter if the answer is only the two of you.
+
 ### 1. Who may look after the children, and from what age?
 
-- **Only us, always** — for: The responsibility stays with the parents — against: Couple time fits around the children
-- **Family only** — for: People who know and love them — against: Their rules may differ
-- **People we trust** — for: Time out together — against: Less control
-- **Daycare or a nanny** — for: Both parents can work — against: Cost; many hours in someone else’s care
+*Have you considered:* Only us, always · Family only · People we trust · Daycare or a nanny · Our own way
 
-*Think about:*
-- What each of you holds as the parents’ responsibility.
+- What does each of you hold as the parents’ own responsibility?
 - The app follows your answer - with "Only us", nothing asks about a babysitter.
 
-### 2. If one of us cannot be there - an emergency, a hospital stay - what happens?
+### 2. If one of you cannot be there - an emergency, a hospital stay - what happens?
 
-- **The other takes the children everywhere**
-- **Named family, only then**
-- **Our own plan**
+*Have you considered:* The other takes the children everywhere · Named family, only then · Our own way
 
-### 3. How do we tell family our rule, and why?
+### 3. How will you tell family your rule, and why?
 
-- **Together, in person**
-- **A short written note of the rule and the reason**
+*Have you considered:* Together, in person · A short note · Our own way
 
-*Think about:*
 - So nobody offers and is hurt by the answer.
 
 ## New or second-hand
 
-### 1. What do we always buy new?
+> Most things can be second-hand. Decide together which you would rather buy new, and why.
 
-- **Safety things - car seats, cot mattresses, stair gates** — for: Nobody knows if a used one was in a crash or damaged — against: Cost
-- **Things that go in the mouth or touch milk - bottles, teats, dummies, breast pumps** — for: Hygiene; some cannot be cleaned inside
-- **Our own list**
+### 1. What will you always buy new?
 
-*Think about:*
-- A car seat can be damaged in a crash without showing it, and seats have an expiry date.
-- A breast pump’s tubing can hold milk and mould.
+*Have you considered:* Car seats · Cot mattresses · Bottles, teats and dummies · Breast pumps · Our own list
 
-*What might change your mind:* A trusted source who can vouch for its history.
+- Which things could you never check the history of - a car seat that might have been in an accident?
+- Which things touch milk or go in the mouth?
 
-### 2. What are we happy to buy second-hand?
+### 2. What are you happy to buy second-hand?
 
-- **Clothes** — for: Outgrown fast
-- **Toys and books** — against: Check for small loose parts
-- **Bicycles, scooters, furniture** — against: Check for damage and recalls
-- **Our own list**
+*Have you considered:* Clothes · Toys and books · Bikes and scooters · Furniture · Our own list
 
-*Think about:*
-- Second-hand saves money and waste; the question is only what you cannot check.
-
-### 3. What do we check before using something second-hand?
-
-- **Recalls and safety notices**
-- **Damage, missing parts, wobble**
-- **Washed or cleaned before use**
-- **All of these**
+- What would you check first - damage, missing parts, recalls?
 
 ## Disposable or cloth nappies
 
-### 1. Disposable nappies, cloth, or both?
+> Disposable, cloth or both - and how you will know your child is ready for the potty.
 
-- **Disposable** — for: Easy, quick, away from home — against: Cost over time; waste
-- **Cloth** — for: Cheaper over time; less waste — against: Washing, drying, more changes
-- **Both - cloth at home, disposable out** — for: A balance — against: Two systems
+### 1. Have you considered disposable, cloth, or both?
 
-*Think about:*
-- Water and electricity for washing.
-- How often each needs changing to avoid rash.
+*Have you considered:* Disposable · Cloth · Both · Our own way
 
-### 2. When do we start potty training, and how will we know they are ready?
+- Cost over time, washing and drying, time, waste - what matters most to each of you?
 
-- **When they show the signs, whatever the age** — for: Follows the child — against: Can be later
-- **Around a set age (e.g. 2 to 3)** — for: A plan — against: Not every child is ready
-- **Summer, when there are fewer clothes**
+### 2. When will you start potty training, and how will you know they are ready?
 
-*Think about:*
-- Signs of readiness: dry for a couple of hours, telling you, interested in the toilet, pulling at a wet nappy.
-- Night dryness often comes much later - it is not the same step.
-- Why start: readiness, daycare or school rules, cost - which matters to us?
+*Have you considered:* When they show they are ready · Around a set age · In a warm season · Our own way
 
-*What might change your mind:* A new baby, a move, illness - big changes can set it back.
+- What signs will you look for?
+- Why start then - readiness, school or daycare, cost?
+- What would make you pause and try again later?
 
 ## Medicines and creams to keep at home
 
-### 1. What medicines and first-aid things do we keep at home?
+> Decide calmly what you keep and where, and write down what you give at what age and amount - from the labels and your pharmacist - so nobody works it out at 3am.
 
-- **Children’s paracetamol**
-- **Children’s ibuprofen**
-- **Oral rehydration sachets**
-- **Saline nose drops**
-- **Antihistamine for children**
-- **Plasters, antiseptic, a thermometer**
+### 1. What medicines and first-aid things will you keep at home?
 
-*Think about:*
-- Every medicine says from what age and how much on the label - check it, and ask a pharmacist for this child’s weight.
-- Note it in the chart below so the dose is decided calmly, not at 3am.
-- Expiry dates.
+*Have you considered:* Our own list
 
-*What might change your mind:* A pharmacist’s or doctor’s advice.
+- Have you read each label for the ages and amounts, and asked a pharmacist about your children’s weights?
+- Note it in the medicine chart below, so the amount is decided calmly.
+- Who checks the expiry dates, and when?
 
-### 2. Where do we keep them, and who checks the dates, when?
+### 2. Where will you keep them?
 
-- **Locked or high up, in one place**
-- **A small kit in the car and the nappy bag too**
+*Have you considered:* Locked or up high · A small kit in the car or nappy bag too · Our own way
 
-*Think about:*
-- Children’s medicines taste sweet - out of reach matters.
+- Can the children reach it?
 
-## Diapers, wipes and creams
+## Wipes and creams
 
-### 1. Which wipes do we use?
+> Decide which you will use, after reading what is in them.
 
-- **Unscented** — for: Less to irritate
-- **Scented** — for: Smell nice — against: Fragrance can irritate sensitive skin
-- **Water-based** — for: Few ingredients — against: Cost
-- **Cotton wool and water** — for: Nothing added — against: Less handy out
+### 1. Have you considered which wipes you will use?
 
-*Think about:*
-- Read the ingredients: fragrance and some preservatives cause rashes in some babies.
+*Have you considered:* Unscented · Scented · Water-based · Cloths and water · Our own way
 
-### 2. Which nappy cream, and when?
+- Have you read what is in them, and looked into the ingredients?
 
-- **Zinc oxide barrier cream** — for: A proven barrier — against: Thick, white
-- **Petroleum jelly** — for: Cheap barrier
-- **Only when there is redness** — for: Less product
-- **At every change** — for: Prevention — against: More product
+### 2. Will you use a nappy cream - which, and when?
 
-*Think about:*
-- Keep it simple - fewer ingredients, fewer surprises.
+*Have you considered:* A barrier cream · Only when there is redness · None · Our own way
 
-*What might change your mind:* A rash that does not clear in a few days, blisters or bleeding - then a doctor.
+- What is in it?
+- When would you see a doctor about a rash?
 
-## Powders: risks
+## Baby powder
 
-### 1. Do we use powder on the baby - and if so, which?
+> There is ongoing discussion about baby powders. Look into it, and decide what you are comfortable with.
 
-- **No powder** — for: Nothing to breathe in
-- **Cornstarch-based, kept away from the face** — for: Absorbs moisture — against: Can still be breathed in
-- **Talc** — for: Smells familiar — against: Breathed in, it can harm a baby’s lungs; talc was classed in 2024 as probably carcinogenic - worth reading up on
+### 1. Have you considered whether to use powder on your baby?
 
-*Think about:*
-- This is not to frighten you - it is something worth looking into before deciding.
-- A puff of powder near the face can be breathed in.
+*Have you considered:* No powder · Powder, kept away from the face · Our own way
 
-*What might change your mind:* What you read when you look into it.
+- There is ongoing discussion about baby powders and what they are made of - have you looked into it?
+- What would you want to know before deciding?
 
 ## Clothes: layers, materials, how many
 
-### 1. What temperature do we keep the baby’s room, and how do we know?
+> A thermometer you both trust, the room temperature you aim for, and what they wear at each - so neither of you has to guess.
 
-- **A room thermometer both of us can read at a glance** — for: Facts, not feelings
-- **16 to 20 °C while the baby sleeps** — for: The range The Lullaby Trust gives
-- **Our own range**
+### 1. How warm will you keep the baby’s room, and how will you both know?
 
-*Think about:*
-- After the birth, mum’s hormones can make her feel much warmer or colder than the room is - agree to trust the thermometer, not either of you.
-- Check the baby’s chest or the back of the neck, not hands and feet.
+*Have you considered:* A room thermometer we both trust · Our own way
 
-*What might change your mind:* Sweating, a hot chest - or cold to the touch.
+- After the birth, mum may feel much warmer or colder than the room is - will you trust a thermometer rather than either of you?
+- How will you check if the baby is too warm or too cold?
 
-### 2. At what temperature do they wear what?
+### 2. At what room temperature will they wear what?
 
-- **A chart we fill in below**
-- **Roughly one layer more than us** — for: A rule of thumb — against: Not exact
+*Have you considered:* A chart we fill in below · Our own way
 
-*Think about:*
-- Babies cannot take a layer off; overheating is a sleep risk.
-- No hats or hoods to sleep indoors.
+- Does it change with age, and for sleep?
 
 ### 3. How many of each, in each size?
 
-- **A few - wash often** — for: Less to buy — against: More washing
-- **Enough for a few days** — for: Less washing — against: Outgrown fast
+*Have you considered:* A few, washed often · Enough for a few days · Our own way
 
-*Think about:*
-- Newborn sizes are outgrown in weeks; second-hand suits them well.
+- Second-hand for the sizes they outgrow fastest?

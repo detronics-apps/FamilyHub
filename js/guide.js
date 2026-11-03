@@ -485,7 +485,7 @@ export const FAQS = [
 
 export const FEATURES = [
   { name: 'Parenting', where: 'Parenting', what: 'Parenting topics as options, trade-offs and the science, with how sure each claim is. Each partner’s view side by side; what you agree goes to Decisions for the ages it applies to, and the dashboard shows what is agreed, in force now and coming up.' },
-  { name: 'Questions to decide', where: 'Parenting › Agreements', what: 'Each topic is a set of questions to decide while calm - each of you answers why, and what would change your mind, then you Decide together. For a fever, you write your own plan by age.' },
+  { name: 'Questions to decide', where: 'Parenting › Agreements', what: 'Each topic asks "have you considered…?" - the app gives no verdicts. Each of you writes what draws you, what worries you, why, and what would change your mind, then you Decide together. Change any question, approach or suggestion to make it yours.' },
   { name: 'Routines', where: 'Parenting', what: 'Leaving the house, bedtime, the morning: the screen splits per child and each ticks off their own list.' },
   { name: 'Planner', where: 'Parenting', what: 'The week for each child and each of you - sport, after school, concerts - with trips and plans alongside, and clashes pointed out.' },
   { name: 'Who to call', where: 'Parenting › Be prepared', what: 'Your own emergency numbers - start from your country and add your doctor.' },

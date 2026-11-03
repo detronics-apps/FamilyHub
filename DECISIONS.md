@@ -696,6 +696,28 @@ note; claims not settled; and paid accounts never sent to medical aid (they will
 scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
 the year of its own date, not of each payment (marked to split by payment day if that matters).
 
+**D-107 Awareness, not direction; every add has a remove (owner, 2026-11-03).** The owner: the app
+is a tool to help parents find their own balance - it asks, it does not push. Where people do not
+agree (sunscreen, sun exposure, plastics, powders, feeding), recommending either way risks a family
+choosing something because the app said so. And no study or health body is stated as fact.
+- **Gone:** the "Why - and how sure we are" claims with their evidence levels and sources; every for
+  and against the app wrote on an option; the step-by-step flowcharts with the app's own thresholds;
+  app-written "signs to act on"; the vitamin D question.
+- **Questions only ask:** "Have you considered…?" with a neutral list of approaches - including ones
+  mainstream bodies do not promote (short spells in the sun, then shade). Where there is debate, the
+  app says only that there is ongoing discussion, and to look into it.
+- **The parents write the reasons:** each answers what draws them, what worries them, why, and what
+  would change their mind; the other's shows once you have given yours; then Decide.
+- **Everything the app suggests can be changed:** questions and approaches (Change questions), the
+  fever plan's signs (Add sign / Remove sign, suggestions to tap in), plan steps (Add step / Remove
+  step), age bands, Prepare now lines, first-aid steps ("what first-aid courses commonly teach - change
+  them to what you were taught"), checklist items, chart lines - and entries logged by mistake in
+  Track, Screen time, Ideas and Dates. Buttons say what they add or remove. The rule is in the
+  detronics-app skill.
+- Kept, as the owner's own: "If you are wondering whether to go, go", and the fever plan they write.
+- **Ideas** gains filters: your children's ages (on by default - no tummy time for a 2-year-old), set
+  up in at most, lasts at least, inside or outside.
+
 **D-106 Topics are questions you decide, calmly, together (owner, 2026-11-02).** The purpose behind
 every Parenting topic: decide with a clear head, before the time, so partners do not argue in the
 moment - and on a tired night you can open it and follow what you agreed. So a topic is a set of

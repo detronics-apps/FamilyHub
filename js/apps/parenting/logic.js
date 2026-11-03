@@ -116,7 +116,8 @@ export function topicsOf(records, starter = STARTER) {
       ...(rec.options.length ? { options: parseOptions(rec.options) } : {}),
     } : {};
     // A topic with questions to decide (D-106) is written, even before its longer write-up.
-    const questions = QUESTIONS[t.id] ?? null;
+    // The family's own version of the questions, once they change them (D-107), else the starting ones.
+    const questions = Array.isArray(rec?.questions) ? normaliseQuestions(rec.questions) : QUESTIONS[t.id] ?? null;
     out.push({ ...t, ...(questions && t.later ? ABOUT_LATER[t.id] ?? {} : {}), ...mine, questions, record: rec, newer: !!rec?.edited && (t.v ?? 0) > rec.baseV, later: t.later && !rec?.edited && !questions });
   }
   for (const rec of byTopic.values()) {
@@ -170,8 +171,17 @@ export function answersFor(record, qid, adults, me) {
   const mine = me ? on[me] ?? null : null;
   return { mine, others: adults.filter((p) => p.id !== me).map((p) => ({ id: p.id, name: p.name, answered: !!on[p.id], shown: mine ? on[p.id] ?? null : null })) };
 }
-/** Set my answer: { pick, why, change }. */
-export const setAnswer = (record, qid, me, a) => ({ ...(record?.answers ?? {}), [qid]: { ...(record?.answers?.[qid] ?? {}), [me]: { pick: str(a.pick, 200), why: str(a.why, 2000), change: str(a.change, 1000), at: a.at ?? '' } } });
+/** Set my answer: what I choose, what draws me to it, what worries me, why, and what would change my mind. */
+export const setAnswer = (record, qid, me, a) => ({ ...(record?.answers ?? {}), [qid]: { ...(record?.answers?.[qid] ?? {}), [me]: { pick: str(a.pick, 200), pro: str(a.pro, 1000), con: str(a.con, 1000), why: str(a.why, 2000), change: str(a.change, 1000), at: a.at ?? '' } } });
+
+/** The family's own questions: each with what it asks, the approaches and the things to consider. */
+export function normaliseQuestions(qs) {
+  return (Array.isArray(qs) ? qs : []).filter((q) => q && str(q.ask)).slice(0, 30).map((q, i) => ({
+    id: str(q.id, 40) || `q${i}`, ask: str(q.ask, 300),
+    options: (Array.isArray(q.options) ? q.options : []).map((o) => ({ name: str(typeof o === 'string' ? o : o?.name, 120) })).filter((o) => o.name).slice(0, 20),
+    think: lines(q.think), change: '',
+  }));
+}
 
 /**
  * Our fever plan (D-106), written by the parents: per age band, what we do at what temperature
@@ -246,8 +256,6 @@ export function tileNote(dash) {
   return dash.total ? `${dash.agreed} of ${dash.total} agreed` : null;
 }
 
-/** A health flowchart: the node, or null. Answers are [label, next]. */
-export const stepAt = (steps, id) => steps?.nodes?.[id ?? steps.start] ?? null;
 
 /** A new id for the family's own topic. */
 export const ownId = (title, now = Date.now()) => `own-${str(title, 40).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'topic'}-${now.toString(36)}`;

@@ -111,7 +111,26 @@ export function playScreen(hub, list, kids) {
 
 let ideaSort = 'best';   // Ideas' order, kept while the app is open
 
-export function ideasScreen(hub, list) {
+// Ideas' filters (owner, D-107): your children's ages by default, setup, how long, where.
+const idf = { ages: 'ours', maxSetup: 30, minLasts: 5, place: null };
+
+export function ideasScreen(hub, allIdeas, kids = []) {
+  const ages = kids.map((k) => k.months).filter((m) => m != null);
+  const list = pick(allIdeas, { kids: idf.ages === 'ours' ? ages : [], place: idf.place, maxSetup: idf.maxSetup, minLasts: idf.minLasts });
+  const range = (key, label, min, max, step, show) => { const out = el('strong', { text: show(idf[key]) });
+    return el('label', { class: 'stack', style: { gap: '2px', flex: '1 1 200px' } }, [el('span', { class: 'small' }, [`${label}: `, out]),
+      el('input', { type: 'range', min, max, step, value: idf[key], 'data-field': `idf-${key}`, 'aria-label': label, style: { width: '100%', accentColor: 'var(--accent-strong)' },
+        on: { input: (e) => { out.textContent = show(Number(e.target.value)); }, change: (e) => { idf[key] = Number(e.target.value); hub.render(); } } })]); };
+  const chip = (label, key, v) => el('button', { class: 'chip', type: 'button', text: label, 'aria-pressed': String(idf[key] === v), 'data-field': `idf-${key}:${v}`, on: { click: () => { idf[key] = idf[key] === v && key !== 'ages' ? null : v; hub.render(); } } });
+  const filters = el('div', { class: 'panel stack', 'data-field': 'idea-filters', style: { gap: '8px' } }, [
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Ages' }, [ages.length ? chip('Our children’s ages', 'ages', 'ours') : null, chip('All ages', 'ages', 'all')].filter(Boolean)),
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Where' }, [chip('Inside', 'place', 'inside'), chip('Outside', 'place', 'outside')]),
+    el('div', { class: 'row', style: { gap: 'var(--space-3)' } }, [
+      range('maxSetup', 'Set up in at most', 0, 30, 1, (v) => (v ? `${v} min` : 'no setup')),
+      range('minLasts', 'Lasts at least', 5, 90, 5, (v) => `${v} min`),
+    ]),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: `${list.length} of ${allIdeas.length} shown` }),
+  ]);
   const today = hub.today();
   const soon = planned(list, today);
   const by = { best: (a, b) => rank(b) - rank(a), payoff: (a, b) => payoff(b) - payoff(a), quick: (a, b) => a.setup - b.setup || b.lasts - a.lasts, loved: (a, b) => ((scores(b).kid ?? 0) + (scores(b).parent ?? 0)) - ((scores(a).kid ?? 0) + (scores(a).parent ?? 0)) };
@@ -130,7 +149,8 @@ export function ideasScreen(hub, list) {
     el('p', { class: 'muted', style: { margin: 0 }, text: 'For when there is time to think: add ideas, change them, plan a day for one, and adjust a game’s rules after you have played it. Play now uses what is here.' }),
     el('div', { class: 'row', style: { alignItems: 'center' } }, [el('a', { class: 'btn btn-primary', href: hub.href('idea-new'), text: 'Add', title: 'Add an activity or game', 'data-field': 'idea-add' }), sortChips]),
     soon.length ? el('div', { class: 'panel stack', 'data-field': 'ideas-planned' }, [el('h2', { text: 'Planned', style: { margin: 0 } }), el('ul', { class: 'list' }, soon.map(row))]) : null,
-    el('ul', { class: 'list panel' }, sorted.map(row)),
+    filters,
+    sorted.length ? el('ul', { class: 'list panel' }, sorted.map(row)) : el('div', { class: 'panel empty' }, [el('p', { text: 'Nothing fits those filters - change one, or add an idea of your own.' })]),
   ]);
 }
 
@@ -157,6 +177,7 @@ export function ideaScreen(hub, list, id, kids) {
         ...a.rulesHistory.slice().reverse().map((h) => el('div', { class: 'small' }, [el('div', { class: 'muted', text: `Until ${h.at.slice(0, 10)}` }), el('ul', { style: { margin: 0 } }, h.rules.map((r) => el('li', { text: r })))]))]) : null]) : null,
     a.logs.length ? el('div', { class: 'panel stack', 'data-field': 'idea-logs' }, [el('h2', { text: 'How it went', style: { margin: 0 } }),
       el('ul', { class: 'list' }, a.logs.slice().reverse().map((l) => el('li', {}, [el('span', { class: 'list__main', text: `${l.day} · ${l.kids.filter((k) => k.score).map((k) => `${nameOf(k.id)} ${k.score}/5`).join(', ') || 'no child score'}${l.parent ? ` · us ${l.parent}/5` : ''}` }),
+        el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', on: { click: () => save(hub, { ...a, logs: a.logs.filter((x) => x !== l) }) } }),
         l.note ? el('div', { class: 'small', text: l.note }) : null])))]) : null,
     notes.length && a.game ? el('p', { class: 'small muted', style: { margin: 0 }, text: 'Your notes are above - worth a look when changing the rules.' }) : null,
     el('div', { class: 'row' }, [el('a', { class: 'btn', href: hub.href('idea-edit', a.activityId), text: 'Edit' }),

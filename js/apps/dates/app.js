@@ -125,7 +125,8 @@ function dateScreen(hub, list, id) {
       el('button', { class: 'btn', type: 'button', text: 'Plan', 'data-field': 'd-plan', on: { click: async () => { if (await save(hub, { ...d, plannedOn: day.value || null })) hub.ui.notice(day.value ? 'Planned.' : 'Plan cleared.'); } } }),
       toBuy(d).length && hub.data.installed('shopping') ? el('a', { class: 'btn', href: sendHref({ source: `date:${d.dateId}`, from: d.name, group: 'household', items: toBuy(d).map((x) => ({ name: x.name, note: x.cost ? `about R${x.cost}` : '' })) }), text: 'Shop' }) : null]),
     d.logs.length ? el('div', { class: 'panel stack' }, [el('h2', { text: 'How it went', style: { margin: 0 } }),
-      el('ul', { class: 'list' }, d.logs.slice().reverse().map((l) => el('li', {}, [el('span', { class: 'list__main', text: `${l.day} · ${Object.entries(l.scores).map(([pid, s]) => `${adults.find((p) => p.id === pid)?.name ?? 'one of you'} ${s}/5`).join(', ') || 'no scores'}` }), l.note ? el('div', { class: 'small', text: l.note }) : null])))]) : null,
+      el('ul', { class: 'list' }, d.logs.slice().reverse().map((l) => el('li', {}, [el('span', { class: 'list__main', text: `${l.day} · ${Object.entries(l.scores).map(([pid, s]) => `${adults.find((p) => p.id === pid)?.name ?? 'one of you'} ${s}/5`).join(', ') || 'no scores'}` }), l.note ? el('div', { class: 'small', text: l.note }) : null,
+        el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', on: { click: () => save(hub, { ...d, logs: d.logs.filter((x) => x !== l) }) } })])))]) : null,
     el('div', { class: 'row' }, [el('a', { class: 'btn', href: hub.href('edit', d.dateId), text: 'Edit' }),
       el('button', { class: 'btn btn-quiet', type: 'button', text: 'Remove', on: { click: async () => {
         if (!await confirmAction({ title: `Remove "${d.name}"?`, text: 'It goes from your date ideas.', confirmLabel: 'Remove', danger: true })) return;

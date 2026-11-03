@@ -1,7 +1,8 @@
 // Parenting (D-095): topics, the ages decisions apply to, the dashboard, and the content's own rules.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { STARTER, SOURCES, LEVELS, OUTCOMES } from '../js/apps/parenting/content.js';
+import { STARTER } from '../js/apps/parenting/content.js';
+import { QUESTIONS } from '../js/apps/parenting/questions.js';
 import { setView, viewsOn, normaliseViews, monthsOld, kidsOf, timing, rangeLabel, topicsOf, dashboard, leaningsFor, topicStatus, parentingDecisions, tileNote, SECTIONS } from '../js/apps/parenting/logic.js';
 import { starter } from '../js/apps/catalogue.js';
 import { normaliseDecision, decisionSummary, categoryOf } from '../js/apps/decisions/logic.js';
@@ -75,24 +76,15 @@ test('a partner’s leaning shows only once you have given your own', () => {
   assert.equal(both.others[0].shown.pick, 'Bed-sharing');
 });
 
-test('the content keeps its own rules: every claim sourced and levelled, every flowchart complete, never "stay home"', () => {
-  for (const t of STARTER.filter((x) => !x.later)) {
-    for (const w of t.why ?? []) {
-      assert.ok(SOURCES[w.source], `${t.id}: ${w.source} is a source`);
-      assert.ok(LEVELS[w.level], `${t.id}: ${w.level} is a level`);
-    }
-    if (!t.steps) continue;
-    assert.ok(t.health, `${t.id}: a flowchart topic is a health topic`);
-    for (const [id, node] of Object.entries(t.steps.nodes)) {
-      for (const [, to] of [...(node.answers ?? []), ...(node.next ?? [])]) assert.ok(t.steps.nodes[to], `${t.id}.${id} leads to ${to}`);
-      if (node.out) assert.ok(OUTCOMES[node.out], `${t.id}.${id}: an outcome`);
-      assert.ok(node.q || node.say || node.out, `${t.id}.${id} says something`);
-    }
+test('the content only asks (D-107): no claims, no sources as truth, no verdicts on an option, never "stay home"', () => {
+  for (const t of STARTER) {
+    assert.ok(!t.why && !t.steps && !t.signs, `${t.id}: no claims, flowcharts or app-made signs`);
+    for (const o of t.options ?? []) assert.ok(!o.strengths && !o.weaknesses, `${t.id}: no verdicts on ${o.name}`);
   }
-  assert.deepEqual(Object.keys(OUTCOMES), ['now', 'today', 'doctor'], 'no outcome tells anyone not to see a doctor');
-  for (const t of STARTER.filter((x) => x.health)) for (const w of [t.summary, t.signs, ...(t.why ?? []).map((x) => x.text)]) {
-    assert.ok(!/no need to (see|go)|stay home|do not need a doctor/i.test(w ?? ''), `${t.id}: never suggests not going`);
-  }
+  for (const [id, qs] of Object.entries(QUESTIONS)) for (const q of qs) for (const o of q.options) assert.ok(!o.pro && !o.con, `${id}.${q.id}: ${o.name} carries no verdict`);
+  const said = [...STARTER.flatMap((t) => [t.summary, t.question]), ...Object.values(QUESTIONS).flat().flatMap((q) => [q.ask, ...q.think])].filter(Boolean).join(' ');
+  assert.ok(!/no need to (see|go)|stay home|do not need a doctor/i.test(said), 'never suggests not going');
+  assert.ok(!/recommended|you should|best practice|is safe|is proven|studies show/i.test(said), 'no recommendations or claims');
 });
 
 test('Parenting and Decisions may see birthdays - without them every child reads as "no birthday yet"', () => {

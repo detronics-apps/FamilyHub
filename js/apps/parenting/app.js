@@ -7,10 +7,10 @@
 import { el } from '../../ui/dom.js';
 import { confirmAction, modal } from '../../ui/common.js';
 import { loading, failure, recordForm, saveRecord } from '../kit.js';
-import { LEVELS, SOURCES, OUTCOMES, GO_LINE, COUNTRY_NUMBERS, numbersOf } from './content.js';
+import { GO_LINE, COUNTRY_NUMBERS, numbersOf } from './content.js';
 import {
   SECTIONS, topicsOf, dashboard, kidsOf, adultsOf, timing, rangeLabel, ageLabel, leaningsFor, topicStatus, parentingDecisions,
-  normaliseRecord, normaliseSection, STATUS_LABEL, careRule, tileNote as noteFor, stepAt, ownId,
+  normaliseRecord, normaliseSection, STATUS_LABEL, careRule, tileNote as noteFor, ownId,
 } from './logic.js';
 import { activitiesOf, planned, plannedOn } from './activities.js';
 import { activitiesCol, playScreen, ideasScreen, ideaScreen, ideaEdit } from './play.js';
@@ -19,7 +19,7 @@ import { loadTrack, trackHome, trackerScreen, scenarioEdit, trackNote } from './
 import { videosPanel } from './videos.js';
 import { loadRoutines, routinesHome, routineRun, routineEdit } from './kidtasks.js';
 import { loadPlanner, plannerScreen, planEdit } from './plannerview.js';
-import { questionsPanel, feverPlanPanel, chartPanel } from './questionsview.js';
+import { questionsPanel, feverPlanPanel, chartPanel, listPanel } from './questionsview.js';
 
 const topicsCol = (hub) => hub.data.collection('topics', { summary: (r) => normaliseRecord(r), text: (r) => [r.title, r.question, r.summary].join(' '), prefix: 'pt' });
 const settingsCol = (hub) => hub.data.collection('settings', { summary: (r) => r, prefix: 'pset' });
@@ -62,7 +62,7 @@ export function render(hub, route) {
   const ctx = { hub, data: r.data, topics: topicsOf(r.data.records), sections: sectionsOf(r.data), kids: kidsOf(hub.people.list(), hub.today()), decisions: parentingDecisions(r.data.decisions) };
   if (route.sub === 'agree') return dashScreen(ctx);
   if (route.sub === 'play') return playScreen(hub, r.data.activities, ctx.kids);
-  if (route.sub === 'ideas') return ideasScreen(hub, r.data.activities);
+  if (route.sub === 'ideas') return ideasScreen(hub, r.data.activities, ctx.kids);
   if (route.sub === 'idea') return ideaScreen(hub, r.data.activities, route.rest[0], ctx.kids);
   if (route.sub === 'idea-edit') return ideaEdit(hub, r.data.activities, route.rest[0]);
   if (route.sub === 'idea-new') return ideaEdit(hub, r.data.activities, null);
@@ -202,34 +202,6 @@ function sectionScreen(ctx, id) {
   ]);
 }
 
-// Each topic's place in its flowchart, kept while the app is open.
-const paths = new Map();
-
-function stepsPanel(t) {
-  const box = el('div', { class: 'stack', 'data-field': 'p-steps' });
-  const draw = () => {
-    const path = paths.get(t.id) ?? [t.steps.start];
-    const node = stepAt(t.steps, path.at(-1));
-    const go = (to) => { paths.set(t.id, [...path, to]); draw(); };
-    const back = path.length > 1 ? el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: '‹ Back', on: { click: () => { paths.set(t.id, path.slice(0, -1)); draw(); } } }) : null;
-    const again = path.length > 1 ? el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Start again', on: { click: () => { paths.delete(t.id); draw(); } } }) : null;
-    const out = node.out ? el('div', { class: `panel ${node.out === 'now' ? 'fin-worse' : ''}`, style: { borderWidth: '2px' }, 'data-field': `p-out:${node.out}` }, [
-      el('strong', { text: OUTCOMES[node.out] }),
-      node.out === 'now' ? el('p', { style: { margin: '6px 0 0' }, text: EMERGENCY.slice(0, 2).map(([w, n]) => `${w}: ${n}`).join(' · ') }) : null,
-    ]) : null;
-    box.replaceChildren(...[
-      el('p', { class: 'small muted', style: { margin: 0 }, text: 'Go through it together now, so it is familiar if it is ever needed.' }),
-      node.q ? el('p', { style: { margin: 0, fontWeight: 600 }, text: node.q }) : null,
-      out,
-      node.say ? el('p', { style: { margin: 0 }, text: node.say }) : null,
-      el('div', { class: 'row', style: { gap: 'var(--space-2)' } }, [...(node.answers ?? node.next ?? []).map(([label, to]) => el('button', { class: 'btn', type: 'button', text: label, on: { click: () => go(to) } })), back, again]),
-      t.health ? el('p', { class: 'small', style: { margin: 0 }, text: GO_LINE }) : null,
-    ].filter(Boolean));
-  };
-  draw();
-  return box;
-}
-
 function leaningPanel(ctx, t) {
   const { hub } = ctx;
   const adults = adultsOf(hub.people.list(), hub.today());
@@ -251,7 +223,7 @@ function leaningPanel(ctx, t) {
     ]),
     ...l.others.map((o) => el('p', { style: { margin: 0 } }, [el('strong', { text: `${o.name}: ` }),
       o.shown ? `${o.shown.pick || 'Not sure yet'}${o.shown.why ? ` - ${o.shown.why}` : ''}` : o.answered ? 'has given theirs - give yours to see it.' : 'not yet.'])),
-    l.mine && shown.length ? el('p', { class: differ ? 'fin-worse' : 'fin-better', style: { margin: 0 }, text: differ ? 'You lean differently. The trade-offs above are what separate you - go through "Align on" together.' : 'You lean the same way.' }) : null,
+    l.mine && shown.length ? el('p', { class: differ ? 'fin-worse' : 'fin-better', style: { margin: 0 }, text: differ ? 'You lean differently - talk it through together.' : 'You lean the same way.' }) : null,
   ]);
 }
 
@@ -281,32 +253,27 @@ function topicScreen(ctx, id) {
     t.later ? el('div', { class: 'panel empty' }, [el('p', { text: 'Not written yet - it will come in a later version. You can write your own version now, or decide on it straight away.' })]) : null,
     t.question ? el('p', { style: { margin: 0, fontSize: '1.1em', fontStyle: 'italic' }, text: t.question }) : null,
     t.summary ? el('p', { style: { margin: 0 }, text: t.summary }) : null,
-    t.prepare ? el('div', { class: 'panel stack', 'data-field': 'p-prepare' }, [el('h2', { text: 'Prepare now', style: { margin: 0 } }),
-      ...[['Have ready', t.prepare.ready], ['Who does what', t.prepare.who], ['Practise', t.prepare.practise]].filter(([, xs]) => xs?.length).map(([h, xs]) => el('div', {}, [el('strong', { text: h }), el('ul', { style: { margin: 0, paddingLeft: '1.2em' } }, xs.map((x) => el('li', { text: x })))]))]) : null,
+    // The app's lines are only a starting point: every list can be changed, added to and removed from (D-107).
+    t.prepare ? listPanel('Prepare now', Array.isArray(rec.prepare) ? rec.prepare : t.prepare, (lines) => put({ prepare: lines }), { add: 'Add line', remove: 'Remove', field: 'p-prepare' }) : null,
+    t.firstAid ? listPanel('What first-aid courses commonly teach', Array.isArray(rec.firstAid) ? rec.firstAid : t.firstAid, (lines) => put({ firstAid: lines }),
+      { help: 'Learn it on a course with a practice doll, then change these to what you were taught.', add: 'Add step', remove: 'Remove step', field: 'p-firstaid' }) : null,
     t.id === 'fever' ? feverPlanPanel(hub, t, put) : null,
     t.id === 'stock' ? chartPanel(hub, t, put, { key: 'meds', title: 'Our medicine chart', help: 'What each medicine is for, from what age, and how much - copied from the label and checked with your pharmacist for each child’s weight. Print it every few months as they grow.', printNote: 'From the labels and our pharmacist - check the label before every dose. If you are wondering whether to see a doctor, go.',
       columns: [['name', 'Medicine', 'e.g. Children’s paracetamol'], ['for', 'For', 'e.g. fever, pain'], ['age', 'From what age', 'e.g. 3 months'], ['dose', 'How much', 'as on the label'], ['often', 'How often / most a day', 'e.g. every 6 h, 4 a day'], ['note', 'Note', '']] }) : null,
     t.id === 'clothes' ? chartPanel(hub, t, put, { key: 'layers', title: 'What they wear at what temperature', help: 'Your own chart for the room temperature the thermometer shows - by age if it changes.',
       columns: [['age', 'Age', 'e.g. 0-6 months'], ['temp', 'Room temperature', 'e.g. 16-18 °C'], ['wear', 'What they wear', 'e.g. vest, sleepsuit, sleeping bag'], ['note', 'Note', '']] }) : null,
-    t.steps ? el('details', { class: 'panel more', 'data-field': 'p-practise' }, [el('summary', { text: t.id === 'fever' ? 'What health services advise - to practise and compare with your plan' : 'Practise the steps' }), stepsPanel(t)]) : null,
-    t.signs ? block('Signs to act on', el('p', { style: { margin: 0 }, text: t.signs }), 'p-signs') : null,
     t.health || t.section === 'emergency' ? block('Who to call', el('div', { class: 'stack' }, [el('ul', { style: { margin: 0, paddingLeft: '1.2em' } }, EMERGENCY.map(([w, n]) => el('li', {}, [`${w}: `, el('a', { href: `tel:${n.replace(/[^\d+]/g, '')}`, text: n })]))),
       el('div', {}, [el('a', { class: 'btn btn-small', href: hub.href('numbers'), text: 'Change', title: 'Your numbers, for where you live' })])]), 'p-call') : null,
-    items.length ? block('Checklist', el('div', { class: 'stack', style: { gap: '4px' } }, items.map((x) => el('label', { class: 'checkline' }, [
-      el('input', { type: 'checkbox', checked: done.has(x), on: { change: (e) => { const next = new Set(done); if (e.target.checked) next.add(x); else next.delete(x); put({ done: [...next] }); } } }), x]))), 'p-check') : null,
-    t.options?.length ? block('The options', el('div', { class: 'stack' }, t.options.map((o) => el('div', { class: 'panel panel--soft stack', style: { gap: '4px' } }, [
-      el('strong', { text: o.name }),
-      o.note ? el('div', { text: o.note }) : null,
-      o.strengths?.length ? el('div', { class: 'small fin-better', text: `For: ${o.strengths.join('; ')}` }) : null,
-      o.weaknesses?.length ? el('div', { class: 'small fin-worse', text: `Against: ${o.weaknesses.join('; ')}` }) : null,
-      o.fits ? el('div', { class: 'small', text: `Fits: ${o.fits}` }) : null,
-      o.notFits ? el('div', { class: 'small', text: `Not for: ${o.notFits}` }) : null,
-      o.timing ? el('div', { class: 'small muted', text: `When: ${o.timing}` }) : null,
-    ]))), 'p-options') : null,
-    t.why?.length ? block('Why - and how sure we are', el('ul', { class: 'list' }, t.why.map((w) => el('li', {}, [el('div', { class: 'list__main' }, [
-      el('div', { text: w.text }),
-      el('div', { class: 'small muted' }, [el('strong', { text: LEVELS[w.level]?.name ?? '', title: LEVELS[w.level]?.text ?? '' }), SOURCES[w.source] ? [' · ', el('a', { href: SOURCES[w.source].url, target: '_blank', rel: 'noopener', text: SOURCES[w.source].name })] : null].flat().filter(Boolean)),
-    ])]))), 'p-why') : null,
+    items.length || t.kind === 'checklist' ? block('Checklist', el('div', { class: 'stack', style: { gap: '4px' } }, [
+      ...items.map((x) => el('div', { class: 'row', style: { gap: '6px', alignItems: 'center' } }, [
+        el('label', { class: 'checkline', style: { flex: '1 1 220px' } }, [el('input', { type: 'checkbox', checked: done.has(x), on: { change: (e) => { const next = new Set(done); if (e.target.checked) next.add(x); else next.delete(x); put({ done: [...next] }); } } }), x]),
+        el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', on: { click: () => put({ items: items.filter((y) => y !== x), done: [...done].filter((y) => y !== x), edited: true, baseV: t.v ?? 0 }) } }),
+      ])),
+      (() => { const inp = el('input', { class: 'input', placeholder: 'Something to add', 'aria-label': 'Add to the checklist', style: { flex: '1 1 220px' }, 'data-field': 'p-check-new' });
+        return el('div', { class: 'row', style: { gap: '6px' } }, [inp, el('button', { class: 'btn btn-small', type: 'button', text: 'Add item', 'data-field': 'p-check-add', on: { click: () => { if (inp.value.trim()) put({ items: [...items, inp.value.trim()], edited: true, baseV: t.v ?? 0 }); } } })]); })(),
+    ]), 'p-check') : null,
+    // Our own topics keep the options their family wrote; starting topics ask their questions instead.
+    t.own && t.options?.length ? block('Our options', el('ul', { style: { margin: 0, paddingLeft: '1.2em' } }, t.options.map((o) => el('li', { text: o.note ? `${o.name}: ${o.note}` : o.name }))), 'p-options') : null,
     t.changes?.length ? block('What changes the answer', ul(t.changes), 'p-changes') : null,
     t.kind !== 'checklist' ? videosPanel(hub, { creators: rec.creators, videos: rec.videos, views: rec.views }, (changes) => put(changes)) : null,
     t.questions?.length ? questionsPanel(hub, t, ctx.decisions, put) : t.kind !== 'checklist' && !t.later ? leaningPanel(ctx, t) : null,
@@ -318,7 +285,6 @@ function topicScreen(ctx, id) {
         el('span', { class: 'small muted', text: ` · ${rangeLabel(d.ageFrom, d.ageTo)} · ${d.hasAgreement ? 'agreed' : 'being worked out'}` })]))) : el('p', { class: 'small muted', style: { margin: 0 }, text: 'Nothing decided yet. One topic can hold several decisions - for example one for under 1 and another for 4 to 5.' }),
       hub.data.installed('decisions') ? el('div', {}, [el('a', { class: 'btn btn-primary', href: decideHref(t.id), text: 'Decide', 'data-field': 'p-decide' })]) : el('p', { class: 'small muted', text: 'Switch on Decisions under Settings to keep what you agree.' }),
     ]), 'p-decisions'),
-    t.why?.length ? el('p', { class: 'small muted', style: { margin: 0 }, text: `Sources checked ${SOURCES[t.why[0].source]?.checked ?? ''}. ${Object.values(LEVELS).map((x) => `${x.name}: ${x.text}`).join(' ')}` }) : null,
     health ? el('p', { class: 'small', style: { margin: 0, fontWeight: 600 }, text: GO_LINE }) : null,
     el('div', { class: 'row' }, [
       el('a', { class: 'btn', href: hub.href('edit', t.id), text: t.later ? 'Write' : 'Edit' }),

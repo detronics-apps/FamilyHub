@@ -52,6 +52,11 @@ export function screenHome(hub, sc, kids, decisions) {
       ]);
     }),
     kids.length ? null : el('p', { class: 'small muted', text: 'Add the children on the People page to see each one’s week.' }),
+    sc.logs.length ? el('details', { class: 'panel more', 'data-field': 'scr-entries' }, [el('summary', { text: `Everything logged (${sc.logs.length})` }),
+      el('ul', { class: 'list' }, sc.logs.slice().sort((a, b) => `${b.day}${b.time}`.localeCompare(`${a.day}${a.time}`)).slice(0, 60).map((l) => el('li', {}, [
+        el('span', { class: 'list__main', text: `${l.day}${l.time ? ` ${l.time}` : ''} · ${sc.shows.find((s) => s.showId === l.showId)?.name ?? (l.what || 'something')} · ${l.minutes} min · ${l.kids.map((id) => kids.find((k) => k.id === id)?.name ?? '').filter(Boolean).join(', ')}` }),
+        el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', on: { click: async () => { await logCol(hub).remove(l.id); hub.invalidate(); } } }),
+      ])))]) : null,
     el('div', { class: 'panel stack', 'data-field': 'scr-rules' }, [el('h2', { text: 'What we agreed', style: { margin: 0 } }),
       rules.length ? el('ul', { class: 'list' }, rules.map((d) => el('li', {}, [el('a', { href: `#/decisions/item/${encodeURIComponent(d.id)}`, text: d.title }),
         el('span', { class: 'small muted', text: ` · ${rangeLabel(d.ageFrom, d.ageTo)}${d.screenMinutes != null ? ` · up to ${mins(d.screenMinutes)} a day` : ''}${d.screenMinScore != null ? ` · shows scoring ${d.screenMinScore}+` : ''}${d.hasAgreement ? '' : ' · not agreed yet'}` })])))

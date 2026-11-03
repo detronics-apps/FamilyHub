@@ -21,7 +21,7 @@ test('emergency numbers: South Africa to start, a country to start from, or your
 test('every topic with questions exists, and every question has options to choose from', () => {
   for (const [id, qs] of Object.entries(QUESTIONS)) {
     assert.ok(STARTER.some((t) => t.id === id), id);
-    for (const q of qs) assert.ok(q.ask && q.options.length >= 2, `${id}.${q.id}`);
+    for (const q of qs) assert.ok(q.ask && q.options.length >= 1, `${id}.${q.id}`);
   }
   const newused = topicsOf([]).find((t) => t.id === 'newused');
   assert.ok(!newused.later && newused.question, 'questions make a topic written');
