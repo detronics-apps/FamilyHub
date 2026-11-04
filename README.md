@@ -9,6 +9,10 @@ this README describes what is built.
 One static page. No backend, no build step, no dependencies, no accounts. Nothing is sent to the
 publisher or anyone else.
 
+Why Family Hub exists, the thinking behind it and the story of every feature are in
+[FEATURES.md](FEATURES.md); what is still to come is in [BACKLOG.md](BACKLOG.md), and what was
+decided against in [REJECTED.md](REJECTED.md).
+
 ## What works now (v0.3.0)
 
 - **Your own Google Drive folder as the home of the data** (Chrome/Edge on a computer, with Google

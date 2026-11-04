@@ -110,20 +110,10 @@ workstreams W1-W3. This file records status only.
 
 ## Planned, not to be built yet
 
-### Planner (calendar) - owner request 2026-10-25
-
-**Planning only. Do not build until the owner says so.**
-
-- A calendar-style mini-app, and one of the first tiles on the home screen (near Chores).
-- The week at a glance (with a month view), gathering dated things from the other mini-apps
-  through read-only access (`data:<app>:read`): chore turns that are due, tasks with a planned
-  day, the weekly meal plan, holiday dates, decision review dates, principle review dates.
-- Its own simple events too (school play, dentist), stored in its own collection.
-- Questions to settle first: should it be a starter app or a core screen; how a planned-but-passed
-  item is shown without guilt (plan §3.7); whether it can move things (e.g. drag a task to
-  another day) - that would need the owning app's screen, since only an app writes its own
-  records (W1 rule).
-- Listed under Mini-apps → Coming later so nobody mistakes it for a working app.
+What is still to come - with its status and agreed tasks - lives in **[BACKLOG.md](BACKLOG.md)**;
+what shipped, and why, in **[FEATURES.md](FEATURES.md)**; ideas decided against in
+**[REJECTED.md](REJECTED.md)**. The Planner first planned here (2026-10-25) shipped in part as
+Parenting › Planner (v0.17.0, D-104); the rest of it is in the backlog.
 
 ## Next steps proposed
 
