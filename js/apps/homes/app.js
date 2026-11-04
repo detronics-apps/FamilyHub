@@ -18,6 +18,8 @@ import { scenarioRange, defaultRanges, measure } from './scenarios.js';
 import { alternativeOf } from './alternative.js';
 import { carryIt, COMFORT } from './risk.js';
 import { situationEffects } from './situations.js';
+import { HOME_CHECKS, HOME_RULE, STAGES, tally } from '../viewing/checks.js';
+import { sectionBar, stageScreen, storyScreen, mattersScreen, compareRows, compareTableOf, progressLine, keep, famOf, checklistCol, checksOf, lookOf } from '../viewing/view.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => r.title, prefix: 'hom' });
 const KIND = 'property';
@@ -30,8 +32,58 @@ const yrs = (y) => `${y} year${y === 1 ? '' : 's'}`;
 
 export function render(hub, route) {
   if (route.sub === 'compare') return compareScreen(hub, route.rest[0] ?? '');
-  if (['home', 'bond', 'rentbuy', 'selltobuy', 'ourbond'].includes(route.sub)) return homeScreen(hub);
+  if (route.sub === 'matters') return mattersPage(hub);
+  if (['home', 'bond', 'rentbuy', 'selltobuy', 'ourbond'].includes(route.sub)) return homeScreen(hub, route.rest[0] ?? 'financing');
   return listScreen(hub);
+}
+
+/* ---------------------------------------- the non-money side (D-111) */
+
+function lookCtx(hub, d, fam) {
+  const today = hub.today();
+  const summary = () => headline(d.values, today);
+  return {
+    hub, d, fam, seed: HOME_CHECKS, prefix: 'h', word: 'home', screen: 'home', rule: HOME_RULE, famCol: checklistCol(hub),
+    save: (loud) => keep(hub, col(hub), KIND, d, summary, { loud }),
+    saveAs: async (name) => { d.title = name; await keep(hub, col(hub), KIND, d, summary, { create: true }); },
+  };
+}
+
+/** What the viewing found, against the price - only arithmetic; what to offer is yours. */
+function repairsPanel(hub, ctx) {
+  const v = ctx.d.values;
+  const look = lookOf(v);
+  const t = tally(checksOf(ctx), look.answers);
+  if (!t.repairs) return null;
+  const price = isBuy(v) ? n(v.price) : 0;
+  const inReno = n(v.renovations) === t.repairs;
+  return el('div', { class: 'panel stack', 'data-field': 'repairs-noted' }, [
+    el('p', { style: { margin: 0 }, text: `Repairs you noted: ${rand(t.repairs)}, from ${((k) => `${k} worr${k === 1 ? 'y' : 'ies'}`)(t.worries.filter((x) => n(look.answers[x.id]?.cost)).length)} with a cost.${price ? ` Asking ${rand(price)}; asking less those repairs: ${rand(price - t.repairs)}.` : ''}` }),
+    isBuy(v) ? el('div', { class: 'row' }, [
+      inReno ? el('span', { class: 'small muted', text: '✓ Counted in "Kept for renovations"' }) : el('button', { class: 'btn btn-small', type: 'button', text: 'Add', 'data-field': 'repairs-add', title: `Put ${rand(t.repairs)} into "Kept for renovations" - you can still change it there`, on: { click: () => { v.renovations = t.repairs; ctx.d.mine.add('renovations'); ctx.save(true); hub.render(); } } }),
+      inReno ? null : el('span', { class: 'small muted', text: 'to "Kept for renovations", so the money for them is counted.' }),
+    ]) : null,
+  ]);
+}
+
+function moneyLines(v, today) {
+  const h = headline(v, today).headline;
+  return [
+    h ? `${h}.` : 'Financing is not filled in yet.',
+    isBuy(v) && n(v.price) ? `Asking ${rand(n(v.price))}.` : null,
+    isBuy(v) && n(v.renovations) ? `Kept for renovations: ${rand(n(v.renovations))}.` : null,
+    'Can you carry it? - in Financing.',
+  ].filter(Boolean);
+}
+
+function mattersPage(hub) {
+  const fam = famOf(hub, checklistCol(hub));
+  if (fam.loading) return loading();
+  if (fam.error) return failure(fam.error);
+  return el('section', { class: 'stack', 'aria-labelledby': 'matters-title' }, [
+    el('h1', { id: 'matters-title', text: 'What matters to us', style: { margin: 0 } }),
+    ...mattersScreen(lookCtx(hub, D(), fam.data)).filter(Boolean),
+  ]);
 }
 
 /* -------------------------------------------------------------- our homes */
@@ -44,10 +96,15 @@ const loadAll = (hub) => hub.use('homes-all', async () => {
 
 function listScreen(hub) {
   const all = loadAll(hub);
+  const fam = famOf(hub, checklistCol(hub));
   const start = (kind) => { loadDraft('homes', DEFAULTS, { values: { kind }, title: '', kind: KIND }); figs.open = null; hub.go('home'); };
   return el('section', { class: 'stack', 'aria-labelledby': 'homes-title' }, [
     el('h1', { id: 'homes-title', text: 'Homes', style: { margin: 0 } }),
-    el('p', { class: 'muted', style: { margin: 0 }, text: 'Each home on one page - one you might buy, the one you own, or one you might rent - with everything it costs and what it leaves you. Save each one, then compare any of them.' }),
+    el('p', { class: 'muted', style: { margin: 0 }, text: 'Each home in one place - one you might buy, the one you own, or one you might rent: what you can see online, the questions to ask, the viewing, how it feels, and the finances. Buying second-hand, a problem found early can be negotiated into the price, or be a reason to walk away. Save each one, then compare any of them on all of it.' }),
+    el('div', { class: 'row' }, [
+      el('a', { class: 'btn', href: hub.href('matters'), text: 'Matters', 'data-field': 'go-matters', title: 'What matters to us: must-haves, nice-to-haves, and the checks - change, remove or add your own' }),
+      el('span', { class: 'small muted', text: 'what is important to your household, and the checks themselves' }),
+    ]),
     el('div', { class: 'panel stack' }, [
       el('h2', { text: 'Add a home', style: { margin: 0 } }),
       el('div', { class: 'row' }, Object.entries(KINDS).map(([k, label]) => el('button', { class: 'btn', type: 'button', text: label, 'data-field': `new:${k}`, title: { buy: 'A home you might buy', own: 'The home you own now', rent: 'A home you might rent' }[k], on: { click: () => start(k) } }))),
@@ -57,7 +114,7 @@ function listScreen(hub) {
       all.loading ? el('p', { class: 'muted', text: 'Loading…' }) : all.error ? failure(all.error) : all.data.length ? el('ul', { class: 'list' }, all.data.map((rec) => {
         const v = valuesOf(rec);
         return el('li', {}, [
-          el('div', { class: 'list__main' }, [el('strong', { text: rec.title || 'Untitled' }), el('div', { class: 'small muted', text: [KINDS[v.kind], headline(v, hub.today()).headline, rec.savedAt ? `saved ${rec.savedAt.slice(0, 10)}` : null].filter(Boolean).join(' · ') })]),
+          el('div', { class: 'list__main' }, [el('strong', { text: rec.title || 'Untitled' }), el('div', { class: 'small muted', text: [KINDS[v.kind], headline(v, hub.today()).headline, rec.savedAt ? `saved ${rec.savedAt.slice(0, 10)}` : null].filter(Boolean).join(' · ') }), fam.data ? el('div', { class: 'small muted', text: progressLine(HOME_CHECKS, fam.data, v) }) : null]),
           el('button', { class: 'btn btn-small', type: 'button', text: 'Open', 'aria-label': `Open ${rec.title}`, 'data-field': `open:${rec.id}`, on: { click: () => { loadDraft('homes', DEFAULTS, { ...rec, values: v, kind: KIND }); figs.open = null; hub.go('home'); } } }),
           el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': `Remove ${rec.title}`, 'data-field': `remove:${rec.id}`, on: { click: async () => {
             if (!(await confirmAction({ title: `Remove "${rec.title || 'Untitled'}"?`, text: 'The saved home is deleted. This cannot be undone.', confirmLabel: 'Remove', danger: true }))) return;
@@ -179,10 +236,22 @@ const SECS = [
 ];
 const ALL_FIELDS = SECS.flatMap((s) => s.fields);
 
-function homeScreen(hub) {
+function homeScreen(hub, sec = 'financing') {
   const d = D();
   const v = d.values;
   v.kind = kindOf(v);
+  const fam = famOf(hub, checklistCol(hub));
+  if (fam.loading) return loading();
+  if (fam.error) return failure(fam.error);
+  const ctx = lookCtx(hub, d, fam.data);
+  if (sec !== 'financing') {
+    const stage = STAGES.find((s) => s.id === sec);
+    return el('section', { class: 'stack', 'aria-labelledby': 'home-title' }, [
+      el('h1', { id: 'home-title', text: d.title || 'A home', style: { margin: 0 } }),
+      sectionBar(hub, 'home', sec),
+      ...(stage ? stageScreen(ctx, sec) : storyScreen(ctx, moneyLines(v, hub.today()))),
+    ].filter(Boolean));
+  }
   const today = hub.today();
   const answer = el('div', { class: 'stack', 'aria-live': 'polite' });
   const boxes = [];      // section extras that follow what is typed
@@ -197,6 +266,8 @@ function homeScreen(hub) {
   refresh();
   return el('section', { class: 'stack', 'aria-labelledby': 'home-title' }, [
     el('h1', { id: 'home-title', text: d.title || 'A home', style: { margin: 0 } }),
+    sectionBar(hub, 'home', 'financing'),
+    repairsPanel(hub, ctx),
     el('p', { class: 'muted', style: { margin: 0 }, text: 'Everything about one home, in sections. Tick a section off to leave it out, fold away what you do not need, and tap (i) for what a figure is and where to find yours.' }),
     levelBar(() => hub.render()),
     el('div', { class: 'panel stack' }, [
@@ -779,7 +850,13 @@ function compareScreen(hub, param) {
     el('p', { class: 'muted', style: { margin: 0 }, text: 'Any of your saved homes, side by side: buying against buying, against renting, or keeping the one you own. Each has the same money every month - whoever needs less that month invests the difference - so different things compare fairly.' }),
     pickList,
   ];
-  if (items.length < 2) return el('section', { class: 'stack', 'aria-labelledby': 'cmp-title' }, [...head, el('p', { class: 'panel muted', text: 'Tick two or more homes.' })]);
+  const fam = famOf(hub, checklistCol(hub)).data ?? {};
+  head.push(recs.length >= 2 ? el('div', { class: 'panel stack' }, [
+    el('h2', { text: 'What matters, and what you found', style: { margin: 0 } }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'Your must-haves first, then each section and the repairs you noted. Set what matters in Matters; open a home to answer more.' }),
+    compareTableOf(recs.map((r) => r.title || 'Untitled'), compareRows(HOME_CHECKS, fam, recs.map((r) => ({ values: valuesOf(r) })))),
+  ]) : null);
+  if (items.length < 2) return el('section', { class: 'stack', 'aria-labelledby': 'cmp-title' }, [...head, el('p', { class: 'panel muted', text: recs.length >= 2 ? 'Fill in Financing for two or more of these to compare the money.' : 'Tick two or more homes.' })]);
   const v0 = items[0].v;
   const sm = sameMoney(items.map((x) => x.plan), { investPct: n(v0.investPct) || 9, investTaxPct: n(v0.investTaxPct) || 15, investShare: v0.investShare ?? 100, cash: v0.diffCash === true });
   const H = cmp.years * 12;
@@ -816,7 +893,7 @@ function compareScreen(hub, param) {
   return el('section', { class: 'stack', 'aria-labelledby': 'cmp-title' }, [
     ...head,
     el('div', { class: 'panel stack', 'data-field': 'cmp-answer' }, [
-      el('h2', { text: 'Which would leave you better off?', style: { margin: 0 } }),
+      el('h2', { text: 'The money: which would leave you better off?', style: { margin: 0 } }),
       items.length > 2 ? el('div', { class: 'row' }, [pickOne('a', 'This'), pickOne('b', 'against')]) : null,
       el('div', { class: 'stats' }, [
         stat(rand(wealth[ia]), `${nameOf(ia)}: what you would have ${after}`, 'r-a'),

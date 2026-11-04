@@ -48,6 +48,7 @@ export const SEARCH_ALIASES = {
   'our bond': ['bond history', 'extra payments', 'pay extra', 'paid more', 'access bond', 're-advance', 'took money out', 'withdraw from bond', 'bond balance', 'rate change', 'minimum payment'],
   'sell to buy': ['sell our house', 'selling costs', 'agent commission', 'agent fees', 'bond cancellation', 'compliance certificate', 'electrical certificate', 'beetle certificate', 'transfer costs', 'attorney fees', 'conveyancing', 'deeds office', 'bond registration', 'deposit from the sale', 'hidden costs'],
   'own or rent': ['rent or buy', 'buy or rent', 'renting', 'is renting better', 'sell and rent', 'keep our house', 'invest the difference', 'maintenance', 'upgrade', 'capital gains'],
+  'before you buy': ['inspection', 'inspect', 'viewing', 'view a house', 'show house', 'checklist', 'second-hand', 'second hand', 'used car', 'mould', 'damp', 'leak', 'roof', 'cracks', 'test drive', 'accident', 'questions to ask', 'agent', 'seller', 'dealer', 'negotiate', 'walk away', 'must have', 'pet friendly', 'report', 'pdf'],
   home: ['house', 'bond', 'mortgage', 'home loan', 'rent', 'renting', 'buy a house', 'transfer duty', 'commute', 'travel to work', 'closer to work', 'move', 'moving'],
   'true cost': ['fuel', 'petrol', 'diesel', 'electric car', 'ev', 'hybrid', 'plug-in', 'charging', 'kwh', 'fuel consumption', 'litres per 100', 'insurance', 'service', 'oil', 'tyres', 'car', 'vehicle', 'car finance', 'loan', 'instalment', 'balloon', 'resale', 'total cost of ownership', 'compare cars'],
   'compound interest': ['interest', 'grow', 'growth', 'investment', 'savings growth', 'calculator', 'inflation'],
@@ -318,10 +319,17 @@ export const HOWTOS = [
     'It says which leaves the household better off, what cash a move needs first and how long saving it takes, and how long the move takes to pay back.',
   ] },
   { id: 'home', title: 'Compare homes - buying, renting, or keeping ours', steps: [
-    'Open Finance, then Homes. Add a home: "Buying", "Ours already" or "Renting". Each is one page, in sections.',
+    'Open Finance, then Homes. Add a home: "Buying", "Ours already" or "Renting". Its Financing is one page, in sections.',
     'Fill in what applies. Tick a section "Left out" to leave it out (travel, say, when both homes are the same distance from work), and fold away what you do not need. Tap (i) beside any heading or figure to see what it is and where to find yours.',
     'Give it a name, like "Closer to work", and press Save. Add the next home the same way.',
     'Press Compare and tick any of your homes - a house against a house, against a rental, or against keeping the one you own. Each has the same money every month; whoever needs less invests the difference.',
+  ] },
+  { id: 'beforebuy', title: 'Before you buy a home or car second-hand', steps: [
+    'Open Finance, then Homes or Cars, and add one. Each has Online, Questions, Viewing, Feeling, Financing and Story.',
+    'Start with Online: what the ad, its photos and the map show. Some checks can be answered from the photos - massive water damage needs no viewing. Give it a name so what you note is kept.',
+    'Questions: Print them (or Save as PDF) for the agent, seller or dealer, or Export them to fill in and Import them back. At the viewing, mark each check OK, Worry or Walk away, with a note and a cost to fix.',
+    'Feeling: sit together and answer Yes, Unsure or No. In Matters, mark what is a must-have for your household, and change, remove or add checks.',
+    'Repairs you noted show in Financing - Add puts them in the costs. Story brings it all together, with what is still unanswered; Compare puts your homes or cars side by side on all of it.',
   ] },
   { id: 'ownrent', title: 'Own or rent - with your own numbers', steps: [
     'Save the home you might buy (or the one you own, as "Ours already") and the place you might rent, each in Homes.',
@@ -329,7 +337,7 @@ export const HOWTOS = [
     'Press Compare and tick both. "Where each would leave you" shows, year by year, what each would leave you - and when the other one starts to leave you more.',
   ] },
   { id: 'car', title: 'Work out the true cost of a car - and compare', steps: [
-    'Open Finance, then Cars. Fill in the price, the rate on your quote, how long the loan runs and how long you will keep the car.',
+    'Open Finance, then Cars, and Add a car (or Open one). In Financing, fill in the price, the rate on your quote, how long the loan runs and how long you will keep the car.',
     'Choose what it runs on - petrol, diesel, hybrid, plug-in hybrid or electric - and the distance you drive a year. Fuel or charging is worked out from the consumption and the current price. Add insurance, the yearly service, oil, tyres and licence for the full picture.',
     'Give it a name, like "Polo over 6 years", and press Save. Change the term, give it a new name and Save again.',
     'Tick two or more saved ones and press Compare to see them side by side, with the differences in words.',
@@ -519,6 +527,7 @@ export const FEATURES = [
   { name: 'The (i) beside every figure', where: 'Finance › Homes and Cars', what: 'What each heading and figure means, where to find your own, and how to get the latest - your bond statement, municipal account, the monthly fuel price.' },
   { name: 'Money in and out', where: 'Every Finance tool', what: 'What the house, car or savings are worth, against what has gone out of your pocket so far, and each month’s spending. Money growing your pocket is above zero; money coming out of it is below.' },
   { name: 'Graphs with the turning points', where: 'Every Finance tool', what: 'Each tool has a graph that tells its story, with the moments that matter marked: when owning starts to leave you more than renting, when a car is worth more than is owed, when more of the bond pays it off than interest.' },
+  { name: 'Before you buy', where: 'Finance › Homes and Cars', what: 'What to look at online, the questions to ask, the viewing and how it feels - for each home or car, saved with its finances. Print the questions, export and import them, and compare on what matters to you.' },
   { name: 'Compare homes', where: 'Finance › Homes › Compare', what: 'Any saved homes side by side - buy against buy, against renting, or keeping ours - on the same money each month, with where each would leave you, year by year.' },
   { name: 'Variations', where: 'Cookbook › a meal › Variations', what: 'One meal made several ways - cheese, pepper or mushroom sauce from one white sauce - with one set of ratings, and shopping that follows the way chosen.' },
   { name: 'Money plan', where: 'Finance › Money plan', what: 'Every goal on one timeline, brought in from Holidays, Cars, Homes, Children’s future and savings goals - what to put aside each month, and where it does not fit.' },

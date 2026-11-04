@@ -97,7 +97,7 @@ export const CAR_DEFAULTS = {
   insurance: null, fuel: null, upkeep: null, licenceYearly: null, escalatePct: REFERENCE.cpi.value,
   serviceYearly: null, oilYearly: null, tyresYearly: null,
   power: 'petrol', region: 'inland', lPer100: null, kwhPer100: null, electricShare: 50, homeShare: 80,
-  fuelPrice: null, homeTariff: ENERGY.home.value, publicTariff: ENERGY.public.value, chargeLoss: 10, chargerInstall: null,
+  fuelPrice: null, homeTariff: ENERGY.home.value, publicTariff: ENERGY.public.value, chargeLoss: 10, chargerInstall: null, repairs: null,
   fuelRisePct: REFERENCE.cpi.value, elecRisePct: ENERGY.elecRise.value,
   resaleMode: 'depreciation', depreciationPct: 15, resaleAmount: null, kmYearly: null,
 };
@@ -197,7 +197,9 @@ export function carCost(input, today = null) {
   const toBank = paidSum + serviceSum;
   const loanMonths = sched ? sched.length - 1 : financed ? n : 0;
   const charger = USES_POWER.has(v.power) ? num(v.chargerInstall) ?? 0 : 0;
-  const upfront = deposit + (v.feeFinanced ? 0 : initiation) + charger;
+  // Repairs found before buying (D-111): paid once, soon after.
+  const repairs = Math.max(0, num(v.repairs) ?? 0);
+  const upfront = deposit + (v.feeFinanced ? 0 : initiation) + charger + repairs;
 
   // Running costs: the steady ones rise with inflation; fuel and electricity at their own rates.
   // A monthly fuel figure of the family's own replaces the worked-out fuel and charging.
@@ -238,7 +240,7 @@ export function carCost(input, today = null) {
   return {
     price, deposit, loan, balloon, months: keep, termMonths: n, financed,
     instalment: financed ? pmt + service : 0, repayment: pmt, serviceFee: service,
-    interest, fees, toBank, upfront, running, runningFirstMonth: runMonth, charger,
+    interest, fees, toBank, upfront, running, runningFirstMonth: runMonth, charger, repairs,
     energy: { ...e, fuelMonth, elecMonth, own: ownFuel != null }, steadyFirstMonth: steady,
     resale, owed, atSale, total, taken: takenSum, loanMonths, scenarios: evs.length,
     depreciation: price - resale,

@@ -696,6 +696,39 @@ note; claims not settled; and paid accounts never sent to medical aid (they will
 scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
 the year of its own date, not of each payment (marked to split by payment day if that matters).
 
+**D-111 Homes and Cars: the whole decision, not only the money (owner, 2026-11-04).** Big
+purchases are what bankrupt families: a first home with mould that costs hundreds of thousands to
+fix, and puts the family's health at risk; a second-hand bus with a kinked chassis. Make people
+aware of what to ask and look for, so a problem is negotiated into the price or a reason to walk
+away. Finance stays the home of both, because they move a family's money most.
+- **Finance › Homes / Cars** opens on the list (Our homes, Our cars - Cars gains one), with
+  **Matters** and **Compare**. Each home or car has six sections: **Online** (before you
+  enquire: the ad, its photos, the map), **Questions** (for the agent, seller or dealer),
+  **Viewing**, **Feeling**, **Financing** (the calculators as they were) and **Story**.
+- **One saved home or car** holds it all: the notes live in its values (`look`), so the finance
+  Save keeps them and they save as you go once it has a name. Removing it removes them.
+- **Each check:** OK / Worry / Walk away (Feeling: Yes / Unsure / No), a note ("What they said"
+  for questions), where it was answered from (Photos, Asked, Seen), and a cost to fix on a worry.
+  Checks photos often show are flagged, so some are answered before any viewing.
+- **The checks** are the owner's lists, in their order and words, plus obvious ones marked
+  *suggested* (service history, tyres, fluids, rust, electrics, a test drive, money owed on a car;
+  compliance certificates, approved plans, the geyser for a home). The family's list (one
+  `checklist` record per app) changes the words, removes (Bring back), and adds their own - for
+  every home or only this one.
+- **What matters to us:** Must have / Nice to have on any check. Compare and the Story put them
+  first: "must-haves met 4 of 5", and which. Never one score and never a winner (D-095).
+- **The owner's rule of thumb** (potential in a good area over perfect in a bad one) is shown as
+  their own view, to weigh; a family can change it into theirs or remove it.
+- **Repairs flow into Financing as arithmetic only:** "Repairs you noted R25 000; asking less
+  those repairs ...", with Add into "Kept for renovations" (homes) or a new **Repairs after
+  buying** (cars, paid up front in the car's cost). What to offer stays theirs.
+- **The sheet:** Print (or Save as PDF) the questions or the viewing checklist with boxes and
+  lines; **Export** them as CSV to fill in anywhere, and **Import** to read it back - matched by
+  Id, empty cells never wipe an answer, and where both differ the family chooses. The Story's
+  Print is the full report. No libraries: a PDF cannot be read back, a CSV can.
+- **The Story** ends with what is not answered yet - that is where a nasty surprise after buying
+  comes from.
+
 **D-110 Workouts are not due on a day: I have 25 minutes, a round, tallies (owner, 2026-11-03).**
 The owner, a parent of twins: an hour planned today can go to a child who needs you. As
 everywhere else in the app, a missed day must not pile up, and getting started must be as easy as

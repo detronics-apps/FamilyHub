@@ -3,10 +3,13 @@
 // what is still owed then. Save each car or finance option by name and compare.
 
 import { el } from '../../ui/dom.js';
+import { confirmAction } from '../../ui/common.js';
 import { loading, failure } from '../kit.js';
 import { carCost, CAR_SCENARIOS, CAR_DEFAULTS, REFERENCE, sensitivity, CAR_NUDGES, monthlyRate, ENERGY, POWER, typicalLitres, typicalKwh, fuelPriceFor } from '../finance/maths.js';
 import { CAR_HELP } from '../finance/help.js';
 import { levelBar, shows, draft, loadDraft, linesPanel, inputsPanel, assumed, stat, sums, step, lineChart, chartPanel, RULE, outOf, crossing, whenLabel, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
+import { CAR_CHECKS, STAGES, tally } from '../viewing/checks.js';
+import { sectionBar, stageScreen, storyScreen, mattersScreen, compareRows, compareTableOf, progressLine, keep, famOf, checklistCol, checksOf, lookOf } from '../viewing/view.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => r.title, prefix: 'car' });
 const KIND = 'car';
@@ -15,6 +18,7 @@ const TERMS = [36, 48, 60, 72, 84].map((m) => ({ value: m, label: `${m / 12} yea
 const FIELDS = [
   { key: 'price', label: 'Price of the car', type: 'money', level: 'simple' },
   { key: 'deposit', label: 'Deposit', type: 'money', level: 'simple', source: { kind: 'assumption' } },
+  { key: 'repairs', label: 'Repairs after buying', type: 'money', level: 'simple', optional: true, hint: 'Once off: what you noted at the viewing, or a quote. Counted with what is paid up front.' },
   { key: 'ratePct', label: 'Interest rate', type: 'percent', level: 'simple', source: { ref: REFERENCE.prime, note: '+ 1.5 points (illustrative)' }, hint: 'The rate on your quote. Car loans are usually a little above prime, and move when prime moves.' },
   { key: 'termMonths', label: 'Pay it off over', type: 'choice', level: 'simple', choices: TERMS },
   { key: 'keepYears', label: 'Keep it for', type: 'years', level: 'simple', source: { kind: 'assumption' }, hint: 'When you expect to sell it. It can be before the loan is paid off.' },
@@ -60,18 +64,109 @@ const GROUPS = {
 
 export function render(hub, route) {
   if (route.sub === 'compare') return compareScreen(hub, route.rest[0] ?? '');
-  return mainScreen(hub);
+  if (route.sub === 'matters') return mattersPage(hub);
+  if (route.sub === 'car') return mainScreen(hub, route.rest[0] ?? 'financing');
+  return listScreen(hub);
 }
 
-function mainScreen(hub) {
+/* --------------------------------------------- our cars, and the non-money side (D-111) */
+
+const loadAll = (hub) => hub.use('cars-all', async () => {
+  const c = col(hub);
+  const { items } = await c.list({ limit: 1000, filter: (s) => s.kind === KIND });
+  return (await Promise.all(items.map((s) => c.get(s.id)))).filter(Boolean).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
+});
+
+const summaryOf = (values, today) => { const c = carCost(values, today); return c.total == null ? {} : { headline: `${rand(c.total)} over ${months(c.months)} · ${rand(c.instalment)} a month`, total: c.total, instalment: c.instalment }; };
+
+function lookCtx(hub, d, fam) {
+  const summary = () => summaryOf(d.values, hub.today());
+  return {
+    hub, d, fam, seed: CAR_CHECKS, prefix: 'c', word: 'car', screen: 'car', rule: null, famCol: checklistCol(hub),
+    save: (loud) => keep(hub, col(hub), KIND, d, summary, { loud }),
+    saveAs: async (name) => { d.title = name; await keep(hub, col(hub), KIND, d, summary, { create: true }); },
+  };
+}
+
+function listScreen(hub) {
+  const all = loadAll(hub);
+  const fam = famOf(hub, checklistCol(hub));
+  const today = hub.today();
+  const start = () => { loadDraft(KIND, CAR_DEFAULTS, { values: {}, title: '', kind: KIND }); hub.go('car', 'online'); };
+  return el('section', { class: 'stack', 'aria-labelledby': 'cars-title' }, [
+    el('h1', { id: 'cars-title', text: 'Cars', style: { margin: 0 } }),
+    el('p', { class: 'muted', style: { margin: 0 }, text: 'Each car in one place: what the ad shows, the questions to ask, the viewing and test drive, how it feels, and what it really costs. Buying second-hand, a problem found early can be negotiated into the price, or be a reason to walk away. Save each one, then compare any of them on all of it.' }),
+    el('div', { class: 'row' }, [
+      el('button', { class: 'btn btn-primary', type: 'button', text: 'Add', 'data-field': 'new-car', title: 'A car you might buy - or one you have, to work out its cost', on: { click: start } }),
+      el('a', { class: 'btn', href: hub.href('matters'), text: 'Matters', 'data-field': 'go-matters', title: 'What matters to us: must-haves, nice-to-haves, and the checks - change, remove or add your own' }),
+    ]),
+    el('div', { class: 'panel stack' }, [
+      el('h2', { text: 'Our cars', style: { margin: 0 } }),
+      all.loading ? el('p', { class: 'muted', text: 'Loading…' }) : all.error ? failure(all.error) : all.data.length ? el('ul', { class: 'list' }, all.data.map((rec) => el('li', {}, [
+        el('div', { class: 'list__main' }, [el('strong', { text: rec.title || 'Untitled' }),
+          el('div', { class: 'small muted', text: [summaryOf({ ...CAR_DEFAULTS, ...rec.values }, today).headline, rec.savedAt ? `saved ${rec.savedAt.slice(0, 10)}` : null].filter(Boolean).join(' · ') }),
+          fam.data ? el('div', { class: 'small muted', text: progressLine(CAR_CHECKS, fam.data, rec.values ?? {}) }) : null]),
+        el('button', { class: 'btn btn-small', type: 'button', text: 'Open', 'aria-label': `Open ${rec.title}`, 'data-field': `open:${rec.id}`, on: { click: () => { loadDraft(KIND, CAR_DEFAULTS, rec); hub.go('car'); } } }),
+        el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': `Remove ${rec.title}`, on: { click: async () => {
+          if (!(await confirmAction({ title: `Remove "${rec.title || 'Untitled'}"?`, text: 'The saved car, with everything noted about it, is deleted. This cannot be undone.', confirmLabel: 'Remove', danger: true }))) return;
+          await col(hub).remove(rec.id); hub.invalidate();
+        } } }),
+      ]))) : el('p', { class: 'muted', style: { margin: 0 }, text: 'Nothing saved yet. Add a car, give it a name, and start with what the ad shows.' }),
+      all.data?.length > 1 ? el('a', { class: 'btn btn-primary', href: hub.href('compare', all.data.map((r) => r.id).join(',')), text: 'Compare', 'data-field': 'go-compare' }) : null,
+    ]),
+  ]);
+}
+
+function mattersPage(hub) {
+  const fam = famOf(hub, checklistCol(hub));
+  if (fam.loading) return loading();
+  if (fam.error) return failure(fam.error);
+  return el('section', { class: 'stack', 'aria-labelledby': 'matters-title' }, [
+    el('h1', { id: 'matters-title', text: 'What matters to us', style: { margin: 0 } }),
+    ...mattersScreen(lookCtx(hub, draft(KIND, CAR_DEFAULTS), fam.data)).filter(Boolean),
+  ]);
+}
+
+/** What the viewing found, against the price - only arithmetic; what to offer is yours. */
+function repairsPanel(hub, ctx) {
+  const v = ctx.d.values;
+  const t = tally(checksOf(ctx), lookOf(v).answers);
+  if (!t.repairs) return null;
+  const price = Number(v.price) || 0;
+  const counted = (Number(v.repairs) || 0) === t.repairs;
+  return el('div', { class: 'panel stack', 'data-field': 'repairs-noted' }, [
+    el('p', { style: { margin: 0 }, text: `Repairs you noted: ${rand(t.repairs)}.${price ? ` Asking ${rand(price)}; asking less those repairs: ${rand(price - t.repairs)}.` : ''}` }),
+    el('div', { class: 'row' }, [
+      counted ? el('span', { class: 'small muted', text: '✓ Counted in "Repairs after buying"' }) : el('button', { class: 'btn btn-small', type: 'button', text: 'Add', 'data-field': 'repairs-add', title: `Put ${rand(t.repairs)} into "Repairs after buying" - you can still change it there`, on: { click: () => { v.repairs = t.repairs; ctx.d.mine.add('repairs'); ctx.save(true); hub.render(); } } }),
+      counted ? null : el('span', { class: 'small muted', text: 'to "Repairs after buying", so they are counted in what it costs.' }),
+    ]),
+  ]);
+}
+
+function mainScreen(hub, sec = 'financing') {
   const d = draft(KIND, CAR_DEFAULTS);
+  const fam = famOf(hub, checklistCol(hub));
+  if (fam.loading) return loading();
+  if (fam.error) return failure(fam.error);
+  const ctx = lookCtx(hub, d, fam.data);
+  if (sec !== 'financing') {
+    const s = summaryOf(d.values, hub.today());
+    const money = [s.headline ? `${s.headline}.` : 'Financing is not filled in yet.', Number(d.values.repairs) ? `Repairs after buying: ${rand(Number(d.values.repairs))}.` : null].filter(Boolean);
+    return el('section', { class: 'stack', 'aria-labelledby': 'cars-title' }, [
+      el('h1', { id: 'cars-title', text: d.title || 'A car', style: { margin: 0 } }),
+      sectionBar(hub, 'car', sec),
+      ...(STAGES.some((x) => x.id === sec) ? stageScreen(ctx, sec) : storyScreen(ctx, money)),
+    ].filter(Boolean));
+  }
   const answer = el('div', { class: 'stack', 'aria-live': 'polite' });
   const today = hub.today();
   const refresh = () => answer.replaceChildren(...results(d, today));
   const changed = (key) => (key === 'on' || FIELDS.find((f) => f.key === key)?.redraw ? hub.render() : refresh());
   refresh();
   return el('section', { class: 'stack', 'aria-labelledby': 'cars-title' }, [
-    el('h1', { id: 'cars-title', text: 'What will this car really cost?', style: { margin: 0 } }),
+    el('h1', { id: 'cars-title', text: d.title || 'What will this car really cost?', style: { margin: 0 } }),
+    sectionBar(hub, 'car', 'financing'),
+    repairsPanel(hub, ctx),
     el('p', { class: 'muted', style: { margin: 0 }, text: 'Not just the instalment: interest, fees, running costs, and what it is worth - and still owed - when you sell it.' }),
     levelBar(() => hub.render()),
     inputsPanel(FIELDS, d, GROUPS, changed),
@@ -79,7 +174,7 @@ function mainScreen(hub) {
     answer,
     savedPanel(hub, {
       col: col(hub), kind: KIND, d, compareScreen: 'compare',
-      summary: () => { const c = carCost(d.values, today); return c.total == null ? {} : { headline: `${rand(c.total)} over ${months(c.months)} · ${rand(c.instalment)} a month`, total: c.total, instalment: c.instalment }; },
+      summary: () => summaryOf(d.values, today),
       onOpen: (rec) => { loadDraft(KIND, CAR_DEFAULTS, rec); hub.render(); },
     }),
   ]);
@@ -104,7 +199,7 @@ function results(d, today) {
       el('h2', { text: 'What it means', style: { margin: 0 } }),
       ...meaning(c, v).map((t) => el('p', { style: { margin: 0 }, text: t })),
       sums([
-        { label: 'Paid up front', value: -c.upfront, note: `Deposit${c.charger ? ', home charger' : ''}, and the initiation fee if it is not in the loan` },
+        { label: 'Paid up front', value: -c.upfront, note: `Deposit${c.charger ? ', home charger' : ''}${c.repairs ? ', repairs after buying' : ''}, and the initiation fee if it is not in the loan` },
         { label: 'Paid to the bank', value: -c.toBank, note: c.financed ? `${Math.min(c.months, c.termMonths)} instalments${c.balloon && c.months >= c.termMonths ? ' and the balloon' : ''}` : null },
         { label: 'Running costs', value: noRunning ? 'not entered' : -c.running },
         { label: 'The sale price', value: c.resale, note: `What it fetches after ${kept}` },
@@ -117,6 +212,7 @@ function results(d, today) {
         { label: 'Interest', value: -c.interest },
         { label: 'Bank fees', value: -c.fees },
         c.charger ? { label: 'Home charger', value: -c.charger } : null,
+        c.repairs ? { label: 'Repairs after buying', value: -c.repairs } : null,
         { label: 'Running costs', value: noRunning ? 'not entered' : -c.running },
         { label: 'Total', value: -c.total, total: true, note: 'The same total, counted the other way - repaying the loan is paying for the car, not a cost on top of it.' },
       ]),
@@ -285,9 +381,16 @@ function compareScreen(hub, param) {
   if (r.loading) return loading();
   if (r.error) return failure(r.error);
   const items = r.data.map((rec) => ({ title: rec.title, out: carCost({ ...CAR_DEFAULTS, ...rec.values }) })).filter((x) => x.out.total != null);
+  const fam = famOf(hub, checklistCol(hub)).data ?? {};
   const lengths = new Set(items.map((x) => x.out.months));
   return el('section', { class: 'stack', 'aria-labelledby': 'cmp-title' }, [
     el('h1', { id: 'cmp-title', text: 'Side by side', style: { margin: 0 } }),
+    r.data.length >= 2 ? el('div', { class: 'panel stack' }, [
+      el('h2', { text: 'What matters, and what you found', style: { margin: 0 } }),
+      el('p', { class: 'small muted', style: { margin: 0 }, text: 'Your must-haves first, then each section and the repairs you noted. Set what matters in Matters.' }),
+      compareTableOf(r.data.map((x) => x.title || 'Untitled'), compareRows(CAR_CHECKS, fam, r.data)),
+    ]) : null,
+    el('h2', { text: 'The money', style: { margin: 0 } }),
     el('p', { class: 'muted', style: { margin: 0 }, text: `Each saved car or finance option, worked out with today’s maths. Green is cheaper than ${items[0]?.title ?? 'the first'}, orange dearer.` }),
     items.length < 2 ? el('p', { class: 'panel', text: 'Two or more saved options are needed to compare.' }) : compareTable(items, [
       { label: 'Instalment a month', get: (c) => c.instalment, lower: true },
