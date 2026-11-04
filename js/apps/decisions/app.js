@@ -50,7 +50,12 @@ function appliesLine(hub, d) {
 }
 
 const col = (hub) => hub.data.collection('decisions', { summary: decisionSummary, text: decisionText, prefix: 'dec' });
-const all = (hub) => hub.use('all', async () => (await col(hub).list({ limit: 100000 })).items);
+const all = (hub) => hub.use('all', async () => {
+  let { items } = await col(hub).list({ limit: 100000 });
+  // Rebuilt once when written before the index kept creators and videos (D-112).
+  if (items.some((s) => s.ix !== 2)) { await col(hub).rebuildIndex(); ({ items } = await col(hub).list({ limit: 100000 })); }
+  return items;
+});
 
 export function render(hub, route) {
   if (route.sub === 'item') return itemScreen(hub, route.rest[0]);

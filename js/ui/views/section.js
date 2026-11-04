@@ -7,6 +7,7 @@ import { section, appsIn } from '../../sections.js';
 import { setEnabled, MODES } from '../../miniapps.js';
 import { STARTERS } from '../../apps/catalogue.js';
 import { doInstall } from './library.js';
+import { topicLinksPanel } from '../topic-links-panel.js';
 
 // Whether the extra help is unfolded - kept while moving between sections.
 let waysOpen = false;
@@ -52,6 +53,8 @@ export function sectionView(ctx, route) {
         ])]))),
       ]))),
     ]) : null,
+    // The creators and videos the family follows on this topic (D-112). More is not a topic.
+    s.id !== 'more' ? topicLinksPanel(ctx, s, on) : null,
     offered.length ? el('div', { class: 'panel' }, [
       el('h2', { text: `Add to ${s.name}` }),
       el('ul', { class: 'list' }, offered.map((m) => el('li', {}, [

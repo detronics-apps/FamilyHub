@@ -238,7 +238,7 @@ export const goodFor = (tags = []) => MEALS.filter((m) => tags.includes(m) || (m
 export const setGoodFor = (r, meals) => ({ ...r, tags: [...MEALS.filter((m) => meals.includes(m)), ...r.tags.filter((t) => !MEALS.includes(t) && t !== 'supper')] });
 
 /** Index version: an index written before this lacks the facts and feedback below and is rebuilt once. */
-export const SUMMARY_VERSION = 7;
+export const SUMMARY_VERSION = 8;
 
 /** What the index keeps per meal: enough to list, search and filter without opening each one. */
 export function recipeSummary(r) {
@@ -258,6 +258,7 @@ export function recipeSummary(r) {
     ways: (r.variations ?? []).map((x) => ({ id: x.id, name: x.name })),   // to choose which version of it another item uses
     goesWith: r.goesWith ?? [],
     yield: r.yield ?? { qty: null, unit: '' },
+    creators: r.creators ?? [], videos: r.videos ?? [],   // for the topic's Creators and videos (D-112)
   };
 }
 

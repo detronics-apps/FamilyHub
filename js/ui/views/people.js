@@ -9,7 +9,6 @@ import { avatar, confirmAction, modal } from '../common.js';
 import {
   addPerson, updatePerson, removePerson, PERSON_COLOURS, ALLERGENS, DIETS, FOCUS, ageOn, lifeStageAllowed,
   addMeasurement, removeMeasurement, measurementsFor, latestMeasure, personName, ENERGY_GOALS, energyGoalAllowed, STAGES, stageOf, pregnancyInfo,
-  addCreator, updateCreator, removeCreator,
 } from '../../model.js';
 const fmt = (n) => (n === null ? null : String(n).replace(/\.0$/, ''));
 // A record someone may read out at a clinic: always the full date, with the year.
@@ -45,32 +44,6 @@ export function peopleView(ctx) {
       el('p', { class: 'small muted', style: { margin: 0 }, text: 'With a birthday, Family Hub works out whether someone is a baby, toddler, child, teen or adult, and keeps it up to date as they grow. Without one, choose adult or child.' }),
     ]),
     former.length ? el('p', { class: 'small muted', text: `Heights and weights of ${former.length} former member${former.length > 1 ? 's' : ''} are kept in the family’s data.` }) : null,
-    creatorsPanel(ctx),
-  ]);
-}
-
-/**
- * The creators the family follows (D-091) - a channel, a pastor, a cook - each a name and a
- * link. Faith, the Cookbook, Exercise and Finance link items to them; changed here for all.
- */
-function creatorsPanel(ctx) {
-  const list = ctx.app.household.creators ?? [];
-  const name = el('input', { class: 'input', placeholder: 'Name', maxlength: '80', 'aria-label': 'Creator name', style: { maxWidth: '200px' }, 'data-field': 'pc-name' });
-  const url = el('input', { class: 'input', placeholder: 'Channel or site link', 'aria-label': 'Their link', style: { maxWidth: '280px' }, 'data-field': 'pc-url' });
-  const add = () => { if (!name.value.trim()) { name.focus(); return; } ctx.commit(addCreator(ctx.app.household, { name: name.value, url: url.value }).household); };
-  const row = (c) => {
-    const n = el('input', { class: 'input', value: c.name, maxlength: '80', 'aria-label': `Name of ${c.name}`, style: { maxWidth: '200px' }, on: { change: (e) => ctx.commit(updateCreator(ctx.app.household, c.id, { name: e.target.value })) } });
-    const u = el('input', { class: 'input', value: c.url, placeholder: 'Channel or site link', 'aria-label': `Link for ${c.name}`, style: { maxWidth: '280px' }, on: { change: (e) => ctx.commit(updateCreator(ctx.app.household, c.id, { url: e.target.value })) } });
-    return el('li', { class: 'row', 'data-field': `pc:${c.id}` }, [n, u,
-      c.url ? el('a', { class: 'small', href: c.url, target: '_blank', rel: 'noopener noreferrer', text: 'Open' }) : el('span', { class: 'small muted', text: 'no link' }),
-      el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', on: { click: async () => { if (await confirmAction({ title: `Remove ${c.name}?`, text: 'Entries, recipes and plans that named them stop showing the name.', confirmLabel: 'Remove' })) ctx.commit(removeCreator(ctx.app.household, c.id)); } } }),
-    ]);
-  };
-  return el('div', { class: 'panel stack', 'aria-label': 'Creators' }, [
-    el('h2', { text: 'Creators', style: { margin: 0 } }),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: 'People whose work the family follows - a channel, a pastor, a cook. Journal entries, recipes, exercise plans and goals can name them; their videos are added on each item.' }),
-    list.length ? el('ul', { class: 'list' }, list.map(row)) : null,
-    el('div', { class: 'row' }, [name, url, el('button', { class: 'btn', type: 'button', text: 'Add', 'data-field': 'pc-add', on: { click: add } })]),
   ]);
 }
 

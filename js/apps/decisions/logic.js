@@ -55,7 +55,7 @@ export function normaliseDecision(d = {}) {
 }
 
 export function decisionSummary(d) {
-  return { title: d.title, status: d.status, reviewOn: d.reviewOn, outcome: d.outcome, source: d.source, hasAgreement: Boolean(d.agreement), ageFrom: d.ageFrom ?? null, ageTo: d.ageTo ?? null, screenMinutes: d.screenMinutes ?? null, screenMinScore: d.screenMinScore ?? null, careBy: d.careBy ?? null };
+  return { ix: 2, creators: d.creators ?? [], videos: d.videos ?? [], title: d.title, status: d.status, reviewOn: d.reviewOn, outcome: d.outcome, source: d.source, hasAgreement: Boolean(d.agreement), ageFrom: d.ageFrom ?? null, ageTo: d.ageTo ?? null, screenMinutes: d.screenMinutes ?? null, screenMinScore: d.screenMinScore ?? null, careBy: d.careBy ?? null };
 }
 
 /** Where a decision came from, as a category to filter by: 'parenting', 'tickets' or '' (D-095). */

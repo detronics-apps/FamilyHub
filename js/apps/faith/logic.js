@@ -185,7 +185,8 @@ export function normaliseNote(n = {}, today) {
 }
 
 export const noteSummary = (n) => ({
-  ix: 2,
+  ix: 3,
+  creators: n.creators ?? [], videos: n.videos ?? [],   // for the topic's Creators and videos (D-112)
   title: n.heading, kind: n.kind, day: n.day, who: n.who, topics: n.topics, terms: n.terms,
   refs: [...n.passages.map(passageRef), n.passage].filter(Boolean),
   questions: n.questions.map((q) => ({ id: q.id, text: q.text, status: q.status })),

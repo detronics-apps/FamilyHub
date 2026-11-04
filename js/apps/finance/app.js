@@ -114,7 +114,9 @@ function projectionText(g, today) {
 
 function goalsScreen(hub) {
   const r = hub.use('goals', async () => {
-    const { items } = await goals(hub).list({ limit: 1000 });
+    let { items } = await goals(hub).list({ limit: 1000 });
+    // Rebuilt once when written before the index kept creators and videos (D-112).
+    if (items.some((s) => s.ix !== 2)) { await goals(hub).rebuildIndex(); ({ items } = await goals(hub).list({ limit: 1000 })); }
     return Promise.all(items.map(async (s) => normaliseGoal(await goals(hub).get(s.id))));
   });
   if (r.loading) return el('section', { class: 'stack' }, [nav(hub, 'goals'), loading()]);

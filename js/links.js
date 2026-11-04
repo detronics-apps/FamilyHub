@@ -36,6 +36,16 @@ export const videosText = (videos = []) => videos.map((v) => [v.url, v.title].fi
 /** "youtube.com" - what a link shows when it has no title. */
 export const hostOf = (url) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; } };
 
+const topicIds = (v) => [...new Set((Array.isArray(v) ? v : []).filter((t) => typeof t === 'string' && /^[a-z]{2,20}$/.test(t)))];
+
+/** A creator; `topics` are the topics (sections) they are one of the family's general creators for (D-112). */
 export function normaliseCreator(c = {}, newId = () => `cr_${Date.now().toString(36)}`) {
-  return { id: str(c.id, 40) || newId(), name: str(c.name, 80) || 'Someone', url: safeUrl(c.url), note: str(c.note, 300) };
+  return { id: str(c.id, 40) || newId(), name: str(c.name, 80) || 'Someone', url: safeUrl(c.url), note: str(c.note, 300), topics: topicIds(c.topics) };
+}
+
+/** A video kept on a topic (D-112): the link, a title, a note, and who made it if you like. Null without a safe link. */
+export function normaliseVideo(v = {}, newId = () => `vd_${Date.now().toString(36)}`) {
+  const url = safeUrl(v.url);
+  if (!url) return null;
+  return { id: str(v.id, 40) || newId(), url, title: str(v.title, 150), note: str(v.note, 300), topic: topicIds([v.topic])[0] ?? '', creatorId: str(v.creatorId, 40) };
 }

@@ -4,10 +4,11 @@
 // Shape (schema 1):
 //   { schema, household: {id, name, createdAt},
 //     people: [Person], rooms: [Room], chores: [Chore], events: [Event],
-//     measurements: [Measurement], creators: [Creator] }
+//     measurements: [Measurement], creators: [Creator], videos: [Video] }
 //
 // A Creator is someone whose work the family follows - a YouTuber, a pastor, a
-// cook: a name and a link, shared by every app (D-091).
+// cook: a name and a link, shared by every app (D-091), and the topics they are
+// a general creator for. A Video is a link kept on one topic (D-112).
 //
 // A Measurement is one dated height and/or weight for a person - a record of
 // its own, so entries added on two laptops merge without asking.
@@ -20,7 +21,7 @@
 // Personal dashboard preferences are NOT part of this model; see dashboard.js.
 
 import { isDay, toDay, dayDiff, addDays } from './dates.js';
-import { normaliseCreator } from './links.js';
+import { normaliseCreator, normaliseVideo } from './links.js';
 
 export const SCHEMA_VERSION = 1;
 
@@ -78,6 +79,7 @@ export function emptyHousehold(name = 'Our family', now = nowIso()) {
     events: [],
     measurements: [],
     creators: [],
+    videos: [],
   };
 }
 
@@ -275,12 +277,17 @@ export function normaliseHousehold(data) {
   const measurements = list(data.measurements).map(normaliseMeasurement)
     .filter((m) => m.personId && m.day && (m.weightKg !== null || m.heightCm !== null));
   const creators = list(data.creators).map((c) => normaliseCreator(c, () => newId('cr')));
+  const videos = list(data.videos).map((v) => normaliseVideo(v, () => newId('vd'))).filter(Boolean);
+  const topicList = (v) => (Array.isArray(v) ? [...new Set(v.filter((x) => typeof x === 'string'))].slice(0, 200) : []);
   return {
     schema: SCHEMA_VERSION,
     household: {
       id: str(hh.id, 40) || newId('hh'),
       name: str(hh.name, 80) || 'Our family',
       createdAt: typeof hh.createdAt === 'string' ? hh.createdAt : nowIso(),
+      // Creators and videos per topic (D-112): topics whose panel is folded away, and examples removed or made your own - kept only once used.
+      ...(topicList(hh.hiddenTopics).length ? { hiddenTopics: topicList(hh.hiddenTopics) } : {}),
+      ...(topicList(hh.examplesOff).length ? { examplesOff: topicList(hh.examplesOff) } : {}),
     },
     people,
     rooms,
@@ -288,6 +295,7 @@ export function normaliseHousehold(data) {
     events,
     measurements,
     creators,
+    videos,
   };
 }
 
@@ -296,7 +304,7 @@ export function validateHousehold(raw) {
   const errors = [];
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, errors: ['The file does not contain a household.'] };
   if (raw.schema !== undefined && !Number.isInteger(raw.schema)) errors.push('The data version is not a whole number.');
-  for (const key of ['people', 'rooms', 'chores', 'events', 'measurements', 'creators']) {
+  for (const key of ['people', 'rooms', 'chores', 'events', 'measurements', 'creators', 'videos']) {
     if (raw[key] !== undefined && !Array.isArray(raw[key])) errors.push(`"${key}" should be a list.`);
   }
   if (!raw.household && !Array.isArray(raw.chores)) errors.push('No household or chores were found in the file.');

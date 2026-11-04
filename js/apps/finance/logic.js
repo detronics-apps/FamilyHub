@@ -76,7 +76,7 @@ export function normaliseGoal(g = {}) {
   };
 }
 
-export const goalSummary = (g) => ({ title: g.title, kind: g.kind, owner: g.owner, target: g.target, current: g.current });
+export const goalSummary = (g) => ({ ix: 2, title: g.title, kind: g.kind, owner: g.owner, target: g.target, current: g.current, creators: g.creators ?? [], videos: g.videos ?? [] });
 
 const MAX_MONTHS = 600;   // 50 years: past this, "not within 50 years" is the honest answer
 

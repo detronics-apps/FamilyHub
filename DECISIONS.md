@@ -696,6 +696,25 @@ note; claims not settled; and paid accounts never sent to medical aid (they will
 scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
 the year of its own date, not of each payment (marked to split by payment day if that matters).
 
+**D-112 Creators and videos on every topic (owner, 2026-11-04).** Link the source instead of
+copying a video's information into the app. Every topic page (all sections but More) has a
+Creators and videos place under its mini-apps, in the core (`js/ui/topic-links-panel.js`, pure logic
+in `js/topic-links.js`), so no app builds its own. It holds the family's general creators for that
+topic (a creator gains `topics`, so one person can be on several) and the topic's own videos (a new
+household list `videos`: link, title, note, topic, who made it; merged like creators). It also
+gathers every creator and video linked on an item inside the topic's apps - Cookbook recipes,
+Exercise activities, plans, exercises and workouts, Faith entries, Finance goals, Parenting topics
+and activities, Decisions, Dates - from their index summaries (Meals, Faith, Finance and Decisions
+now keep the links there, rebuilt once when the app is next opened), each with where it is linked
+from and a link to open it. Examples, never real people or links: one or two per topic naming the
+kind of creator and what to look for, badged "Example - replace"; "Make mine" fills in your own,
+Remove takes it away, and neither brings it back (`examplesOff`). Remove takes your own creator off
+the topic; one then on no topic and linked on nothing here leaves the family's list (asked first).
+Linked ones are unlinked on the item. Hide folds the place away per topic (`hiddenTopics`, Medical
+included), Show brings it back. The Creators list leaves the People page, which is only the
+family's people. On a phone (the family file) only the general ones show - the apps' records are
+not there. Buttons: Add creator, Add video, Edit, Make mine, Remove, Hide, Show.
+
 **D-111 Homes and Cars: the whole decision, not only the money (owner, 2026-11-04).** Big
 purchases are what bankrupt families: a first home with mould that costs hundreds of thousands to
 fix, and puts the family's health at risk; a second-hand bus with a kinked chassis. Make people

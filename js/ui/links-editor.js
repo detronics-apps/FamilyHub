@@ -34,7 +34,7 @@ export function linksEditor(hub, item) {
         on: { click: () => { item.creators = item.creators.includes(c.id) ? item.creators.filter((x) => x !== c.id) : [...item.creators, c.id]; redraw(); } },
       }))) : null,
       el('div', { class: 'row' }, [name, url, el('button', { class: 'btn btn-small', type: 'button', text: '+ Creator', 'data-field': 'creator-add', on: { click: add } })]),
-      el('p', { class: 'small muted', style: { margin: 0 }, text: 'Someone whose work this comes from - a channel, a pastor, a cook. The list is shared by every app; change it on the People page.' }),
+      el('p', { class: 'small muted', style: { margin: 0 }, text: 'Someone whose work this comes from - a channel, a pastor, a cook. The list is shared by every app; change or remove one in Creators and videos on its topic’s page.' }),
       el('label', { class: 'field__label', text: 'Videos' }),
       videos,
     );

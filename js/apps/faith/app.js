@@ -45,7 +45,7 @@ const nav = (hub, current) => tabs(hub, [
 /** Every entry's index line - rebuilt once when written before entries had headings, questions and topics. */
 const allNotes = (hub) => hub.use('notes', async () => {
   let { items } = await notes(hub).list({ limit: 100000 });
-  if (items.some((n) => n.ix !== 2)) { await notes(hub).rebuildIndex(); ({ items } = await notes(hub).list({ limit: 100000 })); }
+  if (items.some((n) => n.ix !== 3)) { await notes(hub).rebuildIndex(); ({ items } = await notes(hub).list({ limit: 100000 })); }
   return items;
 });
 
