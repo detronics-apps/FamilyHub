@@ -696,6 +696,21 @@ note; claims not settled; and paid accounts never sent to medical aid (they will
 scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
 the year of its own date, not of each payment (marked to split by payment day if that matters).
 
+**D-113 Exercise: no doubled examples, Remove beside Edit, filters under headings (owner, 2026-11-04).**
+The owner saw each starting example twice and could not find how to remove an exercise or a filter.
+- **Doubled examples:** two windows (or a re-render clearing the cache) adding the three examples
+  with the children at the same moment wrote six. Each example now has its own id, so adding them
+  twice writes the same three. Copies already made - unchanged, and in no workout - are taken out
+  once, and the page says how many.
+- **Remove** sits beside Edit on an exercise and on a workout, not only at the foot of the form.
+- **Filters under headings:** Where (body weight, at home, gym, what we have), Type (the family's
+  own tags) and Muscles. **Change** beside Type opens the list: Add type, and Remove - which takes the
+  type off the exercises that have it too (asked first), so its filter really goes. The muscles are
+  the body figure's and stay fixed.
+- **A list inside a list can no longer stop a screen.** `append` in `js/ui/dom.js` flattens nested
+  children and turns numbers into text - the cause of the Cookbook stopping on a filling (0.9.35)
+  was a `[' ', link]` inside the children. Fixed once in the shared helper, for every app.
+
 **D-112 Creators and videos on every topic (owner, 2026-11-04).** Link the source instead of
 copying a video's information into the app. Every topic page (all sections but More) has a
 Creators and videos place under its mini-apps, in the core (`js/ui/topic-links-panel.js`, pure logic

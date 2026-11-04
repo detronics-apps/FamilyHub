@@ -256,9 +256,9 @@ export function kidsMoved(w, exercises, weights, onlyIds = null) {
 
 /** The two the owner asked for, as editable examples - the app adds no exercises of its own. */
 export const KIDS_EXAMPLES = [
-  { name: 'Squats holding your child', works: 'strength', place: 'body', tags: ['With the children'], muscles: { quads: 'main', glutes: 'main', core: 'also', hamstrings: 'also' }, how: ['Hold your child close to your chest'] },
-  { name: 'Dead hang with your child on your feet', works: 'strength', place: 'home', tags: ['With the children'], need: ['Pull-up bar'], seconds: 30, muscles: { forearms: 'main', shoulders: 'main', upperback: 'also', core: 'also' }, how: ['Hang from the bar', 'Your child sits on your feet and holds your legs'] },
-  { name: 'Push-ups with your child on your back', works: 'strength', place: 'body', tags: ['With the children'], muscles: { chest: 'main', triceps: 'main', shoulders: 'also', core: 'also' }, how: ['Your child lies or sits on your back'] },
+  { id: 'exc-kids-squats', name: 'Squats holding your child', works: 'strength', place: 'body', tags: ['With the children'], muscles: { quads: 'main', glutes: 'main', core: 'also', hamstrings: 'also' }, how: ['Hold your child close to your chest'] },
+  { id: 'exc-kids-hang', name: 'Dead hang with your child on your feet', works: 'strength', place: 'home', tags: ['With the children'], need: ['Pull-up bar'], seconds: 30, muscles: { forearms: 'main', shoulders: 'main', upperback: 'also', core: 'also' }, how: ['Hang from the bar', 'Your child sits on your feet and holds your legs'] },
+  { id: 'exc-kids-pushups', name: 'Push-ups with your child on your back', works: 'strength', place: 'body', tags: ['With the children'], muscles: { chest: 'main', triceps: 'main', shoulders: 'also', core: 'also' }, how: ['Your child lies or sits on your back'] },
 ];
 
 // ---- Plan without a week (D-110) -------------------------------------------------------------
@@ -298,4 +298,20 @@ export function workoutCounts(activities, today, personId = null) {
 export function countsLine({ week, month }) {
   if (!week) return month ? `This month: ${month} workout${month === 1 ? '' : 's'}. A new week - any time you have 15 minutes.` : 'A new week - any time you have 15 minutes.';
   return `This week: ${week} workout${week === 1 ? '' : 's'}. This month: ${month}.`;
+}
+
+// Two windows adding the starting examples at the same moment once made two of each (D-113). Each
+// example now has its own id, so that cannot happen again; this finds the copies already made.
+const canon = (v) => JSON.stringify(v, (k, x) => (x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => a.localeCompare(b))) : x));
+/** The ids of unchanged copies of a starting example beyond the one kept - never one in a workout. */
+export function seededCopies(exercises, examples, usedIds = new Set()) {
+  const out = [];
+  for (const e of examples) {
+    const want = canon(exerciseSummary(normaliseExercise(e)));
+    const same = exercises.filter((x) => canon(exerciseSummary(normaliseExercise(x))) === want);
+    if (same.length < 2) continue;
+    const keep = same.find((x) => x.id === e.id) ?? same.find((x) => usedIds.has(x.id)) ?? same[0];
+    out.push(...same.filter((x) => x !== keep && !usedIds.has(x.id)).map((x) => x.id));
+  }
+  return out;
 }

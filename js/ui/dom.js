@@ -48,10 +48,12 @@ function applyAttrs(node, attrs, isSvg = false) {
 }
 
 export function append(parent, children) {
-  const list = Array.isArray(children) ? children : [children];
+  // Nested lists are flattened and numbers become text: `[' ', link]` inside the children, or a
+  // count, once stopped a whole screen ("parameter 1 is not of type 'Node'").
+  const list = (Array.isArray(children) ? children : [children]).flat(Infinity);
   for (const child of list) {
     if (child === null || child === undefined || child === false) continue;
-    parent.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+    parent.appendChild(child instanceof Node ? child : document.createTextNode(String(child)));
   }
   return parent;
 }

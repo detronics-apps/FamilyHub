@@ -9,7 +9,7 @@ import { linksControl, linksView } from '../../ui/links-editor.js';
 import {
   KINDS, WORKS, worksName, amountText, normaliseExercise, exerciseSummary, normaliseWorkout, workoutSummary, workoutTime,
   MUSCLES, PLACES, START_TAGS, PREGNANCY_TAG, KIDS_EXAMPLES, muscleName, filterExercises, workoutMuscles, shade, exerciseShade, kidsLoad, kidsMoved,
-  normaliseActivity, activityFromWorkout, yearCount,
+  normaliseActivity, activityFromWorkout, yearCount, seededCopies,
 } from './logic.js';
 import { bodyFigure } from './body.js';
 
@@ -17,15 +17,25 @@ export const exercisesCol = (hub) => hub.data.collection('exercises', { summary:
 export const workoutsCol = (hub) => hub.data.collection('workouts', { summary: workoutSummary, text: (w) => w.name, prefix: 'wko' });
 
 export const useLibrary = (hub) => hub.use('library', async () => {
-  // The owner's examples with the children, added once - edit or remove them like any other.
+  // The owner's examples with the children, added once - edit or remove them like any other. Each has
+  // its own id, so two windows adding them at the same moment write the same three, not six (D-113).
   if (!await hub.settings.get('examplesAdded', false)) {
-    for (const x of KIDS_EXAMPLES) await exercisesCol(hub).put(normaliseExercise(x));
+    for (const x of KIDS_EXAMPLES) if (!await exercisesCol(hub).get(x.id)) await exercisesCol(hub).put(normaliseExercise(x));
     await hub.settings.set('examplesAdded', true);
   }
   const [x, w, tags, have, roundFrom] = await Promise.all([exercisesCol(hub).list({ limit: 5000 }), workoutsCol(hub).list({ limit: 1000 }),
     hub.settings.get('exerciseTags', START_TAGS), hub.settings.get('homeEquipment', []), hub.settings.get('roundFrom', null)]);
+  let exercises = x.items.map((i) => ({ ...normaliseExercise(i), id: i.id }));
+  const workouts = w.items.map((i) => ({ ...normaliseWorkout(i), id: i.id }));
+  // Copies made before that: unchanged and in no workout - taken out once.
+  if (!await hub.settings.get('examplesTidied', false)) {
+    const copies = seededCopies(exercises, KIDS_EXAMPLES, new Set(workouts.flatMap((wk) => wk.items.map((i) => i.exerciseId))));
+    for (const id of copies) await exercisesCol(hub).remove(id);
+    await hub.settings.set('examplesTidied', true);
+    if (copies.length) { exercises = exercises.filter((e) => !copies.includes(e.id)); hub.ui?.notice?.(`Removed ${copies.length} doubled starting example${copies.length === 1 ? '' : 's'}.`); }
+  }
   return {
-    exercises: x.items.map((i) => ({ ...normaliseExercise(i), id: i.id })), workouts: w.items.map((i) => ({ ...normaliseWorkout(i), id: i.id })),
+    exercises, workouts,
     tags, have, roundFrom, get weights() { return hub.people.weights?.() ?? []; },   // read fresh: a new weight on People shows at once
   };
 });
@@ -48,20 +58,36 @@ function linesControl(values, { add, remove, placeholder }) {
   return { node, get: () => [...box.querySelectorAll('input')].map((i) => i.value.trim()).filter(Boolean) };
 }
 
-/** A list kept in the app's settings - our tags, our equipment - with Add and Remove. */
-function settingsList(hub, key, list, { title, add, remove, placeholder, hint }) {
+/** A list kept in the app's settings - our tags, our equipment - with Add and Remove. `onRemove` may ask first. */
+function listEditor(hub, key, list, { add, remove, placeholder, hint, onRemove = null }) {
   const save = async (next) => { await hub.settings.set(key, next); hub.invalidate(); };
   const input = el('input', { class: 'input', placeholder, maxlength: 40, 'aria-label': add });
   const addIt = () => { const v = input.value.trim(); if (v && !list.includes(v)) save([...list, v]); };
-  return el('details', { class: 'panel more', 'data-field': `list:${key}` }, [el('summary', { text: `${title} (${list.length})` }),
-    hint ? el('p', { class: 'small muted', text: hint }) : null,
+  return el('div', { class: 'stack', style: { gap: '6px' }, 'data-field': `list:${key}` }, [
+    hint ? el('p', { class: 'small muted', style: { margin: 0 }, text: hint }) : null,
     el('ul', { class: 'list' }, list.map((t) => el('li', {}, [el('span', { class: 'list__main', text: t }),
-      el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: remove, on: { click: () => save(list.filter((x) => x !== t)) } })]))),
+      el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: remove, 'data-field': `list-remove:${t}`, on: { click: async () => { if (!onRemove || await onRemove(t)) save(list.filter((x) => x !== t)); } } })]))),
     el('div', { class: 'row', style: { flexWrap: 'nowrap' } }, [input, el('button', { class: 'btn btn-small', type: 'button', text: add, on: { click: addIt } })]),
   ]);
 }
+const settingsList = (hub, key, list, { title, ...opts }) => el('details', { class: 'panel more' }, [el('summary', { text: `${title} (${list.length})` }), listEditor(hub, key, list, opts)]);
+
+/** Remove an exercise - and take it out of the workouts it is in. */
+async function removeExercise(hub, lib, x) {
+  const usedIn = lib.workouts.filter((w) => w.items.some((i) => i.exerciseId === x.id));
+  if (!await confirmAction({ title: `Remove "${x.name}"?`, text: usedIn.length ? `It comes out of ${usedIn.map((w) => w.name).join(', ')} too.` : 'It goes from your exercises.', confirmLabel: 'Remove', danger: true })) return;
+  for (const w of usedIn) await saveRecord(hub, workoutsCol(hub), normaliseWorkout({ ...w, items: w.items.filter((i) => i.exerciseId !== x.id) }));
+  await exercisesCol(hub).remove(x.id); hub.invalidate(); hub.go('exercises');
+}
+
+/** Remove a workout - what was logged from it stays. */
+async function removeWorkout(hub, w) {
+  if (!await confirmAction({ title: `Remove "${w.name}"?`, text: 'It goes from the plan. What you logged from it stays.', confirmLabel: 'Remove', danger: true })) return;
+  await workoutsCol(hub).remove(w.id); hub.invalidate(); hub.go('workouts');
+}
 
 const flt = { tags: [], muscles: [], place: null, have: false };   // the filters, kept while the app is open
+let typesOpen = false;   // the Type list open for changing
 let startWith = null;   // Make workout: the exercises shown, and the tag they were filtered on
 const chip = (text, on, click, field) => el('button', { class: 'chip', type: 'button', text, 'aria-pressed': String(on), 'data-field': field, on: { click } });
 const toggle = (list, v) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
@@ -75,12 +101,26 @@ export function exercisesScreen(hub, lib, nav) {
   const xs = filterExercises(all, { ...flt, tags: flt.tags.filter((t) => tags.includes(t)), have: flt.have ? lib.have : null });
   const set = (k, v) => { flt[k] = v; hub.render(); };
   const any = flt.tags.length || flt.muscles.length || flt.place || flt.have;
-  const filters = el('div', { class: 'panel stack', style: { gap: '8px' }, 'data-field': 'exercise-filters' }, [
-    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Where' }, [
+  // Each kind of filter under its own heading (D-113): where it is done, what type it is, the muscles it works.
+  const group = (label, chips, more = null) => el('div', { class: 'stack', style: { gap: '6px' } }, [
+    el('div', { class: 'row', style: { alignItems: 'center', gap: 'var(--space-2)' } }, [el('strong', { class: 'small', text: label }), more]),
+    el('div', { class: 'chipset', role: 'group', 'aria-label': label }, chips)]);
+  // A type removed comes off every exercise that has it too - otherwise its filter would stay.
+  const dropType = async (t) => {
+    const on = all.filter((x) => x.tags.includes(t));
+    if (on.length && !await confirmAction({ title: `Remove "${t}"?`, text: `It comes off ${on.length === 1 ? on[0].name : `the ${on.length} exercises that have it`} too. The exercises stay.`, confirmLabel: 'Remove', danger: true })) return false;
+    for (const x of on) await saveRecord(hub, exercisesCol(hub), normaliseExercise({ ...x, tags: x.tags.filter((y) => y !== t) }));
+    flt.tags = flt.tags.filter((y) => y !== t);
+    return true;
+  };
+  const filters = el('div', { class: 'panel stack', style: { gap: '10px' }, 'data-field': 'exercise-filters' }, [
+    group('Where', [
       ...Object.entries(PLACES).map(([k, n]) => chip(n, flt.place === k, () => set('place', flt.place === k ? null : k), `f-place:${k}`)),
       chip('What we have', flt.have, () => set('have', !flt.have), 'f-have')]),
-    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Tags' }, tags.map((t) => chip(t, flt.tags.includes(t), () => set('tags', toggle(flt.tags, t)), `f-tag:${t}`))),
-    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Muscles' }, MUSCLES.map(([m, n]) => chip(n, flt.muscles.includes(m), () => set('muscles', toggle(flt.muscles, m)), `f-muscle:${m}`))),
+    group('Type', tags.map((t) => chip(t, flt.tags.includes(t), () => set('tags', toggle(flt.tags, t)), `f-tag:${t}`)),
+      el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: typesOpen ? 'Done' : 'Change', 'data-field': 'types-change', on: { click: () => { typesOpen = !typesOpen; hub.render(); } } })),
+    typesOpen ? listEditor(hub, 'exerciseTags', tags, { add: 'Add type', remove: 'Remove', placeholder: 'e.g. Before work', hint: 'Your own types - offered when you tag an exercise.', onRemove: dropType }) : null,
+    group('Muscles', MUSCLES.map(([m, n]) => chip(n, flt.muscles.includes(m), () => set('muscles', toggle(flt.muscles, m)), `f-muscle:${m}`))),
     el('div', { class: 'row' }, [el('span', { class: 'small muted', style: { flex: '1' }, 'data-field': 'exercise-count', text: `${xs.length} of ${all.length} shown` }),
       any && xs.length ? el('button', { class: 'btn btn-small', type: 'button', text: 'Make workout', 'data-field': 'make-workout', title: 'A new workout with the exercises shown', on: { click: () => { startWith = { ids: xs.map((x) => x.id), name: flt.tags.join(' and ') }; hub.go('workout-new'); } } }) : null,
       any ? el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Clear', on: { click: () => { Object.assign(flt, { tags: [], muscles: [], place: null, have: false }); hub.render(); } } }) : null]),
@@ -101,7 +141,6 @@ export function exercisesScreen(hub, lib, nav) {
         x.tags.length ? el('div', { class: 'small', text: x.tags.join(' · ') }) : null,
       ]),
     ]); })) : el('p', { class: 'panel small muted', text: all.length ? 'None match - clear a filter.' : 'No exercises yet. Add the ones your family does - a stretch, squats, a skipping game.' }),
-    settingsList(hub, 'exerciseTags', lib.tags, { title: 'Our tags', add: 'Add tag', remove: 'Remove', placeholder: 'e.g. Before work', hint: 'Offered when you tag an exercise. Removing one here leaves it on the exercises that have it.' }),
     settingsList(hub, 'homeEquipment', lib.have, { title: 'Our equipment at home', add: 'Add item', remove: 'Remove', placeholder: 'e.g. Dumbbells', hint: '"What we have" shows exercises that need nothing else. Spell items the same as in "What you need".' }),
   ]);
 }
@@ -113,7 +152,8 @@ export function exerciseScreen(hub, lib, id) {
   const usedIn = lib.workouts.filter((w) => w.items.some((i) => i.exerciseId === id));
   return el('section', { class: 'stack', 'aria-label': x.name }, [
     back(hub, 'exercises', '‹ Exercises'),
-    el('div', { class: 'row' }, [el('h1', { text: x.name, style: { margin: 0, flex: '1' } }), el('a', { class: 'btn', href: hub.href('exercise-edit', id), text: 'Edit' })]),
+    el('div', { class: 'row' }, [el('h1', { text: x.name, style: { margin: 0, flex: '1' } }), el('a', { class: 'btn', href: hub.href('exercise-edit', id), text: 'Edit' }),
+      el('button', { class: 'btn btn-quiet', type: 'button', text: 'Remove', 'data-field': 'exercise-remove', on: { click: () => removeExercise(hub, lib, x) } })]),
     el('p', { class: 'small muted', text: [PLACES[x.place], x.works ? worksName(x.works) : null, amountText(x), x.who.length ? `For ${x.who.map((w) => nameOf(people, w)).join(', ')}` : null].filter(Boolean).join(' · ') }),
     x.tags.length ? el('div', { class: 'chipset' }, x.tags.map((t) => el('span', { class: 'chip', text: t }))) : null,
     x.tags.includes(PREGNANCY_TAG) ? el('p', { class: 'small', text: ASK }) : null,
@@ -131,7 +171,6 @@ export function exerciseEdit(hub, lib, id) {
   const x = id ? lib.exercises.find((e) => e.id === id) : null;
   const how = linesControl(x?.how ?? [], { add: 'Add step', remove: 'Remove step', placeholder: 'e.g. Feet hip-width apart' });
   const need = linesControl(x?.need ?? [], { add: 'Add item', remove: 'Remove item', placeholder: 'e.g. A mat' });
-  const usedIn = x ? lib.workouts.filter((w) => w.items.some((i) => i.exerciseId === id)) : [];
   const ms = musclesControl(x?.muscles ?? {});
   const tg = tagsControl([...new Set([...lib.tags, ...lib.exercises.flatMap((e) => e.tags)])], x?.tags ?? []);
   const people = hub.people.list();
@@ -160,11 +199,7 @@ export function exerciseEdit(hub, lib, id) {
         { key: 'who', label: 'Who it is for', type: 'people', more: true, hint: 'None ticked: anyone.' },
         ...(hub.creators ? [{ key: 'links', label: 'Creators and videos', type: 'custom', hint: 'Who you learnt it from, and a video showing it - YouTube, TikTok, any link.', control: () => linksControl(hub, x ?? {}) }] : []),
       ],
-      extra: x ? [el('button', { class: 'btn btn-quiet', type: 'button', text: 'Remove', 'data-field': 'exercise-remove', on: { click: async () => {
-        if (!await confirmAction({ title: `Remove "${x.name}"?`, text: usedIn.length ? `It comes out of ${usedIn.map((w) => w.name).join(', ')} too.` : 'It goes from your exercises.', confirmLabel: 'Remove', danger: true })) return;
-        for (const w of usedIn) await saveRecord(hub, workoutsCol(hub), normaliseWorkout({ ...w, items: w.items.filter((i) => i.exerciseId !== id) }));
-        await exercisesCol(hub).remove(id); hub.invalidate(); hub.go('exercises');
-      } } })] : [],
+      extra: x ? [el('button', { class: 'btn btn-quiet', type: 'button', text: 'Remove', 'data-field': 'exercise-remove', on: { click: () => removeExercise(hub, lib, x) } })] : [],
       onCancel: () => (x ? hub.go('exercise', id) : hub.go('exercises')),
       onSave: async (values) => {
         const { links, works, ...rest } = values;
@@ -253,7 +288,8 @@ export function workoutScreen(hub, lib, id, done) {
   const ex = (eid) => lib.exercises.find((e) => e.id === eid);
   return el('section', { class: 'stack', 'aria-label': w.name }, [
     back(hub, 'workouts', '‹ Workouts'),
-    el('div', { class: 'row' }, [el('h1', { text: w.name, style: { margin: 0, flex: '1' } }), done, el('a', { class: 'btn', href: hub.href('workout-edit', id), text: 'Edit' })]),
+    el('div', { class: 'row' }, [el('h1', { text: w.name, style: { margin: 0, flex: '1' } }), done, el('a', { class: 'btn', href: hub.href('workout-edit', id), text: 'Edit' }),
+      el('button', { class: 'btn btn-quiet', type: 'button', text: 'Remove', 'data-field': 'workout-remove', on: { click: () => removeWorkout(hub, w) } })]),
     el('p', { class: 'small muted', text: [timeText(workoutTime(w)), w.inRound ? 'in this round' : null, w.who.length ? w.who.map((p) => nameOf(people, p)).join(', ') : 'Anyone', w.rest ? `${w.rest} s rest` : null].filter(Boolean).join(' · ') }),
     el('ol', { class: 'panel' }, w.items.map((i) => {
       const e = ex(i.exerciseId);
@@ -319,10 +355,7 @@ export function workoutEdit(hub, lib, id) {
         { key: 'note', label: 'Note', type: 'textarea', more: true },
         ...(hub.creators ? [{ key: 'links', label: 'Creators and videos', type: 'custom', more: true, hint: 'The coach or channel, and the video to follow.', control: () => linksControl(hub, w ?? {}) }] : []),
       ],
-      extra: w ? [el('button', { class: 'btn btn-quiet', type: 'button', text: 'Remove', 'data-field': 'workout-remove', on: { click: async () => {
-        if (!await confirmAction({ title: `Remove "${w.name}"?`, text: 'It goes from the plan. What you logged from it stays.', confirmLabel: 'Remove', danger: true })) return;
-        await workoutsCol(hub).remove(id); hub.invalidate(); hub.go('workouts');
-      } } })] : [],
+      extra: w ? [el('button', { class: 'btn btn-quiet', type: 'button', text: 'Remove', 'data-field': 'workout-remove', on: { click: () => removeWorkout(hub, w) } })] : [],
       onCancel: () => (w ? hub.go('workout', id) : hub.go('workouts')),
       onSave: async (values) => {
         const { links, ...rest } = values;

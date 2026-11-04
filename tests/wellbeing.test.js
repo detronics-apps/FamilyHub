@@ -185,3 +185,17 @@ test('exercise: I have 25 minutes, a round to work through, and tallies that nev
   assert.equal(ex.countsLine({ week: 0, month: 0 }), 'A new week - any time you have 15 minutes.');
   assert.ok(!/missed|behind|overdue|streak/i.test(ex.countsLine({ week: 0, month: 4 })));
 });
+
+test('exercise: the starting examples have their own ids; copies made twice are found, never one in a workout (D-113)', () => {
+  const ids = ex.KIDS_EXAMPLES.map((x) => x.id);
+  assert.equal(new Set(ids).size, 3);
+  // Two of each, as saved (keys sorted, as the folder writes them), one of them changed by the family.
+  const sorted = (o) => JSON.parse(JSON.stringify(o, (k, x) => (x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.entries(x).sort()) : x)));
+  const saved = ex.KIDS_EXAMPLES.flatMap((x, i) => [1, 2].map((n) => ({ ...sorted(ex.normaliseExercise({ ...x, id: undefined })), id: `exc-old${i}${n}` })));
+  saved[5].reps = 12;                                   // the second push-ups was changed: it is the family's now
+  const copies = ex.seededCopies(saved, ex.KIDS_EXAMPLES, new Set(['exc-old02']));
+  // Squats: the copy in a workout is kept. Hang: the first is kept. Push-ups: no longer the same, both stay.
+  assert.deepEqual(copies, ['exc-old01', 'exc-old12']);
+  assert.deepEqual(ex.seededCopies(saved.slice(2, 4), ex.KIDS_EXAMPLES), ['exc-old12']);
+  assert.deepEqual(ex.seededCopies(saved.filter((_, i) => i % 2 === 0), ex.KIDS_EXAMPLES), []);
+});
