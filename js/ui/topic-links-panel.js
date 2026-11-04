@@ -88,7 +88,7 @@ function videoForm(v, creators, onSave) {
  * @param topic the section, { id, name }
  * @param apps  the enabled mini-apps in it ({ id, name })
  */
-export function topicLinksPanel(ctx, topic, apps) {
+export function topicLinksPanel(ctx, topic, apps, { heading = true } = {}) {
   const h = ctx.app.household;
   if (!h) return null;
   if (openTopic !== topic.id) { open = null; openTopic = topic.id; }
@@ -150,7 +150,7 @@ export function topicLinksPanel(ctx, topic, apps) {
   const linkingApps = apps.filter((a) => LINKED[a.id]).map((a) => a.name);
   return el('section', { class: 'panel stack', 'aria-labelledby': 'tl-title', 'data-field': 'topic-links' }, [
     el('div', { class: 'row', style: { justifyContent: 'space-between' } }, [
-      el('h2', { id: 'tl-title', text: 'Creators and videos', style: { margin: 0 } }),
+      heading ? el('h2', { id: 'tl-title', text: 'Creators and videos', style: { margin: 0 } }) : el('span'),
       el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Hide', title: 'Fold this away - Show brings it back', 'data-field': 'tl-hide', on: { click: () => ctx.commit(setTopicHidden(h, topic.id, true)) } }),
     ]),
     el('p', { class: 'small muted', style: { margin: 0 }, text: `Who and what your family follows on ${topic.id === 'us' ? 'being the two of you' : topic.name.toLowerCase()} - link the source instead of copying it in. ${linkingApps.length ? `Anyone or anything linked in ${linkingApps.join(' and ').replace(/ and (?=.* and )/g, ', ')} shows here too.` : ''}`.trim() }),

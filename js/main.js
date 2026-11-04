@@ -28,7 +28,7 @@ import { cachedPackage } from './ui/packages.js';
 import { dashboardView } from './ui/views/dashboard.js';
 import { settingsView } from './ui/views/settings.js';
 import { libraryView } from './ui/views/library.js';
-import { sectionView } from './ui/views/section.js';
+import { sectionView, creatorsView } from './ui/views/section.js';
 import { peopleView } from './ui/views/people.js';
 import { helpView } from './ui/views/help.js';
 import { connectView } from './ui/views/connect.js';
@@ -39,7 +39,7 @@ import { openDoc } from './ui/views/docs.js';
 import { syncChip, syncNotices, phoneButtons } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.22.1';
+export const APP_VERSION = '0.22.2';
 
 const store = createLocalStore(window.localStorage);
 
@@ -340,8 +340,15 @@ function openWho() {
 function routeLabel(route) {
   if (route.name === 'home') return null;
   if (route.name === 'section') return section(route.sub)?.name ?? 'Page';
+  if (route.name === 'creators') return 'Creators and videos';
   return { help: 'How to use', connect: 'Phone and laptop', settings: 'Settings', library: 'Mini-apps', people: 'People' }[route.name]
     ?? app.registry.apps[route.name]?.name ?? starter(route.name)?.manifest.name ?? 'Page';
+}
+
+/** Where a topic opens from Home: its one app, or its page when it has several - the way back from its Creators page. */
+function topicHref(s) {
+  const on = appsIn(s.id, installedManifests()).filter((m) => app.registry.apps[m.id]?.enabled);
+  return on.length === 1 ? `#/${on[0].id}` : `#/section/${s.id}`;
 }
 
 function buildCrumbs(route) {
@@ -349,12 +356,15 @@ function buildCrumbs(route) {
   if (!label) return null;
   // A mini-app sits inside its section; the section is named when it says something new.
   const m = manifestFor(route.name);
-  const s = m ? section(sectionOf(m)) : null;
+  const s = m ? section(sectionOf(m)) : route.name === 'creators' ? section(route.sub) : null;
+  // Every app in a topic links to the topic's Creators and videos (D-113).
+  const creators = m && s && s.id !== 'more';
   return el('nav', { class: 'crumbs', 'aria-label': 'You are here' }, [
     el('a', { href: '#/', text: 'Home' }), ' › ',
-    ...(s && s.name !== label ? [el('a', { href: `#/section/${s.id}`, text: s.name }), ' › '] : []),
+    ...(s && s.name !== label ? [el('a', { href: m ? `#/section/${s.id}` : topicHref(s), text: s.name }), ' › '] : []),
     // On one of its inner screens (a recipe), the mini-app's name leads back to its first screen.
     m && route.sub && route.sub !== m.screens[0]?.id ? el('a', { href: `#/${route.name}`, text: label }) : el('span', { text: label }),
+    creators ? el('a', { class: 'crumbs__extra', href: `#/creators/${s.id}`, text: 'Creators', title: `The creators and videos your family follows on ${s.name}`, 'data-field': 'crumb-creators' }) : null,
   ]);
 }
 
@@ -365,9 +375,9 @@ function buildCrumbs(route) {
 function buildBack(route) {
   if (route.name === 'home' || !app.household) return null;
   const m = manifestFor(route.name);
-  const s = m ? section(sectionOf(m)) : null;
+  const s = m ? section(sectionOf(m)) : route.name === 'creators' ? section(route.sub) : null;
   const [href, to] = m && route.sub && route.sub !== m.screens[0]?.id ? [`#/${route.name}`, routeLabel(route)]
-    : s && s.name !== routeLabel(route) ? [`#/section/${s.id}`, s.name]
+    : s && s.name !== routeLabel(route) ? [m ? `#/section/${s.id}` : topicHref(s), s.name]
       : ['#/', 'Home'];
   return el('nav', { class: 'page-back no-print', 'aria-label': 'Back' }, [el('a', { class: 'btn', href, text: `‹ Back`, title: `Back to ${to}`, 'data-field': 'page-back' })]);
 }
@@ -459,7 +469,7 @@ function renderNow() {
       el('button', { class: 'btn btn-primary', type: 'button', text: 'Get started', on: { click: () => openWelcome(ctx) } }),
     ]);
   } else {
-    const core = { home: dashboardView, settings: settingsView, help: helpView, connect: connectView, library: libraryView, section: sectionView, people: peopleView }[route.name];
+    const core = { home: dashboardView, settings: settingsView, help: helpView, connect: connectView, library: libraryView, section: sectionView, creators: creatorsView, people: peopleView }[route.name];
     const entry = app.registry.apps[route.name];
     sticky = !core && entry?.source === 'folder' && entry.enabled && Boolean(cachedPackage(route.name));
     if (core) view = core(ctx, route, items);

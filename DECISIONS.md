@@ -711,6 +711,14 @@ The owner saw each starting example twice and could not find how to remove an ex
   children and turns numbers into text - the cause of the Cookbook stopping on a filling (0.9.35)
   was a `[' ', link]` inside the children. Fixed once in the shared helper, for every app.
 
+**D-113 Creators is on every app's top line (owner, 2026-11-05).** D-112's place sat only on the
+topic page, and Home opens a topic with one app (Faith, Chores, Exercise, Finance with one app
+turned on) straight into that app, whose top line then does not name the topic - so the place could
+not be found. Every app in a topic (not More) now ends its top line with "Creators", opening
+`#/creators/<topic>`: the topic's Creators and videos on a page of its own, its way back to where
+Home opens the topic. Home still opens a one-app topic straight into its app. The topic page keeps
+the place too. Hide there leaves the link, so Show is always one tap away.
+
 **D-112 Creators and videos on every topic (owner, 2026-11-04).** Link the source instead of
 copying a video's information into the app. Every topic page (all sections but More) has a
 Creators and videos place under its mini-apps, in the core (`js/ui/topic-links-panel.js`, pure logic

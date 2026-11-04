@@ -201,7 +201,7 @@ chassis. (D-111)
 ### Link the source, don't copy it (2026-11-04)
 **How it surfaced:** "So you can like link different videos there instead of trying to copy all the
 info from the video into the app." (D-112)
-**Where it shows:** creators and videos on every topic page, and on recipes, workouts, journal
+**Where it shows:** "Creators" at the end of the top line in every app, the topic's own page, and on recipes, workouts, journal
 entries and decisions.
 
 ---
@@ -284,19 +284,22 @@ year. They appear on the person and on any meal that holds those foods.
 **Why it is there:** the owner asked for "warning against honey and water in the first year of a
 baby's life", and shared the Dietary Guidelines for Americans to plan from. (D-031)
 
-#### Creators and videos on every topic (v0.9.33, v0.15.0 and v0.22.0, 2026-11-01 to 2026-11-04)
+#### Creators and videos on every topic (v0.9.33, v0.15.0, v0.22.0 and v0.22.2, 2026-11-01 to 2026-11-05)
 **What it does:** keeps one family list of the people you learn from.
 - Link them, and specific videos, on a recipe, exercise, workout, journal entry, goal, parenting
   topic, activity, decision or date idea.
-- Each topic page also has its own place for creators. It gathers every link from inside that topic
-  and shows where each one is linked from.
+- Each topic also has its own place for creators, reached from "Creators" at the end of the top line
+  in every app of that topic. It gathers every link from inside that topic and shows where each one
+  is linked from.
 **Why it is there:** "Link different videos there instead of trying to copy all the info from the
 video into the app."
 **How it was decided:**
 - Plain links only, opening in a new tab; nothing is embedded or fetched.
 - Examples name the kind of creator to look for, never real people.
-- Each parent can say whether they agree with a video. (D-091, D-101, D-112)
-**Show it:** Home › Meals, scroll to Creators and videos; then open a recipe's links.
+- Each parent can say whether they agree with a video.
+- At first it sat only on the topic page, which Home skips when a topic has one app, so nobody saw
+  it; the link on every app's top line fixed that. (D-091, D-101, D-112, D-113)
+**Show it:** Home › Faith, tap Creators at the top right; then open a recipe's links in the Cookbook.
 
 ### Chores
 

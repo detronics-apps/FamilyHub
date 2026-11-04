@@ -67,3 +67,19 @@ export function sectionView(ctx, route) {
     el('p', { class: 'small' }, ['To turn a mini-app off or remove it, use ', el('a', { href: '#/library', text: 'Mini-apps' }), '. Its records are kept unless you separately delete them.']),
   ]);
 }
+
+/**
+ * A topic's Creators and videos on a page of its own (#/creators/<topic>), linked from the top
+ * line of every app in the topic - Home opens a one-app topic straight into its app, so the
+ * topic page above is not where people land (D-113).
+ */
+export function creatorsView(ctx, route) {
+  const s = section(route.sub);
+  if (!s || s.id === 'more') return el('section', { class: 'panel empty' }, [el('h1', { text: 'Not found' }), el('a', { class: 'btn', href: '#/', text: 'Home' })]);
+  const reg = ctx.app.registry;
+  const on = appsIn(s.id, ctx.installedManifests()).filter((m) => reg.apps[m.id]?.enabled);
+  return el('section', { class: 'stack', 'aria-labelledby': 'creators-title' }, [
+    el('h1', { id: 'creators-title', text: `${s.name}: creators and videos` }),
+    topicLinksPanel(ctx, s, on, { heading: false }),
+  ]);
+}

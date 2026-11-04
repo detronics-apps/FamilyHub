@@ -217,7 +217,7 @@ export const HOWTOS = [
     'They show on the item as plain links that open in a new tab. The list of creators is shared by every app: change a name or link, or remove one, in Creators and videos on the topic’s page.',
   ] },
   { id: 'topic-creators', title: 'Keep the creators and videos you follow on a topic', steps: [
-    'Open a topic from Home - Faith, Chores, Finance, Meals, Parenting and the rest. Under its mini-apps is Creators and videos.',
+    'In any app - Faith, Chores, Finance, Exercise, Meals, Parenting and the rest - tap "Creators" at the end of the line at the top (Home › …). It opens that topic’s Creators and videos. A topic with several apps shows it on its own page too, under the apps.',
     'Press "Add creator" for a channel, a pastor or a coach, with their link and why you follow them; "Add video" for a single video, with who made it if you like. Link the source instead of copying it into the app.',
     'Everyone and everything linked on an item inside that topic - a recipe, a journal entry, a workout, a decision - shows there too, with where it is linked from. Open it from there.',
     'The cards marked "Example - replace" are placeholders, not real people: "Make mine" fills in your own, "Remove" takes one away for good. Remove takes your own off the topic; "Hide" folds the whole place away, and "Show" brings it back.',
@@ -511,7 +511,7 @@ export const FEATURES = [
   { name: 'Medical notes', where: 'Medical › Notes', what: 'Allergies, regular medicines, conditions, blood group and their doctor, for each person.' },
   { name: 'Us', where: 'Home', what: 'The two of you: Decisions you make as the parents, Dates that fit tonight and your own rule on who looks after the children, and the Goals you share.' },
   { name: 'Who looks after the children', where: 'Parenting › Decide together', what: 'Agree who, if anyone, looks after the children and from what age. The app follows it - with "Only us", nothing ever asks about a babysitter.' },
-  { name: 'Creators and videos', where: 'Every topic, under its mini-apps', what: 'The creators and videos your family follows on that topic - your own, plus every one linked on a recipe, entry, workout or decision inside it, with where. Examples to replace, never real people; add, edit, remove or hide.' },
+  { name: 'Creators and videos', where: 'Every app, "Creators" at the top right', what: 'The creators and videos your family follows on that topic - your own, plus every one linked on a recipe, entry, workout or decision inside it, with where. Examples to replace, never real people; add, edit, remove or hide.' },
   { name: 'Videos to weigh up', where: 'Parenting and Decisions', what: 'Add the creators and videos that explain an activity, a topic or a decision. On a topic or decision, each of you says whether you agree with each video - the other’s view shows once you have given yours.' },
   { name: 'Track', where: 'Parenting', what: 'Start tracking a concern for a child - a temperature every half hour, wees and poos, sleep - with a time and value each time, and a summary for the doctor.' },
   { name: 'Screen time', where: 'Parenting', what: 'A quick log of what was watched and how it left them, each child’s week beside the minutes you agreed, and shows ranked on your own values - each parent rating separately.' },
