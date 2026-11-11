@@ -696,6 +696,41 @@ note; claims not settled; and paid accounts never sent to medical aid (they will
 scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
 the year of its own date, not of each payment (marked to split by payment day if that matters).
 
+**D-114 Timed workouts: one Start, a screen to glance at, then what you did (owner, 2026-11-11).**
+The owner asked for three workouts every family starts with, two of them from TikTok creators the owner
+will link: "while I exercise, I don't want to interact with a phone or device. And if it is required,
+it's to a moderate sense."
+- **How a workout goes** (`style`): **In order** (as before), or one of three timed kinds:
+  - **Rounds in a time** - one round is every exercise with its reps; as many rounds as you can.
+  - **To failure, round and round** - each exercise as many as you can, then the next; at the end start
+    again, until the time is up.
+  - **One a day, in turn** - one exercise a session: as many as you can, rest, again. The next session
+    is the next exercise - counted from the last one logged, never from the calendar, so a missed week
+    just carries on (life happens).
+  A timed workout's minutes are its timer (20 if empty).
+- **The three, added once** with fixed ids (D-113), each changeable and removable:
+  - **The Sydney workout**: 5 pull-ups, 10 push-ups, 15 squats - rounds in 20 minutes.
+  - **20 minutes a day**: pull-ups, push-ups, curls, dips, shrugs, lateral raises - to failure, round and
+    round, for 20 minutes.
+  - **One exercise a day**: pull-ups, dips, push-ups, rows, pike push-ups, squats, lunges, Romanian
+    deadlifts - one a day, in turn. (The owner said "spike push-ups"; taken to be pike push-ups.)
+  The eleven exercises they need are added only where the family has none of that name (theirs is
+  used instead). The two creators' workouts say where to add the creator and the video.
+- **Start** (one press) starts the shared timer - its panel at the top of every page keeps Pause,
+  Cancel and Done - and opens the **timer screen**: the time left very large, what to do in big
+  letters (the round; the order; today's one exercise and the next), the screen kept on (Wake Lock,
+  taken again on coming back), a buzz and a tone a minute before the end, three at the end. The only
+  thing to press on the way is optional: **Round done** counts rounds for you.
+- **Then what you did**: rounds; how many of each, every round added together; or how many of today's
+  exercise (changeable, if you did another). Logged like any workout (muscles, the week, the tallies),
+  with the result kept (`result` on the activity). Finish stops early; Done on a timed workout asks the
+  same, without a timer.
+- **The workout's page** says how it goes and what was logged before: "Last time (4 Nov): 6 rounds.
+  Your best: 7 rounds."; "Pull-ups 14, Push-ups 30 - 44 in all"; "Pull-ups: last 15 (5 Nov), best 16".
+- **A bug found on the way:** the Workouts tab stopped as soon as a family had a workout - it called
+  `timesText` without importing it (since v0.20.0). Fixed, and `tests/imports.test.js` now fails on
+  any screen calling a sibling module's function it never imported (shown to fail with the bug put back).
+
 **D-113 Exercise: no doubled examples, Remove beside Edit, filters under headings (owner, 2026-11-04).**
 The owner saw each starting example twice and could not find how to remove an exercise or a filter.
 - **Doubled examples:** two windows (or a re-render clearing the cache) adding the three examples

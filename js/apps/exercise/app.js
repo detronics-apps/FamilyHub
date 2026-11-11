@@ -10,7 +10,7 @@ import { linksControl, linksView } from '../../ui/links-editor.js';
 import {
   KINDS, IDEAS, MUSCLES, workoutTime, fitsIn, roundStatus, yearCount, timesText, workoutCounts, countsLine, weekMuscles, shade, normaliseActivity, activitySummary, normalisePlan, planSummary, weekMinutes, together, planProgress, goalLine,
 } from './logic.js';
-import { useLibrary, exercisesScreen, exerciseScreen, exerciseEdit, workoutsScreen, workoutScreen, workoutEdit, doneButton } from './library.js';
+import { useLibrary, exercisesScreen, exerciseScreen, exerciseEdit, workoutsScreen, workoutScreen, workoutEdit, doneButton, goScreen } from './library.js';
 import { bodyFigure } from './body.js';
 
 const acts = (hub) => hub.data.collection('activities', { summary: activitySummary, text: (a) => `${KINDS[a.kind]} ${a.note}`, prefix: 'act' });
@@ -28,7 +28,8 @@ export function render(hub, route) {
   if (route.sub === 'exercise-new') return exerciseEdit(hub, lib.data, null);
   if (route.sub === 'exercise-edit') return exerciseEdit(hub, lib.data, id);
   if (route.sub === 'workouts') { const a = recent(hub); return workoutsScreen(hub, lib.data, nav(hub, 'workouts'), a.data ?? []); }
-  if (route.sub === 'workout') { const a = recent(hub); return workoutScreen(hub, lib.data, id, a.data ? doneButton(hub, lib.data.workouts.find((w) => w.id === id), lib.data, a.data, acts(hub)) : null); }
+  if (route.sub === 'workout') { const a = recent(hub); return workoutScreen(hub, lib.data, id, { activities: a.data ?? null, actsCol: acts(hub) }); }
+  if (route.sub === 'go') { const a = recent(hub); return a.data ? goScreen(hub, lib.data, id, a.data, acts(hub)) : el('section', { class: 'stack' }, [loading()]); }
   if (route.sub === 'workout-new') return workoutEdit(hub, lib.data, null);
   if (route.sub === 'workout-edit') return workoutEdit(hub, lib.data, id);
   return weekScreen(hub);

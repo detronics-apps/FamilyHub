@@ -199,3 +199,50 @@ test('exercise: the starting examples have their own ids; copies made twice are 
   assert.deepEqual(ex.seededCopies(saved.slice(2, 4), ex.KIDS_EXAMPLES), ['exc-old12']);
   assert.deepEqual(ex.seededCopies(saved.filter((_, i) => i % 2 === 0), ex.KIDS_EXAMPLES), []);
 });
+
+test('exercise: the three timed workouts start everyone off, using the family\'s own exercise of the same name (D-114)', () => {
+  const fresh = ex.starterPlan([]);
+  assert.equal(fresh.exercises.length, 11);
+  assert.deepEqual(fresh.workouts.map((w) => [w.id, w.style, w.minutes, w.items.length]),
+    [['wko-sydney', 'rounds', 20, 3], ['wko-twenty', 'cycle', 20, 6], ['wko-one-a-day', 'rotation', 20, 8]]);
+  assert.deepEqual(fresh.workouts[0].items.map((i) => i.reps), [5, 10, 15]);                 // 5 pull-ups, 10 push-ups, 15 squats
+  // A family that already has "Push ups" and "RDLs" keeps theirs: nothing doubled, the workouts point at them.
+  const theirs = [{ id: 'exc-ours1', name: 'Push ups' }, { id: 'exc-ours2', name: 'RDLs' }];
+  const plan = ex.starterPlan(theirs);
+  assert.equal(plan.exercises.length, 9);
+  assert.ok(plan.workouts[0].items.some((i) => i.exerciseId === 'exc-ours1'));
+  assert.equal(plan.workouts[2].items.at(-1).exerciseId, 'exc-ours2');
+  // Adding them again once they are there adds nothing new.
+  assert.equal(ex.starterPlan(fresh.exercises).exercises.length, 0);
+  // A workout keeps its style; an unknown one is In order, and only a timed one gets 20 minutes by itself.
+  assert.equal(ex.normaliseWorkout({ style: 'nonsense' }).style, 'list');
+  assert.equal(ex.normaliseWorkout({}).minutes, null);
+  assert.equal(ex.normaliseWorkout({ style: 'rounds' }).minutes, 20);
+});
+
+test('exercise: one a day goes on from the last one done, whenever that was; results are kept and read back (D-114)', () => {
+  const plan = ex.starterPlan([]);
+  const w = { ...plan.workouts[2], id: 'wko-one-a-day' };
+  assert.equal(ex.rotationNext(w, []).exerciseId, 'exc-std-pullups');
+  const log = (day, exerciseId, reps) => ex.normaliseActivity({ workoutId: w.id, day, at: `${day}T07:00:00Z`, result: { exerciseId, reps: { [exerciseId]: reps } } }, day);
+  // Dips two weeks ago, then nothing: today is push-ups - nothing was missed.
+  const acts = [log('2026-10-20', 'exc-std-pullups', 12), log('2026-10-21', 'exc-std-dips', 30)];
+  assert.equal(ex.rotationNext(w, acts).exerciseId, 'exc-std-pushups');
+  assert.equal(ex.goWords(w, plan.exercises, acts).lead, 'Today (3 of 8): Push-ups');
+  // After the last one, it starts at the first again.
+  assert.equal(ex.rotationNext(w, [log('2026-11-01', 'exc-std-rdls', 20)]).exerciseId, 'exc-std-pullups');
+  const lines = ex.resultLines(w, [...acts, log('2026-11-05', 'exc-std-pullups', 15)], plan.exercises);
+  assert.deepEqual(lines, ['Pull-ups: last 15 (5 Nov), best 15', 'Dips: last 30 (21 Oct)']);
+  // Rounds: the last time and your best. Nonsense in a result is dropped.
+  const syd = { ...plan.workouts[0], id: 'wko-sydney' };
+  const r = (day, rounds) => ex.normaliseActivity({ workoutId: syd.id, day, result: { rounds } }, day);
+  assert.deepEqual(ex.resultLines(syd, [r('2026-11-01', 7), r('2026-11-04', 6)], plan.exercises), ['Last time (4 Nov): 6 rounds. Your best: 7 rounds.']);
+  assert.equal(ex.normaliseActivity({ result: { rounds: -2, reps: { a: 'x' } } }, '2026-11-01').result, null);
+  assert.deepEqual(ex.activitySummary(r('2026-11-01', 7)).result, { rounds: 7 });
+  // To failure, round and round: every exercise's total, and all of them together.
+  const cyc = { ...plan.workouts[1], id: 'wko-twenty' };
+  const c = ex.normaliseActivity({ workoutId: cyc.id, day: '2026-11-03', result: { reps: { 'exc-std-pullups': 14, 'exc-std-pushups': 30 } } }, '2026-11-03');
+  assert.deepEqual(ex.resultLines(cyc, [c], plan.exercises), ['Last time (3 Nov): Pull-ups 14, Push-ups 30 - 44 in all.']);
+  assert.match(ex.goWords(syd, plan.exercises).lead, /20 minutes/);
+  assert.deepEqual(ex.goWords(syd, plan.exercises).steps, ['5 Pull-ups', '10 Push-ups', '15 Squats']);
+});

@@ -730,8 +730,37 @@ are planned. (D-108)
 - The year's tally never resets, and an empty week just says "any time you have 15 minutes".
 **Why it is there:** an hour planned today can go to a child who needs you. "Even if I forget to
 exercise for a week, then I just want to continue." (D-110)
+**Changed (v0.23.0, 2026-11-11):** the Workouts tab stopped as soon as a family had a workout. It used
+a word it never imported, from v0.20.0 on. That is fixed, and a test now catches the same mistake on
+any screen. (D-114)
 **The philosophy it shows:** Life happens; the lowest way in.
 **Show it:** Exercise › This week › I have 25 min.
+
+#### Timed workouts: one Start, nothing to touch, then what you did (v0.23.0, 2026-11-11)
+**What it does:** three workouts every family starts with, each changeable and removable:
+- **The Sydney workout:** 5 pull-ups, 10 push-ups and 15 squats; as many rounds as you can in 20
+  minutes.
+- **20 minutes a day:** pull-ups, push-ups, curls, dips, shrugs and lateral raises, each to failure,
+  then the next, round and round for 20 minutes.
+- **One exercise a day:** eight exercises in turn, one a session: pull-ups, dips, push-ups, rows, pike
+  push-ups, squats, lunges and Romanian deadlifts. As many as you can, rest, and again.
+
+**Start** sets a 20-minute timer and shows what to do in big letters. The screen stays on, buzzes a
+minute before the end, and chimes at the end. Then you log what you did: the rounds, how many of
+each, or how many of today's one. The workout's page shows the last time and your best.
+**Why it is there:** "While I exercise, I don't want to interact with a phone or device. And if it is
+required, it's to a moderate sense." The second is from a creator whose "entire thing is it's only 20
+minutes a day". The third "only exercises one type of exercise a day... but he rotates between 8
+exercises". (D-114)
+**How it was decided:**
+- These are a new kind of workout ("How it goes"), so any family can make their own.
+- One a day continues from the last one logged, never from the calendar. A missed week carries on
+  with the next one, not a backlog.
+- The only button on the way is optional: **Round done** counts rounds for you.
+- The two creators are left for the owner to link (Edit › Creators and videos). The app never names
+  real people.
+**The philosophy it shows:** life happens; the lowest way in.
+**Show it:** Exercise › Workouts › The Sydney workout › Start.
 
 #### What each exercise works, on a little figure (v0.20.0, 2026-11-03)
 **What it does:** a front-and-back body figure shades what an exercise, a workout or your week

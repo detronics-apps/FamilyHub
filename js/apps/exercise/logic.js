@@ -16,10 +16,22 @@ const mins = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.min(1440
 const ids = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []);
 
 export function normaliseActivity(a = {}, today) {
-  return { ...a, day: day(a.day) ?? today, kind: KINDS[a.kind] ? a.kind : 'other', minutes: mins(a.minutes), who: ids(a.who), note: str(a.note), ...normaliseLinks(a) };
+  return { ...a, day: day(a.day) ?? today, kind: KINDS[a.kind] ? a.kind : 'other', minutes: mins(a.minutes), who: ids(a.who), note: str(a.note), result: resultOf(a.result), ...normaliseLinks(a) };
 }
 
-export const activitySummary = (a) => ({ title: a.title || KINDS[a.kind], workoutId: a.workoutId, at: a.at, muscles: a.muscles, kidsKg: a.kidsKg, day: a.day, kind: a.kind, minutes: a.minutes, who: a.who, creators: a.creators, videos: a.videos });
+export const activitySummary = (a) => ({ title: a.title || KINDS[a.kind], workoutId: a.workoutId, at: a.at, muscles: a.muscles, kidsKg: a.kidsKg, result: a.result, day: a.day, kind: a.kind, minutes: a.minutes, who: a.who, creators: a.creators, videos: a.videos });
+
+/** What a timed workout logged (D-114): rounds done, reps per exercise, and which exercise it was. Null when none. */
+function resultOf(v) {
+  if (!v || typeof v !== 'object') return null;
+  const n = (x) => (Number.isFinite(Number(x)) && Number(x) > 0 ? Math.min(100000, Math.round(Number(x))) : null);
+  const out = {};
+  if (n(v.rounds)) out.rounds = n(v.rounds);
+  const reps = Object.fromEntries(Object.entries(v.reps && typeof v.reps === 'object' ? v.reps : {}).filter(([, x]) => n(x)).map(([k, x]) => [k, n(x)]));
+  if (Object.keys(reps).length) out.reps = reps;
+  if (typeof v.exerciseId === 'string' && v.exerciseId) out.exerciseId = v.exerciseId;
+  return Object.keys(out).length ? out : null;
+}
 
 export function normalisePlan(p = {}) {
   return {
@@ -114,13 +126,15 @@ export function amountText(a = {}) {
 
 /** A workout: exercises in order, each with its own sets, reps or time; on which days, for whom. */
 export function normaliseWorkout(w = {}) {
+  const style = STYLES[w.style] ? w.style : 'list';
   return {
     ...w,
     name: str(w.name, 120) || 'A workout',
+    style,                                         // how it goes (D-114): in order, or one of the timed kinds
     items: (Array.isArray(w.items) ? w.items : []).filter((i) => i && typeof i.exerciseId === 'string').slice(0, 60)
       .map((i) => ({ exerciseId: i.exerciseId, sets: count(i.sets, 50), reps: count(i.reps, 1000), seconds: count(i.seconds, 7200), distance: str(i.distance, 40) })),
     rest: count(w.rest, 600),                      // seconds between sets and exercises
-    minutes: mins(w.minutes) || null,              // your own figure, over the worked-out one
+    minutes: mins(w.minutes) || (style === 'list' ? null : 20),   // your own figure, over the worked-out one; a timed one's timer
     kind: KINDS[w.kind] ? w.kind : 'other',        // how it is logged when done
     days: ids(w.days).filter((d) => DAY_IDS.includes(d)),
     who: ids(w.who),
@@ -130,7 +144,7 @@ export function normaliseWorkout(w = {}) {
     ...normaliseLinks(w),
   };
 }
-export const workoutSummary = (w) => ({ name: w.name, items: w.items, rest: w.rest, minutes: w.minutes, kind: w.kind, days: w.days, who: w.who, active: w.active, inRound: w.inRound, note: w.note, creators: w.creators, videos: w.videos });
+export const workoutSummary = (w) => ({ name: w.name, style: w.style, items: w.items, rest: w.rest, minutes: w.minutes, kind: w.kind, days: w.days, who: w.who, active: w.active, inRound: w.inRound, note: w.note, creators: w.creators, videos: w.videos });
 
 /**
  * Its length: the timed parts plus the rests between. Parts counted in reps have no time to
@@ -314,4 +328,128 @@ export function seededCopies(exercises, examples, usedIds = new Set()) {
     out.push(...same.filter((x) => x !== keep && !usedIds.has(x.id)).map((x) => x.id));
   }
   return out;
+}
+
+// ---- Timed workouts: rounds in a time, to failure round and round, one a day in turn (D-114) ----
+// The owner's three: Start sets one timer, the screen says what to do, and nothing needs touching
+// until it ends - then you log what you did. Life happens: the one-a-day rotation continues from
+// the last one done, whenever that was, never from the calendar.
+
+/** How a workout goes. "In order" is every workout before; the other three are timed. */
+export const STYLES = {
+  list: 'In order',
+  rounds: 'Rounds in a time',
+  cycle: 'To failure, round and round',
+  rotation: 'One a day, in turn',
+};
+export const STYLE_HINTS = {
+  list: 'Each exercise with its own sets and reps, one after the other.',
+  rounds: 'One round is every exercise with its reps. As many rounds as you can before the time is up; log the rounds.',
+  cycle: 'Each exercise as many as you can, then the next; at the end, start again until the time is up. Log how many of each.',
+  rotation: 'One exercise a session, the next one next time. As many as you can, rest, again, until the time is up. Log how many.',
+};
+export const isTimed = (w) => Boolean(w) && STYLES[w.style] && w.style !== 'list';
+
+const byWhen = (a, b) => String(b.at ?? b.day).localeCompare(String(a.at ?? a.day));
+
+/** One a day, in turn: the one after the last one done (by when, not the calendar), and how far round. */
+export function rotationNext(w, activities) {
+  const order = w.items.map((i) => i.exerciseId);
+  if (!order.length) return null;
+  const last = activities.filter((a) => a.workoutId === w.id && a.result?.exerciseId).sort(byWhen)[0];
+  const index = ((last ? order.indexOf(last.result.exerciseId) : -1) + 1) % order.length;
+  return { index, exerciseId: order[index], of: order.length, nextId: order[(index + 1) % order.length] };
+}
+
+/** What to do, in words, for the screen you glance at while working. */
+export function goWords(w, exercises, activities = []) {
+  const name = (id) => exercises.find((e) => e.id === id)?.name ?? 'A removed exercise';
+  const n = w.minutes ?? 20;
+  const time = n === 1 ? '1 minute' : `${n} minutes`;
+  const up = n === 1 ? 'the minute is up' : `the ${n} minutes are up`;
+  if (w.style === 'rounds') {
+    return { lead: `As many rounds as you can in ${time}.`, steps: w.items.map((i) => `${i.reps ? `${i.reps} ` : ''}${name(i.exerciseId)}`), after: 'Then straight into the next round.' };
+  }
+  if (w.style === 'cycle') {
+    return { lead: `Each one as many as you can, then the next. At the end, start again - until ${up}.`, steps: w.items.map((i) => name(i.exerciseId)), after: '' };
+  }
+  if (w.style === 'rotation') {
+    const next = rotationNext(w, activities);
+    if (!next) return { lead: 'Add exercises to this workout first.', steps: [], after: '' };
+    return { lead: `Today (${next.index + 1} of ${next.of}): ${name(next.exerciseId)}`, today: next.exerciseId, steps: ['As many as you can', 'Rest', `Again - until ${up}`], after: next.of > 1 ? `Next time: ${name(next.nextId)}` : '' };
+  }
+  return { lead: '', steps: w.items.map((i) => `${name(i.exerciseId)} ${amountText(i)}`.trim()), after: '' };
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const shortDay = (d) => `${Number(d.slice(8, 10))} ${MONTHS[Number(d.slice(5, 7)) - 1]}`;   // "5 Nov", the same on every device
+
+/** What was logged before - the last time, and your best - in plain words. Nothing when there is nothing. */
+export function resultLines(w, activities, exercises) {
+  const name = (id) => exercises.find((e) => e.id === id)?.name ?? 'a removed exercise';
+  const done = activities.filter((a) => a.workoutId === w.id && a.result).sort(byWhen);
+  if (w.style === 'rounds') {
+    const r = done.filter((a) => a.result.rounds);
+    if (!r.length) return [];
+    const best = Math.max(...r.map((a) => a.result.rounds));
+    const n = (x) => `${x} round${x === 1 ? '' : 's'}`;
+    return [`Last time (${shortDay(r[0].day)}): ${n(r[0].result.rounds)}.${r.length > 1 ? ` Your best: ${n(best)}.` : ''}`];
+  }
+  if (w.style === 'cycle') {
+    const last = done.find((a) => a.result.reps);
+    if (!last) return [];
+    const parts = w.items.map((i) => i.exerciseId).filter((id) => last.result.reps[id]).map((id) => `${name(id)} ${last.result.reps[id]}`);
+    const all = Object.values(last.result.reps).reduce((t, x) => t + x, 0);
+    return [`Last time (${shortDay(last.day)}): ${parts.join(', ')} - ${all} in all.`];
+  }
+  if (w.style === 'rotation') {
+    return w.items.map((i) => i.exerciseId).flatMap((id) => {
+      const mine = done.filter((a) => a.result.exerciseId === id && a.result.reps?.[id]);
+      if (!mine.length) return [];
+      const best = Math.max(...mine.map((a) => a.result.reps[id]));
+      return [`${name(id)}: last ${mine[0].result.reps[id]} (${shortDay(mine[0].day)})${mine.length > 1 ? `, best ${best}` : ''}`];
+    });
+  }
+  return [];
+}
+
+/** The owner's three timed workouts and the exercises they use - starting points, to change or remove. */
+export const STARTER_EXERCISES = [
+  { id: 'exc-std-pullups', name: 'Pull-ups', works: 'strength', place: 'home', need: ['Pull-up bar'], muscles: { upperback: 'main', biceps: 'main', forearms: 'also', shoulders: 'also', core: 'also' } },
+  { id: 'exc-std-pushups', name: 'Push-ups', works: 'strength', place: 'body', muscles: { chest: 'main', triceps: 'main', shoulders: 'also', core: 'also' } },
+  { id: 'exc-std-squats', name: 'Squats', works: 'strength', place: 'body', muscles: { quads: 'main', glutes: 'main', hamstrings: 'also', core: 'also' } },
+  { id: 'exc-std-curls', name: 'Curls', works: 'strength', place: 'home', muscles: { biceps: 'main', forearms: 'also' } },
+  { id: 'exc-std-dips', name: 'Dips', works: 'strength', place: 'home', muscles: { triceps: 'main', chest: 'main', shoulders: 'also' } },
+  { id: 'exc-std-shrugs', name: 'Shrugs', works: 'strength', place: 'home', muscles: { upperback: 'main', forearms: 'also' } },
+  { id: 'exc-std-lateral', name: 'Lateral raises', works: 'strength', place: 'home', muscles: { shoulders: 'main' } },
+  { id: 'exc-std-rows', name: 'Rows', works: 'strength', place: 'home', muscles: { upperback: 'main', biceps: 'also', forearms: 'also' } },
+  { id: 'exc-std-pike', name: 'Pike push-ups', works: 'strength', place: 'body', muscles: { shoulders: 'main', triceps: 'main', chest: 'also', core: 'also' } },
+  { id: 'exc-std-lunges', name: 'Lunges', works: 'strength', place: 'body', muscles: { quads: 'main', glutes: 'main', hamstrings: 'also', calves: 'also' } },
+  { id: 'exc-std-rdls', name: 'Romanian deadlifts', also: ['RDLs', 'RDL'], works: 'strength', place: 'home', muscles: { hamstrings: 'main', glutes: 'main', lowerback: 'also' } },
+];
+const FROM_CREATOR = 'From a creator on TikTok - add them and the video under Edit, in Creators and videos.';
+export const STARTER_WORKOUTS = [
+  { id: 'wko-sydney', name: 'The Sydney workout', style: 'rounds', minutes: 20, kind: 'gym', items: [['exc-std-pullups', 5], ['exc-std-pushups', 10], ['exc-std-squats', 15]] },
+  { id: 'wko-twenty', name: '20 minutes a day', style: 'cycle', minutes: 20, kind: 'gym', note: FROM_CREATOR,
+    items: [['exc-std-pullups'], ['exc-std-pushups'], ['exc-std-curls'], ['exc-std-dips'], ['exc-std-shrugs'], ['exc-std-lateral']] },
+  { id: 'wko-one-a-day', name: 'One exercise a day', style: 'rotation', minutes: 20, kind: 'gym', note: FROM_CREATOR,
+    items: [['exc-std-pullups'], ['exc-std-dips'], ['exc-std-pushups'], ['exc-std-rows'], ['exc-std-pike'], ['exc-std-squats'], ['exc-std-lunges'], ['exc-std-rdls']] },
+];
+
+/**
+ * What adding the starting workouts writes: each exercise only when the family has none of that
+ * name already (theirs is used instead), and each workout pointing at whichever exercise it is.
+ * Fixed ids, so adding them twice writes the same records (D-113).
+ */
+export function starterPlan(exercises) {
+  const key = (t) => String(t).toLowerCase().replace(/[^a-z]/g, '');
+  const theirs = new Map(exercises.map((x) => [key(x.name), x.id]));
+  const idOf = {}; const add = [];
+  for (const x of STARTER_EXERCISES) {
+    const own = [x.name, ...(x.also ?? [])].map((t) => theirs.get(key(t))).find(Boolean);
+    idOf[x.id] = own ?? x.id;
+    if (!own) { const { also, ...rest } = x; add.push(normaliseExercise(rest)); }
+  }
+  const workouts = STARTER_WORKOUTS.map(({ items, ...w }) => normaliseWorkout({ ...w, items: items.map(([id, reps]) => ({ exerciseId: idOf[id], reps })) }));
+  return { exercises: add, workouts };
 }
