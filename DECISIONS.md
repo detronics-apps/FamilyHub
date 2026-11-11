@@ -696,6 +696,28 @@ note; claims not settled; and paid accounts never sent to medical aid (they will
 scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
 the year of its own date, not of each payment (marked to split by payment day if that matters).
 
+**D-115 How to use, against the skill's checklist (owner, 2026-11-11).** The owner asked for the
+how-to section to meet everything the detronics-app skill requires. It already had the search in your
+own words, how-tos, questions, idea tiles, feature tiles and a numbered welcome that opens again from
+"New here?". Added or brought up to date:
+- **How-tos by group:** without a search, a picker of every how-to under its group (Getting started,
+  Phones and Drive, Chores and tasks, Family life and us, Meals and shopping, Money and big decisions,
+  Parenting, Health and exercise, Faith, Holidays and places, Creators and videos) with its steps
+  below; with a search, every match opened. A test keeps every how-to in exactly one group.
+- **New how-tos:** timed workouts, your own exercises and workouts, routines, the planner, the fever
+  plan, dates and goals - and everyday words for them (amrap, rotation, tiktok, chore chart, date
+  night, temperature).
+- **Questions brought up to date:** medical records were decided against (the old answer said "not
+  yet"); why there is no Not now; a missed week of exercise; how a timed workout counts; why
+  Parenting never says what is best.
+- **The ideas behind it** now say what the app stands for: life happens, the time you have, you
+  decide, your data is yours, a starting point. **The time you have**: Plan, Check and Do, each with
+  what it offers - the process in words.
+- **The welcome** opens with the purpose (busy families; not done today, then tomorrow) and its
+  last step names Exercise and Meals as well as Chores.
+- **No achievements** (owner, 2026-11-11): the skill asks for them, but the family's rule against badges
+  and scores (D-097, D-110) wins. Recorded in REJECTED.md.
+
 **D-114 Timed workouts: one Start, a screen to glance at, then what you did (owner, 2026-11-11).**
 The owner asked for three workouts every family starts with, two of them from TikTok creators the owner
 will link: "while I exercise, I don't want to interact with a phone or device. And if it is required,

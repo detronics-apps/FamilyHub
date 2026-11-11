@@ -26,13 +26,17 @@ export const SEARCH_ALIASES = {
   task: ['to do', 'todo', 'errand', 'repair', 'project', 'job'],
   'bring in data': ['import', 'csv', 'spreadsheet', 'excel', 'google sheets', 'template', 'upload', 'existing', 'already have'],
   recipe: ['meal', 'meals', 'cooking', 'food', 'dinner', 'menu'],
-  creator: ['youtuber', 'youtube', 'channel', 'pastor', 'preacher', 'sermon', 'video', 'videos', 'link', 'links', 'source', 'influencer', 'coach'],
+  creator: ['youtuber', 'youtube', 'tiktok', 'tiktoker', 'instagram', 'channel', 'pastor', 'preacher', 'sermon', 'video', 'videos', 'link', 'links', 'source', 'influencer', 'coach'],
+  workout: ['gym', 'training', 'train', 'circuit', 'amrap', 'as many rounds', 'to failure', 'reps', 'sets', 'push-ups', 'pull-ups', 'squats', 'stopwatch', 'session'],
+  'one exercise a day': ['rotation', 'rotate', 'in turn', 'one a day', 'split', 'next exercise'],
+  'fever plan': ['temperature', 'when to go to the doctor', 'hospital', 'medicine chart', 'emergency', 'prepare'],
+  'date ideas': ['date night', 'romance', 'couple', 'spouse', 'partner', 'go out'],
   'sample meals': ['starter', 'default', 'burgers', 'pizza', 'filling', 'sauce', 'variant', 'version', 'goes with', 'porridge', 'pap'],
   'import a recipe': ['paste', 'website', 'copy', 'convert', 'cups', 'grams', 'ounces', 'tbsp', 'units', 'ap flour', 'match'],
   variation: ['version', 'versions', 'variant', 'alteration', 'different way', 'swap', 'sauce', 'cheese sauce', 'without', 'instead of'],
   'shopping list': ['groceries', 'shop', 'buy', 'ingredients'],
   trip: ['holiday', 'vacation', 'travel', 'packing', 'itinerary'],
-  routines: ['bedtime', 'leaving the house', 'morning', 'checklist', 'kids tasks', 'get ready', 'tick off', 'responsibilities'],
+  routines: ['bedtime', 'leaving the house', 'morning', 'checklist', 'kids tasks', 'get ready', 'tick off', 'responsibilities', 'chore chart'],
   planner: ['calendar', 'schedule', 'sport', 'after school', 'concert', 'week', 'activities', 'diary'],
   dates: ['date night', 'date', 'romance', 'couple', 'spouse', 'husband', 'wife', 'partner', 'time together', 'us'],
   goals: ['dreams', 'bucket list', 'together', 'plans', 'someday', 'goal'],
@@ -369,6 +373,39 @@ export const HOWTOS = [
     'Look back in the Journal tab with filters, and go through your questions in the Questions tab. The Bible guide shows where to start reading on a topic, with the passages and questions you have logged on it underneath.',
     'In the Bible guide, press "+ Notes" under Why or What it is about to keep your own notes on a book.',
   ] },
+  { id: 'timed-workout', title: 'Do a timed workout without touching the phone', steps: [
+    'Open Exercise, then Workouts. The Sydney workout, 20 minutes a day and One exercise a day are there to start with.',
+    'Open one and press Start. A 20-minute timer starts and the screen shows what to do in big letters - put the phone down.',
+    'The screen stays on. It buzzes a minute before the end and chimes at the end. Round done (on the Sydney workout) is there if you want it to count rounds for you.',
+    'At the end, say what you did: the rounds, how many of each exercise, or how many of today’s one, then press "Log it". The workout shows your last time and your best.',
+    'One exercise a day goes on from the last one you did - miss a week and it simply carries on. Make your own timed workout with Add workout, under "How it goes".',
+  ] },
+  { id: 'workouts', title: 'Keep your own exercises and put them into workouts', steps: [
+    'In Exercise, open Exercises and press "Add exercise": how to do it, how much, what you need, and the muscles it works.',
+    'Filter by Where, Type and Muscles. "Change" beside Type adds or removes your own types.',
+    'In Workouts, press "Add workout", pick the exercises in order and say how long it takes.',
+    'On This week, tap "I have 25 min" (or 15, 45, 60) to see what fits. Remove sits beside Edit on any exercise or workout.',
+  ] },
+  { id: 'routines', title: 'Let the children tick off their own routine', steps: [
+    'In Parenting, open Routines. Start "Leaving the house" or "Bedtime", or make your own.',
+    'The screen splits into a column per child, with pictures for those who cannot read yet.',
+    'Each child ticks off their own tasks until it says "Ready!". There are no races between them.',
+  ] },
+  { id: 'planner', title: 'See the family’s week in the planner', steps: [
+    'In Parenting, open Planner.',
+    'Add sport, after-school activities or concerts for a child or a parent - weekly ones run until the end of term.',
+    'Trips, planned activities and planned dates show alongside. Two things at the same time for different people are pointed out.',
+  ] },
+  { id: 'fever-plan', title: 'Write your fever plan before you need it', steps: [
+    'In Parenting, open Agreements, then Be prepared.',
+    'For each age band, write from what temperature, for how long, what you do, and when you go straight to a doctor. The app never fills in the numbers.',
+    'Print it or keep it on the phone. If you are wondering whether to go to the doctor, go.',
+  ] },
+  { id: 'dates', title: 'Plan a date, and keep the goals you share', steps: [
+    'On the home screen, open Us.',
+    'In Dates, add ideas with the time, cost and energy they take, and where the children are. Both of you score them.',
+    'In Goals, keep what you are working towards together. Decisions you make as parents live here too.',
+  ] },
   { id: 'modes', title: 'Plan, check or do', steps: [
     'Under the mini-apps on each section page, open "Extra help". It groups what you can do by the time you have: Plan (time to sit and think), Check (a quick look, or writing something down) and Do (20 minutes to an hour to get things done).',
     'For example in Meals: plan the next meals; check what is in a food or write down a meal to try; cook today’s meals.',
@@ -493,7 +530,11 @@ export const FAQS = [
   { q: 'Where did Health go?', a: 'Its food side is now the Meals section (Meal Assistant and Calorie Checker) and its activity side is Exercise. If you had added appointments, they are kept in your folder: Mini-apps lists Health under "Uninstalled, records kept".' },
   { q: 'Where do the rates in the money calculators come from?', a: 'Each one says so beside it: Yours (you typed it), a reference figure with its source and date (like the prime rate from the Reserve Bank), Illustrative (an example - check your own quote), or Assumption. Reference figures go out of date: use the rate on your own quote.' },
   { q: 'Does Finance connect to the bank or give advice?', a: 'No. You enter what you want to track. Projections are arithmetic on your own amounts and rates, assumed to stay the same - not predictions and not financial advice.' },
-  { q: 'Can we keep medical records?', a: 'Not yet. Medical details need private records and access rules first, which are planned for the Medical mini-app. The food details and heights and weights on the People page are visible to everyone in the family.' },
+  { q: 'Can we keep medical records?', a: 'No - that was decided against. Medical keeps doctors’ accounts and claims, and a few notes per person (allergies, medicines, blood group, their doctor), visible to the whole family.' },
+  { q: 'Why is there no "Not now" or snooze?', a: 'Putting something off to a date hides it on the days you might have had time. A chore simply stays until it is done; a weekly one shows all week. Life happens - nothing piles up and nothing scolds.' },
+  { q: 'What if we miss a week of exercise?', a: 'Nothing is missed. Workouts are not given days, the year’s tallies never reset, and One exercise a day carries on with the next one after the last you did. Open it when you have time and press Start.' },
+  { q: 'How does a timed workout count?', a: 'It logs the rounds, how many of each exercise, or how many of today’s one - whatever you enter at the end - and the time the timer ran. The workout then shows your last time and your best. Nothing is scored against anyone.' },
+  { q: 'Why does Parenting not say what is best?', a: 'Where people genuinely disagree, the app only asks "Have you considered...?" and lists the approaches. Each of you writes your own reasons, then you decide together. If you are wondering whether to see a doctor, go.' },
   { q: 'Which music works?', a: 'Your own files: mp3, m4a, aac, ogg, opus, wav, flac or webm (what plays depends on the browser). Spotify and other streaming services are not supported - their rules are different. Nothing is uploaded; only the track playing is held in memory.' },
   { q: 'Are the times exact?', a: 'No. Minutes and effort are rough guesses the family sets. A chore with no time set is still shown, labelled "Time not estimated".' },
   { q: 'Is choosing my name a login?', a: 'No. Anyone using this device can choose any profile. Real accounts and private records will come before anything sensitive, like medical details, is added.' },
@@ -611,3 +652,35 @@ export const ABOUT = {
     ['What it will not do', 'Streaks, scores, leaderboards, or piling missed work onto tomorrow. Missed tasks are information about workload and systems.'],
   ],
 };
+
+/** The how-to picker's groups, in the order a family meets them. Every how-to belongs to one. */
+export const HOWTO_GROUPS = [
+  ['Getting started', ['people', 'who', 'demo', 'dash', 'modes', 'miniapps', 'import', 'measures']],
+  ['Phones and Drive', ['drive', 'phone', 'reconnect', 'conflict', 'backup']],
+  ['Chores and tasks', ['quick', 'add', 'later', 'music']],
+  ['Family life and us', ['ticket', 'meeting', 'decision', 'dates']],
+  ['Meals and shopping', ['meals', 'shopping', 'portions', 'meal-to-recipe', 'assistant', 'plan-meal', 'ingredients', 'recipe-import', 'meal-samples', 'variations', 'rate', 'calories']],
+  ['Money and big decisions', ['budget', 'moneyplan', 'children', 'job', 'home', 'beforebuy', 'ownrent', 'ourbond', 'selltobuy', 'car']],
+  ['Parenting', ['parenting', 'fever-plan', 'activities', 'routines', 'planner', 'track', 'screentime']],
+  ['Health and exercise', ['medical', 'exercise', 'timed-workout', 'workouts']],
+  ['Faith', ['reading', 'journal']],
+  ['Holidays and places', ['trip', 'places']],
+  ['Creators and videos', ['creators', 'topic-creators']],
+];
+export const groupOf = (id) => HOWTO_GROUPS.find(([, ids]) => ids.includes(id))?.[0] ?? null;
+
+/** The ideas the whole app is built on - once these make sense, the rest follows. */
+export const IDEAS = [
+  { name: 'Life happens', what: 'Not done today? Then tomorrow. Nothing scolds, nothing piles up, and coming back after a busy week is as easy as starting.' },
+  { name: 'The time you have', what: 'Plan when you can sit and think, check in a spare minute, do when you have twenty. Every section offers all three.' },
+  { name: 'You decide', what: 'The app shows the options, the numbers and the questions people forget. It never says what is best for your family.' },
+  { name: 'Your data is yours', what: 'No sign-in and no server. It lives in your own Google Drive folder, or only on this device.' },
+  { name: 'A starting point', what: 'Samples, topics and checklists show the way. Change, remove or add to every one of them.' },
+];
+
+/** The time you have, and what each section offers for it (D-045). */
+export const LANES = [
+  { name: 'Plan', when: 'When you can sit and think', what: ['Plan the meals for the week, then put them on days', 'Agree a parenting question together', 'Compare homes, cars or job offers', 'Put workouts together'] },
+  { name: 'Check', when: 'A spare minute', what: ['What is in a food, or a meal you saw', 'How the week is going', 'Write down a ticket or a question before it is forgotten'] },
+  { name: 'Do', when: 'Twenty minutes to an hour', what: ['Do something now in Chores', 'Cook today, or At the shop', 'I have 25 minutes, then Start a workout', 'Play now with the children'] },
+];

@@ -57,14 +57,14 @@ export function openWelcome(ctx) {
     ])]),
     el('li', {}, [el('div', {}, [
       el('strong', { text: 'Whenever you have a few minutes' }),
-      el('span', { class: 'small', text: 'Open Chores. It starts on "Do something now": say how much time and energy you have, and it suggests something that fits. Do one, or more, or stop - all are fine.' }),
+      el('span', { class: 'small', text: 'Chores starts on "Do something now" and suggests something that fits your time and energy. Exercise has "I have 25 minutes" and a timer you can put down. Meals has Cook today. Do one, or more, or stop - all are fine.' }),
     ])]),
   ];
 
   const { close } = modal({
     title: 'Welcome to Family Hub',
     body: [
-      el('p', { text: 'A calm place to share the everyday load of running a home. Capture quickly, think deeply later, and keep the useful outcome.' }),
+      el('p', { text: 'For busy families: meals, the house, money, parenting, faith and staying fit - in one calm place. Not done today? Then tomorrow. Nothing scolds and nothing piles up.' }),
       el('ol', { class: 'welcome-steps' }, steps),
       el('p', { class: 'small muted', text: 'Everything stays in this browser on this device. Nothing is uploaded.' }),
     ],

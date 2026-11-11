@@ -41,6 +41,9 @@ A decision that says what the app stands for is also written up as a principle i
   stays, because timing a job shows how long it really takes. (D-080)
 - **Workouts given fixed days** (2026-11-03). A missed day must not pile up. An optional day may come
   later, but never required (BACKLOG.md). (D-110)
+- **Achievements for finding features** (2026-11-11). The skill asks for them, but even friendly
+  badges sit against the family's rule: notice, never judge. Feature tiles and the guide do the job.
+  (D-115)
 - **Streaks, badges, "missed", "behind" and scores for a child** (2026-11-02 to 2026-11-03). Notice,
   never judge. Life happens. (D-097, D-110)
 

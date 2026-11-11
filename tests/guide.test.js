@@ -57,3 +57,24 @@ test('Phone and laptop: every part, both phones, and what can go wrong (D-063)',
   assert.ok(CONNECT.problems.some((x) => /Files app/.test(x.q)), 'Google Drive missing from the iPhone Files app');
   assert.ok(HOWTOS.find((h) => h.id === 'phone').steps.some((s) => /Phone and laptop/.test(s)), 'the how-to points to the page');
 });
+
+test('every how-to sits in exactly one group of the picker, and every group names real how-tos', async () => {
+  const { HOWTO_GROUPS, groupOf, IDEAS, LANES } = await import('../js/guide.js');
+  const listed = HOWTO_GROUPS.flatMap(([, ids]) => ids);
+  assert.equal(new Set(listed).size, listed.length, 'a how-to in two groups');
+  assert.deepEqual(HOWTOS.filter((h) => !groupOf(h.id)).map((h) => h.id).filter((id) => !CONNECT.parts.some((p) => p.id === id)), []);
+  for (const id of listed) assert.ok(HOWTOS.some((h) => h.id === id), `${id} is not a how-to`);
+  assert.ok(IDEAS.some((i) => i.name === 'Life happens'));
+  assert.deepEqual(LANES.map((l) => l.name), ['Plan', 'Check', 'Do']);
+});
+
+test('the newer parts are found in everyday words (D-115)', () => {
+  const find = (q) => HOWTOS.filter((h) => guideMatches(howtoText(h), q)).map((h) => h.id);
+  assert.ok(find('amrap').includes('timed-workout'));
+  assert.ok(find('tiktok').includes('creators'));
+  assert.ok(find('rotation').includes('timed-workout'));
+  assert.ok(find('chore chart').includes('routines'));
+  assert.ok(find('date night').includes('dates'));
+  assert.ok(find('temperature').includes('fever-plan'));
+  assert.match(FAQS.find((f) => /medical records/.test(f.q)).a, /decided against/);
+});

@@ -248,6 +248,19 @@ phone, and then my wife also sends from hers? Will we lose my changes?"
 able to do it on their computers as well, to set up their own Family Hub." (D-063)
 **Show it:** the link at the bottom of every page.
 
+#### How to use, in your own words (v0.2 to v0.23.1, 2026-10-25 to 2026-11-11)
+**What it does:**
+- Search in your own words: "amrap", "date night" or "postpone" all find the right page.
+- Pick any how-to by its group, and the steps show below it.
+- Questions answered, the ideas the app stands for, Plan · Check · Do, and the features worth knowing.
+- The welcome tells the app's story in numbered first steps, and opens again from "New here?".
+**Why it is there:** the target is an app that needs no support: a stranger reaches a real result with
+nobody to ask. The owner asked for the how-to section to meet everything the skill requires (2026-11-11).
+**How it was decided:**
+- Every new feature adds its tile, and an answer if it changes a number.
+- Achievements were left out, because the family decided against badges and scores. (D-115)
+**Show it:** the "How to use" link at the bottom of any page.
+
 #### Your own dashboard, by dragging (v0.9.0, 2026-10-27)
 **What it does:** drag a row to put your apps in your own order. Two apps reach the top in two
 drags.
