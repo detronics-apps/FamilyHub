@@ -8,10 +8,23 @@ import { toCSV, parseCSV } from '../../csv.js';
 
 export const STAGES = [
   { id: 'online', label: 'Online', title: 'Before you enquire', says: 'What the ad, its photos and the map already show. Some of these you can answer without a viewing.' },
-  { id: 'questions', label: 'Questions', title: 'Before the viewing', says: 'To ask the agent, seller or dealer. Print them, or export them to fill in and read back in.' },
+  { id: 'questions', label: 'General', title: 'General questions, before the viewing', says:'To ask the agent, seller or dealer. Print them, or export them to fill in and read back in.' },
   { id: 'viewing', label: 'Viewing', title: 'At the viewing', says: 'Inspect and take notes. A worry with a cost can be negotiated into the price; a walk-away is a walk-away.' },
   { id: 'feeling', label: 'Feeling', title: 'The feeling', says: 'Sit together and answer how you feel about each one.' },
 ];
+
+/**
+ * Where one home or car got to (D-116): after each stage you decide to go on or stop there - a choice, never a gate,
+ * so a later stage stays open. `go` = { [stageId]: 'go' | 'stop' }. The feeling's "go" is the overall yes.
+ */
+export function whereItStands(go = {}) {
+  const stop = STAGES.find((s) => go[s.id] === 'stop');
+  if (stop) return { stopped: stop, text: stop.id === 'feeling' ? 'Decided: walk away' : `Stopped after ${stop.label}` };
+  if (go.feeling === 'go') return { done: true, text: 'Decided: buy it' };
+  const passed = STAGES.filter((s) => go[s.id] === 'go');
+  const next = STAGES.find((s) => go[s.id] !== 'go');
+  return { next, text: passed.length ? `Through ${passed.map((s) => s.label).join(', ')} - next: ${next.label}` : '' };
+}
 
 /** Marks: inspection-like stages, and the feeling. */
 export const MARKS = { ok: 'OK', worry: 'Worry', walk: 'Walk away' };

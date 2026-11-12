@@ -65,7 +65,7 @@ const GROUPS = {
 export function render(hub, route) {
   if (route.sub === 'compare') return compareScreen(hub, route.rest[0] ?? '');
   if (route.sub === 'matters') return mattersPage(hub);
-  if (route.sub === 'car') return mainScreen(hub, route.rest[0] ?? 'financing');
+  if (route.sub === 'car') return mainScreen(hub, route.rest[0] ?? 'story');
   return listScreen(hub);
 }
 
@@ -92,7 +92,7 @@ function listScreen(hub) {
   const all = loadAll(hub);
   const fam = famOf(hub, checklistCol(hub));
   const today = hub.today();
-  const start = () => { loadDraft(KIND, CAR_DEFAULTS, { values: {}, title: '', kind: KIND }); hub.go('car', 'online'); };
+  const start = () => { loadDraft(KIND, CAR_DEFAULTS, { values: {}, title: '', kind: KIND }); hub.go('car'); };
   return el('section', { class: 'stack', 'aria-labelledby': 'cars-title' }, [
     el('h1', { id: 'cars-title', text: 'Cars', style: { margin: 0 } }),
     el('p', { class: 'muted', style: { margin: 0 }, text: 'Each car in one place: what the ad shows, the questions to ask, the viewing and test drive, how it feels, and what it really costs. Buying second-hand, a problem found early can be negotiated into the price, or be a reason to walk away. Save each one, then compare any of them on all of it.' }),

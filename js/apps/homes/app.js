@@ -33,7 +33,7 @@ const yrs = (y) => `${y} year${y === 1 ? '' : 's'}`;
 export function render(hub, route) {
   if (route.sub === 'compare') return compareScreen(hub, route.rest[0] ?? '');
   if (route.sub === 'matters') return mattersPage(hub);
-  if (['home', 'bond', 'rentbuy', 'selltobuy', 'ourbond'].includes(route.sub)) return homeScreen(hub, route.rest[0] ?? 'financing');
+  if (['home', 'bond', 'rentbuy', 'selltobuy', 'ourbond'].includes(route.sub)) return homeScreen(hub, route.rest[0] ?? (route.sub === 'home' ? 'story' : 'financing'));
   return listScreen(hub);
 }
 

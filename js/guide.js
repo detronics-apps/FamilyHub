@@ -335,10 +335,10 @@ export const HOWTOS = [
     'Press Compare and tick any of your homes - a house against a house, against a rental, or against keeping the one you own. Each has the same money every month; whoever needs less invests the difference.',
   ] },
   { id: 'beforebuy', title: 'Before you buy a home or car second-hand', steps: [
-    'Open Finance, then Homes or Cars, and add one. Each has Online, Questions, Viewing, Feeling, Financing and Story.',
-    'Start with Online: what the ad, its photos and the map show. Some checks can be answered from the photos - massive water damage needs no viewing. Give it a name so what you note is kept.',
-    'Questions: Print them (or Save as PDF) for the agent, seller or dealer, or Export them to fill in and Import them back. At the viewing, mark each check OK, Worry or Walk away, with a note and a cost to fix.',
-    'Feeling: sit together and answer Yes, Unsure or No. In Matters, mark what is a must-have for your household, and change, remove or add checks.',
+    'Open Finance, then Homes or Cars, and add one. It opens on its Story - give it a name there. Then Financing, and the questions in the order you meet them: Online, General, Viewing, Feeling.',
+    'Start with Online: what the ad, its photos and the map show. Some checks can be answered from the photos - massive water damage needs no viewing. At the end of each stage, Go on or Stop here: a walk-away or a must-have not met is a reason to stop, and the Story says where it got to. Nothing is locked - a later stage is always there.',
+    'General: the questions for the agent, seller or dealer. Print them (or Save as PDF) for the agent, seller or dealer, or Export them to fill in and Import them back. At the viewing, mark each check OK, Worry or Walk away, with a note and a cost to fix.',
+    'Feeling: sit together and answer Yes, Unsure or No, then Buy it or Walk away. In Matters, mark what is a must-have for your household, and change, remove or add checks.',
     'Repairs you noted show in Financing - Add puts them in the costs. Story brings it all together, with what is still unanswered; Compare puts your homes or cars side by side on all of it.',
   ] },
   { id: 'ownrent', title: 'Own or rent - with your own numbers', steps: [

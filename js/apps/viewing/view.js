@@ -9,9 +9,11 @@ import { el, download } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
 import { rand } from '../finance/pod.js';
 import { saveRecord } from '../kit.js';
-import { STAGES, MARKS, FROM, MATTERS, marksFor, checksFor, removedSeeds, tally, stageLine, sheetCSV, readSheet, ownId } from './checks.js';
+import { STAGES, MARKS, FROM, MATTERS, marksFor, checksFor, removedSeeds, tally, stageLine, sheetCSV, readSheet, ownId, whereItStands } from './checks.js';
 
-export const SECTIONS = [...STAGES.map((s) => ({ id: s.id, label: s.label })), { id: 'financing', label: 'Financing' }, { id: 'story', label: 'Story' }];
+// In the order you go through them (D-116): the story is the hub (the name, and where it stands), then the money,
+// then the questions stage by stage - Online, General, Viewing, Feeling.
+export const SECTIONS = [{ id: 'story', label: 'Story' }, { id: 'financing', label: 'Financing' }, ...STAGES.map((s) => ({ id: s.id, label: s.label }))];
 
 export const lookOf = (values) => {
   const l = values.look ?? {};
@@ -42,11 +44,48 @@ async function saveFam(ctx, fam) {
   ctx.hub.invalidate();
 }
 
-/** Online · Questions · Viewing · Feeling · Financing · Story - one home or car in each. */
+/** Story · Financing · Online · General · Viewing · Feeling - one home or car in each. The story is where it opens. */
 export function sectionBar(hub, screen, current) {
   return el('nav', { class: 'chipset no-print', 'aria-label': 'Sections', 'data-field': 'sections' }, SECTIONS.map((s) => el('a', {
-    class: 'chip', href: hub.href(screen, s.id === 'financing' ? null : s.id), 'aria-current': s.id === current ? 'page' : null, 'data-field': `sec:${s.id}`, text: s.label,
+    class: 'chip', href: hub.href(screen, s.id === 'story' ? null : s.id), 'aria-current': s.id === current ? 'page' : null, 'data-field': `sec:${s.id}`, text: s.label,
   })));
+}
+
+/**
+ * The end of a stage: go on to the next, or stop here. A choice, never a gate - the next stage stays open either way.
+ * Its criteria are the stage's own walk-aways and must-haves not met.
+ */
+function goOnPanel(ctx, look, stageId, t, checks) {
+  const { hub } = ctx;
+  const i = STAGES.findIndex((s) => s.id === stageId);
+  const next = STAGES[i + 1];
+  const go = look.go ?? {};
+  const said = go[stageId];
+  const walks = checks.filter((x) => look.answers[x.id]?.mark === 'walk');
+  const unmet = t.must.missing.filter((x) => x.stage === stageId);
+  const reasons = [
+    walks.length ? `Walk away: ${walks.map((x) => x.text).join('; ')}.` : null,
+    unmet.length ? `Must-have not met: ${unmet.map((x) => x.text).join('; ')}.` : null,
+  ].filter(Boolean);
+  const choose = (k) => {
+    const g = { ...go };
+    if (g[stageId] === k) delete g[stageId]; else g[stageId] = k;
+    look.go = g;
+    ctx.save(true);
+    if (g[stageId] === 'go' && next) hub.go(ctx.screen, next.id);
+    else if (g[stageId]) hub.go(ctx.screen);
+    else hub.render();
+  };
+  const chip = (k, text) => el('button', { class: 'chip', type: 'button', 'aria-pressed': String(said === k), 'data-field': `go:${stageId}:${k}`, text, on: { click: () => choose(k) } });
+  return el('div', { class: 'panel stack', 'data-field': 'go-on' }, [
+    el('h3', { text: next ? `Go on to ${next.label}?` : `Overall: this ${ctx.word}?`, style: { margin: 0 } }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: reasons.length ? reasons.join(' ') : `Nothing here says stop${t.stages[stageId].answered ? '' : ' yet - nothing is answered'}.` }),
+    el('div', { class: 'chipset', role: 'group', 'aria-label': next ? `Go on to ${next.label}` : 'Overall decision' }, [
+      chip('go', next ? 'Go on' : 'Buy it'),
+      chip('stop', next ? 'Stop here' : 'Walk away'),
+      el('a', { class: 'btn btn-small btn-quiet', href: hub.href(ctx.screen), text: 'Story', title: 'Everything about it, and where it stands', 'data-field': 'to-story' }),
+    ]),
+  ]);
 }
 
 export function checksOf(ctx) {
@@ -131,12 +170,14 @@ export function stageScreen(ctx, stageId) {
       el('h2', { text: stage.title, style: { margin: 0 } }),
       el('p', { class: 'small muted', style: { margin: 0 }, text: stage.says }),
       el('p', { class: 'small', style: { margin: 0 }, 'data-field': 'stage-tally', text: `Answered ${stageLine(st)}.${t.walks.length ? ` Your walk-aways so far: ${t.walks.map((x) => x.text).join('; ')}.` : ''}` }),
+      whereItStands(look.go).stopped ? el('p', { class: 'small', style: { margin: 0 }, 'data-field': 'stopped', text: `${whereItStands(look.go).text} - this stage is still here if you want it.` }) : null,
       stageId === 'online' ? whereBox(ctx, look) : null,
       ctx.rule && (stageId === 'online' || stageId === 'feeling') ? ruleCard(ctx) : null,
       stageId === 'questions' || stageId === 'viewing' ? sheetBar(ctx, [stageId], stageId === 'questions' ? 'Questions' : 'Checklist') : null,
     ]),
     el('ul', { class: 'panel stack', style: { listStyle: 'none', paddingLeft: 'var(--space-3)', margin: 0 } }, checks.map(row)),
     stageId === 'feeling' ? wordsBox(ctx, look) : null,
+    goOnPanel(ctx, look, stageId, t, checks),
     el('div', { class: 'panel stack' }, [
       el('h3', { text: 'Add a check', style: { margin: 0 } }),
       el('div', { class: 'row' }, [newText, el('button', { class: 'btn', type: 'button', text: 'Add', 'data-field': 'own-add', on: { click: add } })]),
@@ -261,7 +302,9 @@ export function storyParts(ctx, money = []) {
   const side = (s, name) => (s.total ? [{ title: `${name}: ${s.met.length} of ${s.total} met`, lines: [
     ...s.met.map((x) => `✓ ${x.text}${said(x)}`), ...s.missing.map((x) => `✗ ${x.text}${said(x)}`), ...s.unknown.map((x) => `? ${x.text}${a(x).mark === 'unsure' ? ' (unsure)' : ' (not answered yet)'}`)] }] : []);
   const rule = ctx.rule ? ruleText(ctx) : null;
+  const w = whereItStands(look.go);
   return [
+    w.text ? { title: w.text, lines: STAGES.filter((s) => look.go?.[s.id]).map((s) => `${s.label}: ${look.go[s.id] === 'go' ? (s.id === 'feeling' ? 'buy it' : 'went on') : 'stopped here'}`) } : null,
     ...side(t.must, 'Must-haves'),
     ...side(t.nice, 'Nice to have'),
     t.walks.length ? { title: `You marked ${t.walks.length} walk-away${t.walks.length === 1 ? '' : 's'}`, lines: t.walks.map((x) => `${x.text}${said(x)}`) } : null,
@@ -277,8 +320,11 @@ export function storyParts(ctx, money = []) {
 
 export function storyScreen(ctx, money) {
   const parts = storyParts(ctx, money);
+  const w = whereItStands(lookOf(ctx.d.values).go);
   return [
     needsName(ctx),
+    w.next ? el('div', { class: 'row no-print' }, [el('a', { class: 'btn btn-primary', href: ctx.hub.href(ctx.screen, w.next.id), 'data-field': 'story-next', text: `Next: ${w.next.label} ▶` }),
+      el('span', { class: 'small muted', text: w.next.title })]) : null,
     el('p', { class: 'muted', style: { margin: 0 }, text: `Everything you noted about this ${ctx.word}, in one place - from your own marks, with no verdict. What is not answered yet is at the end: that is where a nasty surprise after buying would come from.` }),
     sheetBar(ctx, STAGES.map((s) => s.id), 'Report', parts),
     ...parts.map((p) => el('div', { class: 'panel stack', 'data-field': 'story-part' }, [
@@ -302,6 +348,7 @@ export function compareRows(seed, fam, recs) {
     rows.push({ head: true, label: `${MATTERS[kind]}s`, cells: per.map((p) => `${p.t[kind].met.length} of ${list.length} met`) });
     for (const x of list) rows.push({ label: x.text, cells: per.map((p) => sign(p, x)) });
   }
+  rows.push({ head: true, label: 'Where it stands', cells: per.map((p) => whereItStands(p.look.go).text || 'not decided yet') });
   rows.push({ head: true, label: 'Checks', cells: per.map((p) => `${p.t.answered} of ${p.t.total} answered`) });
   for (const s of STAGES) rows.push({ label: s.label, cells: per.map((p) => stageLine(p.t.stages[s.id])) });
   rows.push({ label: 'Walk-aways', cells: per.map((p) => (p.t.walks.length ? p.t.walks.map((x) => x.text).join('; ') : 'none')) });

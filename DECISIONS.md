@@ -696,6 +696,16 @@ note; claims not settled; and paid accounts never sent to medical aid (they will
 scheme's tax certificate). A list of what to gather, and plainly not tax advice. An entry counts in
 the year of its own date, not of each payment (marked to split by payment day if that matters).
 
+**D-116 Homes and Cars in the order you go through them (owner, 2026-11-12).** The owner: the
+sections felt the wrong way round. The Story is the hub where the name goes in first, so it comes
+first and is where a home or car opens; then Financing; then the questions in the order you meet
+them - Online, General (was Questions), Viewing, Feeling. Each stage is a step you may not need to
+take: after it, **Go on** or **Stop here** (`look.go`), with that stage's walk-aways and must-haves
+not met shown as the reasons. Feeling ends in **Buy it** or **Walk away**. The Story's first part,
+and a Compare row, say where it stands ("Stopped after Online", "Through Online, General - next:
+Viewing"). It is a choice, not a gate: every stage stays open, in line with structure that helps
+and never forces. Old links to Bond, Rent or buy and the like still open on Financing.
+
 **D-115 How to use, against the skill's checklist (owner, 2026-11-11).** The owner asked for the
 how-to section to meet everything the detronics-app skill requires. It already had the search in your
 own words, how-tos, questions, idea tiles, feature tiles and a numbered welcome that opens again from

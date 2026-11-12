@@ -45,9 +45,9 @@ test('the sheet goes out and comes back in, without wiping or overwriting', () =
   assert.ok(!/Brakes/.test(csv));
   // Filled in elsewhere: a new answer, a clash, an empty row, and a row nobody knows.
   const back = csv
-    .replace(/(c-q-accident,Questions,[^\r\n]*?),,,,/, '$1,Walk away,Front-end repaired,8000,Asked')
+    .replace(/(c-q-accident,General,[^\r\n]*?),,,,/, '$1,Walk away,Front-end repaired,8000,Asked')
     .replace(/Moving overseas/, 'Needs a bigger car')
-    + '\r\nzz,Questions,Something else,OK,,,\r\n';
+    + '\r\nzz,General,Something else,OK,,,\r\n';
   const r = readSheet(back, list, answers);
   assert.deepEqual(r.taken['c-q-accident'], { mark: 'walk', note: 'Front-end repaired', cost: 8000, from: 'asked' });
   assert.equal(r.clashes.length, 1);
@@ -63,4 +63,15 @@ test('repairs after buying a car are paid up front and counted in its cost', asy
   const a = carCost(v); const b = carCost({ ...v, repairs: 9000 });
   assert.equal(b.upfront - a.upfront, 9000);
   assert.equal(Math.round(b.total - a.total), 9000);
+});
+
+test('after each stage: go on or stop there - the story says where it got to', async () => {
+  const { whereItStands } = await import('../js/apps/viewing/checks.js');
+  assert.deepEqual(STAGES.map((s) => s.label), ['Online', 'General', 'Viewing', 'Feeling']);
+  assert.equal(whereItStands({}).text, '');
+  assert.equal(whereItStands({}).next.id, 'online');
+  assert.equal(whereItStands({ online: 'go' }).text, 'Through Online - next: General');
+  assert.equal(whereItStands({ online: 'go', questions: 'stop' }).text, 'Stopped after General');
+  assert.equal(whereItStands({ online: 'go', questions: 'go', viewing: 'go', feeling: 'go' }).text, 'Decided: buy it');
+  assert.equal(whereItStands({ online: 'go', questions: 'go', viewing: 'go', feeling: 'stop' }).text, 'Decided: walk away');
 });

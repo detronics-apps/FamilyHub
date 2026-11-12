@@ -196,7 +196,7 @@ child. Exercise keeps yearly tallies that never reset.
 the questions and prevent a life-changing decision versus being too ashamed to ask these simple
 questions." The owner's examples were mould behind fresh paint, and a second-hand bus with a kinked
 chassis. (D-111)
-**Where it shows:** Homes and Cars cover Online, Questions, Viewing, Feeling, Financing and Story.
+**Where it shows:** Homes and Cars cover Story, Financing, Online, General, Viewing and Feeling.
 
 ### Link the source, don't copy it (2026-11-04)
 **How it surfaced:** "So you can like link different videos there instead of trying to copy all the
@@ -559,14 +559,18 @@ kept for renovating.
 there's also lawyers' fees and the hidden fees for buying the house." (D-074)
 
 #### Homes and Cars: the whole decision, not only the money (v0.21.0, 2026-11-04)
-**What it does:** each home or car has six sections:
+**What it does:** each home or car has six sections, in the order you go through them (v0.23.2):
+- **Story:** where it opens - the name, where it stands, and everything noted.
+- **Financing.**
 - **Online:** what the ad and the map show.
-- **Questions:** for the agent, seller or dealer.
+- **General:** the questions for the agent, seller or dealer.
 - **Viewing:** mould, roofs, cracks, plumbing and electrics; on a car, accident damage and the roof
   of a tall vehicle.
 - **Feeling.**
-- **Financing.**
-- **Story.**
+
+Each question stage ends with **Go on** or **Stop here** (Feeling: **Buy it** or **Walk away**),
+with that stage's walk-aways and unmet must-haves as the reasons to weigh. The Story and Compare say
+where each one got to. A choice, never a lock: a later stage stays open.
 
 Each check is marked OK, Worry or Walk away, with a note and a cost to fix. Print the questions,
 export them, fill them in, and import them back.
