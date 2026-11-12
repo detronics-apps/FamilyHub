@@ -706,6 +706,19 @@ and a Compare row, say where it stands ("Stopped after Online", "Through Online,
 Viewing"). It is a choice, not a gate: every stage stays open, in line with structure that helps
 and never forces. Old links to Bond, Rent or buy and the like still open on Financing.
 
+**D-117 What each side is worth; Bond over; Compare always there (owner, 2026-11-12).** The owner wanted
+each side's whole worth over time, not only the gap: "your total worth that you have at that time in rent
+and investments versus in buying", the year one passes the other, and what each has paid out - and to
+slide the bond from 20 years to 14, "that's how I bought my house".
+- **What each side is worth** on every home's page (worthPanel): buying - the home if sold, less what is
+  owed, selling costs and tax, plus what it invested; renting - its investments, day-one cash included;
+  each year one passes the other marked and said ("Renting instead is worth more at first; buying from May
+  2030"); each side's paid out so far dashed. The same sameMoney series as the main graph, so they agree.
+- **Bond over**: a slider from 5 to 30 years beside Sell after, with what the bond then costs a month and
+  when it is paid off.
+- **Compare** is always on the Homes list; with fewer than two saved it is greyed and says that a home you
+  might buy already compares itself with renting a similar home.
+
 **D-116 Sell after, what it would take, and the example from moneywithcarla (owner, 2026-11-12).**
 The owner put moneywithcarla's post (a R11,5m Oranjezicht 2-bed against R45K rent) through Homes and asked
 for the day-one cash invested, a break-even graph with tolerance bands, any sell year (12,5 too), the post

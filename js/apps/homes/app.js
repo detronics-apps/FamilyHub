@@ -134,7 +134,11 @@ function listScreen(hub) {
           } } }),
         ]);
       })) : el('p', { class: 'muted', style: { margin: 0 }, text: 'Nothing saved yet. Add a home above, fill it in, and save it with a name.' }),
-      all.data?.length > 1 ? el('a', { class: 'btn btn-primary', href: hub.href('compare'), text: 'Compare', 'data-field': 'go-compare', title: 'Compare any of these - buy against buy, against renting, or keeping ours' }) : null,
+      el('div', { class: 'row', style: { alignItems: 'center' } }, [
+        all.data?.length > 1 ? el('a', { class: 'btn btn-primary', href: hub.href('compare'), text: 'Compare', 'data-field': 'go-compare', title: 'Compare any of these - buy against buy, against renting, or keeping ours' })
+          : el('button', { class: 'btn', type: 'button', text: 'Compare', disabled: true, 'data-field': 'go-compare', title: 'Save two or more homes to compare them' }),
+        el('span', { class: 'small muted', style: { flex: '1' }, text: all.data?.length > 1 ? 'Any of these side by side: what each would leave you, year by year, on the same money.' : 'Save two or more homes to compare them side by side. A home you might buy already compares itself with renting a similar home - fill in "Rent for a similar home".' }),
+      ]),
     ]),
   ]);
 }
@@ -527,6 +531,7 @@ function results(hub, d) {
     cmp.values ? sellAfterPanel(hub, d, cmp, H, p) : null,
     range?.explore,
     range?.moves,
+    cmp.values ? worthPanel(cmp, p, span, xLabel, [payoff, todayMark, { x: H, label: 'You sell' }]) : null,
     cmp.values && p.kind === 'buy' ? breakEvenPanel(hub, v, today, H, xLabel) : null,
     situationsPanel(hub, v, sit, H, xLabel, span, [payoff, todayMark]),
     costSplit(p, N, span, xLabel, [payoff, todayMark], v, cmp),
@@ -961,8 +966,16 @@ function sellAfterPanel(hub, d, cmp, H, p) {
   const label = el('strong', { 'data-field': 'sell-after-years', text: `${yrsNow} years (${yearOf(yrsNow)})` });
   const slider = el('input', { type: 'range', min: '1', max: '30', step: '0.5', value: String(yrsNow), 'aria-label': 'Sell after, in years', 'data-field': 'sell-after', style: { flex: '1 1 220px' },
     on: { input: (e) => { label.textContent = `${e.target.value} years (${yearOf(Number(e.target.value))})`; }, change: (e) => { v.stayYears = Number(e.target.value); d.mine.add('stayYears'); hub.render(); } } });
+  // Bond over (D-117): slide 20 years to 14 and watch when the home pulls ahead.
+  const bondYrs = v.kind === 'buy' && p.bond ? Math.round(n(v.termYears)) || 20 : null;
+  const bondLabel = el('strong', { 'data-field': 'bond-over-years', text: `${bondYrs} years` });
+  const bondRow = bondYrs ? el('div', { class: 'row', style: { alignItems: 'center', gap: 'var(--space-2)' } }, [el('span', { text: 'Bond over' }),
+    el('input', { type: 'range', min: '5', max: '30', step: '1', value: String(bondYrs), 'aria-label': 'Bond over, in years', 'data-field': 'bond-over', style: { flex: '1 1 220px' },
+      on: { input: (e) => { bondLabel.textContent = `${e.target.value} years`; }, change: (e) => { v.termYears = Number(e.target.value); d.mine.add('termYears'); hub.render(); } } }), bondLabel]) : null;
   return el('div', { class: 'panel stack', 'data-field': 'sell-after-panel' }, [
     el('div', { class: 'row', style: { alignItems: 'center', gap: 'var(--space-2)' } }, [el('span', { text: 'Sell after' }), slider, label]),
+    bondRow,
+    bondYrs ? el('p', { class: 'small muted', style: { margin: 0 }, text: `A shorter bond costs more each month - on the same money the other side invests that difference - and is paid off sooner, after which the whole home is yours and the instalment is yours to invest. Bond now ${rand(p.bond.minNow)} a month, paid off ${ymName(p.bond.paidOff)}.` }) : null,
     el('p', { style: { margin: 0 }, text: `${(diff >= 0 ? A : B)} leaves about ${rand(Math.abs(diff))} more if you sell then. Slide it to any year, half years too - every graph and figure on the page reads at it.` }),
   ]);
 }
@@ -1032,5 +1045,45 @@ function examplePanel(hub, d, today) {
       act ? el('button', { class: 'btn btn-small', type: 'button', text: act[0], 'data-field': `ex-${name.split(' ')[0].toLowerCase()}`, on: { click: act[1] } }) : el('span', { class: 'small muted', text: 'counted now' }),
     ]))),
     el('p', { class: 'small muted', style: { margin: 0 }, text: 'General information, not financial advice - the post says the same.' }),
+  ]);
+}
+
+/* ------------------------------------------------ what each side is worth (D-117) */
+
+/**
+ * Each side's whole worth, not only the gap: buying - the home if sold (less what is owed, selling
+ * costs and tax) plus what it has invested; renting - its investments, the day-one cash included.
+ * The year one passes the other is marked; paid out so far, each side, is dashed beside it.
+ */
+function worthPanel(cmp, p, span, xLabel, marks) {
+  const [A, B] = cmp.names;
+  const a = cmp.m.wealthA; const b = cmp.m.wealthB; const alt = cmp.altPlan;
+  const end = Math.min(span, a.length, b.length);
+  const pts = (get) => Array.from({ length: Math.floor(end / 3) }, (_, i) => (i + 1) * 3).map((t) => [t, get(t)]);
+  const paid = (plan, t) => (plan.months[t - 1] ?? plan.months.at(-1)).paid;
+  // Where the lead changes hands, each time.
+  const crossings = [];
+  for (let t = 2; t <= end; t += 1) {
+    const s0 = Math.sign(a[t - 2].wealth - b[t - 2].wealth); const s1 = Math.sign(a[t - 1].wealth - b[t - 1].wealth);
+    if (s1 && s0 !== s1) crossings.push({ t, ahead: s1 > 0 ? A : B });
+  }
+  const ym = (t) => p.months[Math.min(p.months.length, t) - 1]?.ym ?? '';
+  const first = Math.sign(a[0].wealth - b[0].wealth) >= 0 ? A : B;
+  const words = crossings.length
+    ? `${first} is worth more at first; ${crossings.map((c) => `${c.ahead.toLowerCase()} from ${ymName(ym(c.t))}`).join(', then ')}.`
+    : `${Math.sign(a[end - 1].wealth - b[end - 1].wealth) >= 0 ? A : B} is worth more all the way to ${ym(end).slice(0, 4)}.`;
+  const at = end - 1;
+  return el('div', { class: 'panel stack', 'data-field': 'worth' }, [
+    el('h2', { text: 'What each side is worth', style: { margin: 0 } }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: `${A}: the home if it were sold - its value less what is still owed, selling costs and tax - plus whatever is invested along the way. ${B}: its investments, starting with the cash buying would have needed up front. Whoever pays less in a month invests the difference.` }),
+    el('p', { style: { margin: 0 }, 'data-field': 'worth-words', text: words }),
+    lineChart([
+      { name: A, points: pts((t) => a[t - 1].wealth) },
+      { name: B, points: pts((t) => b[t - 1].wealth) },
+      { name: `${A}, paid out`, points: pts((t) => paid(p, t)), dashed: true },
+      { name: `${B}, paid out`, points: pts((t) => paid(alt, t)), dashed: true },
+    ], { label: `What each side is worth, and what each has paid out, ${A.toLowerCase()} against ${B.toLowerCase()}`, xLabel, marks: [...marks, ...crossings.map((c) => ({ x: c.t, label: `${c.ahead.split(' ')[0]} ahead` }))],
+      story: 'The solid lines are what each is worth; where they cross, the other one pulls ahead. The dashed lines are every rand paid out so far - bond, rent, costs, the deposit and fees.' }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: `By ${ym(end).slice(0, 4)}: ${A.toLowerCase()} worth ${rand(a[at].wealth)}, ${rand(paid(p, end))} paid out; ${B.toLowerCase()} worth ${rand(b[at].wealth)}, ${rand(paid(alt, end))} paid out.` }),
   ]);
 }

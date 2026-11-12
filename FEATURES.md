@@ -551,6 +551,22 @@ out of the house loan again to buy a car. I want to log things like that." (D-07
 D-090)
 **Show it:** a home you own › "What happened", then "What each one did".
 
+#### What each side is worth, and Bond over (v0.24.1, 2026-11-12)
+**What it does:**
+- **A graph of each side's whole worth over time.** Buying is the home if it were sold, plus what was
+  invested along the way. Renting is the renter's investments.
+- **The crossing:** the year one passes the other is marked, and said in words.
+- **Money paid out:** every rand each side has paid out shows beside it as a dashed line.
+- **Bond over:** a slider sets the bond's length from 5 to 30 years.
+**Why it is there:** "Your total worth that you have at that time in rent and investments versus in buying...
+as soon as you've paid off the bank, then the full house amount is in your worth." And: "What if I did the
+bond over 14 years? That's how I bought my house." (D-117)
+**How it was decided:**
+- It uses the same money as the main graph, so the two always agree.
+- The main graph keeps the gap; this one shows the totals behind it.
+- Compare is now always on the list, and says what it needs.
+**Show it:** Finance › Homes › a home › Financing, then slide Bond over to 14.
+
 #### Sell after, and what would it take for buying to win (v0.24.0, 2026-11-12)
 **What it does:**
 - **Sell after:** a slider moves the year you sell, in half years. The whole page reads at that year.
