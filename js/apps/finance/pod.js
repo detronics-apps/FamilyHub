@@ -254,7 +254,10 @@ function niceStep(span, n = 4) {
  * `yLines` [{ y, label }] are dotted levels (30% of income); each line's name and last
  * value sit at its end. Tapping or moving over the graph reads every series at that point.
  */
-function drawChart(series, { label, marks = [], story = null, xLabel = null, band = null, stack = false, zones = null, dots = [], yLines = [] }) {
+function drawChart(series, { label, marks = [], story = null, xLabel = null, band = null, stack = false, zones = null, dots = [], yLines = [], percent = false }) {
+  // A graph of rates (D-116) reads in %, every other in rand.
+  const yShort = percent ? (y) => `${Number(Number(y).toFixed(1))}%` : short;
+  const yFull = percent ? yShort : rand;
   // Drawn narrower on a phone, so the writing stays readable when it is scaled to fit.
   const narrow = typeof window !== 'undefined' && window.innerWidth < 560;
   const W = narrow ? 340 : 640; const H = narrow ? 230 : 260; const L = 48; const B = 26; const T = 16; const R = narrow ? 80 : 118;
@@ -295,13 +298,13 @@ function drawChart(series, { label, marks = [], story = null, xLabel = null, ban
     cursor.setAttribute('x1', X(x)); cursor.setAttribute('x2', X(x));
     const b = band ? near(band.points, x) : null;
     readout.classList.remove('muted');
-    readout.textContent = `${when(x)}: ${series.map((s) => `${s.name} ${rand(near(s.points, x)[1])}`).join(' · ')}${stack ? ` · All of it ${rand(series.filter(piled).reduce((t, s) => t + near(s.points, x)[1], 0))}` : ''}${b ? ` · ${band.name}: ${rand(b[1])} to ${rand(b[2])}` : ''}`;
+    readout.textContent = `${when(x)}: ${series.map((s) => `${s.name} ${yFull(near(s.points, x)[1])}`).join(' · ')}${stack ? ` · All of it ${rand(series.filter(piled).reduce((t, s) => t + near(s.points, x)[1], 0))}` : ''}${b ? ` · ${band.name}: ${rand(b[1])} to ${rand(b[2])}` : ''}`;
   };
   return el('figure', { class: 'fin-chart', style: { margin: 0 } }, [
     svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': [label, ...shown.map((m) => m.label), ...dots.filter(Boolean).map((d) => d.label)].join('. '), width: '100%', on: { pointermove: read, pointerdown: read } }, [
       ...ticks.map((t) => svg('g', {}, [
         svg('line', { x1: L, x2: W - R, y1: Y(t), y2: Y(t), stroke: t === 0 ? 'var(--text-dim)' : 'var(--border)', 'stroke-width': t === 0 ? 1.5 : 1 }),
-        svg('text', { x: L - 6, y: Y(t) + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--text-dim)' }, [short(t)]),
+        svg('text', { x: L - 6, y: Y(t) + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--text-dim)' }, [yShort(t)]),
       ])),
       ...years.filter((x, i) => years.length < 14 || i % Math.ceil(years.length / 10) === 0).map((x) => svg('text', { x: X(x), y: H - 8, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--text-dim)' }, [xLabel ? xLabel(x) : `${x / 12}y`])),
       // The scenario range (D-084): shaded between its low and high edges, under the lines.
@@ -331,7 +334,7 @@ function drawChart(series, { label, marks = [], story = null, xLabel = null, ban
       ])),
       ...ends.map((e) => svg('g', {}, [
         svg('text', { x: W - R + 8, y: e.y, 'font-size': 11, fill: 'var(--text)' }, [cut(e.name)]),
-        svg('text', { x: W - R + 8, y: e.y + 12, 'font-size': 11, 'font-weight': 700, fill: e.colour }, [short(e.value)]),
+        svg('text', { x: W - R + 8, y: e.y + 12, 'font-size': 11, 'font-weight': 700, fill: e.colour }, [yShort(e.value)]),
       ])),
       cursor,
     ]),

@@ -551,6 +551,46 @@ out of the house loan again to buy a car. I want to log things like that." (D-07
 D-090)
 **Show it:** a home you own › "What happened", then "What each one did".
 
+#### Sell after, and what would it take for buying to win (v0.24.0, 2026-11-12)
+**What it does:**
+- **Sell after:** a slider moves the year you sell, in half years. The whole page reads at that year.
+- **What would it take for buying to win?** For each year you might sell, the graph shows the house-price
+  growth (or investment return) at which buying and renting come out level. Your own figure is drawn
+  beside it.
+- **The rent line:** "Can you afford it each month?" marks the year rent passes the buyer's monthly cost.
+**Why it is there:**
+- "A crossover point at which renting is better or buying is better... with tolerance bands, so that you
+  can also see like what percentage of what would create a break-even point at what year."
+- "If I want to sell at year 12.5, like what is the best?" (D-116)
+**How it was decided:**
+- Each point is the whole model worked out again, not a shortcut.
+- It says what would have to happen, never how likely it is.
+- The day-one cash invested and the break-even graph were already there. They appear once "Rent for a
+  similar home" is given.
+**The philosophy it shows:** you decide; graphs that answer a question.
+**Show it:** Finance › Homes › Oranjezicht 2-bed (example) › Financing, then the Sell after slider.
+
+#### The example home: moneywithcarla's Oranjezicht 2-bed (v0.24.0, 2026-11-12)
+**What it does:** every family starts with the 2-bed from moneywithcarla's post: R11,5m to buy, or R45K a
+month to rent. It shows:
+- the post's results beside Family Hub's, with the differences, measured and not adjusted;
+- what the post leaves out, each item with Try or Show.
+
+Remove it from Our homes when you are done.
+**Why it is there:** "Put as a default into the app that can be deleted... so people can play around...
+I want to see how accurate our calculations and the image calculations is. So don't modify anything to
+make it similar to that." (D-116)
+**How it was decided:**
+- The post's figures are kept as given, and the differences are explained:
+  - duty and fees item by item;
+  - capital gains tax on the sale;
+  - 13% a year compounded to the year;
+  - the buyer investing once rent costs more.
+- moneywithcarla and the post are on Finance's Creators and videos.
+**The philosophy it shows:** structure, not content; link the source, don't copy it; better decisions
+with what you know now.
+**Show it:** Finance › Homes › Oranjezicht 2-bed (example) › Financing › "An example to play with".
+
 #### Selling to buy, every cost item by item (v0.9.16, 2026-10-27)
 **What it does:** itemises transfer duty, attorneys, Deeds Office and bank fees, and the agent's own
 percentage plus VAT. It shows what is left after the bond, split into the next deposit and money

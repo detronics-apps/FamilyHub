@@ -16,6 +16,8 @@ import { HOME_HELP as H } from '../finance/help.js';
 import { rangePanel, rangeParts } from './range-view.js';
 import { scenarioRange, defaultRanges, measure } from './scenarios.js';
 import { alternativeOf } from './alternative.js';
+import { breakEven, breakEvenWords, BREAK_EVEN } from './breakeven.js';
+import { EXAMPLE_HOME, CARLA, exampleCheck, WHY_DIFFERENT } from './examples.js';
 import { carryIt, COMFORT } from './risk.js';
 import { situationEffects } from './situations.js';
 import { HOME_CHECKS, HOME_RULE, STAGES, tally } from '../viewing/checks.js';
@@ -90,6 +92,16 @@ function mattersPage(hub) {
 
 const loadAll = (hub) => hub.use('homes-all', async () => {
   const c = col(hub);
+  // The example home (D-116), added once with its fixed id - removed like any other, it stays removed.
+  if (!await hub.settings.get('exampleHomeAdded', false)) {
+    if (!await c.get(EXAMPLE_HOME.id)) {
+      const values = { ...DEFAULTS, ...EXAMPLE_HOME.values };
+      await c.put({ id: EXAMPLE_HOME.id, kind: KIND, title: EXAMPLE_HOME.title, values, result: headline(values, hub.today()), savedAt: new Date().toISOString() });
+    }
+    const carla = hub.creators?.add({ name: CARLA.name, url: CARLA.url, note: 'Money and property in South Africa', topics: ['finance'] });
+    if (carla) hub.creators.addVideo?.('finance', { url: CARLA.post, title: 'Cape Town property: to buy or not to buy?', note: 'The Oranjezicht 2-bed example in Homes is from this post.' });
+    await hub.settings.set('exampleHomeAdded', true);
+  }
   const { items } = await c.list({ limit: 1000 });
   return (await Promise.all(items.map((s) => c.get(s.id)))).filter(Boolean).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
 });
@@ -170,6 +182,7 @@ const SECS = [
     f('growthPct', 'House prices grow by', 'percent', { source: { kind: 'illustrative' }, when: isRent }),
     f('investPct', 'Investments grow by, before tax', 'percent', { source: { kind: 'illustrative' } }),
     f('investTaxPct', 'Share of growth lost to tax', 'percent', { level: 'advanced', unitText: '%', source: { kind: 'illustrative' } }),
+    f('investShare', 'Of the difference, really invested', 'percent', { level: 'advanced', unitText: '%', source: { kind: 'illustrative' } }),
   ] },
   { key: 'sellFirst', title: SECTIONS.sellFirst, tick: true, when: (v) => !isOwn(v), fields: [
     f('sellPrice', 'Our home will sell for', 'money'),
@@ -509,9 +522,12 @@ function results(hub, d) {
       p.bond ? stat(ymName(p.bond.paidOff), 'bond paid off', 'r-paidoff') : stat(rand(p.fromPocket), 'from savings up front', 'r-upfront'),
     ]),
     el('div', { class: 'panel stack' }, [el('h2', { text: 'What it means', style: { margin: 0 } }), ...lines.map((t) => el('p', { style: { margin: 0 }, text: t }))]),
+    v.exampleOf === 'carla' ? examplePanel(hub, d, today) : null,
     cmp.values ? range.chart : askPanel(hub, cmp, A),
+    cmp.values ? sellAfterPanel(hub, d, cmp, H, p) : null,
     range?.explore,
     range?.moves,
+    cmp.values && p.kind === 'buy' ? breakEvenPanel(hub, v, today, H, xLabel) : null,
     situationsPanel(hub, v, sit, H, xLabel, span, [payoff, todayMark]),
     costSplit(p, N, span, xLabel, [payoff, todayMark], v, cmp),
     p.kind !== 'rent' ? equityPanel(hub, d, p, today, span, xLabel, [payoff, todayMark], esc) : null,
@@ -722,6 +738,10 @@ function costSplit(p, N, span, xLabel, marks, v, cmp) {
     p.kind === 'rent' ? 'Rent has no rates, levies or upkeep - the landlord pays those out of it - but it rises every year and none of it comes back.' : null,
   ].filter(Boolean);
   const pts = (get) => p.months.slice(0, span).filter((m) => m.t % 3 === 0).map((m) => [m.t, get(m)]);
+  // Where the other side's month passes this home's (D-116): rent rising past the bond and costs.
+  const own = (t) => p.months[t - 1].out - p.months[t - 1].upgradeNow;
+  const passT = alt ? (() => { const first = Math.sign(altOut(N + 1) - own(N + 1)); for (let t = N + 2; t <= Math.min(span, p.months.length); t += 1) if (Math.sign(altOut(t) - own(t)) !== first && Math.sign(altOut(t) - own(t)) !== 0) return t; return null; })() : null;
+  if (passT) lines.push(`From ${p.months[passT - 1].ym.slice(0, 4)}, ${cmp.names[1].toLowerCase()} costs ${altOut(passT) > own(passT) ? 'more' : 'less'} each month than this home - marked on the graph. Which leaves you more counts both sides all along: that is the main graph.`);
   return el('div', { class: 'panel stack', 'data-field': 'cost-split' }, [
     el('h2', { text: 'Can you afford it each month?', style: { margin: 0 } }),
     el('p', { class: 'small muted', style: { margin: 0 }, text: 'The long-term result matters, but you also have to pay each month along the way. This is cash out of your pocket each month - a different question from which leaves you more.' }),
@@ -729,7 +749,7 @@ function costSplit(p, N, span, xLabel, marks, v, cmp) {
     lineChart([
       ...parts.map(([k, label]) => ({ name: label, points: pts((m) => partOf(m, k)) })),
       ...(alt ? [{ name: cmp.names[1], points: pts((m) => altOut(m.t)), over: true, dashed: true, colour: 'var(--text)' }] : []),
-    ], { label: `What this home costs each month, part by part, stacked${alt ? `, with ${cmp.names[1].toLowerCase()} as a dashed line` : ''}`, stack: true, marks, xLabel,
+    ], { label: `What this home costs each month, part by part, stacked${alt ? `, with ${cmp.names[1].toLowerCase()} as a dashed line` : ''}`, stack: true, marks: [...marks, passT ? { x: passT, label: `${cmp.names[1].split(' ')[0]} passes` } : null], xLabel,
       yLines: [income ? { y: income * 0.3, label: `30% of income (${rand(income * 0.3)})` } : null],
       story: `${p.kind === 'rent' ? 'Rent rises every year.' : `Stacked, so the top edge is the whole month. ${p.bond ? 'The bond stays level unless the rate changes, then stops when it is paid off; ' : ''}${stays} carry on and rise.`}${alt ? ` The dashed line is ${cmp.names[1].toLowerCase()} each month.` : ''}` }),
     el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums' }, [
@@ -926,5 +946,91 @@ function compareScreen(hub, param) {
       ])]),
       exportBar(`Homes compared - ${items.map((x) => x.rec.title || 'Untitled').join(', ')}`),
     ]),
+  ]);
+}
+
+/* ------------------------------------- sell after, and what would it take (D-116) */
+
+/** Sell after: the year you would sell, in half years - the whole answer reads at it. */
+function sellAfterPanel(hub, d, cmp, H, p) {
+  const v = d.values;
+  const yrsNow = (Math.round(n(v.stayYears) * 2) / 2) || 10;
+  const diff = cmp.m.series[H - 1][1];
+  const [A, B] = cmp.names;
+  const yearOf = (y) => p.months[Math.min(p.months.length, Math.max(1, Math.max(0, p.now) + Math.round(y * 12))) - 1].ym.slice(0, 4);
+  const label = el('strong', { 'data-field': 'sell-after-years', text: `${yrsNow} years (${yearOf(yrsNow)})` });
+  const slider = el('input', { type: 'range', min: '1', max: '30', step: '0.5', value: String(yrsNow), 'aria-label': 'Sell after, in years', 'data-field': 'sell-after', style: { flex: '1 1 220px' },
+    on: { input: (e) => { label.textContent = `${e.target.value} years (${yearOf(Number(e.target.value))})`; }, change: (e) => { v.stayYears = Number(e.target.value); d.mine.add('stayYears'); hub.render(); } } });
+  return el('div', { class: 'panel stack', 'data-field': 'sell-after-panel' }, [
+    el('div', { class: 'row', style: { alignItems: 'center', gap: 'var(--space-2)' } }, [el('span', { text: 'Sell after' }), slider, label]),
+    el('p', { style: { margin: 0 }, text: `${(diff >= 0 ? A : B)} leaves about ${rand(Math.abs(diff))} more if you sell then. Slide it to any year, half years too - every graph and figure on the page reads at it.` }),
+  ]);
+}
+
+const beState = { key: 'growthPct' };
+const beCache = new Map();
+/** For each year you might sell, the house-price growth (or investment return) at which the two come out level. */
+function breakEvenPanel(hub, v, today, H, xLabel) {
+  const key = beState.key;
+  const ck = `${key}|${JSON.stringify(v)}`;
+  if (!beCache.has(ck)) { if (beCache.size > 12) beCache.clear(); beCache.set(ck, breakEven(v, today, key, 30)); }
+  const r = beCache.get(ck);
+  if (!r) return null;
+  const sellYear = Math.max(1, Math.min(30, Math.round(H / 12)));
+  const pts = r.rows.filter((x) => x.needed != null).map((x) => [x.year * 12, x.needed]);
+  const rentYears = r.rows.filter((x) => x.always === 'rent').map((x) => x.year);
+  const buyYears = r.rows.filter((x) => x.always === 'buy').map((x) => x.year);
+  const span = (ys) => (ys.length === 1 ? `year ${ys[0]}` : `years ${ys[0]} to ${ys.at(-1)}`);
+  const g = BREAK_EVEN[key];
+  const chips = el('div', { class: 'chipset', role: 'group', 'aria-label': 'Which assumption' }, Object.entries({ growthPct: 'House prices', investPct: 'Investments' }).map(([k, t]) => el('button', {
+    class: 'chip', type: 'button', text: t, 'aria-pressed': String(key === k), 'data-field': `be:${k}`, on: { click: () => { beState.key = k; hub.render(); } } })));
+  return el('div', { class: 'panel stack', 'data-field': 'break-even' }, [
+    el('h2', { text: 'What would it take for buying to win?', style: { margin: 0 } }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'For each year you might sell: the figure at which buying and renting a similar home come out level, everything else as you have it. Each point is the whole page worked out again.' }),
+    chips,
+    el('p', { style: { margin: 0 }, 'data-field': 'break-even-words', text: H % 12 ? breakEvenWords(r, sellYear).replace('Selling after ', 'Selling after about ') : breakEvenWords(r, sellYear) }),
+    pts.length ? lineChart([
+      { name: key === 'growthPct' ? 'Level at' : 'Level at', points: pts },
+      { name: 'Yours', points: [[12, r.yours], [r.rows.length * 12, r.yours]], dashed: true, colour: 'var(--text-dim)' },
+    ], { label: `${g.name}: where buying and renting come out level, by the year you sell`, xLabel, percent: true, marks: [{ x: Math.min(H, r.rows.length * 12), label: 'You sell' }],
+      story: key === 'growthPct' ? 'Above the line, buying leaves more; below it, renting. Where your figure sits above the line, buying wins that year.' : 'Below the line, buying leaves more; above it, renting. Where your figure sits below the line, buying wins that year.' }) : null,
+    rentYears.length ? el('p', { class: 'small', style: { margin: 0 }, text: `In ${span(rentYears)}, renting leaves more whatever ${key === 'growthPct' ? 'house prices do' : 'investments do'} (${g.from}% to ${g.to}% a year tried) - buying’s costs up front take that long to win back.` }) : null,
+    buyYears.length ? el('p', { class: 'small', style: { margin: 0 }, text: `In ${span(buyYears)}, buying leaves more whatever ${key === 'growthPct' ? 'house prices do' : 'investments do'} (${g.from}% to ${g.to}% a year tried).` }) : null,
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'Not a prediction: it says what would have to happen. How likely that is, is yours to judge - the range under the main graph tries several at once.' }),
+  ]);
+}
+
+/* -------------------------------------------- the example home (D-116) */
+
+/** The example: where it is from, the post's figures beside ours, and what it leaves out - each one to try. */
+function examplePanel(hub, d, today) {
+  const v = d.values;
+  const rows = exampleCheck(v, today);
+  const fmt = (x, unit) => (x == null ? '-' : unit === 'R' ? rand(x) : `${x}`);
+  const delta = (r) => (r.ours == null ? '-' : r.unit === 'R' ? `${r.ours >= r.said ? '+' : '−'}${rand(Math.round(Math.abs(r.ours - r.said)))}` : `${r.ours >= r.said ? '+' : '−'}${Math.abs(Math.round((r.ours - r.said) * 10) / 10)}`);
+  const set = (patch, note) => { Object.assign(v, patch); for (const k of Object.keys(patch)) d.mine.add(k); hub.render(); hub.ui.notice(note); };
+  const show = (field) => { figs.open = true; hub.render(); const box = document.querySelector(`[data-field="${field}"]`); box?.scrollIntoView({ block: 'center' }); box?.focus?.(); };
+  const leavesOut = [
+    ['Tax on what investments grow', 'The post’s 13% is before tax. In South Africa growth is taxed unless it sits in a tax-free or retirement account.', Number(v.investTaxPct) ? null : ['Try', () => set({ investTaxPct: 15 }, 'Now 15% of investment growth is lost to tax - change it under Your figures.')]],
+    ['Not every rand of the difference gets invested', 'Renting wins only if the difference really is invested, every month, for 20 years.', ['Show', () => show('in:investShare')]],
+    ['Selling costs', 'The agent and fees when the home is sold - the post counts the property’s full value.', Number(v.sellPct) ? null : ['Try', () => set({ sellPct: 7.5 }, 'Now selling costs 7.5% of the price - change it under Your figures.')]],
+    ['Renting somewhere nicer than you would buy', 'Most people rent a fancier place than they could buy - then the two are not the same home.', ['Show', () => show('in:likeRent')]],
+    ['The worst house in the best area', 'Buy the house that needs work in a good area, renovate, and the money spent can come back when you sell.', ['Show', () => show('upgrade-add')]],
+    ['Nobody knows what returns will do', 'One figure each for prices, returns and rent - the range and "What would it take" show what happens if they differ.', ['Show', () => { document.querySelector('[data-field="break-even"]')?.scrollIntoView({ block: 'start' }); }]],
+  ];
+  return el('div', { class: 'panel stack', 'data-field': 'example-home' }, [
+    el('h2', { text: 'An example to play with', style: { margin: 0 } }),
+    el('p', { style: { margin: 0 } }, ['The figures from ', el('a', { href: CARLA.post, target: '_blank', rel: 'noopener noreferrer', text: `${CARLA.name}’s post` }), ' - a 2-bed in Oranjezicht, R11,5m to buy or R45K a month to rent. Change anything; remove it from Our homes when you are done.']),
+    rows.length ? el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums', 'data-field': 'example-check' }, [
+      el('thead', {}, [el('tr', {}, ['', 'The post', 'Family Hub', 'Difference'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
+      el('tbody', {}, rows.map((r) => el('tr', {}, [el('td', { text: r.what }), el('td', { class: 'num', text: fmt(r.said, r.unit) }), el('td', { class: 'num', text: fmt(r.ours, r.unit) }), el('td', { class: 'num', text: delta(r) })]))),
+    ])]) : null,
+    el('details', { class: 'more' }, [el('summary', { text: 'Why they differ' }), el('ul', { class: 'small' }, WHY_DIFFERENT.map((t) => el('li', { text: t })))]),
+    el('h3', { text: 'What the example leaves out', style: { margin: 0 } }),
+    el('ul', { class: 'list' }, leavesOut.map(([name, what, act]) => el('li', {}, [
+      el('div', { class: 'list__main' }, [el('strong', { text: name }), el('div', { class: 'small', text: what })]),
+      act ? el('button', { class: 'btn btn-small', type: 'button', text: act[0], 'data-field': `ex-${name.split(' ')[0].toLowerCase()}`, on: { click: act[1] } }) : el('span', { class: 'small muted', text: 'counted now' }),
+    ]))),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'General information, not financial advice - the post says the same.' }),
   ]);
 }

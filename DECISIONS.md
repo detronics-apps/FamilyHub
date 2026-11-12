@@ -706,6 +706,32 @@ and a Compare row, say where it stands ("Stopped after Online", "Through Online,
 Viewing"). It is a choice, not a gate: every stage stays open, in line with structure that helps
 and never forces. Old links to Bond, Rent or buy and the like still open on Financing.
 
+**D-116 Sell after, what it would take, and the example from moneywithcarla (owner, 2026-11-12).**
+The owner put moneywithcarla's post (a R11,5m Oranjezicht 2-bed against R45K rent) through Homes and asked
+for the day-one cash invested, a break-even graph with tolerance bands, any sell year (12,5 too), the post
+as a starting example with its figures compared - not adjusted - and what it leaves out.
+- **Already there, said so:** the renter has the buyer's whole day-one cash (deposit, duty and fees, not
+  only the deposit) invested from day one (sameMoney, D-078); the main graph is the break-even graph -
+  which leaves more by year, the tested range shaded, a crossing marked. Both appear once "Rent for a
+  similar home" is given.
+- **Sell after**: a slider under the main graph, 1 to 30 years in half years; the whole page reads at it
+  (it is the stay). It says which leaves more if you sell then.
+- **What would it take for buying to win?** (homes/breakeven.js): for each year you might sell, the
+  house-price growth - or investment return - at which the two come out level, everything else as you
+  have it, each point the whole model worked out again over a grid (−5% to 25%, 0% to 30%, half points).
+  Drawn against your own figure; the years where one wins at any value tried are said. Not a probability:
+  what would have to happen. Graphs can now read in % (`percent` on lineChart).
+- **Rent passing the buyer's month** is marked on "Can you afford it each month?", with the year said.
+- **The example home** "Oranjezicht 2-bed (example)", added once (fixed id), with the post's figures and a
+  table of the post's results beside Family Hub's, live, with the differences: up front +R49K (duty and
+  fees item by item); bond, both years one and the home after 20 years agree; buying after 20 years −R4,05m
+  (capital gains tax taken off); renting −R6,35m (13% a year compounded to the year, and the buyer - not
+  the renter - investing once rent costs more); rent passes the buyer at 17,1 years, not 18 (running costs
+  at 5%). **What the example leaves out**, each with Try or Show: tax on investment growth, not every rand
+  invested (a new figure, "Of the difference, really invested"), selling costs, renting nicer than you
+  would buy, the worst house in the best area renovated, and not knowing what returns will do.
+- **moneywithcarla** is on Finance's Creators and videos with the post (Homes may now add creators).
+
 **D-115 How to use, against the skill's checklist (owner, 2026-11-11).** The owner asked for the
 how-to section to meet everything the detronics-app skill requires. It already had the search in your
 own words, how-tos, questions, idea tiles, feature tiles and a numbered welcome that opens again from

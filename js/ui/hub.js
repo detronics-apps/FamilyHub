@@ -9,6 +9,7 @@
 import { createCollection } from '../collections.js';
 import { createFoodDb } from '../food.js';
 import { latestMeasure, roleOf, addCreator } from '../model.js';
+import { addTopicVideo } from '../topic-links.js';
 
 // One copy of the food database for every app that reads it, fetched on first use.
 let foodDb = null;
@@ -179,6 +180,8 @@ export function createHubFactory(ctx) {
       hub.creators = {
         list: () => ctx.app.household?.creators ?? [],
         add: (fields) => { const r = addCreator(ctx.app.household, fields); if (r.household !== ctx.app.household) ctx.commit(r.household, { quiet: true }); return r.creator; },
+        /** A video on a topic's Creators and videos (D-116) - an app's own starting example. */
+        addVideo: (topic, fields) => { const h = addTopicVideo(ctx.app.household, topic, fields); if (h !== ctx.app.household) ctx.commit(h, { quiet: true }); },
       };
     }
     if (has('food:read')) hub.food = { load: loadFoodDb };

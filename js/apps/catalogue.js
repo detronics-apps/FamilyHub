@@ -283,7 +283,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'homes', section: 'finance', name: 'Homes', version: '3.0.0',
+      fhManifest: 1, id: 'homes', section: 'finance', name: 'Homes', version: '3.1.0',
       description: 'Each home in one place - buying, owning or renting: what you can see online, the questions to ask, the viewing, how it feels, every cost and your bond; then compare them on all of it.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'homes', title: 'Our homes' }, { id: 'home', title: 'A home' }, { id: 'matters', title: 'What matters', nav: false }, { id: 'compare', title: 'Compare' }],
@@ -292,7 +292,7 @@ const RAW = [
         { mode: 'plan', screen: 'compare', label: 'Compare homes - buy, rent or keep ours' },
       ],
       data: { collections: [{ name: 'saved', schema: 1 }, { name: 'checklist', schema: 1 }] },
-      permissions: ['data:own', 'notify'],
+      permissions: ['data:own', 'notify', 'household:creators'],
     },
     load: () => import('./homes/app.js'),
   },
