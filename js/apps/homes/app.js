@@ -17,7 +17,7 @@ import { rangePanel, rangeParts } from './range-view.js';
 import { scenarioRange, defaultRanges, measure } from './scenarios.js';
 import { alternativeOf } from './alternative.js';
 import { breakEven, breakEvenWords, BREAK_EVEN } from './breakeven.js';
-import { EXAMPLE_HOME, CARLA, exampleCheck, WHY_DIFFERENT } from './examples.js';
+import { EXAMPLE_HOME, OUR_EXAMPLE, CARLA, exampleCheck, WHY_DIFFERENT } from './examples.js';
 import { carryIt, COMFORT } from './risk.js';
 import { situationEffects } from './situations.js';
 import { HOME_CHECKS, HOME_RULE, STAGES, tally } from '../viewing/checks.js';
@@ -101,6 +101,14 @@ const loadAll = (hub) => hub.use('homes-all', async () => {
     const carla = hub.creators?.add({ name: CARLA.name, url: CARLA.url, note: 'Money and property in South Africa', topics: ['finance'] });
     if (carla) hub.creators.addVideo?.('finance', { url: CARLA.post, title: 'Cape Town property: to buy or not to buy?', note: 'The Oranjezicht 2-bed example in Homes is from this post.' });
     await hub.settings.set('exampleHomeAdded', true);
+  }
+  // The same home on our own figures (D-123), added once beside it - removed, it stays removed.
+  if (!await hub.settings.get('exampleOursAdded', false)) {
+    if (!await c.get(OUR_EXAMPLE.id)) {
+      const values = { ...DEFAULTS, ...OUR_EXAMPLE.values };
+      await c.put({ id: OUR_EXAMPLE.id, kind: KIND, title: OUR_EXAMPLE.title, values, result: headline(values, hub.today()), savedAt: new Date().toISOString() });
+    }
+    await hub.settings.set('exampleOursAdded', true);
   }
   const { items } = await c.list({ limit: 1000 });
   return (await Promise.all(items.map((s) => c.get(s.id)))).filter(Boolean).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
@@ -535,9 +543,11 @@ function results(hub, d) {
       cmp.values ? el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' } }, [el('span', { class: 'small muted', text: 'Whoever spends less each month:' }), switchCash]) : null,
       endPick,
     ]),
-    el('div', { class: 'stats' }, [
+    // The answer starts here (D-123): its own heading, darker boxes, who wins in the wide middle.
+    el('h2', { text: 'The answer', style: { margin: 'var(--space-2) 0 0' }, 'data-field': 'answer-title' }),
+    el('div', { class: `stats answer-row${cmp.values ? ' answer-row--three' : ''}` }, [
       stat(rand(p.monthNow), 'a month now, all counted', 'r-month'),
-      cmp.values ? (() => { const vd = verdict(cmp, H, leave); return el('div', { class: 'stat', 'data-field': 'r-diff' }, [
+      cmp.values ? (() => { const vd = verdict(cmp, H, leave); return el('div', { class: 'stat stat--main', 'data-field': 'r-diff' }, [
         el('div', { class: 'stat__label', text: `If you sell in ${leave}` }),
         el('div', { class: 'small', text: `${vd.A}: ${rand(vd.wa)}` }),
         el('div', { class: 'small', text: `${vd.B}: ${rand(vd.wb)}` }),
@@ -547,6 +557,7 @@ function results(hub, d) {
     ]),
     el('div', { class: 'panel stack' }, [el('h2', { text: 'What it means', style: { margin: 0 } }), ...lines.map((t) => el('p', { style: { margin: 0 }, text: t }))]),
     v.exampleOf === 'carla' ? examplePanel(hub, d, today) : null,
+    v.exampleOf === 'ours' ? oursPanel() : null,
     cmp.values ? range.chart : askPanel(hub, cmp, A),
     cmp.values ? sellAfterPanel(hub, d, cmp, H, p) : null,
     range?.explore,
@@ -1045,6 +1056,22 @@ function breakEvenPanel(hub, v, today, H, xLabel) {
 /* -------------------------------------------- the example home (D-116) */
 
 /** The example: where it is from, the post's figures beside ours, and what it leaves out - each one to try. */
+/** What our figures change from the post's (D-123) - the same home, four figures moved. */
+function oursPanel() {
+  return el('div', { class: 'panel stack', 'data-field': 'ours-changes' }, [
+    el('h2', { text: 'What we changed from the post', style: { margin: 0 } }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'The same home as the example from moneywithcarla’s post, with four figures moved. Everything else is the post’s.' }),
+    el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums' }, [
+      el('thead', {}, [el('tr', {}, ['', 'The post', 'Ours'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
+      el('tbody', {}, OUR_EXAMPLE.changes.map((c) => el('tr', {}, [
+        el('td', {}, [c.what, el('div', { class: 'small muted', text: c.why })]),
+        el('td', { class: 'num', text: c.post }), el('td', { class: 'num', text: c.ours }),
+      ]))),
+    ])]),
+    el('p', { class: 'small', style: { margin: 0 }, text: 'Then try "Kept as cash" at the top: what if the difference each month is not invested? And open each figure’s range under the graph. No single set of figures decides it - play with yours.' }),
+  ]);
+}
+
 function examplePanel(hub, d, today) {
   const v = d.values;
   const rows = exampleCheck(v, today);

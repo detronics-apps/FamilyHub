@@ -265,6 +265,13 @@ details.more > summary, details.explain > summary {
 .stat { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-3) var(--space-4); }
 .stat__value { font-size: 28px; font-weight: 700; color: var(--text); }
 .stat__label { font-size: 13px; color: var(--text-dim); }
+/* The answer row (D-123): darker than the inputs above, who wins in the wide middle. */
+.answer-row .stat { background: var(--accent-soft); border-color: var(--border-strong); }
+.answer-row--three { grid-template-columns: 1fr 2fr 1fr; }
+@media (max-width: 560px) {
+  .answer-row--three { grid-template-columns: 1fr 1fr; }
+  .answer-row--three .stat--main { grid-column: 1 / -1; order: -1; }
+}
 
 table.plain { width: 100%; border-collapse: collapse; font-size: 14px; }
 table.plain th, table.plain td { text-align: left; padding: var(--space-2); border-bottom: 1px solid var(--border); }

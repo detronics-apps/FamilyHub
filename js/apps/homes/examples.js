@@ -27,6 +27,22 @@ export const EXAMPLE_HOME = {
   },
 };
 
+/**
+ * The same home on the owner's own figures (D-123): four changes from the post, to show how
+ * much the answer moves with them - one snapshot does not decide buying or renting.
+ */
+export const OUR_EXAMPLE = {
+  id: 'hom-example-oranjezicht-ours',
+  title: 'Oranjezicht 2-bed (our figures)',
+  values: { ...EXAMPLE_HOME.values, exampleOf: 'ours', investPct: 10, growthPct: 9, termYears: 14, stayYears: 15 },
+  changes: [
+    { what: 'Investments grow by', post: '13% a year', ours: '10% a year', why: 'What we see as realistic over many years. The range tests 8 to 12%.' },
+    { what: 'House prices grow by', post: '7% a year', ours: '9% a year', why: 'Our own house grew 11.5% a year so far. The range tests 7 to 11%.' },
+    { what: 'The bond over', post: '20 years', ours: '14 years', why: 'A shorter bond: a bigger instalment, far less interest.' },
+    { what: 'Sell after', post: '20 years', ours: '15 years', why: 'A shorter stay - the answer is read in that year.' },
+  ],
+};
+
 /** What the post says it comes to (2026). */
 export const CARLA_SAID = {
   upfront: 2400000, bond: 103000, buyerYear1: 1400000, renterYear1: 540000,

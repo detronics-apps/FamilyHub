@@ -554,6 +554,19 @@ out of the house loan again to buy a car. I want to log things like that." (D-07
 D-090)
 **Show it:** a home you own › "What happened", then "What each one did".
 
+#### The same home on our own figures (v0.25.3, 2026-11-13)
+**What it does:**
+- **A second example:** the post's Oranjezicht home with four figures moved - investments 10% instead of 13%,
+  house prices 9% instead of 7%, the bond over 14 years instead of 20, selling after 15 years instead of 20 - and a
+  table of what was changed and why.
+- **What it shows:** the post's figures leave renting about R41m ahead; ours put the two within about R1.3m, the
+  tested range centred on zero. Tap "Kept as cash" and buying leaves more across the whole range.
+- **The answer row** has its own heading, darker boxes, and who wins in the wide middle.
+**Why it is there:** "I kind of just want to show how finicky these values are, and that you cannot just take one
+snapshot to make the estimation or to decide renting or buying to be the answer. You actually need to play
+around." (D-123)
+**Show it:** Finance › Homes › Oranjezicht 2-bed (our figures), then the example beside it; then Kept as cash.
+
 #### Yours above zero, paid out below; moments at the top (v0.25.2, 2026-11-13)
 **What it does:**
 - **What each side is worth:** what buying and renting leave you sit above zero; what each has paid out sits

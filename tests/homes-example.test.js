@@ -36,3 +36,25 @@ test('what would it take: the growth, or the return, at which buying and renting
   assert.match(breakEvenWords(breakEven({ ...v, growthPct: 12 }, TODAY, 'growthPct', 20), 20), /buying leaves more/);
   assert.equal(breakEven({ ...v, likeRent: null }, TODAY, 'growthPct'), null, 'nothing to compare with yet');
 });
+
+test('D-123 our figures: the same home with four figures moved - the answer and its tested range move with them', async () => {
+  const { OUR_EXAMPLE } = await import('../js/apps/homes/examples.js');
+  const { alternativeOf } = await import('../js/apps/homes/alternative.js');
+  const { scenarioRange, defaultRanges } = await import('../js/apps/homes/scenarios.js');
+  const { PLAN_DEFAULTS } = await import('../js/apps/homes/home.js');
+  const range = (values) => {
+    const v = { ...PLAN_DEFAULTS, ...values };
+    const both = [v, alternativeOf(v, TODAY).values];
+    return scenarioRange(both, TODAY, defaultRanges(both), v.stayYears * 12, { a: 0, b: 1 }).at;
+  };
+  // Only the four figures differ from the post's home.
+  const moved = Object.keys(OUR_EXAMPLE.values).filter((k) => JSON.stringify(OUR_EXAMPLE.values[k]) !== JSON.stringify(EXAMPLE_HOME.values[k]));
+  assert.deepEqual(moved.sort(), ['exampleOf', 'growthPct', 'investPct', 'stayYears', 'termYears']);
+  const post = range(EXAMPLE_HOME.values);
+  const ours = range(OUR_EXAMPLE.values);
+  assert.ok(post.central < 0, 'the post: renting leaves more');
+  assert.ok(ours.unfavourable < 0 && ours.favourable > 0, 'ours: the tested range spans both');
+  assert.ok(Math.abs(ours.central) < Math.abs(post.central) / 10, 'ours: close to level');
+  const cash = range({ ...OUR_EXAMPLE.values, diffCash: true });
+  assert.ok(cash.unfavourable > 0, 'kept as cash: buying leaves more across the range');
+});

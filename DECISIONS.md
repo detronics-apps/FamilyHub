@@ -770,6 +770,20 @@ not counted yet, or counted with or without interest. **The 13% note** for the e
 monthly rate that ends a year exactly 13% up is about 1.024%; 13% / 12 = 1.083% a month ends the year 13.8% up;
 over 20 years R1 becomes R11.52 against R13.28.
 
+**D-123 The example on our own figures; the answer row (owner, 2026-11-13).** For the video the owner wanted
+to show "how finicky these values are, and that you cannot just take one snapshot". A second example, **Oranjezicht
+2-bed (our figures)**, is the post's home with four of the owner's figures: investments 10% (tested 8-12) instead
+of 13, house prices 9% (tested 7-11) instead of 7 - "my house did grow 11.5% per year so far" - the bond over 14
+years instead of 20, and selling after 15 years instead of 20. Worked through the app's own sums: the post's
+figures leave renting R41.1m more (tested -R114.7m to +R20.2m); the two growth rates alone turn it to buying
+R5.5m more; with the shorter bond and stay, buying R1.3m more with the tested range centred on zero (-R26.1m to
++R27.3m); kept as cash instead of invested, buying leaves more across the whole range (+R12.2m to +R41.2m). It is
+added once beside the first (its own setting, `exampleOursAdded`), opens on Financing, and shows "What we changed
+from the post" - each change, the post's figure, ours and why - in place of the post's comparison. **The answer
+row** (a month now, who wins, bond paid off) read as more input: it now has its own heading, "The answer", its
+boxes are darker than the inputs, and who wins sits in the wide middle (1 : 2 : 1); on a phone it goes first,
+full width, with the other two side by side under it.
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in
