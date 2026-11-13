@@ -37,11 +37,10 @@ test('a topic shows its general creators, the linked ones and the examples; neve
   assert.deepEqual(real.map((c) => c.name), ['Cook A']);
   assert.equal(real[0].from.length, 2);
   assert.equal(real[0].url, 'https://cook.example/a');
-  assert.equal(t.creators.filter((c) => c.example).length, EXAMPLES.meals.length);
+  assert.equal(t.creators.filter((c) => c.example).length, 0);
   assert.equal(t.videos[0].own, false);
-  // Every topic but More has examples, and none of them carries a link.
-  for (const s of SECTIONS.filter((x) => x.id !== 'more')) assert.ok(EXAMPLES[s.id]?.length, s.id);
-  assert.ok(Object.values(EXAMPLES).flat().every(([name, note]) => name && note.startsWith('Look for')));
+  // No made-up creators anywhere (owner, 2026-11-13): only real ones the family adds.
+  assert.deepEqual(EXAMPLES, {});
 });
 
 test('the same name is one creator, on several topics; Remove takes it off one, then out', () => {

@@ -706,6 +706,14 @@ and a Compare row, say where it stands ("Stopped after Online", "Through Online,
 Viewing"). It is a choice, not a gate: every stage stays open, in line with structure that helps
 and never forces. Old links to Bond, Rent or buy and the like still open on Financing.
 
+**D-118 No made-up creators; Creators on every topic's top line (owner, 2026-11-13).**
+- The "Example - replace" placeholders (a kind of creator and what to look for, one or two per topic)
+  are gone: "do not make up data or information. Like, don't create fake creators." `EXAMPLES` is empty
+  and a test keeps it so; they were only ever drawn, never saved, so they leave every family at once.
+  Starting creators will be real ones the owner follows, supplied by the owner, added as the family's own.
+- A topic with several apps (Finance) had its Creators and videos at the foot of its page. Its top line
+  now has **Creators**, as every app's does, opening the topic's own page (#/creators/<topic>).
+
 **D-117 What each side is worth; Bond over; Compare always there (owner, 2026-11-12).** The owner wanted
 each side's whole worth over time, not only the gap: "your total worth that you have at that time in rent
 and investments versus in buying", the year one passes the other, and what each has paid out - and to

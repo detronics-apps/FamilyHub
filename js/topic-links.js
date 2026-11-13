@@ -24,60 +24,11 @@ export const LINKED = {
 };
 
 /**
- * Placeholders to replace - the kind of creator and what to look for, never a real name or link.
- * Edit one to make it yours, or Remove it; either way it does not come back.
+ * Starting creators: none made up (owner, 2026-11-13) - "do not make up data or information". Only
+ * real creators the owner follows go in, as the family's own (they can remove them), when the owner
+ * supplies them. Kept as a list so a topic's place can still show starting entries if ever needed.
  */
-export const EXAMPLES = {
-  faith: [
-    ['A pastor or teacher you trust', 'Look for: sermons, Bible teaching, faith in family life.'],
-    ['A Bible study channel', 'Look for: book-by-book overviews, the background to a passage, questions to talk about.'],
-  ],
-  chores: [
-    ['A home organising channel', 'Look for: better chores, decluttering, laying out your rooms, structuring a house.'],
-    ['A homesteading channel', 'Look for: growing food, preserving, keeping animals, fixing things yourself.'],
-  ],
-  finance: [
-    ['A family money channel', 'Look for: budgeting, saving, debt, talking about money as a couple.'],
-    ['A long-term money channel', 'Look for: ideas and things to think about - big purchases, retirement, investing basics.'],
-  ],
-  tasks: [
-    ['A DIY channel', 'Look for: projects at home, repairs, using tools safely.'],
-    ['An ideas channel', 'Look for: inspiring projects and things you would like to do one day.'],
-  ],
-  us: [
-    ['A marriage and relationships channel', 'Look for: communication, time together, working through disagreements.'],
-  ],
-  exercise: [
-    ['A home workout channel', 'Look for: body weight, little equipment, short sessions.'],
-    ['A coach for a particular need', 'Look for: back care, pregnancy, mobility - and who says so.'],
-  ],
-  meals: [
-    ['A meal planning channel', 'Look for: planning a week, batch cooking, using leftovers.'],
-    ['A cook you like', 'Look for: new dishes, techniques, meals the children enjoy.'],
-  ],
-  principles: [
-    ['A family leadership channel', 'Look for: leading your family, setting home rules, living your values.'],
-    ['A home-building teacher', 'Look for: building up a house, roles, traditions.'],
-  ],
-  shopping: [
-    ['A frugal shopping channel', 'Look for: saving by shopping at different places, comparing shops, buying in bulk.'],
-  ],
-  holidays: [
-    ['A travel channel', 'Look for: places to go, travelling with children, travelling on a budget.'],
-    ['A local explorer', 'Look for: day trips and places near you.'],
-  ],
-  tickets: [
-    ['A family communication channel', 'Look for: parents and children listening to each other - both ways - and family meetings.'],
-    ['A couples communication teacher', 'Look for: growing up in different houses with different values, finding the middle, love as sacrifice from both sides, building each other up.'],
-  ],
-  medical: [
-    ['A doctor or nurse who explains', 'Look for: understanding common situations, first aid, questions to ask your doctor.'],
-  ],
-  parenting: [
-    ['A parenting channel', 'Look for: parenting styles, routines, discipline.'],
-    ['A homeschooling family', 'Look for: homeschooling, learning at home, ideas for lessons.'],
-  ],
-};
+export const EXAMPLES = {};
 const exampleId = (topic, i) => `ex-${topic}-${i}`;
 
 /**

@@ -94,6 +94,8 @@ A decision that says what the app stands for is also written up as a principle i
 
 - **Embedding videos, or fetching anything from a creator's site** (2026-11-01). Plain links only,
   which keeps "nothing leaves the browser". (D-091)
+- **Made-up example creators, even as placeholders** (2026-11-13). "Do not make up data or information.
+  Like, don't create fake creators." Only real creators the owner follows, supplied by the owner. (D-118)
 - **Real people as example creators** (2026-11-04). Examples name only the kind of creator to look
   for. (D-112)
 - **The creators list on the People page** (2026-11-04). People is only the family's people. Creators

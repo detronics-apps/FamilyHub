@@ -308,10 +308,13 @@ baby's life", and shared the Dietary Guidelines for Americans to plan from. (D-0
 video into the app."
 **How it was decided:**
 - Plain links only, opening in a new tab; nothing is embedded or fetched.
-- Examples name the kind of creator to look for, never real people.
+- No made-up creators: the "Example - replace" placeholders were removed (v0.24.2). Only real creators
+  the owner follows go in, as the family's own - moneywithcarla so far.
 - Each parent can say whether they agree with a video.
 - At first it sat only on the topic page, which Home skips when a topic has one app, so nobody saw
   it; the link on every app's top line fixed that. (D-091, D-101, D-112, D-113)
+**Changed (v0.24.2, 2026-11-13):** a topic with several apps (Finance) showed Creators and videos at the
+foot of its page; now its top line has Creators, like every app, opening the topic's own page. (D-118)
 **Show it:** Home › Faith, tap Creators at the top right; then open a recipe's links in the Cookbook.
 
 ### Chores

@@ -39,7 +39,7 @@ import { openDoc } from './ui/views/docs.js';
 import { syncChip, syncNotices, phoneButtons } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.24.1';
+export const APP_VERSION = '0.24.2';
 
 const store = createLocalStore(window.localStorage);
 
@@ -357,14 +357,15 @@ function buildCrumbs(route) {
   // A mini-app sits inside its section; the section is named when it says something new.
   const m = manifestFor(route.name);
   const s = m ? section(sectionOf(m)) : route.name === 'creators' ? section(route.sub) : null;
-  // Every app in a topic links to the topic's Creators and videos (D-113).
-  const creators = m && s && s.id !== 'more';
+  // Every app in a topic - and a topic's own page - links to the topic's Creators and videos (D-113, D-118).
+  const topic = s ?? (route.name === 'section' ? section(route.sub) : null);
+  const creators = topic && topic.id !== 'more' && (m || route.name === 'section');
   return el('nav', { class: 'crumbs', 'aria-label': 'You are here' }, [
     el('a', { href: '#/', text: 'Home' }), ' › ',
     ...(s && s.name !== label ? [el('a', { href: m ? `#/section/${s.id}` : topicHref(s), text: s.name }), ' › '] : []),
     // On one of its inner screens (a recipe), the mini-app's name leads back to its first screen.
     m && route.sub && route.sub !== m.screens[0]?.id ? el('a', { href: `#/${route.name}`, text: label }) : el('span', { text: label }),
-    creators ? el('a', { class: 'crumbs__extra', href: `#/creators/${s.id}`, text: 'Creators', title: `The creators and videos your family follows on ${s.name}`, 'data-field': 'crumb-creators' }) : null,
+    creators ? el('a', { class: 'crumbs__extra', href: `#/creators/${topic.id}`, text: 'Creators', title: `The creators and videos your family follows on ${topic.name}`, 'data-field': 'crumb-creators' }) : null,
   ]);
 }
 

@@ -53,8 +53,7 @@ export function sectionView(ctx, route) {
         ])]))),
       ]))),
     ]) : null,
-    // The creators and videos the family follows on this topic (D-112). More is not a topic.
-    s.id !== 'more' ? topicLinksPanel(ctx, s, on) : null,
+    // Creators and videos open from the top line, on a page of their own, as in every app (D-118).
     offered.length ? el('div', { class: 'panel' }, [
       el('h2', { text: `Add to ${s.name}` }),
       el('ul', { class: 'list' }, offered.map((m) => el('li', {}, [
