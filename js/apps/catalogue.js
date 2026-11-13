@@ -244,7 +244,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'finance', section: 'finance', name: 'Budget and goals', version: '1.2.0',
+      fhManifest: 1, id: 'finance', section: 'finance', name: 'Budget and goals', version: '1.3.0',
       description: 'Monthly budgets, and savings and debt goals with the assumptions in plain view.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'month', title: 'Budget' }, { id: 'goals', title: 'Goals' }, { id: 'goal', title: 'Goal', nav: false }, { id: 'new-goal', title: 'Add a goal', nav: false }],
@@ -307,6 +307,18 @@ const RAW = [
       permissions: ['data:own', 'notify'],
     },
     load: () => import('./jobs/app.js'),
+  },
+  {
+    manifest: {
+      fhManifest: 1, id: 'salary', section: 'finance', name: 'Salary and costs', version: '1.0.0',
+      description: 'Is your salary keeping up? Your raises against your own costs, each rising at its own rate, and the salary you would need with what life brings next.',
+      author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
+      screens: [{ id: 'plan', title: 'Salary and costs' }],
+      modes: [{ mode: 'plan', screen: 'plan', label: 'See if our salary is keeping up with our costs' }],
+      data: { collections: [{ name: 'saved', schema: 1 }] },
+      permissions: ['data:own', 'notify', 'data:finance:read'],
+    },
+    load: () => import('./salary/app.js'),
   },
   {
     manifest: {

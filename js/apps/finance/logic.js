@@ -21,7 +21,12 @@ export function normaliseMonth(m = {}, month) {
   return {
     ...m,
     month: /^\d{4}-\d{2}$/.test(m.month ?? '') ? m.month : month,
-    lines: listOf(m.lines, (l, i) => (l && str(l.category) ? { id: str(l.id, 40) || `l${i}`, category: str(l.category, 60), planned: money(l.planned) ?? 0 } : null)),
+    lines: listOf(m.lines, (l, i) => (l && str(l.category) ? {
+      id: str(l.id, 40) || `l${i}`, category: str(l.category, 60), planned: money(l.planned) ?? 0,
+      ...(l.off ? { off: true } : {}),
+      ...(Array.isArray(l.items) ? { items: listOf(l.items, (x, j) => (x && str(x.name) ? { id: str(x.id, 40) || `x${i}_${j}`, name: str(x.name, 60), planned: money(x.planned) ?? 0 } : null)) } : {}),
+    } : null)),
+    ...(m.food ? { food: normaliseFood(m.food) } : {}),
     spends: listOf(m.spends, (s, i) => (s && money(s.amount) != null ? {
       id: str(s.id, 40) || `s${i}`, day: /^\d{4}-\d{2}-\d{2}$/.test(s.day ?? '') ? s.day : null,
       category: str(s.category, 60) || 'Other', amount: money(s.amount), note: str(s.note, 200), who: typeof s.who === 'string' ? s.who : null,
@@ -31,9 +36,12 @@ export function normaliseMonth(m = {}, month) {
 }
 
 /** Per category: planned, spent, left. Spending in a category with no plan is shown, not hidden. */
+/** A category's plan: the sum of its items when it has them, otherwise its own amount. */
+export const plannedOf = (l) => (l.items?.length ? r2(l.items.reduce((s, x) => s + x.planned, 0)) : l.planned);
+
 export function monthSummary(m) {
   const cats = new Map();
-  for (const l of m.lines) cats.set(l.category.toLowerCase(), { category: l.category, planned: l.planned, spent: 0, planned_: true });
+  for (const l of m.lines) if (!l.off) cats.set(l.category.toLowerCase(), { category: l.category, planned: plannedOf(l), spent: 0, planned_: true });
   for (const s of m.spends) {
     const k = s.category.toLowerCase();
     if (!cats.has(k)) cats.set(k, { category: s.category, planned: 0, spent: 0, planned_: false });
@@ -46,7 +54,7 @@ export function monthSummary(m) {
 }
 
 /** Next month starts from this month's plan (no spending copied). */
-export const copyMonth = (from, month) => ({ month, lines: from.lines.map((l) => ({ ...l })), spends: [], income: from.income.map((x) => ({ ...x })) });
+export const copyMonth = (from, month) => ({ month, lines: from.lines.map((l) => ({ ...l, ...(l.items ? { items: l.items.map((x) => ({ ...x })) } : {}) })), spends: [], income: from.income.map((x) => ({ ...x })), ...(from.food ? { food: { ...from.food, shares: { ...from.food.shares } } } : {}) });
 
 let n = 0;
 const nextId = (p) => `${p}${Date.now().toString(36)}${(n += 1)}`;
@@ -54,6 +62,74 @@ export const addSpend = (m, s) => (money(s.amount) == null ? m : { ...m, spends:
 export const addLine = (m, category, planned) => (str(category) ? { ...m, lines: [...m.lines, { id: nextId('l'), category: str(category, 60), planned: money(planned) ?? 0 }] } : m);
 export const addIncome = (m, what, amount) => (str(what) ? { ...m, income: [...m.income, { id: nextId('i'), what: str(what, 100), amount: money(amount) ?? 0 }] } : m);
 export const removeFrom = (m, list, id) => ({ ...m, [list]: m[list].filter((x) => x.id !== id) });
+
+/* ------------------------------------------ starting set (D-119) */
+
+/**
+ * The categories every family can start from, each broken into what people
+ * forget. No amounts: the family fills in its own. Untick what you do not have
+ * ("We don't have this"), rename, remove and add to any of it.
+ */
+export const STARTING_SET = [
+  ['Home', ['Rent or bond', 'Rates or levies', 'Electricity', 'Water', 'Insurance', 'Security', 'Garden', 'Domestic worker']],
+  ['Food', ['Groceries', 'Cleaning and toiletries', 'Eating out', 'Takeaways', 'School lunches']],
+  ['Transport', ['Petrol', 'Car payment', 'Car insurance', 'Licence and service', 'Tyres', 'Tolls and parking', 'Uber']],
+  ['Phone and internet', ['Cell phones', 'Fibre', 'Streaming', 'TV licence']],
+  ['Health', ['Medical aid', 'Gap cover', 'Pharmacy', 'Doctor and dentist not covered']],
+  ['Children', ['School fees', 'Aftercare', 'Uniforms and stationery', 'Activities', 'Nappies and formula', 'Crèche', 'Parties and gifts']],
+  ['Cover and saving', ['Life cover', 'Funeral cover', 'Retirement', 'Emergency fund', 'Store and credit cards']],
+  ['Personal', ['Clothes', 'Haircuts', 'Gym', 'Gifts', 'Church giving', 'Pets']],
+  ['Once a year, by the month', ['Car licence', 'Christmas', 'Birthdays', 'School trips', 'Holidays', 'Replacing appliances']],
+];
+
+export const startingSet = (m) => ({
+  ...m,
+  lines: [...m.lines, ...STARTING_SET.map(([category, items]) => ({ id: nextId('l'), category, planned: 0, items: items.map((name) => ({ id: nextId('x'), name, planned: 0 })) }))],
+});
+
+const mapLine = (m, lineId, fn) => ({ ...m, lines: m.lines.map((l) => (l.id === lineId ? fn(l) : l)) });
+export const setLine = (m, lineId, patch) => mapLine(m, lineId, (l) => ({ ...l, ...patch, ...(patch.category != null ? { category: str(patch.category, 60) || l.category } : {}) }));
+export const addItem = (m, lineId, name, planned) => (str(name) ? mapLine(m, lineId, (l) => ({ ...l, items: [...(l.items ?? []), { id: nextId('x'), name: str(name, 60), planned: money(planned) ?? 0 }] })) : m);
+export const setItem = (m, lineId, itemId, patch) => mapLine(m, lineId, (l) => ({ ...l, items: (l.items ?? []).map((x) => (x.id === itemId ? { ...x, ...(patch.name != null ? { name: str(patch.name, 60) || x.name } : {}), ...(patch.planned !== undefined ? { planned: money(patch.planned) ?? 0 } : {}) } : x)) }));
+export const removeItem = (m, lineId, itemId) => mapLine(m, lineId, (l) => ({ ...l, items: (l.items ?? []).filter((x) => x.id !== itemId) }));
+
+/* ------------------------------------------- food per meal (D-119) */
+
+/** Breakfast, lunch and dinner as shares of a day's food: a starting split, Estimated - each family sets its own. */
+export const MEAL_SHARES = { breakfast: 20, lunch: 30, dinner: 50 };
+export const MEALS = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner' };
+const DAYS = 365 / 12;
+
+function normaliseFood(f = {}) {
+  const share = (k) => Math.max(0, money(f.shares?.[k]) ?? MEAL_SHARES[k]);
+  return {
+    groceriesToo: !!f.groceriesToo,
+    cleaning: Math.max(0, money(f.cleaning) ?? 0),
+    people: Math.max(0, Math.round(money(f.people) ?? 0)) || null,
+    shares: { breakfast: share('breakfast'), lunch: share('lunch'), dinner: share('dinner') },
+    sharesMine: !!f.sharesMine,
+  };
+}
+export const foodSettings = normaliseFood;
+
+/**
+ * What the food budget allows for each meal. `food`: the month's amount for
+ * food; with `groceriesToo`, the cleaning and toiletries in it come off first.
+ * Shares are of a day's food and need not add to 100 - each is taken of their sum.
+ */
+export function perMeal(food, settings, eatingOut = 0) {
+  const f = normaliseFood(settings);
+  const forFood = Math.max(0, (Number(food) || 0) - (f.groceriesToo ? f.cleaning : 0));
+  if (!(forFood > 0) || !f.people) return null;
+  const total = Object.values(f.shares).reduce((s, x) => s + x, 0) || 1;
+  const perPersonDay = forFood / f.people / DAYS;
+  const meals = Object.keys(MEALS).map((k) => {
+    const perPerson = (perPersonDay * f.shares[k]) / total;
+    return { key: k, label: MEALS[k], share: (f.shares[k] / total) * 100, perPerson, family: perPerson * f.people, month: perPerson * f.people * DAYS };
+  });
+  const dinner = meals.find((x) => x.key === 'dinner');
+  return { forFood, people: f.people, perPersonDay, meals, eatingOut: Number(eatingOut) || 0, dinnersOut: dinner.family > 0 && eatingOut > 0 ? eatingOut / dinner.family : null };
+}
 
 /* -------------------------------------------------------------- goals */
 

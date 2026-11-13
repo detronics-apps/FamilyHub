@@ -452,13 +452,13 @@ export function savedPanel(hub, { col, kind, d, summary, onOpen, compareScreen }
   return el('div', { class: 'panel stack', 'data-field': 'saved-panel' }, [
     el('h2', { text: 'Save and compare', style: { margin: 0 } }),
     exportBar(() => name.value.trim() || d.title || kind),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: 'Save this with a name - a car, a house, an offer - and come back to it any time. Tick two or more to compare them.' }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: `Save this with a name - a car, a house, an offer - and come back to it any time.${compareScreen ? ' Tick two or more to compare them.' : ''}` }),
     el('div', { class: 'row' }, [
       el('label', { class: 'sr-only', for: `name-${kind}`, text: 'Name' }), name,
       el('button', { class: 'btn btn-primary', type: 'button', text: 'Save', title: 'Saved under a new name, it is kept as a new one', 'data-field': 'save', on: { click: save } }),
     ]),
     list.loading ? el('p', { class: 'small muted', text: 'Loading…' }) : items.length ? el('ul', { class: 'list' }, items.map((s) => el('li', {}, [
-      el('input', { type: 'checkbox', 'aria-label': `Compare ${s.title}`, 'data-field': `tick:${s.id}`, on: { change: (e) => { if (e.target.checked) ticked.add(s.id); else ticked.delete(s.id); tick(); } } }),
+      compareScreen ? el('input', { type: 'checkbox', 'aria-label': `Compare ${s.title}`, 'data-field': `tick:${s.id}`, on: { change: (e) => { if (e.target.checked) ticked.add(s.id); else ticked.delete(s.id); tick(); } } }) : null,
       el('div', { class: 'list__main' }, [el('strong', { text: s.title }), el('div', { class: 'small muted', text: [s.headline, s.savedAt ? `saved ${s.savedAt.slice(0, 10)}` : null].filter(Boolean).join(' · ') })]),
       el('button', { class: 'btn btn-small', type: 'button', text: 'Open', 'aria-label': `Open ${s.title}`, 'data-field': `open:${s.id}`, on: { click: async () => onOpen(await col.get(s.id)) } }),
       el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': `Remove ${s.title}`, on: { click: async () => {
@@ -466,7 +466,7 @@ export function savedPanel(hub, { col, kind, d, summary, onOpen, compareScreen }
         await col.remove(s.id); if (d.savedId === s.id) d.savedId = null; hub.invalidate();
       } } }),
     ]))) : el('p', { class: 'small muted', style: { margin: 0 }, text: 'Nothing saved yet.' }),
-    items.length > 1 ? el('div', { class: 'row' }, [compareBtn]) : null,
+    items.length > 1 && compareScreen ? el('div', { class: 'row' }, [compareBtn]) : null,
   ]);
 }
 

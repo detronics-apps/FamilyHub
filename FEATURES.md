@@ -554,6 +554,33 @@ out of the house loan again to buy a car. I want to log things like that." (D-07
 D-090)
 **Show it:** a home you own › "What happened", then "What each one did".
 
+#### Is your salary keeping up? (v0.25.0, 2026-11-13)
+**What it does:**
+- **Your salary against your own costs:** the salary you started on, each raise since, and your costs -
+  rent, medical aid, petrol, the rest - each rising at its own rate: yours from then and now, or a
+  starting rate labelled Estimated with its source.
+- **What it buys now** in the prices of when you started, beside what CPI alone would say.
+- **The years ahead:** married in 3 years, two children - each life event adds its costs from its date,
+  and the graph shows the take-home you would need against the one your raises give, and where the gap opens.
+**Why it is there:** "Someone started at R50 000 a year, 3.5 years ago, in Cape Town. With the raises
+they've had, are they better off each year, or more broke because of what their own costs did?" Rent
+rising 10% a year, medical aid above inflation, petrol at a record - one inflation figure hides them. (D-119)
+**The philosophy it shows:** own figures beat rules of thumb; graphs answer one question; the gap shown
+plainly, with no advice.
+**Show it:** Finance › Salary and costs: R50 000 a year from May 2023, raises, rent then and now, a child in 2028.
+
+#### Budget starting set and food per meal (v0.25.0, 2026-11-13)
+**What it does:**
+- **Starting set:** the categories most families have, each broken into what people forget - rates,
+  security, tyres, gap cover, school trips, replacing appliances. Untick "We don't have this", rename,
+  remove and add.
+- **Food per meal:** what the food money allows for breakfast, lunch and dinner, a person and for the
+  family, on the family's own split of the day - and how many dinners eating out uses.
+**Why it is there:** the budget started empty, so everyone started from scratch. And on meals: "Breakfast
+is usually cheaper than lunch, which is usually cheaper than dinner. But each person lives and works
+differently... we know how much we need to spend on buying cereal and milk and bread type items." (D-119)
+**Show it:** Finance › Budget › Starting set, then Plan the categories › Food.
+
 #### Who wins, said in full (v0.24.3, 2026-11-13)
 **What it does:** the box under a home's answer shows, for the year you sell, what buying leaves, what renting
 leaves, and who wins by how much. Close results say "About the same".

@@ -706,6 +706,38 @@ and a Compare row, say where it stands ("Stopped after Online", "Through Online,
 Viewing"). It is a choice, not a gate: every stage stays open, in line with structure that helps
 and never forces. Old links to Bond, Rent or buy and the like still open on Financing.
 
+**D-119 Salary and costs; the budget's starting set; food per meal (owner, 2026-11-13).** Someone
+started on R50 000 a year 3.5 years ago in Cape Town: with the raises they have had, are they better off,
+or "more broke" because of what their own costs did? **Salary and costs** (Finance, app `salary`) takes the
+salary started on (a year or a month, before tax or take-home), the month started (empty: today, a new job),
+each raise on the anniversary, and the raise expected from now on (CPI, Estimated). Each cost rises at its
+own rate: the family's own from "then and now" for the past, its own % from now on, otherwise a sourced
+starting rate for that calendar year, labelled Estimated - CPI (Stats SA yearly averages 2020-2025, 2026 the
+latest), rent (PayProp 2026: national 4.7%, Western Cape 9.7%, one tap), medical aid by scheme (each
+scheme's announced 2026 average; 2025 for Discovery and Bonitas), electricity (NERSA 9.01%), a bond 0%
+(it follows the interest rate). Petrol has no sourced history in the app, so it is then-and-now or CPI.
+Life events (Married, A child, Medical aid, Move house, Income, Something else) add an amount a month in
+today's money from their date, rising like the cost chosen; the hints name what to think about, with no
+amounts. Graphs, each titled by its question: "Is your salary keeping up with your own costs?" (take-home
+in the start's prices, as % more or less than at the start, beside CPI only - a rand scale from zero
+squeezed the lines flat) and "What salary would you need, year by year?" (needed = costs + events -
+income + what was left over at the start, kept in step with the family's prices). Advanced: where the
+extra went, what could change the answer (each rate 2 points either side; a bond left out), year by year.
+A gross salary goes through the 2026/27 SARS tables for every year, and the page says this makes tax take
+a little more of each raise. Saving reuses savedPanel, which now leaves out Compare when a tool has none.
+**The budget** (Budget and goals 1.3.0): an empty month offers **Starting set** - nine categories with
+the items people forget (the owner approved the list), no amounts. Each category can be ticked "We don't
+have this", renamed, removed and added to; its plan is its items' total (`plannedOf`); old months without
+items are unchanged. **Food per meal**, under Food: food only or groceries too (then the cleaning and
+toiletries in it come off), people eating at home (from People), and the family's own share of a day for
+breakfast, lunch and dinner - the owner: breakfast is usually cheaper than lunch, and lunch than dinner,
+but each family lives differently. The starting split is 20/30/50, labelled Estimated. It shows each
+meal a person, for the family and a month (what there is for cereal, milk and bread), and how many family
+dinners eating out uses. The brief's example ("R6 000 for 4 is about R50 a person a meal") was a day, not
+a meal: R6 000 for 4 is about R49 a person a day. Links: Food to Meal Planner; the budget to Salary and
+costs, whose **From budget** takes the categories (own-rate items such as rent, medical aid, petrol and
+electricity stand alone; the rest of each category rises with CPI).
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in
