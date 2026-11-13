@@ -17,7 +17,7 @@ import { rangePanel, rangeParts } from './range-view.js';
 import { scenarioRange, defaultRanges, measure } from './scenarios.js';
 import { alternativeOf } from './alternative.js';
 import { breakEven, breakEvenWords, BREAK_EVEN } from './breakeven.js';
-import { EXAMPLE_HOME, OUR_EXAMPLE, CARLA, exampleCheck, WHY_DIFFERENT } from './examples.js';
+import { EXAMPLE_HOME, OUR_EXAMPLE, CARLA } from './examples.js';
 import { carryIt, COMFORT } from './risk.js';
 import { situationEffects } from './situations.js';
 import { HOME_CHECKS, HOME_RULE, STAGES, tally } from '../viewing/checks.js';
@@ -99,7 +99,7 @@ const loadAll = (hub) => hub.use('homes-all', async () => {
       await c.put({ id: EXAMPLE_HOME.id, kind: KIND, title: EXAMPLE_HOME.title, values, result: headline(values, hub.today()), savedAt: new Date().toISOString() });
     }
     const carla = hub.creators?.add({ name: CARLA.name, url: CARLA.url, note: 'Money and property in South Africa', topics: ['finance'] });
-    if (carla) hub.creators.addVideo?.('finance', { url: CARLA.post, title: 'Cape Town property: to buy or not to buy?', note: 'The Oranjezicht 2-bed example in Homes is from this post.' });
+    if (carla) hub.creators.addVideo?.('finance', { url: CARLA.post, title: 'Cape Town property: to buy or not to buy?', note: 'Buying or renting in Cape Town, worked through.' });
     await hub.settings.set('exampleHomeAdded', true);
   }
   // The same home on our own figures (D-123), added once beside it - removed, it stays removed.
@@ -556,7 +556,7 @@ function results(hub, d) {
       p.bond ? stat(ymName(p.bond.paidOff), 'bond paid off', 'r-paidoff') : stat(rand(p.fromPocket), 'from savings up front', 'r-upfront'),
     ]),
     el('div', { class: 'panel stack' }, [el('h2', { text: 'What it means', style: { margin: 0 } }), ...lines.map((t) => el('p', { style: { margin: 0 }, text: t }))]),
-    v.exampleOf === 'carla' ? examplePanel(hub, d, today) : null,
+    v.exampleOf === 'carla' ? examplePanel(hub, d) : null,
     v.exampleOf === 'ours' ? oursPanel() : null,
     cmp.values ? range.chart : askPanel(hub, cmp, A),
     cmp.values ? sellAfterPanel(hub, d, cmp, H, p) : null,
@@ -1055,52 +1055,46 @@ function breakEvenPanel(hub, v, today, H, xLabel) {
 
 /* -------------------------------------------- the example home (D-116) */
 
-/** The example: where it is from, the post's figures beside ours, and what it leaves out - each one to try. */
-/** What our figures change from the post's (D-123) - the same home, four figures moved. */
+/**
+ * The examples (D-124): a home to play with, and the same home with four figures moved. Neither
+ * names a source or sets one figure against another's - the creator is in Finance's Creators.
+ */
 function oursPanel() {
   return el('div', { class: 'panel stack', 'data-field': 'ours-changes' }, [
-    el('h2', { text: 'What we changed from the post', style: { margin: 0 } }),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: 'The same home as the example from moneywithcarla’s post, with four figures moved. Everything else is the post’s.' }),
+    el('h2', { text: 'What we changed', style: { margin: 0 } }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'The same home as the example beside it, with four figures moved. Everything else is the same.' }),
     el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums' }, [
-      el('thead', {}, [el('tr', {}, ['', 'The post', 'Ours'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
+      el('thead', {}, [el('tr', {}, ['', 'Example', 'Ours'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
       el('tbody', {}, OUR_EXAMPLE.changes.map((c) => el('tr', {}, [
         el('td', {}, [c.what, el('div', { class: 'small muted', text: c.why })]),
-        el('td', { class: 'num', text: c.post }), el('td', { class: 'num', text: c.ours }),
+        el('td', { class: 'num', text: c.example }), el('td', { class: 'num', text: c.ours }),
       ]))),
     ])]),
     el('p', { class: 'small', style: { margin: 0 }, text: 'Then try "Kept as cash" at the top: what if the difference each month is not invested? And open each figure’s range under the graph. No single set of figures decides it - play with yours.' }),
   ]);
 }
 
-function examplePanel(hub, d, today) {
+function examplePanel(hub, d) {
   const v = d.values;
-  const rows = exampleCheck(v, today);
-  const fmt = (x, unit) => (x == null ? '-' : unit === 'R' ? rand(x) : `${x}`);
-  const delta = (r) => (r.ours == null ? '-' : r.unit === 'R' ? `${r.ours >= r.said ? '+' : '−'}${rand(Math.round(Math.abs(r.ours - r.said)))}` : `${r.ours >= r.said ? '+' : '−'}${Math.abs(Math.round((r.ours - r.said) * 10) / 10)}`);
   const set = (patch, note) => { Object.assign(v, patch); for (const k of Object.keys(patch)) d.mine.add(k); hub.render(); hub.ui.notice(note); };
   const show = (field) => { figs.open = true; hub.render(); const box = document.querySelector(`[data-field="${field}"]`); box?.scrollIntoView({ block: 'center' }); box?.focus?.(); };
-  const leavesOut = [
-    ['Tax on what investments grow', 'The post’s 13% is before tax. In South Africa growth is taxed unless it sits in a tax-free or retirement account.', Number(v.investTaxPct) ? null : ['Try', () => set({ investTaxPct: 15 }, 'Now 15% of investment growth is lost to tax - change it under Your figures.')]],
-    ['Not every rand of the difference gets invested', 'Renting wins only if the difference really is invested, every month, for 20 years.', ['Show', () => show('in:investShare')]],
-    ['Selling costs', 'The agent and fees when the home is sold - the post counts the property’s full value.', Number(v.sellPct) ? null : ['Try', () => set({ sellPct: 7.5 }, 'Now selling costs 7.5% of the price - change it under Your figures.')]],
-    ['Renting somewhere nicer than you would buy', 'Most people rent a fancier place than they could buy - then the two are not the same home.', ['Show', () => show('in:likeRent')]],
+  const tries = [
+    ['Tax on what investments grow', 'Here investment growth is counted before tax. In South Africa growth is taxed unless it sits in a tax-free or retirement account.', Number(v.investTaxPct) ? null : ['Try', () => set({ investTaxPct: 15 }, 'Now 15% of investment growth is lost to tax - change it under Your figures.')]],
+    ['Not every rand of the difference gets invested', 'Renting leaves more only if the difference really is invested, every month, for all those years.', ['Show', () => show('in:investShare')]],
+    ['Selling costs', 'Here the home is counted at its full value when it is sold. The agent and fees take part of it.', Number(v.sellPct) ? null : ['Try', () => set({ sellPct: 7.5 }, 'Now selling costs 7.5% of the price - change it under Your figures.')]],
+    ['Renting somewhere nicer than you would buy', 'Many people rent a fancier place than they would buy - then the two are not the same home.', ['Show', () => show('in:likeRent')]],
     ['The worst house in the best area', 'Buy the house that needs work in a good area, renovate, and the money spent can come back when you sell.', ['Show', () => show('upgrade-add')]],
     ['Nobody knows what returns will do', 'One figure each for prices, returns and rent - the range and "What would it take" show what happens if they differ.', ['Show', () => { document.querySelector('[data-field="break-even"]')?.scrollIntoView({ block: 'start' }); }]],
   ];
   return el('div', { class: 'panel stack', 'data-field': 'example-home' }, [
     el('h2', { text: 'An example to play with', style: { margin: 0 } }),
-    el('p', { style: { margin: 0 } }, ['The figures from ', el('a', { href: CARLA.post, target: '_blank', rel: 'noopener noreferrer', text: `${CARLA.name}’s post` }), ' - a 2-bed in Oranjezicht, R11,5m to buy or R45K a month to rent. Change anything; remove it from Our homes when you are done.']),
-    rows.length ? el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums', 'data-field': 'example-check' }, [
-      el('thead', {}, [el('tr', {}, ['', 'The post', 'Family Hub', 'Difference'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
-      el('tbody', {}, rows.map((r) => el('tr', {}, [el('td', { text: r.what }), el('td', { class: 'num', text: fmt(r.said, r.unit) }), el('td', { class: 'num', text: fmt(r.ours, r.unit) }), el('td', { class: 'num', text: delta(r) })]))),
-    ])]) : null,
-    el('details', { class: 'more' }, [el('summary', { text: 'Why they differ' }), el('ul', { class: 'small' }, WHY_DIFFERENT.map((t) => el('li', { text: t })))]),
-    el('h3', { text: 'What the example leaves out', style: { margin: 0 } }),
-    el('ul', { class: 'list' }, leavesOut.map(([name, what, act]) => el('li', {}, [
+    el('p', { style: { margin: 0 }, text: 'A 2-bed in Oranjezicht, R11,5m to buy or R45 000 a month to rent. Change anything; remove it from Our homes when you are done.' }),
+    el('h3', { text: 'What to try', style: { margin: 0 } }),
+    el('ul', { class: 'list' }, tries.map(([name, what, act]) => el('li', {}, [
       el('div', { class: 'list__main' }, [el('strong', { text: name }), el('div', { class: 'small', text: what })]),
       act ? el('button', { class: 'btn btn-small', type: 'button', text: act[0], 'data-field': `ex-${name.split(' ')[0].toLowerCase()}`, on: { click: act[1] } }) : el('span', { class: 'small muted', text: 'counted now' }),
     ]))),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: 'General information, not financial advice - the post says the same.' }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'General information, not financial advice.' }),
   ]);
 }
 

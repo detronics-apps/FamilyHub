@@ -784,6 +784,16 @@ row** (a month now, who wins, bond paid off) read as more input: it now has its 
 boxes are darker than the inputs, and who wins sits in the wide middle (1 : 2 : 1); on a phone it goes first,
 full width, with the other two side by side under it.
 
+**D-124 The examples name no one; the creator is in Finance's Creators (owner, 2026-11-13).** "I very much
+appreciate [her] post. And don't want to show where she's wrong, or that she is wrong at all. I just want to show
+how finicky these calculations actually are." The example home no longer names or links its source, and no longer
+sets the post's results beside Family Hub's: the side-by-side table and "Why they differ" (D-116) are gone from the
+page. "What the example leaves out" is now "What to try", each line about the example's own figures ("Here
+investment growth is counted before tax"). Our figures' panel is "What we changed", against "Example", not "The
+post". The guide tile says the same. The creator stays where the owner wants her - in Finance's Creators, a good
+person to follow - with her post as a video; for new families its note no longer ties it to the example.
+`exampleCheck` stays only as a test that the model works the published figures through sensibly.
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in

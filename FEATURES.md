@@ -554,6 +554,14 @@ out of the house loan again to buy a car. I want to log things like that." (D-07
 D-090)
 **Show it:** a home you own › "What happened", then "What each one did".
 
+#### Examples that name no one (v0.25.4, 2026-11-13)
+**What it does:** the example homes are just homes to play with - no source named, and nothing set against anyone's
+figures. Each has "What to try". The creator whose post inspired them is in Finance › Creators, as someone worth
+following.
+**Why it is there:** "I just want to add on to that and give people the tool to do the calculations themselves...
+I don't want to show where she's wrong... don't call her out in the example." (D-124)
+**Show it:** Finance › Homes › either example; Finance › Creators.
+
 #### The same home on our own figures (v0.25.3, 2026-11-13)
 **What it does:**
 - **A second example:** the post's Oranjezicht home with four figures moved - investments 10% instead of 13%,

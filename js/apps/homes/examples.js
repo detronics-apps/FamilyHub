@@ -36,10 +36,10 @@ export const OUR_EXAMPLE = {
   title: 'Oranjezicht 2-bed (our figures)',
   values: { ...EXAMPLE_HOME.values, exampleOf: 'ours', investPct: 10, growthPct: 9, termYears: 14, stayYears: 15 },
   changes: [
-    { what: 'Investments grow by', post: '13% a year', ours: '10% a year', why: 'What we see as realistic over many years. The range tests 8 to 12%.' },
-    { what: 'House prices grow by', post: '7% a year', ours: '9% a year', why: 'Our own house grew 11.5% a year so far. The range tests 7 to 11%.' },
-    { what: 'The bond over', post: '20 years', ours: '14 years', why: 'A shorter bond: a bigger instalment, far less interest.' },
-    { what: 'Sell after', post: '20 years', ours: '15 years', why: 'A shorter stay - the answer is read in that year.' },
+    { what: 'Investments grow by', example: '13% a year', ours: '10% a year', why: 'What we see as realistic over many years. The range tests 8 to 12%.' },
+    { what: 'House prices grow by', example: '7% a year', ours: '9% a year', why: 'Our own house grew 11.5% a year so far. The range tests 7 to 11%.' },
+    { what: 'The bond over', example: '20 years', ours: '14 years', why: 'A shorter bond: a bigger instalment, far less interest.' },
+    { what: 'Sell after', example: '20 years', ours: '15 years', why: 'A shorter stay - the answer is read in that year.' },
   ],
 };
 
@@ -74,11 +74,3 @@ export function exampleCheck(values, today) {
     { what: 'Rent costs more than the buyer pays, from year', said: CARLA_SAID.rentPasses, ours: passes < 0 ? null : Math.round(((passes + 1) / 12) * 10) / 10, unit: 'years' },
   ];
 }
-
-/** Why the two differ - each reason the post's figures alone cannot show. */
-export const WHY_DIFFERENT = [
-  'Up front: Family Hub works out transfer duty, both attorneys, the Deeds Office and the bank’s fee item by item from the published 2026 figures; the post rounds them.',
-  'Buying leaves less here than the home is worth: capital gains tax when it is sold is taken off. The post counts the property’s value.',
-  'Renting - growth each month, not each year. Investments grow a little every month, and each month’s growth grows too. Family Hub uses the monthly rate that ends a year exactly 13% up: about 1.024% a month (1.01024 to the power 12 = 1.13). The quick way, 13% ÷ 12 = 1.083% a month, grown the same way ends the year 13.8% up (1.01083 to the power 12 = 1.138) - 0.8% a year more than the 13% it started from. Over 20 years R1 at 13% becomes about R11.52; at 13.8% about R13.28, some 15% more. And once rent costs more than buying, here the buyer invests the difference instead of the renter drawing down.',
-  'When rent passes the buyer’s costs depends on how fast running costs rise - the post does not say; 5% is used here.',
-];
