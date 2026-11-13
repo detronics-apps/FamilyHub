@@ -10,28 +10,8 @@ import { saveRecord } from '../kit.js';
 
 /* ------------------------------------------------------------ levels */
 
-export const LEVELS = [
-  { id: 'simple', label: 'Simple', says: 'Just the answer, from the few things that matter most.' },
-  { id: 'advanced', label: 'Advanced', says: 'Every cost and assumption, a timeline, and what moves the answer most.' },
-  { id: 'learn', label: 'Learn', says: 'Everything in Advanced, plus how each number is worked out, step by step.' },
-];
-
-export function level() {
-  try { const v = localStorage.getItem(KEYS.financeLevel); return LEVELS.some((l) => l.id === v) ? v : 'simple'; } catch { return 'simple'; }
-}
-
-export function levelBar(onChange) {
-  const now = level();
-  return el('div', { class: 'stack', style: { gap: 'var(--space-1)' } }, [
-    el('div', { class: 'chipset', role: 'group', 'aria-label': 'How much detail' }, LEVELS.map((l) => el('button', {
-      class: 'chip', type: 'button', 'aria-pressed': String(l.id === now), 'data-field': `level:${l.id}`, text: l.label,
-      on: { click: () => { try { localStorage.setItem(KEYS.financeLevel, l.id); } catch { /* this device only */ } onChange(); } },
-    }))),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: LEVELS.find((l) => l.id === now).says }),
-  ]);
-}
-
-export const shows = (want) => ({ simple: 0, advanced: 1, learn: 2 })[level()] >= ({ simple: 0, advanced: 1, learn: 2 })[want];
+// One level for the whole app, chosen in the bar under the top bar (D-121).
+export { LEVELS, level, shows } from '../../ui/levels.js';
 
 /* ------------------------------------------------------------ amounts */
 

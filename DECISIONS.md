@@ -738,6 +738,17 @@ a meal: R6 000 for 4 is about R49 a person a day. Links: Food to Meal Planner; t
 costs, whose **From budget** takes the categories (own-rate items such as rent, medical aid, petrol and
 electricity stand alone; the rest of each category rises with CPI).
 
+**D-121 One level for the whole app: Simple, Advanced, Expert (owner, 2026-11-13).** Reverses D-005's
+"no app-wide levels". The Finance tools each had their own Simple / Advanced / Learn chips, found only deep
+inside (Finance, Homes, a home, Financing) and looking like any other button. The owner: it is "one setting
+across the board over all apps", called Expert, "part of our app design philosophy", like the other Detronics
+apps - under the top bar, following you down the page, foldable to "a little tab in the center of three dots".
+- `js/ui/levels.js` holds the level (this device, `familyhub.level`; the old Finance choice is read once,
+  Learn becoming Expert) and the bar; `shows()` is the same for every app (`'learn'` still works).
+- The bar is the header's second row, so it is sticky with it: small chips, the chosen level's sentence
+  (hidden on a phone), and **Hide**; folded, a small ⋯ tab under the header opens it again.
+- The seven Finance tools' own bars are gone; they read the one level.
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in

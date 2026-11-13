@@ -7,7 +7,7 @@ import { confirmAction } from '../../ui/common.js';
 import { loading, failure } from '../kit.js';
 import { carCost, CAR_SCENARIOS, CAR_DEFAULTS, REFERENCE, sensitivity, CAR_NUDGES, monthlyRate, ENERGY, POWER, typicalLitres, typicalKwh, fuelPriceFor } from '../finance/maths.js';
 import { CAR_HELP } from '../finance/help.js';
-import { levelBar, shows, draft, loadDraft, linesPanel, inputsPanel, assumed, stat, sums, step, lineChart, chartPanel, RULE, outOf, crossing, whenLabel, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
+import { shows, draft, loadDraft, linesPanel, inputsPanel, assumed, stat, sums, step, lineChart, chartPanel, RULE, outOf, crossing, whenLabel, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
 import { CAR_CHECKS, STAGES, tally } from '../viewing/checks.js';
 import { sectionBar, stageScreen, storyScreen, mattersScreen, compareRows, compareTableOf, progressLine, keep, famOf, checklistCol, checksOf, lookOf } from '../viewing/view.js';
 
@@ -168,7 +168,6 @@ function mainScreen(hub, sec = 'financing') {
     sectionBar(hub, 'car', 'financing'),
     repairsPanel(hub, ctx),
     el('p', { class: 'muted', style: { margin: 0 }, text: 'Not just the instalment: interest, fees, running costs, and what it is worth - and still owed - when you sell it.' }),
-    levelBar(() => hub.render()),
     inputsPanel(FIELDS, d, GROUPS, changed),
     linesPanel(d, refresh, 'scenarios', CAR_SCENARIOS, 'What if…', CAR_HELP.scenarios, true),
     answer,

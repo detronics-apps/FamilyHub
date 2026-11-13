@@ -6,7 +6,7 @@ import { el } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
 import { loading, failure, saveRecord } from '../kit.js';
 import { REFERENCE } from '../finance/maths.js';
-import { levelBar, shows, stat, step, lineChart, chartPanel, RULE, outOf, crossing, whenLabel, rand, pct, months } from '../finance/pod.js';
+import { shows, stat, step, lineChart, chartPanel, RULE, outOf, crossing, whenLabel, rand, pct, months } from '../finance/pod.js';
 import { normalisePlan, schedule, family, savingAt, startingLater, exactAge } from './logic.js';
 
 const plans = (hub) => hub.data.collection('plans', { summary: (r) => ({ title: r.personId ?? 'settings' }), prefix: 'kid' });
@@ -52,7 +52,6 @@ function familyScreen(hub, data) {
   const head = [
     el('h1', { id: 'kids-title', text: 'What will the children need?', style: { margin: 0 } }),
     el('p', { class: 'muted', style: { margin: 0 }, text: 'School, studies and starting out, for each child - and all of them together, so the years when costs pile up show early.' }),
-    levelBar(() => hub.render()),
   ];
   if (!children.length) {
     return el('section', { class: 'stack', 'aria-labelledby': 'kids-title' }, [...head,
@@ -179,7 +178,6 @@ function childScreen(hub, data, id) {
   return el('section', { class: 'stack', 'aria-labelledby': 'child-title' }, [
     el('h1', { id: 'child-title', text: `${child.name}’s future`, style: { margin: 0 } }),
     el('p', { class: 'muted', style: { margin: 0 }, text: `${child.name} is ${Math.floor(s.age)}. Tick what fits your plans and put in your own costs - everything is a starting point.` }),
-    levelBar(() => hub.render()),
     el('div', { class: 'stats' }, [
       stat(rand(s.monthlyNow), 'to put aside each month, for save-ahead costs', 'r-child-save'),
       stat(rand(s.nowMonthly), 'a month from the budget now', 'r-child-now'),

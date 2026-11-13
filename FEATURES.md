@@ -581,6 +581,16 @@ is usually cheaper than lunch, which is usually cheaper than dinner. But each pe
 differently... we know how much we need to spend on buying cereal and milk and bread type items." (D-119)
 **Show it:** Finance › Budget › Starting set, then Plan the categories › Food.
 
+#### Simple, Advanced, Expert - one choice for the whole app (v0.25.1, 2026-11-13)
+**What it does:** a small bar under the top bar on every page: Simple, Advanced or Expert, with a line saying
+what each shows. It follows you down the page; Hide folds it to a small ⋯ tab. Every app reads the same choice.
+**Why it is there:** "That should be a selection that you constantly see under the top bar... I choose simple,
+that means I want everything run in simple... It's called expert because it's constant over all our apps, is
+part of our app design philosophy." (D-121)
+**How it was decided:** this reverses the first-day decision to have no app-wide levels in a family app; the
+Finance tools' own Simple / Advanced / Learn chips went, and Learn is now Expert.
+**Show it:** any page - choose Expert, open a home's Financing, and "How it is worked out" appears.
+
 #### Who wins, said in full (v0.24.3, 2026-11-13)
 **What it does:** the box under a home's answer shows, for the year you sell, what buying leaves, what renting
 leaves, and who wins by how much. Close results say "About the same".

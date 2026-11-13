@@ -16,6 +16,7 @@ import { CORE_TILES } from './dashboard.js';
 import { activeSections, appsIn, section, sectionOf } from './sections.js';
 import { starterRegistry, reconcileStarters, normaliseRegistry, setEnabled } from './miniapps.js';
 import { starterManifests, starter } from './apps/catalogue.js';
+import { levelBar } from './ui/levels.js';
 import { el, clear } from './ui/dom.js';
 import { renderNotices, captureFocus, restoreFocus } from './ui/patterns.js';
 import { avatar, modal, HOUSE_ICON } from './ui/common.js';
@@ -39,7 +40,7 @@ import { openDoc } from './ui/views/docs.js';
 import { syncChip, syncNotices, phoneButtons } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.25.0';
+export const APP_VERSION = '0.25.1';
 
 const store = createLocalStore(window.localStorage);
 
@@ -315,6 +316,8 @@ function buildHeader() {
         },
       }, [el('span', { class: 'btn__glyph', 'aria-hidden': 'true', text: THEME_GLYPH[theme] })]),
     ]),
+    // How much detail, for the whole app (D-121): its own row, so it follows the top bar down the page.
+    levelBar(render),
   ]);
 }
 

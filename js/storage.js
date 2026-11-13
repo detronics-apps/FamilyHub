@@ -24,7 +24,9 @@ export const KEYS = {
   fileBase: 'familyhub.file.base',
   folds: 'familyhub.folds',                  // which sections are folded away, on this device (D-062)
   phoneChanged: 'familyhub.phone.changed',   // when a phone last changed a mini-app record (D-064)
-  financeLevel: 'familyhub.finance.level',   // Simple, Advanced or Learn in the Finance calculators (D-066)
+  financeLevel: 'familyhub.finance.level',   // the Finance tools' own level before D-121 - read once, as the starting choice
+  level: 'familyhub.level',                  // Simple, Advanced or Expert - for the whole app (D-121)
+  levelFolded: 'familyhub.level.folded',     // the level bar folded to its small tab
 };
 
 export const EXPORT_KIND = 'family-hub-household';

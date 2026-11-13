@@ -5,7 +5,7 @@
 import { el } from '../../ui/dom.js';
 import { loading, failure } from '../kit.js';
 import { REFERENCE } from '../finance/maths.js';
-import { levelBar, shows, draft, loadDraft, inputsPanel, assumed, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
+import { shows, draft, loadDraft, inputsPanel, assumed, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
 import { OFFER_DEFAULTS, SARS, estimatePay, project, moveCash, versus, bandTax } from './logic.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => `${r.title} ${r.values?.notes ?? ''}`, prefix: 'job' });
@@ -57,7 +57,6 @@ function offerScreen(hub) {
   return el('section', { class: 'stack', 'aria-labelledby': 'jobs-title' }, [
     el('h1', { id: 'jobs-title', text: 'What does this job really leave us?', style: { margin: 0 } }),
     el('p', { class: 'muted', style: { margin: 0 }, text: 'Not the headline salary: what reaches the bank, what the job costs, and what moving takes. Save the job you have now and each offer by name, then compare them.' }),
-    levelBar(() => hub.render()),
     inputsPanel(FIELDS, d, GROUPS, refresh),
     answer,
     savedPanel(hub, {

@@ -5,7 +5,7 @@
 import { el } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
 import { loading, failure, saveRecord } from '../kit.js';
-import { levelBar, shows, stat, step, lineChart, chartPanel, RULE, outOf, crossing, whenLabel, rand, pct, months } from '../finance/pod.js';
+import { shows, stat, step, lineChart, chartPanel, RULE, outOf, crossing, whenLabel, rand, pct, months } from '../finance/pod.js';
 import { carCost, homeCost, bond, CAR_DEFAULTS, HOME_DEFAULTS } from '../finance/maths.js';
 import { normaliseMonth, monthSummary, monthId, normaliseGoal as financeGoal } from '../finance/logic.js';
 import { normaliseTrip, budgetSummary } from '../holidays/logic.js';
@@ -134,7 +134,6 @@ function planScreen(hub, plan, found) {
   return el('section', { class: 'stack', 'aria-labelledby': 'plan-title' }, [
     el('h1', { id: 'plan-title', text: 'Can we do all of it?', style: { margin: 0 } }),
     el('p', { class: 'muted', style: { margin: 0 }, text: 'Every goal on one timeline - trips, a car, a home, the children - against what you can put aside each month. Not a spending record: look at it once a month.' }),
-    levelBar(() => hub.render()),
     moneyPanel(hub, plan, set, found),
     ready ? results(plan, s, today, opts, vs, without, offer) : el('p', { class: 'panel muted', text: 'Fill in the money coming in and the monthly commitments to see whether the plan fits.' }),
     ready ? planStory(s, today) : null,

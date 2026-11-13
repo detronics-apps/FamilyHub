@@ -5,7 +5,7 @@
 import { el } from '../../ui/dom.js';
 import { loading, failure } from '../kit.js';
 import { growth, todaysMoney, effectiveYearly, REFERENCE } from '../finance/maths.js';
-import { levelBar, shows, draft, loadDraft, input, assumed, stat, sums, step, lineChart, chartPanel, RULE, outOf, crossing, whenLabel, savedPanel, compareTable, rand, pct } from '../finance/pod.js';
+import { shows, draft, loadDraft, input, assumed, stat, sums, step, lineChart, chartPanel, RULE, outOf, crossing, whenLabel, savedPanel, compareTable, rand, pct } from '../finance/pod.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => r.title, prefix: 'clc' });
 
@@ -48,7 +48,6 @@ function compoundScreen(hub) {
   return el('section', { class: 'stack', 'aria-labelledby': 'ci-title' }, [
     el('h1', { id: 'ci-title', text: 'What will my savings grow to?', style: { margin: 0 } }),
     el('p', { class: 'muted', style: { margin: 0 }, text: 'Compound interest: growth is added to the savings, and then grows too.' }),
-    levelBar(() => hub.render()),
     el('div', { class: 'panel stack' }, [el('h2', { text: 'What we need', style: { margin: 0 } }), ...COMPOUND.filter((f) => shows(f.level)).map((f) => input(f, d, refresh))]),
     answer,
     savedPanel(hub, {

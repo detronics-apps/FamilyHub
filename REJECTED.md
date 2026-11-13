@@ -20,8 +20,8 @@ A decision that says what the app stands for is also written up as a principle i
 - **A Detronics logo and business look inside the app** (2026-10-25). "Nothing in the app should feel
   like it was bought by a business or owned by a business." Only the coffee button, the footer link
   and the licence were added later, at the owner's request (2026-11-02). (D-005, D-103)
-- **Simple / Advanced / Expert for the whole app** (2026-10-25). A family app serves everyone at
-  once. The levels stay only inside the Finance tools. (D-005, D-066)
+- ~~**Simple / Advanced / Expert for the whole app**~~ (2026-10-25) - *reversed by the owner on
+  2026-11-13 (D-121): one level for the whole app, in a bar under the top bar, foldable.*
 - **A Health section** (2026-10-26). It was really two things, and became Meals and Exercise.
   (D-023)
 

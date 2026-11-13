@@ -5,7 +5,7 @@
 
 import { el } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
-import { levelBar, shows, draft, loadDraft, inputsPanel, stat, step, lineChart, chartPanel, barsChart, savedPanel, rand, pct } from '../finance/pod.js';
+import { shows, draft, loadDraft, inputsPanel, stat, step, lineChart, chartPanel, barsChart, savedPanel, rand, pct } from '../finance/pod.js';
 import { normaliseMonth, monthId } from '../finance/logic.js';
 import { SARS } from '../jobs/logic.js';
 import { DEFAULTS, KINDS, SCHEMES, RENT, CPI, plan, whatMoves, startingRate, futureRaise, costsFromBudget, addMonth, monthsBetween } from './logic.js';
@@ -40,7 +40,6 @@ export function render(hub) {
   return el('section', { class: 'stack', 'aria-labelledby': 'sal-title' }, [
     el('h1', { id: 'sal-title', text: 'Is your salary keeping up?', style: { margin: 0 } }),
     el('p', { class: 'muted', style: { margin: 0 }, text: 'The salary you started on and your raises, against your own costs - rent, medical aid, petrol and the rest, each rising at its own rate. Then the years ahead, with what you plan: getting married, children.' }),
-    levelBar(() => hub.render()),
     inputsPanel(FIELDS, d, {}, onInput),
     lists,
     answer,

@@ -361,7 +361,7 @@ export const HOWTOS = [
     'Choose what it runs on - petrol, diesel, hybrid, plug-in hybrid or electric - and the distance you drive a year. Fuel or charging is worked out from the consumption and the current price. Add insurance, the yearly service, oil, tyres and licence for the full picture.',
     'Give it a name, like "Polo over 6 years", and press Save. Change the term, give it a new name and Save again.',
     'Tick two or more saved ones and press Compare to see them side by side, with the differences in words.',
-    'Choose Advanced for every fee, the balloon and a timeline - or Learn to see each sum worked out with your numbers.',
+    'Choose Advanced (in the bar under the top bar) for every fee, the balloon and a timeline - or Expert to see each sum worked out with your numbers.',
   ] },
   { id: 'exercise', title: 'Log exercise and plan to move more', steps: [
     'Open Exercise, then "Log activity". Tick everyone who took part - doing it together counts for the family.',
@@ -599,7 +599,7 @@ export const FEATURES = [
   { name: 'One page per home', where: 'Finance › Homes', what: 'Buying, ours already or renting - the home, buying it, selling ours first, the bond and its history, running it, upgrades, travel, investing after the bond - each section counted or left out.' },
   { name: 'Petrol against electric', where: 'Finance › Cars', what: 'Fuel or charging worked out from distance, consumption and the current fuel price or electricity tariff - home and public charging, hybrids and plug-ins - with insurance, service, oil and tyres. Save both and compare.' },
   { name: 'True cost of a car', where: 'Finance › Cars', what: 'The instalment, interest, fees, running costs, and what is still owed when you sell - saved by name and compared side by side.' },
-  { name: 'Simple, Advanced, Learn', where: 'Finance calculators', what: 'The quick answer, every cost and assumption, or each sum worked out step by step - switch any time without losing what you typed.' },
+  { name: 'Simple, Advanced, Expert', where: 'Under the top bar, on every page', what: 'One choice for the whole app: the quick answer, every figure and assumption, or each sum worked out step by step. It follows you down the page; Hide folds it to a small ⋯ tab. Switch any time without losing what you typed.' },
   { name: 'Projections with their assumptions', where: 'Finance › Goals', what: 'When a goal could be reached, or a debt paid off - and plainly when it never would at the current payment.' },
   { name: 'Time a day for chores', where: 'Chores › Plan and Progress', what: 'All the chores together, a week and on average a day - so you can plan for, say, an hour a day.' },
   { name: 'The timer ring', where: 'Chores › Start', what: 'Fills to the time a chore should take, then turns honey and counts what is over. Done records the minutes; Cancel records nothing; left running, it asks "Still on it?" and stops if nobody answers.' },

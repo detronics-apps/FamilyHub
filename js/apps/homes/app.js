@@ -11,7 +11,7 @@ import { REFERENCE, total, SELL_DEFAULTS } from '../finance/maths.js';
 import { historyGrowth, CGT } from './ownrent.js';
 import { EVENT_KINDS } from './bondlog.js';
 import { homePlan, withAndWithout, sameMoney, kindOf, KINDS, SECTIONS, SECTIONS_ON, SCENARIO_KINDS, PLAN_DEFAULTS } from './home.js';
-import { levelBar, shows, draft, loadDraft, input, info, linesPanel as eventsPanel, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, RULE, savedPanel, exportBar, rand, pct, months } from '../finance/pod.js';
+import { shows, draft, loadDraft, input, info, linesPanel as eventsPanel, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, RULE, savedPanel, exportBar, rand, pct, months } from '../finance/pod.js';
 import { HOME_HELP as H } from '../finance/help.js';
 import { rangePanel, rangeParts } from './range-view.js';
 import { scenarioRange, defaultRanges, measure } from './scenarios.js';
@@ -286,7 +286,6 @@ function homeScreen(hub, sec = 'financing') {
     sectionBar(hub, 'home', 'financing'),
     repairsPanel(hub, ctx),
     el('p', { class: 'muted', style: { margin: 0 }, text: 'Everything about one home, in sections. Tick a section off to leave it out, fold away what you do not need, and tap (i) for what a figure is and where to find yours.' }),
-    levelBar(() => hub.render()),
     el('div', { class: 'panel stack' }, [
       el('div', { class: 'chipset', role: 'group', 'aria-label': 'This home' }, Object.entries(KINDS).map(([k, label]) => el('button', {
         class: 'chip', type: 'button', 'aria-pressed': String(v.kind === k), 'data-field': `kind:${k}`, text: label,
