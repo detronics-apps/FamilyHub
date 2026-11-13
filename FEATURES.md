@@ -554,6 +554,15 @@ out of the house loan again to buy a car. I want to log things like that." (D-07
 D-090)
 **Show it:** a home you own › "What happened", then "What each one did".
 
+#### Who wins, said in full (v0.24.3, 2026-11-13)
+**What it does:** the box under a home's answer shows, for the year you sell, what buying leaves, what renting
+leaves, and who wins by how much. Close results say "About the same".
+**Why it is there:** the box said "R41 104 117 more with renting instead". The owner asked: "It's a bit unclear,
+like more than what, and like, is this the delta?... It should show exactly which one wins in this instance."
+(D-120)
+**How it was decided:** both totals first, then the difference, named; the saved line and Story say the same.
+**Show it:** Finance › Homes › Oranjezicht 2-bed (example) - it opens on Financing.
+
 #### What each side is worth, and Bond over (v0.24.1, 2026-11-12)
 **What it does:**
 - **A graph of each side's whole worth over time.** Buying is the home if it were sold, plus what was

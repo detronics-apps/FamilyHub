@@ -706,6 +706,13 @@ and a Compare row, say where it stands ("Stopped after Online", "Through Online,
 Viewing"). It is a choice, not a gate: every stage stays open, in line with structure that helps
 and never forces. Old links to Bond, Rent or buy and the like still open on Financing.
 
+**D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
+a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
+now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in
+2046 · Buying: R40 448 040 · Renting instead: R81 552 157 · Renting instead wins by R41 104 117"), or
+"About the same" within 2% or R20 000. The saved line and Story's money line say the same in words. A home
+opens on Story (D-111); the example opens on Financing, where the comparison is, and Story says where it is.
+
 **D-118 No made-up creators; Creators on every topic's top line (owner, 2026-11-13).**
 - The "Example - replace" placeholders (a kind of creator and what to look for, one or two per topic)
   are gone: "do not make up data or information. Like, don't create fake creators." `EXAMPLES` is empty

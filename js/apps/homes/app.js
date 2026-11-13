@@ -74,7 +74,7 @@ function moneyLines(v, today) {
     h ? `${h}.` : 'Financing is not filled in yet.',
     isBuy(v) && n(v.price) ? `Asking ${rand(n(v.price))}.` : null,
     isBuy(v) && n(v.renovations) ? `Kept for renovations: ${rand(n(v.renovations))}.` : null,
-    'Can you carry it? - in Financing.',
+    'The comparison with renting, its graphs, and Can you carry it? are in Financing (the tab above).',
   ].filter(Boolean);
 }
 
@@ -127,7 +127,7 @@ function listScreen(hub) {
         const v = valuesOf(rec);
         return el('li', {}, [
           el('div', { class: 'list__main' }, [el('strong', { text: rec.title || 'Untitled' }), el('div', { class: 'small muted', text: [KINDS[v.kind], headline(v, hub.today()).headline, rec.savedAt ? `saved ${rec.savedAt.slice(0, 10)}` : null].filter(Boolean).join(' · ') }), fam.data ? el('div', { class: 'small muted', text: progressLine(HOME_CHECKS, fam.data, v) }) : null]),
-          el('button', { class: 'btn btn-small', type: 'button', text: 'Open', 'aria-label': `Open ${rec.title}`, 'data-field': `open:${rec.id}`, on: { click: () => { loadDraft('homes', DEFAULTS, { ...rec, values: v, kind: KIND }); figs.open = null; hub.go('home'); } } }),
+          el('button', { class: 'btn btn-small', type: 'button', text: 'Open', 'aria-label': `Open ${rec.title}`, 'data-field': `open:${rec.id}`, on: { click: () => { loadDraft('homes', DEFAULTS, { ...rec, values: v, kind: KIND }); figs.open = null; hub.go('home', v.exampleOf ? 'financing' : undefined); } } }),
           el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': `Remove ${rec.title}`, 'data-field': `remove:${rec.id}`, on: { click: async () => {
             if (!(await confirmAction({ title: `Remove "${rec.title || 'Untitled'}"?`, text: 'The saved home is deleted. This cannot be undone.', confirmLabel: 'Remove', danger: true }))) return;
             await col(hub).remove(rec.id); cmp.picked?.delete(rec.id); hub.invalidate();
@@ -442,8 +442,21 @@ function headline(v, today) {
   const c = comparison(v, today);
   const H = Math.min(360, p.stay);
   if (!c.values) return { headline: `${rand(p.monthNow)} a month` };
-  const diff = c.m.series[H - 1][1];
-  return { headline: `${rand(p.monthNow)} a month · ${diff >= 0 ? c.names[0] : c.names[1]} leaves ${rand(Math.abs(diff))} more by ${p.months[H - 1].ym.slice(0, 4)}` };
+  return { headline: `${rand(p.monthNow)} a month · ${verdict(c, H, p.months[H - 1].ym.slice(0, 4)).line}` };
+}
+
+/**
+ * Who wins, said in full (D-119): each side's total by then, and which leaves more and by how much -
+ * never a bare "more". Close results are called close (within 2% or R20 000).
+ */
+function verdict(c, H, year) {
+  const [A, B] = c.names;
+  const wa = c.m.wealthA[H - 1].wealth; const wb = c.m.wealthB[H - 1].wealth; const diff = wa - wb;
+  const close = Math.abs(diff) < Math.max(20000, 0.02 * Math.max(Math.abs(wa), Math.abs(wb)));
+  const winner = diff >= 0 ? A : B;
+  const result = close ? 'About the same' : `${winner} wins by ${rand(Math.abs(diff))}`;
+  return { A, B, wa, wb, diff, close, winner, result, year,
+    line: `by ${year}, ${A.toLowerCase()} leaves ${rand(wa)} and ${B.toLowerCase()} ${rand(wb)}: ${close ? 'about the same' : `${winner.toLowerCase()} wins by ${rand(Math.abs(diff))}`}` };
 }
 
 /** "Your figures": every section, folded into one line once there is an answer to read. */
@@ -522,7 +535,12 @@ function results(hub, d) {
     ]),
     el('div', { class: 'stats' }, [
       stat(rand(p.monthNow), 'a month now, all counted', 'r-month'),
-      cmp.values ? stat(rand(Math.abs(diffNow)), `more with ${(diffNow >= 0 ? A : B).toLowerCase()}, ${after}`, 'r-diff') : null,
+      cmp.values ? (() => { const vd = verdict(cmp, H, leave); return el('div', { class: 'stat', 'data-field': 'r-diff' }, [
+        el('div', { class: 'stat__label', text: `If you sell in ${leave}` }),
+        el('div', { class: 'small', text: `${vd.A}: ${rand(vd.wa)}` }),
+        el('div', { class: 'small', text: `${vd.B}: ${rand(vd.wb)}` }),
+        el('div', { class: 'stat__value', style: { fontSize: '1.15rem' }, text: vd.result }),
+      ]); })() : null,
       p.bond ? stat(ymName(p.bond.paidOff), 'bond paid off', 'r-paidoff') : stat(rand(p.fromPocket), 'from savings up front', 'r-upfront'),
     ]),
     el('div', { class: 'panel stack' }, [el('h2', { text: 'What it means', style: { margin: 0 } }), ...lines.map((t) => el('p', { style: { margin: 0 }, text: t }))]),
