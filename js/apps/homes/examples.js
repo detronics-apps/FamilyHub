@@ -63,6 +63,6 @@ export function exampleCheck(values, today) {
 export const WHY_DIFFERENT = [
   'Up front: Family Hub works out transfer duty, both attorneys, the Deeds Office and the bank’s fee item by item from the published 2026 figures; the post rounds them.',
   'Buying leaves less here than the home is worth: capital gains tax when it is sold is taken off. The post counts the property’s value.',
-  'Renting: Family Hub turns 13% a year into a monthly rate that comes to exactly 13% a year; taking 13% ÷ 12 each month comes to about 13.8% a year. And once rent costs more than buying, here the buyer invests the difference instead of the renter drawing down.',
+  'Renting - growth each month, not each year. Investments grow a little every month, and each month’s growth grows too. Family Hub uses the monthly rate that ends a year exactly 13% up: about 1.024% a month (1.01024 to the power 12 = 1.13). The quick way, 13% ÷ 12 = 1.083% a month, grown the same way ends the year 13.8% up (1.01083 to the power 12 = 1.138) - 0.8% a year more than the 13% it started from. Over 20 years R1 at 13% becomes about R11.52; at 13.8% about R13.28, some 15% more. And once rent costs more than buying, here the buyer invests the difference instead of the renter drawing down.',
   'When rent passes the buyer’s costs depends on how fast running costs rise - the post does not say; 5% is used here.',
 ];

@@ -31,7 +31,7 @@ test('D-086 ours from when we bought it: renting a similar home from then, at to
   const own = { kind: 'own', ownFrom: 'bought', boughtFor: 1500000, boughtWhen: '2019-12', worthNow: 2400000, bondLoan: 900000, bondStart: '2019-12', bondYears: 14, bondRate: 10.75, ratesTaxes: 1300, levies: 2900, growthPct: 5, likeRent: 15000, rentRisePct: 6, stayYears: 15, investPct: 9 };
   const p = homePlan(own, TODAY);
   const alt = alternativeOf(own, TODAY);
-  assert.deepEqual(alt.names, ['Having bought it', 'Renting instead']);
+  assert.deepEqual(alt.names, ['Having bought it', 'Renting']);
   const ap = homePlan(alt.values, TODAY);
   assert.equal(ap.startYM, p.startYM, 'both from the month we bought');
   assert.ok(Math.abs(ap.months[p.now].rent - 15000) < 1, 'today\'s rent is the one typed');
@@ -60,4 +60,20 @@ test('D-086 repairs are tested only when there is a figure: 50% more than nothin
   assert.ok(relevant([{ ...buy, maintYearly: 0 }]).every((x) => x.key !== 'repairs'));
   assert.ok(relevant([buy]).some((x) => x.key === 'repairs'));
   assert.ok(relevant([{ ...buy, maintYearly: 0, maintMode: 'percent', upkeepPct: 1 }]).some((x) => x.key === 'repairs'));
+});
+
+test('D-122 the rental deposit: asked on the renting side too, not invested, back at the end with its interest', () => {
+  const v = { ...buy, likeRent: 15000 };
+  assert.equal(alternativeOf(v, TODAY).values.rentDeposit, null);                       // not counted until given
+  const alt = alternativeOf({ ...v, likeDeposit: 30000 }, TODAY).values;
+  assert.equal(alt.rentDeposit, 30000);
+  const plain = homePlan(alt, TODAY);
+  assert.equal(plain.fromPocket, 30000);                                                  // cash on day one
+  assert.equal(plain.months[11].homeNet, 30000);                                          // back, no interest yet
+  const earning = homePlan({ ...alt, rentDepositRatePct: 5 }, TODAY);
+  assert.ok(Math.abs(earning.months[11].homeNet - 31500) < 0.01);                         // a year at 5%
+  // A deposit leaves the renter less to invest, so buying gains against renting.
+  const without = at(measure([v, alternativeOf(v, TODAY).values], TODAY, {}, { a: 0, b: 1 }), 120);
+  const withDep = at(measure([v, alt], TODAY, {}, { a: 0, b: 1 }), 120);
+  assert.ok(withDep > without, `${withDep} > ${without}`);
 });

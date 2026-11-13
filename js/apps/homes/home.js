@@ -169,7 +169,8 @@ export function homePlan(input, today, { withScenarios = true } = {}) {
     paid += out; cashIn += taken;
     const owed = r ? r.balance : 0;
     const tax = kind === 'rent' ? 0 : homeGainTax(value * (1 - sell), baseCost + upgradesSpent, v.marginalPct).tax;
-    const homeNet = kind === 'rent' ? num(v.rentDeposit) : value * (1 - sell) - owed - tax;
+    // The rental deposit comes back at the end, with the interest it earned (Rental Housing Act s5(3)) - none counted until the family says what it earns (D-122).
+    const homeNet = kind === 'rent' ? num(v.rentDeposit) * (1 + num(v.rentDepositRatePct) / 100) ** (t / 12) : value * (1 - sell) - owed - tax;
     const forgone = on.forgone ? fromPocket * ((1 + ir) ** t - 1) : 0;
     const ahead = homeNet + inv + cashIn - paid - forgone - start;
     months.push({ t, ym: addMonthsYM(ym, t), out, bondPaid, running, upkeep: maint, rent, trip, upgradeNow, taken, takenOut: r ? eventsAt('withdraw', t, () => true) : 0, owed, value, inv, paid, homeNet, ahead, minPmt: r?.minPmt ?? 0, interest: r?.interestThis ?? 0 });

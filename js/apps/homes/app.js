@@ -171,12 +171,15 @@ const SECS = [
     f('rent', 'Rent a month', 'money'),
     f('rentRisePct', 'Rent rises by', 'percent', { source: { kind: 'illustrative' } }),
     f('rentDeposit', 'Rental deposit', 'money', { optional: true }),
+    f('rentDepositRatePct', 'The deposit earns', 'percent', { optional: true }),
     f('rentMove', 'Moving in', 'money', { optional: true, level: 'advanced' }),
   ] },
   { key: 'alt', title: 'What you compare it with', fields: [
     f('likeRent', 'Rent for a similar home, a month', 'money', { optional: true, when: isBuy }),
     f('likeRent', 'What a similar home rents for now, a month', 'money', { optional: true, when: isOwn }),
     f('rentRisePct', 'Rent rises by', 'percent', { source: { kind: 'illustrative' }, when: hasHome }),
+    f('likeDeposit', 'Its rental deposit', 'money', { optional: true, when: hasHome }),
+    f('rentDepositRatePct', 'The deposit earns', 'percent', { optional: true, when: hasHome }),
     f('price', 'A similar home would cost', 'money', { optional: true, when: isRent }),
     f('deposit', 'Deposit you would put down', 'money', { source: { kind: 'assumption' }, when: isRent }),
     f('ratePct', 'Bond interest rate', 'percent', { source: { ref: REFERENCE.prime }, when: isRent }),
@@ -850,6 +853,7 @@ function forgotten(v, p, cmp) {
     [on.travel && n(v.km) > 0, on.travel ? (n(v.km) ? 'Getting to work, every month' : 'Getting to work - not counted yet') : 'Getting to work - left out'],
     [!!cmp, cmp ? `What it is compared with: ${cmp.names[1].toLowerCase()} - on the same money, the differences ${v.diffCash ? 'kept as cash' : 'invested'}` : `What it is compared with - add ${alternativeOf(v, new Date().toISOString().slice(0, 10)).ask} under "What you compare it with"`],
     p.kind !== 'rent' ? [true, 'Tax on selling the home you live in: none on the first R3 million of gain'] : null,
+    depositLine(v, p),
     [scenarioCount(v) > 0, scenarioCount(v) ? `${scenarioCount(v)} what-if${scenarioCount(v) === 1 ? '' : 's'} ticked - each one's effect under "What each one did"` : 'What if you paid more, or took money out? Add a line under "What if…"'],
   ].filter(Boolean);
   return el('div', { class: 'panel stack', 'data-field': 'forgotten' }, [
@@ -859,6 +863,14 @@ function forgotten(v, p, cmp) {
     el('p', { class: 'small muted', style: { margin: 0 }, text: '✓ counted · ≈ estimated - your own figure replaces it · ○ not counted or left out' }),
     el('p', { class: 'small muted', style: { margin: 0 }, text: 'And what is not money: being able to stay, making the place your own, the freedom to move.' }),
   ]);
+}
+/** The rental deposit: cash on day one that cannot be invested, back at the end with its interest (D-122). */
+function depositLine(v, p) {
+  const dep = n(p.kind === 'rent' ? v.rentDeposit : v.likeDeposit);
+  const rate = n(v.rentDepositRatePct);
+  const whose = p.kind === 'rent' ? 'The rental deposit' : 'The similar rental’s deposit';
+  if (!dep) return [false, `${whose} - not counted yet. It is cash before moving in that cannot be invested; put it in under ${p.kind === 'rent' ? '"The rent"' : '"What you compare it with"'}`];
+  return [rate ? true : 'est', `${whose}, ${rand(dep)}: cash on day one that cannot be invested, back when you leave, less any damage${rate ? `, with ${pct(rate, 2)} a year interest` : ' - no interest counted yet. By law it is held in an interest-bearing account for you: ask the landlord the rate'}`];
 }
 const scenarioCount = (v) => (v.scenarios ?? []).filter((s) => s && s.on !== false && s.from).length;
 
@@ -1074,6 +1086,13 @@ function examplePanel(hub, d, today) {
  */
 function worthPanel(cmp, p, span, xLabel, marks) {
   const [A, B] = cmp.names;
+  // Short names that fit at the line ends, each explained in the key (D-122).
+  const [sa, sb] = p.kind === 'rent' ? ['Rent', 'Buy'] : p.kind === 'own' && !p.story ? ['Keep', 'Sell, rent'] : [p.kind === 'own' ? 'Bought' : 'Buy', 'Rent'];
+  const homeWorth = (x) => `what ${x} leaves you - the home if sold then, less the bond, selling costs and tax, plus what was invested along the way`;
+  const rentWorth = (x) => `what ${x} leaves you - the investments, starting with the cash buying would have needed, plus the rental deposit back`;
+  const homeCost = (x) => `everything ${x} has paid out so far - deposit, fees, bond, rates, upkeep`;
+  const rentCost = (x) => `everything ${x} has paid out so far - rent, the rental deposit, moving`;
+  const [na, nb] = p.kind === 'rent' ? [[rentWorth, rentCost], [homeWorth, homeCost]] : [[homeWorth, homeCost], [rentWorth, rentCost]];
   const a = cmp.m.wealthA; const b = cmp.m.wealthB; const alt = cmp.altPlan;
   const end = Math.min(span, a.length, b.length);
   const pts = (get) => Array.from({ length: Math.floor(end / 3) }, (_, i) => (i + 1) * 3).map((t) => [t, get(t)]);
@@ -1095,12 +1114,14 @@ function worthPanel(cmp, p, span, xLabel, marks) {
     el('p', { class: 'small muted', style: { margin: 0 }, text: `${A}: the home if it were sold - its value less what is still owed, selling costs and tax - plus whatever is invested along the way. ${B}: its investments, starting with the cash buying would have needed up front. Whoever pays less in a month invests the difference.` }),
     el('p', { style: { margin: 0 }, 'data-field': 'worth-words', text: words }),
     lineChart([
-      { name: A, points: pts((t) => a[t - 1].wealth) },
-      { name: B, points: pts((t) => b[t - 1].wealth) },
-      { name: `${A}, paid out`, points: pts((t) => paid(p, t)), dashed: true },
-      { name: `${B}, paid out`, points: pts((t) => paid(alt, t)), dashed: true },
-    ], { label: `What each side is worth, and what each has paid out, ${A.toLowerCase()} against ${B.toLowerCase()}`, xLabel, marks: [...marks, ...crossings.map((c) => ({ x: c.t, label: `${c.ahead.split(' ')[0]} ahead` }))],
-      story: 'The solid lines are what each is worth; where they cross, the other one pulls ahead. The dashed lines are every rand paid out so far - bond, rent, costs, the deposit and fees.' }),
+      { name: sa, note: na[0](A.toLowerCase()), colour: 'var(--accent-strong)', points: pts((t) => a[t - 1].wealth) },
+      { name: sb, note: nb[0](B.toLowerCase()), colour: 'var(--warn)', points: pts((t) => b[t - 1].wealth) },
+      // Money paid out is below zero, money that is yours above - the one sign rule.
+      { name: `${sa} cost`, note: na[1](A.toLowerCase()), colour: 'var(--accent-strong)', points: pts((t) => -paid(p, t)), dashed: true },
+      { name: `${sb} cost`, note: nb[1](B.toLowerCase()), colour: 'var(--warn)', points: pts((t) => -paid(alt, t)), dashed: true },
+    ], { label: `What each side leaves you, and what each has paid out, ${A.toLowerCase()} against ${B.toLowerCase()}`, xLabel, marks: [...marks, ...crossings.map((c) => ({ x: c.t, label: `${c.ahead} leaves more from here` }))],
+      zones: { above: 'Yours', below: 'Paid out' },
+      story: 'Above zero: what each side leaves you. Below zero: what each has paid out so far. Where the two solid lines cross, the other side starts to leave you more.' }),
     el('p', { class: 'small muted', style: { margin: 0 }, text: `By ${ym(end).slice(0, 4)}: ${A.toLowerCase()} worth ${rand(a[at].wealth)}, ${rand(paid(p, end))} paid out; ${B.toLowerCase()} worth ${rand(b[at].wealth)}, ${rand(paid(alt, end))} paid out.` }),
   ]);
 }

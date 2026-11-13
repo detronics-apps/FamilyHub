@@ -240,9 +240,11 @@ function drawChart(series, { label, marks = [], story = null, xLabel = null, ban
   const yFull = percent ? yShort : rand;
   // Drawn narrower on a phone, so the writing stays readable when it is scaled to fit.
   const narrow = typeof window !== 'undefined' && window.innerWidth < 560;
-  const W = narrow ? 340 : 640; const H = narrow ? 230 : 260; const L = 48; const B = 26; const T = 16; const R = narrow ? 80 : 118;
+  const W = narrow ? 340 : 640; const H = narrow ? 230 : 260; const L = 48; const B = 26; const R = narrow ? 80 : 118;
   const colours = ['var(--accent-strong)', 'var(--warn)', 'var(--ok)', 'var(--text-dim)'];
   const colourOf = (s, i) => s.colour ?? colours[i % colours.length];
+  // A dashed line's key is dashed too.
+  const keyOf = (s, i) => (s.dashed ? `repeating-linear-gradient(90deg, ${colourOf(s, i)} 0 4px, transparent 4px 7px)` : colourOf(s, i));
   // Stacked: each series sits on the ones before it - except one marked `over`, a line drawn on top (the rent instead).
   const piled = (s) => stack && !s.over;
   const drawn = series.map((s, i) => (!piled(s) ? s : { ...s, points: s.points.map(([x], j) => [x, series.slice(0, i + 1).filter(piled).reduce((t, o) => t + (o.points[j]?.[1] ?? 0), 0)]) }));
@@ -257,7 +259,11 @@ function drawChart(series, { label, marks = [], story = null, xLabel = null, ban
   const ticks = []; for (let t = y0; t <= y1 + step / 2; t += step) ticks.push(Math.abs(t) < step / 1e6 ? 0 : t);
   const grid = []; for (let x = Math.ceil(x0 / 12) * 12; x <= x1; x += 12) grid.push(x);
   const years = grid.length > 1 ? grid : [x0, x1];
-  const shown = marks.filter((m) => m && Number.isFinite(m.x) && m.x >= x0 && m.x <= x1);
+  // Moments that matter (D-122): a dashed line to the top, a numbered tag above the plot, the name in the key.
+  const shown = marks.filter((m) => m && Number.isFinite(m.x) && m.x >= x0 && m.x <= x1).sort((a, b) => a.x - b.x);
+  const T = shown.length ? 34 : 16;
+  // Tags kept at least 20 apart; each joined to its line.
+  const tags = []; for (const m of shown) { const x = X(m.x); tags.push({ m, x, tx: Math.max(x, (tags.at(-1)?.tx ?? -99) + 20) }); }
   const pts = (p) => p.map(([x, y]) => `${X(x).toFixed(1)},${Y(y).toFixed(1)}`).join(' ');
   // Each line's name and last value at its end, nudged apart so none overlap.
   const ends = drawn.map((s, i) => {
@@ -266,6 +272,8 @@ function drawChart(series, { label, marks = [], story = null, xLabel = null, ban
     return { i, y: Y(mid), name: s.name, value: series[i].points.at(-1)[1], colour: colourOf(s, i) };
   }).filter(Boolean).sort((p, q) => p.y - q.y);
   for (let k = 1; k < ends.length; k += 1) ends[k].y = Math.max(ends[k].y, ends[k - 1].y + 26);
+  // ...and kept inside the graph: pushed back up from the bottom when they run past it.
+  for (let k = ends.length - 1; k >= 0; k -= 1) ends[k].y = Math.min(ends[k].y, k === ends.length - 1 ? H - B - 4 : ends[k + 1].y - 26);
   const cut = (t, n = narrow ? 13 : 18) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
   const cursor = svg('line', { x1: -10, x2: -10, y1: T, y2: H - B, stroke: 'var(--text-dim)', 'stroke-width': 1 });
   const readout = el('div', { class: 'small muted fin-read', 'aria-live': 'polite', text: 'Tap or move over the graph to read it.' });
@@ -278,7 +286,8 @@ function drawChart(series, { label, marks = [], story = null, xLabel = null, ban
     cursor.setAttribute('x1', X(x)); cursor.setAttribute('x2', X(x));
     const b = band ? near(band.points, x) : null;
     readout.classList.remove('muted');
-    readout.textContent = `${when(x)}: ${series.map((s) => `${s.name} ${yFull(near(s.points, x)[1])}`).join(' · ')}${stack ? ` · All of it ${rand(series.filter(piled).reduce((t, s) => t + near(s.points, x)[1], 0))}` : ''}${b ? ` · ${band.name}: ${rand(b[1])} to ${rand(b[2])}` : ''}`;
+    const here = shown.filter((m) => Math.abs(m.x - x) <= (x1 - x0) / 30).map((m) => m.label);
+    readout.textContent = `${here.length ? `${here.join(', ')} - ` : ''}${when(x)}: ${series.map((s) => `${s.name} ${yFull(near(s.points, x)[1])}`).join(' · ')}${stack ? ` · All of it ${rand(series.filter(piled).reduce((t, s) => t + near(s.points, x)[1], 0))}` : ''}${b ? ` · ${band.name}: ${rand(b[1])} to ${rand(b[2])}` : ''}`;
   };
   return el('figure', { class: 'fin-chart', style: { margin: 0 } }, [
     svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': [label, ...shown.map((m) => m.label), ...dots.filter(Boolean).map((d) => d.label)].join('. '), width: '100%', on: { pointermove: read, pointerdown: read } }, [
@@ -301,13 +310,13 @@ function drawChart(series, { label, marks = [], story = null, xLabel = null, ban
         svg('line', { x1: L, x2: W - R, y1: Y(l.y), y2: Y(l.y), stroke: 'var(--text-dim)', 'stroke-dasharray': '2 3' }),
         svg('text', { x: L + 6, y: Y(l.y) - 4, 'font-size': 11, fill: 'var(--text-dim)' }, [l.label]),
       ])),
-      ...shown.map((m, i) => {
-        const x = X(m.x); const right = x > L + (W - L - R) * 0.6;
-        return svg('g', {}, [
-          svg('line', { x1: x, x2: x, y1: T, y2: H - B, stroke: 'var(--text)', 'stroke-width': 1, 'stroke-dasharray': '3 3' }),
-          svg('text', { x: right ? x - 5 : x + 5, y: T + 30 + (i % 3) * 14, 'text-anchor': right ? 'end' : 'start', 'font-size': 12, 'font-weight': 700, fill: 'var(--text)' }, [m.label]),
-        ]);
-      }),
+      ...tags.map(({ m, x, tx }, i) => svg('g', {}, [
+        svg('title', {}, [m.label]),
+        svg('line', { x1: x, x2: x, y1: 22, y2: H - B, stroke: 'var(--text)', 'stroke-width': 1, 'stroke-dasharray': '3 3' }),
+        tx !== x ? svg('line', { x1: tx, x2: x, y1: 18, y2: 22, stroke: 'var(--text)', 'stroke-width': 1 }) : null,
+        svg('circle', { cx: tx, cy: 11, r: 9, fill: 'var(--panel)', stroke: 'var(--text)', 'stroke-width': 1.5 }),
+        svg('text', { x: tx, y: 15, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: 'var(--text)' }, [String(i + 1)]),
+      ])),
       ...dots.filter((d) => d && Number.isFinite(d.x) && Number.isFinite(d.y) && d.x >= x0 && d.x <= x1).map((d) => svg('g', {}, [
         svg('circle', { cx: X(d.x), cy: Y(d.y), r: 5, fill: 'var(--accent-strong)', stroke: 'var(--panel)', 'stroke-width': 2 }),
         svg('text', { x: X(d.x) - 8, y: Y(d.y) + (d.below ? 18 : -10), 'text-anchor': 'end', 'font-size': 12, 'font-weight': 700, fill: 'var(--text)' }, [d.label]),
@@ -320,9 +329,14 @@ function drawChart(series, { label, marks = [], story = null, xLabel = null, ban
     ]),
     el('figcaption', { class: 'stack', style: { gap: 'var(--space-1)' } }, [
       readout,
-      el('div', { class: 'row small', style: { gap: 'var(--space-3)' } }, [...series.map((s, i) => el('span', {}, [
-        el('span', { class: 'fin-key', style: { background: colourOf(s, i) } }), s.name,
+      tags.length ? el('div', { class: 'row small', style: { gap: 'var(--space-3)' }, 'data-field': 'chart-marks' }, tags.map(({ m }, i) => el('span', {}, [el('strong', { class: 'fin-tagno', text: String(i + 1) }), ' ', m.label]))) : null,
+      // A line with a `note` is named shortly on the graph and explained here.
+      series.some((s) => s.note) ? el('ul', { class: 'small', style: { margin: 0, paddingLeft: 0, listStyle: 'none' }, 'data-field': 'chart-key' }, series.map((s, i) => el('li', {}, [
+        el('span', { class: 'fin-key', style: { background: keyOf(s, i) } }), el('strong', { text: s.name }), s.note ? `: ${s.note}` : '',
+      ]))) : el('div', { class: 'row small', style: { gap: 'var(--space-3)' } }, [...series.map((s, i) => el('span', {}, [
+        el('span', { class: 'fin-key', style: { background: keyOf(s, i) } }), s.name,
       ])), band ? el('span', {}, [el('span', { class: 'fin-key', style: { background: 'var(--accent-soft)', outline: '1px solid var(--border-strong)' } }), band.name]) : null]),
+      series.some((s) => s.note) && band ? el('div', { class: 'small' }, [el('span', { class: 'fin-key', style: { background: 'var(--accent-soft)', outline: '1px solid var(--border-strong)' } }), band.name]) : null,
       story ? el('p', { class: 'small', style: { margin: 0 }, text: story }) : null,
     ]),
   ]);

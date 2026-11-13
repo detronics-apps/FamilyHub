@@ -554,6 +554,21 @@ out of the house loan again to buy a car. I want to log things like that." (D-07
 D-090)
 **Show it:** a home you own › "What happened", then "What each one did".
 
+#### Yours above zero, paid out below; moments at the top (v0.25.2, 2026-11-13)
+**What it does:**
+- **What each side is worth:** what buying and renting leave you sit above zero; what each has paid out sits
+  below. The lines have short names - Buy, Rent, Buy cost, Rent cost - each explained in a key under the graph.
+- **The main graph's line is the Gap:** what buying leaves you minus what renting leaves you. Above zero buying
+  leaves more; below, renting.
+- **Moments on every graph** - Today, Bond paid off, You sell - are dashed lines to the top with a numbered tag,
+  named in a key under the graph and on hover.
+- **The rental deposit:** asked for the similar rental too - cash you cannot invest, back when you leave, with the
+  interest it earns. By law it sits in an interest-bearing account for you: ask the landlord the rate.
+**Why it is there:** "I want to make it very clear when the money on a graph is showing a positive money for
+yourself, or if it is the cost of that thing." And: "I don't know when you get the deposit back at the end. Do you
+get it back with interest?" (D-122)
+**Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
+
 #### Is your salary keeping up? (v0.25.0, 2026-11-13)
 **What it does:**
 - **Your salary against your own costs:** the salary you started on, each raise since, and your costs -

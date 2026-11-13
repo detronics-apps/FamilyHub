@@ -58,7 +58,7 @@ export function rangeParts({ values, today, state, names, H, opts = {}, xLabel =
     return el('div', { class: 'panel stack', 'data-field': 'main-graph' }, [
       el('h2', { text: title ?? `${A} or ${B.toLowerCase()}: which leaves you more?`, style: { margin: 0 } }),
       el('p', { style: { margin: 0, fontWeight: 600 }, 'data-field': 'main-answer', text: Math.abs(c) < 1000 ? `${A} and ${B.toLowerCase()} come out about the same ${when}.` : `${c > 0 ? A : B} leaves you about ${rand(Math.abs(c))} more ${when}, at your figures.` }),
-      lineChart([{ name: `${A} minus ${B.toLowerCase()}`, points: step(r.central) }], {
+      lineChart([{ name: 'Gap', note: `what ${A.toLowerCase()} leaves you, minus what ${B.toLowerCase()} leaves you. Above zero ${A.toLowerCase()} leaves more; below, ${B.toLowerCase()}`, points: step(r.central) }], {
         label: `How much more ${A.toLowerCase()} leaves you than ${B.toLowerCase()}, over time`, marks, xLabel,
         zones: { above: `${A} leaves more`, below: `${B} leaves more` },
         dots: [{ x: H, y: c, label: `${c >= 0 ? '+' : '−'}${rand(Math.abs(c))}`, below: c < 0 }],

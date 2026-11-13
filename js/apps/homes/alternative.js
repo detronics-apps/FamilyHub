@@ -15,23 +15,23 @@ const num = (x) => (x === null || x === undefined || x === '' || !Number.isFinit
  */
 export function alternativeOf(v, today) {
   if (v.kind === 'buy') {
-    const names = ['Buying', 'Renting instead'];
+    const names = ['Buying', 'Renting'];
     if (!(num(v.likeRent) > 0)) return { values: null, names, ask: 'the rent for a similar home' };
-    return { values: { ...v, kind: 'rent', rent: num(v.likeRent), rentDeposit: null, rentMove: null, upgrades: [], scenarios: [] }, names };
+    return { values: { ...v, kind: 'rent', rent: num(v.likeRent), rentDeposit: num(v.likeDeposit) || null, rentMove: null, upgrades: [], scenarios: [] }, names };
   }
   if (v.kind === 'own') {
     const plan = homePlan(v, today);
     const story = !plan.missing && plan.story;
-    const names = story ? ['Having bought it', 'Renting instead'] : ['Keeping it', 'Selling and renting'];
+    const names = story ? ['Having bought it', 'Renting'] : ['Keeping it', 'Selling and renting'];
     if (!(num(v.likeRent) > 0)) return { values: null, names, ask: 'what a similar home rents for' };
     if (plan.missing) return { values: null, names, ask: plan.missing.join(' and ') };
     // From when we bought it: the same start, the deposit and costs invested instead. From
     // today: our home sold today, and what that leaves is invested while renting.
-    const alt = { ...v, kind: 'rent', rent: num(v.likeRent), rentToday: true, fromMonth: plan.startYM, rentDeposit: null, rentMove: null, upgrades: [], scenarios: [], bondEvents: [] };
+    const alt = { ...v, kind: 'rent', rent: num(v.likeRent), rentToday: true, fromMonth: plan.startYM, rentDeposit: num(v.likeDeposit) || null, rentMove: null, upgrades: [], scenarios: [], bondEvents: [] };
     Object.assign(alt, story ? { on: { ...(v.on ?? {}), sellFirst: false } } : { on: { ...(v.on ?? {}), sellFirst: true }, sellPrice: num(v.worthNow), owedNow: plan.bond?.owedNow ?? 0 });
     return { values: alt, names };
   }
-  const names = ['Renting', 'Buying instead'];
+  const names = ['Renting', 'Buying'];
   if (!(num(v.price) > 0)) return { values: null, names, ask: 'what a similar home would cost to buy' };
   return { values: { ...v, kind: 'buy', upgrades: [], scenarios: [] }, names };
 }

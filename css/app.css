@@ -584,6 +584,7 @@ table.plain .num { text-align: right; white-space: nowrap; font-variant-numeric:
 .home-figs[open] > summary::before { content: '▾'; }
 .home-figs[open] > summary { margin-bottom: var(--space-3); }
 .fin-key { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.fin-tagno { display: inline-grid; place-items: center; width: 18px; height: 18px; border: 1.5px solid var(--text); border-radius: 50%; font-size: 11px; line-height: 1; }
 .fin-step { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius); }
 .fin-formula { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; padding: var(--space-1) var(--space-2); border-radius: 6px; background: color-mix(in srgb, var(--text) 6%, transparent); }
 .fin-formula--worked { background: color-mix(in srgb, var(--accent) 12%, transparent); }

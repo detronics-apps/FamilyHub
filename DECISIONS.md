@@ -749,6 +749,27 @@ apps - under the top bar, following you down the page, foldable to "a little tab
   (hidden on a phone), and **Hide**; folded, a small ⋯ tab under the header opens it again.
 - The seven Finance tools' own bars are gone; they read the one level.
 
+**D-122 Money that is yours, and money paid out; the moments on a graph; the rental deposit (owner, 2026-11-13).**
+"Buying R50m, buying paid out R27m, renting instead paid out R20m, renting instead R13m" - which is money for
+yourself and which is a cost? The names were cut off at the line ends and said too little. **What each side is
+worth** now uses the app's one sign rule: what each side leaves you above zero (zones "Yours" and "Paid out"),
+everything each has paid out below. Short names fit at the line ends - Buy, Rent, Buy cost, Rent cost (Bought,
+Keep, Sell, rent for a home we own) - and a key under the graph explains each in a sentence; a line's `note` in
+`lineChart` gives the key, a dashed line's key is dashed, and each cost line takes its side's colour. The main
+graph's line is **Gap** - what buying leaves you minus what renting leaves you - with "Buying leaves more" above
+zero and "Renting leaves more" below: "instead" is gone from every name (Renting, Buying). **The moments** (Today,
+Bond paid off, You sell, where one side starts to leave more) were labels written inside the graph that overlapped
+when close; now every graph draws each as a dashed line to the top with a numbered tag above the plot, the names
+in a numbered key under it, the full name on hover (SVG title), and the readout names a moment when you touch
+it. End labels are kept inside the graph. **The rental deposit:** buying against renting a similar home never
+asked for the similar rental's deposit. It is now asked ("Its rental deposit"), paid on day one so the renter
+cannot invest it, and back at the end. Under the Rental Housing Act s5(3) the landlord keeps it in an
+interest-bearing account and pays it back with the interest; "The deposit earns" (left empty, no interest
+counted) grows it, and its (i) says to ask the landlord the rate. "Did you think of..." names the deposit -
+not counted yet, or counted with or without interest. **The 13% note** for the example now shows the sum: the
+monthly rate that ends a year exactly 13% up is about 1.024%; 13% / 12 = 1.083% a month ends the year 13.8% up;
+over 20 years R1 becomes R11.52 against R13.28.
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in

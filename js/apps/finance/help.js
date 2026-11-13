@@ -55,6 +55,8 @@ export const HOME_HELP = {
   rentRisePct: 'The yearly increase in the lease. Look at what this rent did over the last few years - many rise faster than inflation.',
   rentDeposit: 'Usually one or two months’ rent, paid before moving in and returned when you leave (less any damage).',
   rentMove: 'Removals and setting up in the rented home.',
+  likeDeposit: 'The deposit a similar rental asks for - on the listing or ask the agent. It is cash before moving in that the renter cannot invest; it comes back when you leave, less any damage.',
+  rentDepositRatePct: 'Under the Rental Housing Act (section 5(3)) the landlord must keep the deposit in an interest-bearing account for you, and pay it back with the interest - several sources say at no less than the bank’s savings rate. Ask the landlord or agent which account it is in and what it earns; you may ask for a statement of the interest at any time. Left empty, no interest is counted.',
   km: 'Distance to work, one way - a map app shows it.',
   minutes: 'Time to get there, one way, in normal traffic - a map app shows it for the time you leave.',
   days: 'How many days a month you travel to work.',
