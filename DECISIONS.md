@@ -821,6 +821,16 @@ that month on, in the same terms as the salary started on (a year or a month, be
 clears the other, and the entry shows both worked out - "R54 000 a year take-home, +8%" - still one entry with one
 Remove raise. A new salary replaces the pay that month; the raises after it build on it.
 
+**D-127 Amounts grouped in threes as you type (owner, 2026-11-14).** "As I'm typing in a value, because we're
+working perhaps with money in the range of millions, help the user out with counting the zeros." Every amount box
+in Finance - Budget and goals, Homes, Cars, Job offers, Salary and costs, Children's future, Money plan and the
+calculators - puts a space before each group of three digits while you type: 1500000 shows as "1 500 000". The
+caret stays after the digit you typed, a decimal comma or point is kept, and what is saved is the plain number.
+One flag on the box (`money: true` in el(), js/ui/dom.js; the grouping is pure in js/digits.js). Percentages,
+years and counts stay plain number boxes.
+The save box under each Finance tool suggests a name for that tool - "Our flat, selling after 10 years" on
+Homes, "My pay since 2022" on Salary and costs - instead of the car example everywhere (owner, same day).
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in

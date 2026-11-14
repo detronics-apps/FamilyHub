@@ -93,6 +93,7 @@ export function input(f, d, onInput) {
   } else {
     control = el('input', {
       class: 'input', id, type: 'number', inputmode: 'decimal', step: 'any', min: f.min === null ? null : f.min ?? '0', value: d.values[f.key] ?? '',
+      money: f.type === 'money' || f.type === 'km' ? (f.min === null ? 'signed' : true) : null,
       placeholder: f.placeholder ?? (f.estimate ? 'estimate' : f.optional ? 'not counted' : ''), 'data-field': `in:${f.key}`, style: { maxWidth: '200px' },
       on: { input: (e) => set(e.target.value === '' ? null : Number(e.target.value)) },
     });
@@ -394,7 +395,7 @@ export function linesPanel(d, refresh, key, kinds, title, help, tickable = false
     e.kind === 'pay' || e.kind === 'more' ? el('span', { class: 'small muted', text: 'to' }) : null,
     e.kind === 'pay' || e.kind === 'more' ? el('input', { class: 'input', type: 'month', value: e.to ?? '', 'aria-label': 'To (empty: from then on)', style: { maxWidth: '170px' }, on: { change: (x) => { e.to = x.target.value || null; save(); } } }) : null,
     el('span', { class: 'small muted', text: e.kind === 'rate' ? 'new rate' : e.kind === 'more' ? 'R more a month' : e.kind === 'pay' ? 'R a month' : 'R' }),
-    el('input', { class: 'input', type: 'number', min: '0', step: 'any', value: e.amount ?? '', 'aria-label': e.kind === 'rate' ? 'New rate, % a year' : 'Amount', style: { maxWidth: '130px' }, on: { change: (x) => { e.amount = Number(x.target.value) || 0; save(); } } }),
+    el('input', { class: 'input', type: 'number', money: e.kind !== 'rate', min: '0', step: 'any', value: e.amount ?? '', 'aria-label': e.kind === 'rate' ? 'New rate, % a year' : 'Amount', style: { maxWidth: '130px' }, on: { change: (x) => { e.amount = Number(x.target.value) || 0; save(); } } }),
     e.kind === 'rate' ? el('span', { class: 'small muted', text: '%' }) : null,
     // Money taken out: invested, or spent and gone (D-087).
     uses && e.kind === 'withdraw' ? el('select', { class: 'select', 'aria-label': 'What the money taken out went to', style: { width: 'auto' }, 'data-field': `${key}:${i}:use`, on: { change: (x) => { e.use = x.target.value === 'spent' ? 'spent' : undefined; save(); } } },
@@ -421,10 +422,20 @@ export function linesPanel(d, refresh, key, kinds, title, help, tickable = false
  * Name it, save it, come back to it. A saved record keeps every input (defaults
  * included, so it can be rebuilt exactly) and the answer as it was that day.
  */
+// What the save box suggests, per tool (owner, 2026-11-14): a car example on Cars, a home on Homes.
+const SAVE_EXAMPLES = {
+  car: ['Polo over 6 years', 'a car'],
+  property: ['Our flat, selling after 10 years', 'a home'],
+  offer: ['The Cape Town offer', 'a job offer'],
+  salary: ['My pay since 2022', 'your salary and costs'],
+  compound: ['R2 000 a month for 20 years', 'a saving plan'],
+};
+
 export function savedPanel(hub, { col, kind, d, summary, onOpen, compareScreen }) {
+  const [eg, what] = SAVE_EXAMPLES[kind] ?? ['Our plan', 'this'];
   const list = hub.use(`saved:${kind}`, async () => (await col.list({ limit: 1000, filter: (s) => s.kind === kind })).items
     .sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt))));
-  const name = el('input', { class: 'input', id: `name-${kind}`, value: d.title, placeholder: 'Give it a name, e.g. Polo over 6 years', 'data-field': 'save-name', style: { flex: '1 1 220px' } });
+  const name = el('input', { class: 'input', id: `name-${kind}`, value: d.title, placeholder: `Give it a name, e.g. ${eg}`, 'data-field': 'save-name', style: { flex: '1 1 220px' } });
   const ticked = new Set();
   const compareBtn = el('a', { class: 'btn', href: '#', 'data-field': 'compare', text: 'Compare', title: 'Tick two or more saved ones to compare them side by side', 'aria-disabled': 'true' });
   const tick = () => {
@@ -448,7 +459,7 @@ export function savedPanel(hub, { col, kind, d, summary, onOpen, compareScreen }
   return el('div', { class: 'panel stack', 'data-field': 'saved-panel' }, [
     el('h2', { text: 'Save and compare', style: { margin: 0 } }),
     exportBar(() => name.value.trim() || d.title || kind),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: `Save this with a name - a car, a house, an offer - and come back to it any time.${compareScreen ? ' Tick two or more to compare them.' : ''}` }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: `Save ${what} with a name and come back to it any time.${compareScreen ? ' Tick two or more to compare them.' : ''}` }),
     el('div', { class: 'row' }, [
       el('label', { class: 'sr-only', for: `name-${kind}`, text: 'Name' }), name,
       el('button', { class: 'btn btn-primary', type: 'button', text: 'Save', title: 'Saved under a new name, it is kept as a new one', 'data-field': 'save', on: { click: save } }),

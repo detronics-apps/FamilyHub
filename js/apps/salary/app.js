@@ -83,7 +83,7 @@ function raisesPanel(d, today, refresh, redraw) {
         // A percentage, or the new salary from that month on - whichever you know. Typing one clears the other.
         const pctBox = el('input', { class: 'input', type: 'number', inputmode: 'decimal', step: 'any', value: r.salary != null ? '' : r.pct ?? '', placeholder: '%', 'aria-label': 'Raise, %', style: { maxWidth: '72px' },
           on: { input: (e) => { r.pct = e.target.value === '' ? null : Number(e.target.value); r.salary = null; salBox.value = ''; changed(false); }, change: () => changed(true) } });
-        const salBox = el('input', { class: 'input', type: 'number', inputmode: 'decimal', step: 'any', min: '0', value: r.salary ?? '', placeholder: `new salary a ${per}`, 'aria-label': `Or the new salary a ${per}`, style: { maxWidth: '150px' },
+        const salBox = el('input', { class: 'input', money: true, inputmode: 'decimal', step: 'any', min: '0', value: r.salary ?? '', placeholder: `new salary a ${per}`, 'aria-label': `Or the new salary a ${per}`, style: { maxWidth: '150px' },
           on: { input: (e) => { r.salary = e.target.value === '' ? null : Number(e.target.value); r.pct = null; pctBox.value = ''; changed(false); }, change: () => changed(true) } });
         return [
           el('span', { class: 'row', style: { gap: 'var(--space-1)', flexWrap: 'nowrap' } }, [pctBox, el('span', { class: 'small muted', text: '%' })]),
@@ -114,7 +114,7 @@ function costsPanel(hub, d, today, refresh, redraw) {
   const list = d.values.costs = Array.isArray(d.values.costs) ? d.values.costs : [];
   const s = start(d, today);
   const changed = (structure) => { mine(d, 'costs'); if (structure) redraw(); else refresh(); };
-  const field = (c, key, attrs) => el('input', { class: 'input', type: 'number', inputmode: 'decimal', step: 'any', value: c[key] ?? '', style: { maxWidth: '130px' }, ...attrs,
+  const field = (c, key, attrs) => el('input', { class: 'input', type: 'number', money: key !== 'pct', inputmode: 'decimal', step: 'any', value: c[key] ?? '', style: { maxWidth: '130px' }, ...attrs,
     on: { input: (e) => { c[key] = e.target.value === '' ? null : Number(e.target.value); changed(false); } } });
   const fromBudget = async () => {
     const month = today.slice(0, 7);
@@ -193,7 +193,7 @@ function eventsPanel(d, refresh, redraw) {
         el('span', { class: 'small muted', text: 'from' }),
         el('input', { class: 'input', type: 'month', value: e.from ?? '', 'aria-label': 'From', style: { maxWidth: '170px' }, on: { change: (x) => { e.from = x.target.value || null; changed(false); } } }),
         el('span', { class: 'muted', text: 'R' }),
-        el('input', { class: 'input', type: 'number', step: 'any', value: e.amount ?? '', placeholder: 'a month', 'aria-label': 'A month, in today’s money', style: { maxWidth: '120px' }, on: { input: (x) => { e.amount = x.target.value === '' ? null : Number(x.target.value); changed(false); } } }),
+        el('input', { class: 'input', money: true, step: 'any', value: e.amount ?? '', placeholder: 'a month', 'aria-label': 'A month, in today’s money', style: { maxWidth: '120px' }, on: { input: (x) => { e.amount = x.target.value === '' ? null : Number(x.target.value); changed(false); } } }),
         el('span', { class: 'small muted', text: e.kind === 'income' ? 'grows like' : 'rises like' }),
         el('select', { class: 'select', 'aria-label': 'Rises like', style: { width: 'auto' }, on: { change: (x) => { e.risesWith = x.target.value; changed(false); } } },
           [el('option', { value: 'cpi', text: 'Prices (CPI)' }), ...costs.map((c) => el('option', { value: c.id, text: c.name || KINDS[c.kind], selected: e.risesWith === c.id }))]),

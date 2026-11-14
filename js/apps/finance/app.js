@@ -41,13 +41,13 @@ function budgetScreen(hub, param) {
   const me = hub.people.current();
 
   const spendCat = el('select', { class: 'select', 'aria-label': 'Category', style: { width: 'auto' } }, [...m.lines.filter((l) => !l.off).map((l) => el('option', { value: l.category, text: l.category })), el('option', { value: 'Other', text: 'Other' })]);
-  const spendAmount = el('input', { class: 'input', type: 'number', step: 'any', min: '0', placeholder: 'Amount', 'aria-label': 'Amount spent', style: { maxWidth: '130px' }, 'data-field': 'spend-amount' });
+  const spendAmount = el('input', { class: 'input', money: true, step: 'any', min: '0', placeholder: 'Amount', 'aria-label': 'Amount spent', style: { maxWidth: '130px' }, 'data-field': 'spend-amount' });
   const spendNote = el('input', { class: 'input', placeholder: 'What for (optional)', 'aria-label': 'What it was for' });
   const doSpend = () => save(addSpend(m, { category: spendCat.value, amount: spendAmount.value, note: spendNote.value, day: hub.today(), who: me?.id ?? null }));
   const lineCat = el('input', { class: 'input', placeholder: 'Category, e.g. Groceries', 'aria-label': 'New category' });
-  const linePlanned = el('input', { class: 'input', type: 'number', step: 'any', min: '0', placeholder: 'Planned', 'aria-label': 'Planned amount', style: { maxWidth: '130px' } });
+  const linePlanned = el('input', { class: 'input', money: true, step: 'any', min: '0', placeholder: 'Planned', 'aria-label': 'Planned amount', style: { maxWidth: '130px' } });
   const incWhat = el('input', { class: 'input', placeholder: 'Income, e.g. Salary', 'aria-label': 'Income source' });
-  const incAmount = el('input', { class: 'input', type: 'number', step: 'any', min: '0', placeholder: 'Amount', 'aria-label': 'Income amount', style: { maxWidth: '130px' } });
+  const incAmount = el('input', { class: 'input', money: true, step: 'any', min: '0', placeholder: 'Amount', 'aria-label': 'Income amount', style: { maxWidth: '130px' } });
 
   return el('section', { class: 'stack', 'aria-label': 'Budget' }, [
     nav(hub, null),
@@ -106,12 +106,12 @@ function budgetScreen(hub, param) {
 const openLines = new Set();   // which categories are unfolded, kept while the app is open
 
 function planPanel(hub, m, save) {
-  const amount = (value, label, onSet) => el('input', { class: 'input', type: 'number', inputmode: 'decimal', step: 'any', min: '0', value: value || '', placeholder: '0', 'aria-label': label, style: { maxWidth: '110px' },
+  const amount = (value, label, onSet) => el('input', { class: 'input', money: true, inputmode: 'decimal', step: 'any', min: '0', value: value || '', placeholder: '0', 'aria-label': label, style: { maxWidth: '110px' },
     on: { change: (e) => onSet(e.target.value) } });
   const remove = (label, onClick) => el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': `Remove ${label}`, on: { click: onClick } });
   const line = (l) => {
     const newName = el('input', { class: 'input', placeholder: 'Something else', 'aria-label': `New item in ${l.category}`, style: { flex: '1 1 140px' } });
-    const newAmount = el('input', { class: 'input', type: 'number', inputmode: 'decimal', step: 'any', min: '0', placeholder: 'R', 'aria-label': 'Its amount', style: { maxWidth: '110px' } });
+    const newAmount = el('input', { class: 'input', money: true, inputmode: 'decimal', step: 'any', min: '0', placeholder: 'R', 'aria-label': 'Its amount', style: { maxWidth: '110px' } });
     const isFood = !l.off && (/food|grocer/i.test(l.category) || (l.items ?? []).some((x) => /grocer/i.test(x.name)));
     return el('details', { class: 'fin-group', open: openLines.has(l.id), 'data-field': `line:${l.category}`,
       on: { toggle: (e) => { if (e.currentTarget.open) openLines.add(l.id); else openLines.delete(l.id); } } }, [
@@ -229,7 +229,7 @@ function goalScreen(hub, id) {
   if (r.error) return failure(r.error);
   if (!r.data) return el('div', { class: 'panel empty' }, [el('p', { text: 'This goal no longer exists.' }), el('a', { class: 'btn', href: hub.href('goals'), text: 'Goals' })]);
   const g = normaliseGoal(r.data);
-  const amount = el('input', { class: 'input', type: 'number', step: 'any', min: '0', placeholder: 'Amount', 'aria-label': 'Amount', style: { maxWidth: '150px' }, 'data-field': 'goal-amount' });
+  const amount = el('input', { class: 'input', money: true, step: 'any', min: '0', placeholder: 'Amount', 'aria-label': 'Amount', style: { maxWidth: '150px' }, 'data-field': 'goal-amount' });
   return el('section', { class: 'stack' }, [
     el('a', { href: hub.href('goals'), class: 'small', text: '‹ Goals' }),
     el('div', { class: 'panel stack' }, [
@@ -266,9 +266,9 @@ function goalEdit(hub, id) {
       fields: [
         { key: 'title', label: 'What is it?', required: true, placeholder: 'e.g. Emergency fund' },
         { key: 'kind', label: 'Kind', type: 'select', options: [['saving', 'Saving towards something'], ['debt', 'Paying something off']] },
-        { key: 'target', label: 'Target amount (for saving)', type: 'number' },
-        { key: 'current', label: 'Saved so far, or still owed', type: 'number' },
-        { key: 'monthly', label: 'Amount each month', type: 'number' },
+        { key: 'target', label: 'Target amount (for saving)', type: 'money' },
+        { key: 'current', label: 'Saved so far, or still owed', type: 'money' },
+        { key: 'monthly', label: 'Amount each month', type: 'money' },
         { key: 'ratePct', label: 'Yearly interest or growth (%)', type: 'number', more: true, hint: 'Optional. Used only for the projection, assumed to stay the same.' },
         { key: 'owner', label: 'Whose goal', type: 'select', options: [['household', 'The household'], ...hub.people.list().map((p) => [p.id, p.name])], more: true },
         { key: 'notes', label: 'Notes', type: 'textarea', more: true },

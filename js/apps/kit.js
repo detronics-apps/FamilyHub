@@ -69,7 +69,8 @@ export function recordForm({ fields, record = {}, people = [], onSave, onCancel 
         getters[f.key] = () => control.value || null;
         break;
       case 'number':
-        control = el('input', { class: 'input', id, type: 'number', min: '0', step: 'any', inputmode: 'decimal', value: v ?? '', style: { maxWidth: '160px' }, placeholder: f.placeholder ?? '' });
+      case 'money':
+        control = el('input', { class: 'input', id, type: 'number', money: f.type === 'money', min: '0', step: 'any', inputmode: 'decimal', value: v ?? '', style: { maxWidth: '160px' }, placeholder: f.placeholder ?? '' });
         getters[f.key] = () => (control.value === '' ? null : Math.max(0, Number(control.value)));
         break;
       case 'custom': {

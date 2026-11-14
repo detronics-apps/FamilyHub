@@ -166,13 +166,13 @@ function childScreen(hub, data, id) {
   const s = schedule(child, plan.items, today, { savingsPct: savingsPct(data) });
   const items = plan.items;
   const put = (itemId, patch) => save(hub, data, id, items.map((x) => (x.id === itemId ? { ...x, ...patch } : x)));
-  const moneyIn = (it, key, label) => el('input', { class: 'input', type: 'number', step: 'any', min: '0', value: it[key] ?? '', 'aria-label': `${label}: ${it.name}`, 'data-field': `${key}:${it.id}`, style: { maxWidth: '130px' }, on: { change: (e) => put(it.id, { [key]: Number(e.target.value) || 0 }) } });
+  const moneyIn = (it, key, label) => el('input', { class: 'input', money: true, step: 'any', min: '0', value: it[key] ?? '', 'aria-label': `${label}: ${it.name}`, 'data-field': `${key}:${it.id}`, style: { maxWidth: '130px' }, on: { change: (e) => put(it.id, { [key]: Number(e.target.value) || 0 }) } });
   const ageIn = (it, key) => el('input', { class: 'input', type: 'number', min: '0', max: '60', value: it[key], 'aria-label': `${key === 'from' ? 'From age' : 'To age'}: ${it.name}`, style: { maxWidth: '76px' }, on: { change: (e) => put(it.id, { [key]: Number(e.target.value) || 0, ...(key === 'from' && it.every === 'once' ? { to: Number(e.target.value) || 0 } : {}) }) } });
   const shown = plan.shown;
   const groups = [...new Set(shown.map((x) => x.group))];
   const due = new Map(); for (const p of s.payments) due.set(p.item, (due.get(p.item) ?? 0) + p.monthly);
 
-  const add = { name: el('input', { class: 'input', id: 'own-name', placeholder: 'e.g. Braces', 'data-field': 'own-name' }), age: el('input', { class: 'input', type: 'number', min: '0', id: 'own-age', value: Math.ceil(s.age), style: { maxWidth: '90px' } }), cost: el('input', { class: 'input', type: 'number', min: '0', id: 'own-cost', style: { maxWidth: '130px' } }) };
+  const add = { name: el('input', { class: 'input', id: 'own-name', placeholder: 'e.g. Braces', 'data-field': 'own-name' }), age: el('input', { class: 'input', type: 'number', min: '0', id: 'own-age', value: Math.ceil(s.age), style: { maxWidth: '90px' } }), cost: el('input', { class: 'input', money: true, id: 'own-cost', style: { maxWidth: '130px' } }) };
   let every = 'once';
 
   return el('section', { class: 'stack', 'aria-labelledby': 'child-title' }, [

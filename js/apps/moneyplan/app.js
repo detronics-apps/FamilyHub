@@ -219,7 +219,7 @@ function results(plan, s, today, opts, vs, without, offer) {
 
 function goalsPanel(hub, plan, s, set, setGoal, today) {
   const status = new Map(s.goals.map((g) => [g.id, g]));
-  const draft = { title: el('input', { class: 'input', id: 'g-title', placeholder: 'e.g. New roof', 'data-field': 'g-title' }), amount: el('input', { class: 'input', id: 'g-amount', type: 'number', min: '0', style: { maxWidth: '150px' } }), month: el('input', { class: 'input', id: 'g-month', type: 'month', value: monthAt(today, 12), style: { maxWidth: '180px' } }) };
+  const draft = { title: el('input', { class: 'input', id: 'g-title', placeholder: 'e.g. New roof', 'data-field': 'g-title' }), amount: el('input', { class: 'input', id: 'g-amount', money: true, style: { maxWidth: '150px' } }), month: el('input', { class: 'input', id: 'g-month', type: 'month', value: monthAt(today, 12), style: { maxWidth: '180px' } }) };
   let must = false;
   const sorted = [...plan.goals].sort((a, b) => String(a.payments[0]?.month ?? '9999').localeCompare(String(b.payments[0]?.month ?? '9999')));
   return el('div', { class: 'panel stack' }, [
@@ -267,10 +267,10 @@ function goalRow(g, status, today, setGoal, remove) {
     g.note ? el('div', { class: 'small muted', text: g.note }) : null,
     !g.fixed && shows('advanced') && setGoal ? el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' } }, [
       single ? el('span', { class: 'small muted', text: 'R' }) : null,
-      single ? el('input', { class: 'input', type: 'number', min: '0', value: g.payments[0].amount, 'aria-label': `Amount: ${g.title}`, style: { maxWidth: '130px' }, on: { change: (e) => setGoal(g.id, { payments: [{ ...g.payments[0], amount: Number(e.target.value) || 0 }] }) } }) : null,
+      single ? el('input', { class: 'input', money: true, value: g.payments[0].amount, 'aria-label': `Amount: ${g.title}`, style: { maxWidth: '130px' }, on: { change: (e) => setGoal(g.id, { payments: [{ ...g.payments[0], amount: Number(e.target.value) || 0 }] }) } }) : null,
       single ? el('input', { class: 'input', type: 'month', value: g.payments[0].month, 'aria-label': `By: ${g.title}`, style: { maxWidth: '170px' }, on: { change: (e) => e.target.value && setGoal(g.id, { payments: [{ ...g.payments[0], month: e.target.value }] }) } }) : null,
       el('span', { class: 'small muted', text: 'Saved R' }),
-      el('input', { class: 'input', type: 'number', min: '0', value: g.saved || '', 'aria-label': `Saved already: ${g.title}`, style: { maxWidth: '120px' }, on: { change: (e) => setGoal(g.id, { saved: Number(e.target.value) || 0 }) } }),
+      el('input', { class: 'input', money: true, value: g.saved || '', 'aria-label': `Saved already: ${g.title}`, style: { maxWidth: '120px' }, on: { change: (e) => setGoal(g.id, { saved: Number(e.target.value) || 0 }) } }),
       el('div', { class: 'chipset', role: 'group', 'aria-label': `How important: ${g.title}` }, [[false, 'Want to'], [true, 'Must']].map(([v, l]) => el('button', {
         class: 'chip', type: 'button', 'aria-pressed': String(v === g.must), text: l, on: { click: () => setGoal(g.id, { must: v }) },
       }))),

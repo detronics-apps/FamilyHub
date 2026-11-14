@@ -590,6 +590,13 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### Amounts you can read as you type (v0.25.9, 2026-11-14)
+**What it does:** every amount box in Finance groups the digits in threes while you type - 1500000 becomes
+"1 500 000" - so a missing or extra zero shows at once. The save box under each tool suggests a name that fits it.
+**Why it is there:** "We're working perhaps with money in the range of millions, help the user out with counting
+the zeros." (D-127)
+**Show it:** Finance › Budget and goals › Spent something? - type 1500000 slowly and watch the spaces appear.
+
 #### Raises when they really came (v0.25.7, 2026-11-14)
 **What it does:** each raise is its own entry - Add raise, pick the month and year, put in the percentage - every
 six months, a month after starting, whenever. A raise you know is coming goes in too. After the last one, the

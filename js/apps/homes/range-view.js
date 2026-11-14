@@ -100,7 +100,7 @@ export function rangeParts({ values, today, state, names, H, opts = {}, xLabel =
     const slider = (side, min, max, out) => el('input', { type: 'range', min, max, step: x.step, value: r[side], style: { width: '100%' }, 'aria-label': `${x.label}: ${side === 'low' ? 'lower' : 'upper'} value`, 'data-field': `range:${x.key}:${side}`,
       on: { input: (e) => { r[side] = Number(e.target.value); out.textContent = show(at(r[side])); }, change: () => { state.preset = 'custom'; draw(); } } });
     const mine = onCentral
-      ? el('input', { class: 'input', type: 'number', inputmode: 'decimal', step: money ? 1000 : 0.25, value: central, style: { maxWidth: '7em', textAlign: 'center' }, 'aria-label': `${x.label}: your estimate`, 'data-field': `range-central:${x.key}`,
+      ? el('input', { class: 'input', type: 'number', money, inputmode: 'decimal', step: money ? 1000 : 0.25, value: central, style: { maxWidth: '7em', textAlign: 'center' }, 'aria-label': `${x.label}: your estimate`, 'data-field': `range-central:${x.key}`,
         on: { change: (e) => { if (e.target.value !== '' && Number.isFinite(Number(e.target.value))) onCentral(field, Number(e.target.value)); } } })
       : el('strong', { text: show(central) });
     const cell = (head, body, extra) => el('div', { class: 'stack', style: { gap: '2px', flex: '1 1 0', minWidth: 0, alignItems: 'center', textAlign: 'center' } }, [el('span', { class: 'small muted', text: head }), body, extra].filter(Boolean));

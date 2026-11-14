@@ -1,5 +1,7 @@
 /** Small DOM helpers, so the UI modules read as structure rather than plumbing. */
 
+import { groupDigits, caretAfter, countBefore, showGrouped } from '../digits.js';
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /**
@@ -12,7 +14,36 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 export function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
   applyAttrs(node, attrs);
+  if (attrs.money) moneyBox(node, { negative: attrs.money === 'signed' });
   append(node, children);
+  return node;
+}
+
+/**
+ * An amount box that groups in threes as you type (D-127): 1500000 shows as "1 500 000".
+ * `el('input', { money: true, ... })` - or `money: 'signed'` where it can go below nothing.
+ * The box still reads as plain digits ("1500000"), so every `Number(box.value)` keeps working;
+ * only what is shown carries the spaces.
+ */
+const nativeValue = typeof HTMLInputElement === 'undefined' ? null : Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+export function moneyBox(node, { negative = false } = {}) {
+  const shown = node.value;
+  node.type = 'text'; node.inputMode = 'decimal'; node.autocomplete = 'off';
+  node.removeAttribute('step'); node.removeAttribute('min'); node.removeAttribute('max');
+  Object.defineProperty(node, 'value', {
+    configurable: true,
+    get() { const v = groupDigits(nativeValue.get.call(node), { negative }).value; return v === null ? '' : String(v); },
+    set(v) { nativeValue.set.call(node, showGrouped(v === '' ? null : v, { negative })); },
+  });
+  node.value = shown;
+  node.addEventListener('input', () => {
+    const raw = nativeValue.get.call(node);
+    const g = groupDigits(raw, { negative });
+    if (g.text === raw) return;
+    const count = countBefore(raw, node.selectionStart ?? raw.length);
+    nativeValue.set.call(node, g.text);
+    try { const at = caretAfter(g.text, count); node.setSelectionRange(at, at); } catch { /* not focused */ }
+  }, { capture: true });
   return node;
 }
 
@@ -29,6 +60,7 @@ function applyAttrs(node, attrs, isSvg = false) {
     if (value === null || value === undefined || value === false) continue;
 
     if (key === 'text') { node.textContent = value; continue; }
+    if (key === 'money') continue;
     if (key === 'html') { node.innerHTML = value; continue; }
     if (key === 'on') {
       for (const [type, fn] of Object.entries(value)) node.addEventListener(type, fn);
