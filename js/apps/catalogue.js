@@ -129,12 +129,12 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'meals', section: 'meals', name: 'Cookbook', version: '1.7.0',
+      fhManifest: 1, id: 'meals', section: 'meals', name: 'Cookbook', version: '1.8.0',
       description: 'Your family’s meals, recipes and own ingredients, and how much each person might eat.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [
         { id: 'recipes', title: 'Cookbook' }, { id: 'item', title: 'Item', nav: false }, { id: 'new', title: 'Add an item', nav: false },
-        { id: 'import', title: 'Import a recipe', nav: false },
+        { id: 'import', title: 'Import a recipe', nav: false }, { id: 'packs', title: 'What we buy', nav: false },
       ],
       modes: [
         { mode: 'note', screen: 'new', label: 'Write down a meal to try', hint: 'Saw something good? Save it before you forget' },
@@ -142,7 +142,7 @@ const RAW = [
       ],
       // Plans and the shopping list were kept here before This Week and Shopping became
       // mini-apps of their own; those apps still read the old files, which stay untouched.
-      data: { collections: [{ name: 'recipes', schema: 1 }, { name: 'sizes', schema: 1 }] },
+      data: { collections: [{ name: 'recipes', schema: 1 }, { name: 'sizes', schema: 1 }, { name: 'packs', schema: 1 }] },
       permissions: ['data:own', 'notify', 'food:read', 'people:food', 'household:creators'],
     },
     load: () => import('./meals/app.js'),
@@ -150,7 +150,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'mealplan', section: 'meals', name: 'Meal Planner', version: '1.3.0',
+      fhManifest: 1, id: 'mealplan', section: 'meals', name: 'Meal Planner', version: '1.4.0',
       description: 'Choose the meals, then drag them onto days - a week or a month ahead - and send what they need to the shopping list.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [
@@ -158,21 +158,21 @@ const RAW = [
         { id: 'add', title: 'Plan a meal', nav: false }, { id: 'choose', title: 'Choose a meal', nav: false },
         { id: 'slot', title: 'Planned meal', nav: false }, { id: 'mix', title: 'Suggest meals', nav: false }, { id: 'review', title: 'How the week looks', nav: false },
         { id: 'modify', title: 'Change a planned meal', nav: false }, { id: 'today', title: 'Cook today' },
-        { id: 'sent', title: 'Sent to Shopping', nav: false },
+        { id: 'sent', title: 'Sent to Shopping', nav: false }, { id: 'auto', title: 'Plan my week', nav: false },
       ],
       modes: [
         { mode: 'plan', screen: 'plan', label: 'Plan the next meals', hint: 'Choose the meals, then drag them onto days' },
         { mode: 'note', screen: 'week', label: 'See what is planned', hint: 'The calendar, a week or a month at a time' },
         { mode: 'do', screen: 'today', label: 'Cook today’s meals', hint: 'Ingredients and method, one meal at a time' },
       ],
-      data: { collections: [{ name: 'plans', schema: 1 }] },
+      data: { collections: [{ name: 'plans', schema: 1 }, { name: 'ideas', schema: 1 }] },
       permissions: ['data:own', 'notify', 'data:meals:read', 'food:read', 'people:food'],
     },
     load: () => import('./mealplan/app.js'),
   },
   {
     manifest: {
-      fhManifest: 1, id: 'shopping', section: 'shopping', name: 'Shopping', version: '1.1.1',
+      fhManifest: 1, id: 'shopping', section: 'shopping', name: 'Shopping', version: '1.2.0',
       description: 'One family shopping list. Find what you buy by kind - food, cleaning, hygiene - add anything new, and tick it off at the shop.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [{ id: 'list', title: 'Shopping list' }, { id: 'shop', title: 'At the shop' }, { id: 'add', title: 'Add to the list', nav: false }],
@@ -310,13 +310,13 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'salary', section: 'finance', name: 'Salary and costs', version: '1.0.0',
+      fhManifest: 1, id: 'salary', section: 'finance', name: 'Salary and costs', version: '1.1.0',
       description: 'Is your salary keeping up? Your raises against your own costs, each rising at its own rate, and the salary you would need with what life brings next.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'plan', title: 'Salary and costs' }],
       modes: [{ mode: 'plan', screen: 'plan', label: 'See if our salary is keeping up with our costs' }],
       data: { collections: [{ name: 'saved', schema: 1 }] },
-      permissions: ['data:own', 'notify', 'data:finance:read'],
+      permissions: ['data:own', 'notify', 'data:finance:read', 'people:read', 'people:ages'],   // the children, from their birthdays (D-141)
     },
     load: () => import('./salary/app.js'),
   },

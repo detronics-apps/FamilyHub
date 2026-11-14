@@ -175,3 +175,35 @@ test('the table follows the raises: a row in each raise month, never the anniver
   assert.ok(jun.raise && Math.abs(jun.payPct - 3) < 0.01, 'June shows its own 3%');
   assert.equal(p.years[3].payPct, 0, 'no raise between June 2023 and today');
 });
+
+test('D-141: the prices box, unticked costs, children from birth and a 13th cheque', async () => {
+  const { kidLines, kidEvents, futurePrices } = await import('../js/apps/salary/logic.js');
+  const base = { salary: 40000, salaryPer: 'month', salaryKind: 'takehome', start: '2024-01', ahead: 5 };
+  const T = '2026-11-14';
+  // Prices: the family's own figure replaces CPI from now on.
+  assert.equal(futurePrices({ pricesPct: 8 }), 8);
+  const cheap = plan({ ...base, pricesPct: 2 }, T); const dear = plan({ ...base, pricesPct: 8 }, T);
+  assert.ok(dear.at(dear.N).needed > cheap.at(cheap.N).needed, 'faster prices: more needed later');
+  // An unticked cost counts nothing.
+  const rent = { id: 'r', kind: 'rent', amount: 9000 };
+  assert.equal(plan({ ...base, costs: [{ ...rent, on: false }] }, T).basket0, 0);
+  assert.equal(plan({ ...base, costs: [rent] }, T).basket0, 9000);
+  // A child: one amount, or More detail's lines instead; nappies stop at about three.
+  assert.deepEqual(kidLines({ amount: 4000 }).map((x) => x.amount), [4000]);
+  const detailed = { amount: 4000, atHome: true, detail: { school: 3000, food: 1500, nappies: 600 } };
+  assert.deepEqual(kidLines(detailed).map((x) => x.key), ['food', 'nappies'], 'at home: no school; the one amount is not added');
+  const ev = kidEvents({ kids: [{ id: 'k', born: '2025-06', ...detailed }] }, '2024-01');
+  assert.equal(ev.find((e) => e.id.endsWith('nappies')).to, '2028-06');
+  const withKid = plan({ ...base, kids: [{ id: 'k', name: 'Mia', born: '2025-06', amount: 4000 }] }, T);
+  const row = (p, m) => p.rows.find((r) => r.month === m);
+  assert.equal(row(withKid, '2025-05').added, 0);
+  assert.ok(row(withKid, '2025-06').added > 3500, 'from the birth month');
+  assert.ok(Math.abs(row(withKid, '2026-11').added - 4000) < 1, 'R4 000 in today’s money');
+  // A child already there when you started is not counted twice: the gap at the start is still zero.
+  const before = plan({ ...base, kids: [{ id: 'k', name: 'Sam', born: '2020-03', amount: 4000 }] }, T);
+  assert.ok(Math.abs(before.at(0).gap) < 1);
+  // A 13th cheque: one more month's pay a year, spread over the year.
+  const b13 = plan({ ...base, bonus: '13th' }, T);
+  assert.ok(Math.abs(b13.at(0).takeHome - 40000 * 13 / 12) < 1);
+  assert.ok(Math.abs(plan({ ...base, bonus: 'amount', bonusAmount: 12000 }, T).at(0).takeHome - 41000) < 1);
+});

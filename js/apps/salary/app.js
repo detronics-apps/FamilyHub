@@ -8,7 +8,9 @@ import { confirmAction } from '../../ui/common.js';
 import { shows, draft, loadDraft, inputsPanel, stat, step, lineChart, chartPanel, barsChart, savedPanel, rand, pct } from '../finance/pod.js';
 import { normaliseMonth, monthId } from '../finance/logic.js';
 import { SARS } from '../jobs/logic.js';
-import { DEFAULTS, KINDS, SCHEMES, RENT, CPI, plan, whatMoves, startingRate, futureRaise, costsFromBudget, addMonth, monthsBetween } from './logic.js';
+import { REFERENCE } from '../finance/maths.js';
+import { DEFAULTS, KINDS, SCHEMES, RENT, CPI, plan, whatMoves, startingRate, futureRaise, futurePrices, costsFromBudget, addMonth, monthsBetween, SUGGESTED_COSTS, KID_DETAIL, kidLines } from './logic.js';
+import { roleOf } from '../../model.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => r.title, prefix: 'sal' });
 const KIND = 'salary';
@@ -23,7 +25,10 @@ const FIELDS = [
   { key: 'salaryPer', label: 'That is', type: 'choice', level: 'simple', choices: [{ value: 'year', label: 'A year' }, { value: 'month', label: 'A month' }] },
   { key: 'salaryKind', label: 'Before or after tax', type: 'choice', level: 'simple', choices: [{ value: 'gross', label: 'Before tax' }, { value: 'takehome', label: 'Take-home' }], info: `Before tax: the take-home is estimated with the ${SARS.source}, every year at the salary of that year. Take-home from a payslip is firmer.` },
   { key: 'start', label: 'When you started', type: 'month', level: 'simple', hint: 'Empty: today - a new job, looking ahead only.' },
-  { key: 'raisePct', label: 'After your last raise, a year', type: 'percent', level: 'simple', estimate: () => CPI.future, info: `What you expect a year after the last raise you put in, spread month by month - no raise date is assumed. Left empty it is ${pct(CPI.future)}, the inflation rate (${CPI.source}), labelled Estimated. A raise is never promised: a raise you know is coming goes in as its own entry under Your raises.` },
+  { key: 'raisePct', label: 'After your last raise, a year', type: 'percent', level: 'simple', estimate: (v) => futurePrices(v), info: `What you expect a year after the last raise you put in, spread month by month - no raise date is assumed. Left empty it is ${pct(CPI.future)}, the inflation rate (${CPI.source}), labelled Estimated. A raise is never promised: a raise you know is coming goes in as its own entry under Your raises.` },
+  { key: 'pricesPct', label: 'Prices rise by, a year', type: 'percent', level: 'simple', estimate: () => CPI.future, info: `How fast prices rise in general from now on - inflation. Left empty it is CPI (the consumer price index: how much prices rise in general, measured by Stats SA), ${pct(CPI.future)} a year (${REFERENCE.cpi.source}). Your own costs can each rise faster or slower: Your costs, in Advanced.` },
+  { key: 'bonus', label: 'Bonus', type: 'choice', level: 'advanced', choices: [{ value: 'none', label: 'None' }, { value: '13th', label: '13th cheque' }, { value: 'amount', label: 'Another amount' }], info: 'A 13th cheque is one extra month’s pay a year. Either way it is counted as a share of the year, spread month by month, and taxed with the salary.' },
+  { key: 'bonusAmount', label: 'Bonus a year', type: 'money', level: 'advanced', when: (v) => v.bonus === 'amount', hint: 'In the same terms as the salary: before tax or take-home.' },
   { key: 'ahead', label: 'Look ahead', type: 'choice', level: 'simple', choices: [5, 10, 20].map((y) => ({ value: y, label: `${y} years` })) },
 ];
 
@@ -35,12 +40,14 @@ export function render(hub) {
   const lists = el('div', { class: 'stack' });
   // Simple asks only what the answer needs; your own costs and life events are nice to have - Advanced (D-137).
   const extras = () => {
-    const c = (d.values.costs ?? []).length; const e = (d.values.events ?? []).length;
-    if (!c && !e) return null;
-    const what = [c ? `${c} cost${c === 1 ? '' : 's'}` : null, e ? `${e} life event${e === 1 ? '' : 's'}` : null].filter(Boolean).join(' and ');
+    const c = (d.values.costs ?? []).filter((x) => x && x.on !== false && num(x.amount) > 0).length;
+    const e = (d.values.events ?? []).filter((x) => x && x.on !== false && num(x.amount)).length;
+    const k = (d.values.kids ?? []).filter((x) => x && x.on !== false && kidLines(x).length).length;
+    if (!c && !e && !k) return null;
+    const what = [c ? `${c} cost${c === 1 ? '' : 's'}` : null, e ? `${e} life event${e === 1 ? '' : 's'}` : null, k ? `${k} child${k === 1 ? '' : 'ren'}’s costs` : null].filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' and $1');
     return el('p', { class: 'small muted', style: { margin: 0 }, 'data-field': 'sal-extras', text: `Counting the ${what} you added - choose Advanced to see or change them.` });
   };
-  const redraw = () => { lists.replaceChildren(...(shows('advanced') ? [raisesPanel(d, today, refresh, redraw), costsPanel(hub, d, today, refresh, redraw), eventsPanel(d, refresh, redraw)] : [raisesPanel(d, today, refresh, redraw), extras()]).filter(Boolean)); refresh(); };
+  const redraw = () => { lists.replaceChildren(...(shows('advanced') ? [raisesPanel(d, today, refresh, redraw), costsPanel(hub, d, today, refresh, redraw), eventsPanel(hub, d, today, refresh, redraw)] : [raisesPanel(d, today, refresh, redraw), extras()]).filter(Boolean)); refresh(); };
   // A new start month, or how far ahead, changes the years a raise can be in and whether "now" applies.
   const onInput = (key) => (key === 'start' || key === 'ahead' ? redraw() : refresh());
   redraw();
@@ -111,14 +118,16 @@ function raisesPanel(d, today, refresh, redraw) {
 
 /* --------------------------------------------------------- the costs */
 
-function rateNote(c) {
+function rateNote(c, v = {}) {
   if (num(c.pct) != null) return 'Yours';
-  const r = startingRate(c);
+  const r = startingRate(c, null, futurePrices(v));
   return `Estimated ${pct(r.pct)} - ${r.source}`;
 }
 
 function costsPanel(hub, d, today, refresh, redraw) {
   const list = d.values.costs = Array.isArray(d.values.costs) ? d.values.costs : [];
+  // A new plan starts with the usual costs listed (D-141): untick what is not yours.
+  if (!list.length && !d.mine.has('costs')) list.push(...SUGGESTED_COSTS.map((k) => ({ id: newId('c'), kind: k, name: '', amount: null, suggested: true })));
   const s = start(d, today);
   const changed = (structure) => { mine(d, 'costs'); if (structure) redraw(); else refresh(); };
   const field = (c, key, attrs) => el('input', { class: 'input', type: 'number', money: key !== 'pct', inputmode: 'decimal', step: 'any', value: c[key] ?? '', style: { maxWidth: '130px' }, ...attrs,
@@ -134,12 +143,27 @@ function costsPanel(hub, d, today, refresh, redraw) {
     if (s) for (const c of list) { c.now = c.amount; c.amount = null; }
     changed(true);
   };
+  // A listed cost not filled in yet, or one that is not ours: one line, with a tick to count it or not.
+  const costLine = (c, i) => {
+    const name = c.name || KINDS[c.kind] || 'A cost';
+    const tick = el('input', { type: 'checkbox', checked: c.on !== false, 'aria-label': `${name}: counted`, on: { change: (e) => { c.on = e.target.checked; changed(true); } } });
+    if (c.on === false) {
+      return el('div', { class: 'row small muted', style: { gap: 'var(--space-2)', alignItems: 'center' }, 'data-field': `cost:${i}` }, [
+        el('label', { class: 'checkline' }, [tick, el('span', { text: `${name} - not ours` })]),
+      ]);
+    }
+    return el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' }, 'data-field': `cost:${i}` }, [
+      el('label', { class: 'checkline', style: { minWidth: '150px' } }, [tick, el('span', { text: name })]),
+      el('span', { class: 'muted', text: 'R' }), field(c, 'amount', { placeholder: s ? 'then' : 'a month', 'aria-label': `${name}, a month${s ? ' when you started' : ''}` }),
+      el('span', { class: 'small muted', text: rateNote(c, d.values).replace(/^Estimated /, 'usually rises ') }),
+    ]);
+  };
   return el('div', { class: 'panel stack', 'data-field': 'costs-panel' }, [
     el('h2', { text: 'Your costs', style: { margin: 0 } }),
     el('p', { class: 'small muted', style: { margin: 0 }, text: s
       ? `A month, when you started in ${monthName(s)}. "Now" is what it costs today: from the two, the app works out how fast it rose for you. Leave "Now" empty to use the starting rate. Add "Everything else" for what is not its own line.`
       : 'A month, today. Each rises at its own rate - yours, or a starting rate labelled Estimated. Add "Everything else" for what is not its own line.' }),
-    ...list.map((c, i) => el('fieldset', { class: 'stack fin-group', 'data-field': `cost:${i}` }, [
+    ...list.map((c, i) => (c.on === false || (c.suggested && num(c.amount) == null && num(c.now) == null) ? costLine(c, i) : el('fieldset', { class: 'stack fin-group', 'data-field': `cost:${i}` }, [
       el('div', { class: 'row', style: { gap: 'var(--space-2)' } }, [
         el('input', { class: 'input', value: c.name ?? '', placeholder: KINDS[c.kind] ?? 'What it is', 'aria-label': 'What the cost is', style: { flex: '1 1 160px' }, on: { input: (e) => { c.name = e.target.value; changed(false); } } }),
         el('select', { class: 'select', 'aria-label': 'Rises like', style: { width: 'auto' }, on: { change: (e) => { c.kind = e.target.value; changed(true); } } },
@@ -162,8 +186,8 @@ function costsPanel(hub, d, today, refresh, redraw) {
         el('span', { class: 'small', text: 'From now on' }), field(c, 'pct', { placeholder: String(startingRate(c).pct), 'aria-label': 'Rises from now on, % a year', style: { maxWidth: '100px' } }),
         el('span', { class: 'small muted', text: '% a year' }),
       ]),
-      el('div', { class: 'fin-tag', text: rateNote(c) }),
-    ])),
+      el('div', { class: 'fin-tag', text: rateNote(c, d.values) }),
+    ]))),
     el('div', { class: 'row' }, [
       el('button', { class: 'btn btn-small', type: 'button', text: 'Add cost', 'data-field': 'cost-add', on: { click: () => { list.push({ id: newId('c'), kind: 'other', name: '', amount: null }); changed(true); } } }),
       el('button', { class: 'btn btn-small', type: 'button', text: 'From budget', title: 'Take the categories from this month’s budget', 'data-field': 'from-budget', on: { click: fromBudget } }),
@@ -182,13 +206,57 @@ const EVENTS = {
   income: { label: 'Income', think: 'Money coming in: a partner’s take-home, in today’s money.' },
 };
 
-function eventsPanel(d, refresh, redraw) {
+/**
+ * The children on the People page, each from their birth (D-141): one amount a month - or, under
+ * More detail, school or daycare, medical aid, food, nappies and clothes, added up instead.
+ */
+function kidsBlock(hub, d, today, changed) {
+  const people = (hub.people?.list?.() ?? []).filter((p) => roleOf(p, today) === 'child');
+  const old = new Map((Array.isArray(d.values.kids) ? d.values.kids : []).map((k) => [k.id, k]));
+  const kids = d.values.kids = people.map((p) => ({ on: true, amount: null, atHome: false, detail: {}, ...old.get(p.id), id: p.id, name: p.name, born: /^\d{4}-\d{2}/.test(p.born ?? '') ? p.born.slice(0, 7) : null }));
+  if (!kids.length) return el('p', { class: 'small muted', style: { margin: 0 }, text: 'Children on the People page show here, each from their birthday. Or add "A child" below.' });
+  const money = (obj, key, label) => el('input', { class: 'input', money: true, value: obj[key] ?? '', placeholder: 'a month', 'aria-label': label, style: { maxWidth: '120px' },
+    on: { input: (e) => { obj[key] = e.target.value === '' ? null : Number(e.target.value); changed(false); }, change: () => changed(true) } });
+  return el('div', { class: 'stack', 'data-field': 'kids' }, [
+    el('h3', { text: 'Your children', style: { margin: 0 } }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'What each child costs a month, in today’s money, from their birthday. One amount is enough - More detail works it out line by line.' }),
+    ...kids.map((k) => {
+      const tick = el('input', { type: 'checkbox', checked: k.on !== false, 'aria-label': `${k.name}: counted`, on: { change: (e) => { k.on = e.target.checked; changed(true); } } });
+      const lines = kidLines(k);
+      const detailed = lines.length > 0 && lines[0].key !== 'all';
+      const on = k.on !== false;
+      return el('fieldset', { class: `stack fin-group${on ? '' : ' fin-group--off'}`, 'data-field': `kid:${k.id}` }, [
+        el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' } }, [
+          el('label', { class: 'checkline' }, [tick, el('strong', { text: k.name })]),
+          el('span', { class: 'small muted', text: k.born ? `from ${monthName(k.born)}` : 'no birthday on the People page - from the start' }),
+          on && !detailed ? el('span', { class: 'muted', text: 'R' }) : null,
+          on && !detailed ? money(k, 'amount', `${k.name}, a month`) : null,
+          on && detailed ? el('span', { class: 'small', text: `${rand(lines.reduce((t, x) => t + x.amount, 0))} a month, from More detail` }) : null,
+          on ? el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: k.more ? 'Less detail' : 'More detail', 'aria-expanded': String(!!k.more), on: { click: () => { k.more = !k.more; changed(true); } } }) : null,
+        ]),
+        on && k.more ? el('div', { class: 'stack', style: { gap: '6px' } }, [
+          el('div', { class: 'chipset', role: 'group', 'aria-label': `${k.name}: school or daycare` }, [[true, 'At home'], [false, 'School or daycare']].map(([home, label]) => el('button', {
+            class: 'chip', type: 'button', 'aria-pressed': String(!!k.atHome === home), text: label, on: { click: () => { k.atHome = home; changed(true); } } }))),
+          ...KID_DETAIL.filter((x) => !(x.key === 'school' && k.atHome)).map((x) => el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' } }, [
+            el('span', { class: 'small', style: { minWidth: '150px' }, text: `${x.label}${x.months ? ' (until about 3)' : ''}` }),
+            el('span', { class: 'muted', text: 'R' }), money((k.detail ??= {}), x.key, `${k.name}: ${x.label}, a month`),
+          ])),
+          el('p', { class: 'small muted', style: { margin: 0 }, text: 'Filled in here, these lines are used instead of the one amount. Empty ones count nothing.' }),
+        ]) : null,
+      ]);
+    }),
+  ]);
+}
+
+function eventsPanel(hub, d, today, refresh, redraw) {
   const list = d.values.events = Array.isArray(d.values.events) ? d.values.events : [];
   const costs = (d.values.costs ?? []).filter((c) => num(c.amount) > 0);
   const changed = (structure) => { mine(d, 'events'); if (structure) redraw(); else refresh(); };
+  const kidsChanged = (structure) => { mine(d, 'kids'); if (structure) redraw(); else refresh(); };
   return el('div', { class: 'panel stack', 'data-field': 'events-panel' }, [
     el('h2', { text: 'Life events', style: { margin: 0 } }),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: 'Getting married, a child, someone added to the medical aid, a move, a partner’s income - each one that happened or that you plan, with what it adds a month from its date, in today’s money. Press the one to add it.' }),
+    kidsBlock(hub, d, today, kidsChanged),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'Add event for getting married, a child, someone added to the medical aid, a move, a partner’s income or something else - each one that happened or that you plan, with what it adds a month from its date, in today’s money.' }),
     ...list.map((e, i) => el('fieldset', { class: 'stack fin-group', 'data-field': `event:${i}` }, [
       el('div', { class: 'row', style: { gap: 'var(--space-2)' } }, [
         el('select', { class: 'select', 'aria-label': 'What happens', style: { width: 'auto' }, on: { change: (x) => { e.kind = x.target.value; changed(true); } } },
@@ -207,12 +275,8 @@ function eventsPanel(d, refresh, redraw) {
       ]),
       EVENTS[e.kind]?.think ? el('p', { class: 'small muted', style: { margin: 0 }, text: EVENTS[e.kind].think }) : null,
     ])),
-    // Every kind on show, not behind one button (owner, D-139): what can be added is seen without clicking.
-    el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' }, 'data-field': 'event-add' }, [
-      el('span', { class: 'small muted', text: 'Add:' }),
-      ...Object.entries(EVENTS).map(([k, x]) => el('button', { class: 'btn btn-small', type: 'button', text: x.label, 'data-field': `event-add:${k}`,
-        on: { click: () => { list.push({ id: newId('e'), kind: k, from: null, amount: null, risesWith: 'cpi' }); changed(true); } } })),
-    ]),
+    // One button: the text above names what it covers (D-139, D-141 - six buttons crowded the screen).
+    el('div', {}, [el('button', { class: 'btn btn-small', type: 'button', text: 'Add event', 'data-field': 'event-add', on: { click: () => { list.push({ id: newId('e'), kind: 'married', from: null, amount: null, risesWith: 'cpi' }); changed(true); } } })]),
   ]);
 }
 

@@ -590,6 +590,17 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### Plan my week, what we buy, and costs thought of for you (v0.27.0, 2026-11-14)
+**What it does:**
+- **Plan my week:** one button in the Meal Planner fills the week from your Cookbook - balanced, favourites first -
+  with a snack idea a day. Press × on anything and the next idea takes its place; Put in when it looks right.
+- **What we buy:** note once that eggs come in a tray of 18 or peas in a 1 kg bag; the shopping list says "buy 1 ×
+  tray of 18 - 13 spare", and half a tomato says "buy 1 - ½ spare".
+- **Salary and costs:** a Prices rise by box; rent, medical aid, food, school, electricity and petrol already listed
+  to untick; each child from the People page with one amount a month (More detail if you want it); a 13th cheque.
+**Why it is there:** "I can't think of stuff out of my head when I'm tired and overworked." (D-141 to D-143)
+**Show it:** Meal Planner › Plan week; Cookbook › Packs, then Shopping; Finance › Salary and costs (Advanced).
+
 #### Words explained, life events on show (v0.26.4, 2026-11-14)
 **What it does:** CPI is explained wherever it shows - the consumer price index, how much prices rise in general.
 Under Life events, every kind is its own button: Married, A child, Medical aid, Move house, Something else, Income.

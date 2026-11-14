@@ -924,6 +924,35 @@ wherever it shows, with its meaning beside it - "CPI, the consumer price index: 
 measured by Stats SA" - in the inflation source line every tool shows, Salary's sentences, its table, graph and
 Expert steps, Money plan, and the guide. Every term from now on gets the same: its meaning on screen or behind an (i).
 
+**D-141 Salary and costs: we do the thinking, one line each (owner, 2026-11-14).** "I want us to do the thinking
+... they should state if it is not applicable to them" - but "that does not mean just splitting one button into 20
+other buttons". (1) Prices rise by, in Simple: CPI (4.5%, Stats SA) until the family types its own; every cost's
+starting rate and the yearly raise follow it. (2) A new plan lists rent, medical aid, food, school or daycare,
+electricity and petrol, one line each with a tick and how fast it usually rises (and from where); unticked counts
+nothing; no amounts are filled in. (3) The children on the People page appear under Life events, each from their
+birthday, with one amount a month ("perhaps I just want to add like 4,000 rand per kid"); More detail opens school
+or daycare (or at home), medical aid, food, nappies (to about three) and clothes, used instead when filled in. A
+child already there when the job started is not counted twice - what was left over then already paid for them.
+Salary may now read birthdays (people:ages). (4) A bonus: none, a 13th cheque (one month's pay a year) or another
+yearly amount, spread over the year and taxed with the salary. (5) Life events back to one Add event button.
+No starting amounts are made up; the "R7 000 a child" the owner heard is not used.
+
+**D-142 What we buy (owner, 2026-11-14).** "If a recipe calls for half a tomato, I know I need to buy a tomato ...
+and then I know what I will have spare." Foods already knew their sizes from USDA FoodData Central ("1 medium
+tomato = 123 g", "a medium head of iceberg = 539 g"). New: the Cookbook's Packs screen ("What we buy") keeps the
+packs the family buys a food in - a tray of 18 eggs, a 1 kg bag of frozen peas - noted by them, removable. The
+shopping list and At the shop then say "buy 1 × tray of 18 - 13 spare"; anything counted whole says "buy 1 - ½
+spare". Cups are never guessed into grams.
+
+**D-143 Plan my week (owner, 2026-11-14).** "When I'm really just tired of thinking, to just plan out the week and
+get like a balanced meal plan ... I can just reject the suggestions you give me. But I don't know what I don't know."
+Plan week (Meal Planner) fills every empty breakfast, lunch and supper of this or next week from the family's own
+Cookbook: meals marked good for that meal (a meal marked for none counts as lunch or supper; recipes, fillings and
+doughs are parts of meals and are not planned), favourites first, two new ones a week while tried ones are left,
+nothing from the last two weeks until the rest are used, not the same protein or starch at the same meal two days
+running, and nothing someone cannot eat. One snack idea a day from an editable list (carrot sticks, apple slices,
+yoghurt...). Every pick has an ×; the next idea takes its place. Nothing goes in until Put in.
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in

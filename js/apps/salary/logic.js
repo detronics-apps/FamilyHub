@@ -36,11 +36,27 @@ export const KINDS = {
   petrol: 'Petrol',
   electricity: 'Electricity',
   food: 'Food',
+  school: 'School or daycare',
 };
 
+/**
+ * The costs already listed for a new plan (D-141): we do the thinking, the family unticks what is
+ * not theirs. No amounts are filled in - only the family knows them.
+ */
+export const SUGGESTED_COSTS = ['rent', 'medical', 'food', 'school', 'electricity', 'petrol'];
+
+/** A child's costs, opened under More detail (D-141). Nappies stop at about three. */
+export const KID_DETAIL = [
+  { key: 'school', label: 'School or daycare' },
+  { key: 'medical', label: 'Medical aid for them' },
+  { key: 'food', label: 'Food' },
+  { key: 'nappies', label: 'Nappies', months: 36 },
+  { key: 'clothes', label: 'Clothes' },
+];
+
 /** The starting rate for one cost in one calendar year (null year: from now on), and where it comes from. */
-export function startingRate(cost, year = null) {
-  const cpi = () => ({ pct: (year != null ? CPI.byYear[year] : null) ?? CPI.future, source: year == null ? `${REFERENCE.cpi.label}, ${REFERENCE.cpi.source}` : CPI.source });
+export function startingRate(cost, year = null, future = CPI.future) {
+  const cpi = () => ({ pct: (year != null ? CPI.byYear[year] : null) ?? future, source: year == null ? `${REFERENCE.cpi.label}, ${REFERENCE.cpi.source}` : CPI.source });
   if (cost.kind === 'bond') return { pct: 0, source: 'A bond moves with the interest rate, not with prices' };
   if (cost.kind === 'electricity') { const p = year != null ? ELECTRICITY.byYear[year] : ELECTRICITY.future; return p != null ? { pct: p, source: ELECTRICITY.source } : cpi(); }
   if (cost.kind === 'rent' && (year == null || year >= 2026)) return { pct: cost.region === 'wc' ? RENT.wc : RENT.national, source: RENT.source };
@@ -63,10 +79,31 @@ export function addMonth(m, n) {
 export const DEFAULTS = {
   salary: null, salaryPer: 'year', salaryKind: 'gross', start: null,
   raises: [], raisePct: null, costs: [], events: [], ahead: 10,
+  pricesPct: null,                 // prices rise by, a year from now on - empty: CPI (D-141)
+  bonus: 'none', bonusAmount: null, // a 13th cheque or another yearly bonus, spread over the year
+  kids: [],                        // the children from the People page, each with their costs a month
 };
 
+/** Prices from now on: the family's own figure, or CPI. */
+export const futurePrices = (v) => num(v.pricesPct) ?? CPI.future;
+
+/** A child's costs a month: More detail's lines when any is filled in, else the one amount (D-141). */
+export function kidLines(k) {
+  const d = k?.detail ?? {};
+  const lines = KID_DETAIL.filter((x) => num(d[x.key]) > 0 && !(x.key === 'school' && k.atHome)).map((x) => ({ ...x, amount: num(d[x.key]) }));
+  return lines.length ? lines : num(k?.amount) > 0 ? [{ key: 'all', label: 'Everything for them', amount: num(k.amount) }] : [];
+}
+
+/** The children as life events: each line from their birth (or the start), nappies ending at about three. */
+export function kidEvents(v, start) {
+  return (v.kids ?? []).filter((k) => k && k.on !== false).flatMap((k) => {
+    const from = isMonth(k.born) ? k.born : start;
+    return kidLines(k).map((x) => ({ id: `kid:${k.id}:${x.key}`, kind: 'child', from, to: x.months ? addMonth(from, x.months) : null, amount: x.amount, risesWith: 'cpi' }));
+  });
+}
+
 /** The yearly raise assumed after your last raise entry: yours, or CPI (Estimated). */
-export const futureRaise = (v) => num(v.raisePct) ?? CPI.future;
+export const futureRaise = (v) => num(v.raisePct) ?? futurePrices(v);
 
 /**
  * Raises are entries the person adds - a month and a percentage - on no assumed timeline
@@ -111,16 +148,17 @@ export function plan(input, today) {
   const entries = raiseEntries(v, start);
   const assumedFrom = [now, ...entries.map((r) => r.month)].sort().at(-1);
   const assumedStep = (1 + futureRaise(v) / 100) ** (1 / 12);
-  const costs = (v.costs ?? []).filter((c) => c && num(c.amount) > 0);
+  const costs = (v.costs ?? []).filter((c) => c && c.on !== false && num(c.amount) > 0);   // unticked: not ours (D-141)
+  const future = futurePrices(v);
 
   // Each cost's monthly growth for the step into month m (m >= 1).
   const stepOf = (c, m) => {
     if (m <= T && num(c.now) > 0 && T > 0) return (num(c.now) / num(c.amount)) ** (1 / T);
     const own = m > T ? num(c.pct) : null;
-    const pct = own ?? startingRate(c, m > T ? null : Number(addMonth(start, m).slice(0, 4))).pct;
+    const pct = own ?? startingRate(c, m > T ? null : Number(addMonth(start, m).slice(0, 4)), future).pct;
     return (1 + pct / 100) ** (1 / 12);
   };
-  const cpiStep = (m) => (1 + (m > T ? CPI.future : CPI.byYear[Number(addMonth(start, m).slice(0, 4))] ?? CPI.future) / 100) ** (1 / 12);
+  const cpiStep = (m) => (1 + (m > T ? future : CPI.byYear[Number(addMonth(start, m).slice(0, 4))] ?? future) / 100) ** (1 / 12);
 
   const F = costs.map(() => [1]);
   const cpi = [1];
@@ -139,11 +177,18 @@ export function plan(input, today) {
     pay.push(p * (month > assumedFrom ? assumedStep : 1));
   }
   const estimated = v.salaryKind !== 'takehome';
-  const takeHomeOf = (g) => (estimated ? estimatePay({ grossMonthly: g }).monthly : g);
+  // A bonus counts as a 13th share of the year, spread month by month (D-141): a 13th cheque is one
+  // month's pay; another bonus is its yearly amount, in the same terms as the salary.
+  const bonusOf = (g) => (v.bonus === '13th' ? g / 12 : v.bonus === 'amount' && num(v.bonusAmount) > 0 ? num(v.bonusAmount) / 12 : 0);
+  const takeHomeOf = (g) => { const b = bonusOf(g); return estimated ? estimatePay({ grossMonthly: g + b }).monthly : g + b; };
   const factorOf = (id, m) => { const i = costs.findIndex((c) => c.id === id); return i >= 0 ? F[i][m] / F[i][T] : cpi[m] / cpi[T]; };
-  const events = (v.events ?? []).filter((e) => e && isMonth(e.from) && num(e.amount));   // a move can cost less: a minus amount
+  const events = [...(v.events ?? []), ...kidEvents(v, start)].filter((e) => e && e.on !== false && isMonth(e.from) && num(e.amount));   // a move can cost less: a minus amount
+  const live = (e, month) => e.from <= month && !(isMonth(e.to) && month >= e.to);
   const basket0 = costs.reduce((s, c) => s + num(c.amount), 0);
-  const left0 = Math.max(0, takeHomeOf(monthly) - basket0);
+  // What was left over at the start, after the costs and the events already running then (a child
+  // born before you started was already being paid for - not counted twice).
+  const ev0 = events.filter((e) => live(e, start)).reduce((t, e) => t + (e.kind === 'income' ? -1 : 1) * num(e.amount) * factorOf(e.risesWith, 0), 0);
+  const left0 = Math.max(0, takeHomeOf(monthly) - basket0 - ev0);
 
   const rows = [];
   for (let m = 0; m <= N; m += 1) {
@@ -152,7 +197,7 @@ export function plan(input, today) {
     const own = basket0 > 0 ? basket / basket0 : cpi[m];
     let added = 0; let income = 0;
     for (const e of events) {
-      if (e.from > month) continue;
+      if (!live(e, month)) continue;
       const amt = num(e.amount) * factorOf(e.risesWith, m);
       if (e.kind === 'income') income += amt; else added += amt;
     }

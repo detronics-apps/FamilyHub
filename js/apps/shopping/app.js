@@ -6,7 +6,7 @@
 import { el } from '../../ui/dom.js';
 import { fold, roomy } from '../../ui/common.js';
 import { loading, failure, saveRecord } from '../kit.js';
-import { formatIngredient, combineIngredients, parseIngredient } from '../meals/logic.js';
+import { formatIngredient, combineIngredients, parseIngredient, buyNote } from '../meals/logic.js';
 import { inSystem } from '../../units.js';
 import {
   GROUPS, KINDS, LIST_ID, normaliseShopping, addFromSource, addMore, addShoppingItem, toggleItem, clearBought, removeItem, byGroup, readSend, listText,
@@ -97,7 +97,11 @@ function finder(hub, list, save) {
   ]);
 }
 
+// The packs the family buys things in, noted in the Cookbook (D-142).
+const loadPacks = (hub) => hub.use('packs', async () => (hub.data.installed('meals') ? (await hub.data.of('meals', 'packs').list({ limit: 1000 }).catch(() => ({ items: [] }))).items : []));
+
 function listScreen(hub, list, save) {
+  const packs = loadPacks(hub).data ?? [];
   const bought = list.items.filter((i) => i.checked);
   const item = (i) => el('li', {}, [
     el('label', { class: 'checkline list__main' }, [
@@ -106,6 +110,7 @@ function listScreen(hub, list, save) {
         el('span', { text: formatIngredient(inSystem(i, hub.units())), style: i.checked ? { textDecoration: 'line-through', color: 'var(--text-faint)' } : null }),
         i.note ? el('span', { class: 'small muted', text: ` (${i.note})` }) : null,
         i.from ? el('span', { class: 'small muted', text: ` · ${i.from}` }) : null,
+        !i.checked && buyNote(i, packs) ? el('span', { class: 'small', 'data-field': `buy:${i.id}`, text: ` - ${buyNote(i, packs)}` }) : null,
       ]),
     ]),
     el('button', { class: 'btn btn-quiet btn-small', type: 'button', text: '×', 'aria-label': `Remove ${i.name}`, on: { click: () => save(removeItem(list, i.id)) } }),
@@ -139,12 +144,14 @@ function listScreen(hub, list, save) {
  * trolley. Nothing to add or change here; that is for the list screen.
  */
 function shopScreen(hub, list, save) {
+  const packs = loadPacks(hub).data ?? [];
   const left = list.items.filter((i) => !i.checked);
   const got = list.items.filter((i) => i.checked);
   const tick = (i) => el('label', { class: 'checkline shop-tick', 'data-field': `tick:${i.id}` }, [
     el('input', { type: 'checkbox', checked: i.checked, on: { change: () => save(toggleItem(list, i.id, hub.today())) } }),
     el('span', { text: formatIngredient(inSystem(i, hub.units())), style: i.checked ? { textDecoration: 'line-through', color: 'var(--text-faint)' } : null }),
     i.note ? el('span', { class: 'small muted', text: ` (${i.note})` }) : null,
+    !i.checked && buyNote(i, packs) ? el('span', { class: 'small', text: ` - ${buyNote(i, packs)}` }) : null,
   ]);
   return el('section', { class: 'stack shop-mode', 'aria-label': 'At the shop' }, [
     el('h1', { text: left.length ? `At the shop - ${left.length} to get` : 'Everything is in the trolley' }),
