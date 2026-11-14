@@ -60,8 +60,13 @@ function raisesPanel(d, today, refresh, redraw) {
   const now = today.slice(0, 7);
   const s = start(d, today) ?? now;
   // Saved before D-125: one figure per anniversary - shown as the dated entries they mean.
-  const list = d.values.raises = (Array.isArray(d.values.raises) ? d.values.raises : []).map((r, i) => (r && typeof r === 'object' ? r : num(r) ? { id: newId('r'), month: addMonth(s, 12 * (i + 1)), pct: num(r) } : null)).filter(Boolean);
+  const list = d.values.raises = (Array.isArray(d.values.raises) ? d.values.raises : []).map((r, i) => (r && typeof r === 'object' ? (r.id ? r : { ...r, id: newId('r') }) : num(r) ? { id: newId('r'), month: addMonth(s, 12 * (i + 1)), pct: num(r) } : null)).filter(Boolean);
   const changed = (structure) => { mine(d, 'raises'); if (structure) redraw(); else refresh(); };
+  // Each entry shows the other half worked out: "R54 000 a year, +8%" (D-126).
+  const worked = new Map((plan(d.values, today).entries ?? []).map((e) => [e.id, e]));
+  const per = d.values.salaryPer === 'month' ? 'month' : 'year';
+  const kind = d.values.salaryKind === 'takehome' ? 'take-home' : 'before tax';
+  const workedText = (r) => { const e = worked.get(r.id); return e ? `${rand(e.salary)} a ${per} ${kind}, ${e.pct >= 0 ? '+' : '−'}${pct(Math.abs(e.pct), 1)}` : ''; };
   const firstYear = Number(s.slice(0, 4));
   const lastYear = Number(now.slice(0, 4)) + (num(d.values.ahead) ?? 10);
   const years = Array.from({ length: lastYear - firstYear + 1 }, (_, k) => firstYear + k);
@@ -70,16 +75,23 @@ function raisesPanel(d, today, refresh, redraw) {
     options.map(([value, text]) => el('option', { value, text, selected: (part === 'year' ? r.month.slice(0, 4) : r.month.slice(5)) === value })));
   return el('div', { class: 'panel stack', 'data-field': 'raises-panel' }, [
     el('h2', { text: 'Your raises', style: { margin: 0 } }),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: 'Each raise you have had - and any you know is coming - in the month it started. Whenever they came: a month after you started, every six months, December and June. Nothing is assumed.' }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'Each raise you have had - and any you know is coming - in the month it started: the percentage, or the new salary if that is what you know. Whenever they came: a month after you started, every six months, December and June. Nothing is assumed.' }),
     ...list.map((r, i) => el('div', { class: 'row', style: { gap: 'var(--space-2)' }, 'data-field': `raise:${i}` }, [
       pick(r, 'month', MONTHS.map((m, k) => [String(k + 1).padStart(2, '0'), m]), 'Month of the raise'),
       pick(r, 'year', years.map((y) => [String(y), String(y)]), 'Year of the raise'),
-      el('span', { class: 'row', style: { gap: 'var(--space-1)', flexWrap: 'nowrap' } }, [
-        el('input', { class: 'input', type: 'number', inputmode: 'decimal', step: 'any', value: r.pct ?? '', placeholder: '%', 'aria-label': 'Raise, %', style: { maxWidth: '72px' },
-          on: { input: (e) => { r.pct = e.target.value === '' ? null : Number(e.target.value); changed(false); } } }),
-        el('span', { class: 'small muted', text: '%' }),
-      ]),
+      ...(() => {
+        // A percentage, or the new salary from that month on - whichever you know. Typing one clears the other.
+        const pctBox = el('input', { class: 'input', type: 'number', inputmode: 'decimal', step: 'any', value: r.salary != null ? '' : r.pct ?? '', placeholder: '%', 'aria-label': 'Raise, %', style: { maxWidth: '72px' },
+          on: { input: (e) => { r.pct = e.target.value === '' ? null : Number(e.target.value); r.salary = null; salBox.value = ''; changed(false); }, change: () => changed(true) } });
+        const salBox = el('input', { class: 'input', type: 'number', inputmode: 'decimal', step: 'any', min: '0', value: r.salary ?? '', placeholder: `new salary a ${per}`, 'aria-label': `Or the new salary a ${per}`, style: { maxWidth: '150px' },
+          on: { input: (e) => { r.salary = e.target.value === '' ? null : Number(e.target.value); r.pct = null; pctBox.value = ''; changed(false); }, change: () => changed(true) } });
+        return [
+          el('span', { class: 'row', style: { gap: 'var(--space-1)', flexWrap: 'nowrap' } }, [pctBox, el('span', { class: 'small muted', text: '%' })]),
+          el('span', { class: 'row', style: { gap: 'var(--space-1)', flexWrap: 'nowrap' } }, [el('span', { class: 'small muted', text: 'or R' }), salBox]),
+        ];
+      })(),
       el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove raise', on: { click: () => { list.splice(i, 1); changed(true); } } }),
+      workedText(r) ? el('span', { class: 'small', style: { flexBasis: '100%' }, 'data-field': `raise-worked:${i}`, text: workedText(r) }) : null,
       r.month <= s ? el('span', { class: 'small muted', style: { flexBasis: '100%' }, text: 'Before you started - not counted: the salary you started on already has it.' }) : null,
     ])),
     el('div', {}, [el('button', { class: 'btn btn-small', type: 'button', text: 'Add raise', 'data-field': 'raise-add', on: { click: () => {

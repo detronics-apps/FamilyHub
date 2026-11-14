@@ -73,12 +73,16 @@ export const futureRaise = (v) => num(v.raisePct) ?? CPI.future;
  * (D-125): every 6 months, a month after starting, whenever. Saved before D-125 they were one
  * figure per anniversary of starting; those are read as dated entries on those anniversaries.
  * Only raises after the start month count: the start salary already includes anything before.
+ * An entry gives the percentage, or the new salary from that month on (D-126), in the same
+ * terms as the salary you started on (a year or a month, before tax or take-home).
  */
 export function raiseEntries(v, start) {
   const list = Array.isArray(v.raises) ? v.raises : [];
   return list.map((r, i) => {
     if (typeof r === 'number' || r === null) return num(r) ? { month: addMonth(start, 12 * (i + 1)), pct: num(r) } : null;
-    return r && isMonth(r.month) && num(r.pct) != null ? { month: r.month, pct: num(r.pct) } : null;
+    if (!r || !isMonth(r.month)) return null;
+    if (num(r.salary) > 0) return { id: r.id, month: r.month, salary: num(r.salary) };
+    return num(r.pct) != null ? { id: r.id, month: r.month, pct: num(r.pct) } : null;
   }).filter((r) => r && r.month > start).sort((a, b) => a.month.localeCompare(b.month));
 }
 
@@ -100,7 +104,8 @@ export function plan(input, today) {
   const start = isMonth(v.start) && v.start < now ? v.start : now;
   const T = monthsBetween(start, now);
   const N = T + 12 * Math.max(1, Math.min(40, num(v.ahead) ?? 10));
-  const monthly = v.salaryPer === 'month' ? s0 : s0 / 12;
+  const per = v.salaryPer === 'month' ? 1 : 12;
+  const monthly = s0 / per;
   // Each raise on its own month; after the last one (or today, if later) the assumed yearly
   // raise is spread month by month - no timeline is assumed for it.
   const entries = raiseEntries(v, start);
@@ -124,8 +129,14 @@ export function plan(input, today) {
     costs.forEach((c, i) => F[i].push(F[i][m - 1] * stepOf(c, m)));
     cpi.push(cpi[m - 1] * cpiStep(m));
     const month = addMonth(start, m);
-    const raised = entries.filter((r) => r.month === month).reduce((f, r) => f * (1 + r.pct / 100), 1);
-    pay.push(pay[m - 1] * raised * (month > assumedFrom ? assumedStep : 1));
+    // A new salary replaces the pay; a percentage raises it - each entry then shows the other worked out.
+    let p = pay[m - 1];
+    for (const r of entries.filter((x) => x.month === month)) {
+      const next = r.salary != null ? r.salary / per : p * (1 + r.pct / 100);
+      Object.assign(r, { pct: (next / p - 1) * 100, salary: next * per });
+      p = next;
+    }
+    pay.push(p * (month > assumedFrom ? assumedStep : 1));
   }
   const estimated = v.salaryKind !== 'takehome';
   const takeHomeOf = (g) => (estimated ? estimatePay({ grossMonthly: g }).monthly : g);

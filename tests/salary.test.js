@@ -27,6 +27,15 @@ test('D-125 raises are dated entries on no assumed timeline; a payslip figure is
   assert.deepEqual(plan({}, TODAY).missing, ['the salary you started on']);
 });
 
+test('D-126 a raise as the new salary from that month: the percentage worked out, and the other way round', () => {
+  const raises = [{ id: 'a', month: '2024-01', salary: 54000 }, { id: 'b', month: '2025-01', pct: 10 }];
+  const p = plan({ salary: 50000, salaryPer: 'year', salaryKind: 'takehome', start: '2023-05', raises, raisePct: 0 }, TODAY);
+  near(p.at(8).takeHome, 4500);                   // January 2024: R54 000 a year
+  near(p.entries[0].pct, 8);                       // +8%
+  near(p.entries[1].salary, 59400);                // +10%: R59 400 a year
+  near(p.at(20).takeHome, 4950);
+});
+
 test('D-125 after the last raise entry the assumed raise is spread month by month; old anniversary raises still read', () => {
   const v = { salary: 12000, salaryPer: 'month', salaryKind: 'takehome', raisePct: 12 };
   const p = plan(v, TODAY);                                       // a new job, no entries

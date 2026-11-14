@@ -815,6 +815,12 @@ the answer says which raises are yours and which assumed. Year by year shows "Pa
 each row instead of an anniversary raise. Saved before this, one figure per anniversary is read as dated entries
 on those anniversaries, so nothing saved is lost.
 
+**D-126 A raise as the new salary (owner, 2026-11-14).** "Or perhaps they can just add their new salary from
+that day onwards if they don't know the percentage." Each raise entry takes the percentage or the new salary from
+that month on, in the same terms as the salary started on (a year or a month, before tax or take-home); typing one
+clears the other, and the entry shows both worked out - "R54 000 a year take-home, +8%" - still one entry with one
+Remove raise. A new salary replaces the pay that month; the raises after it build on it.
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in
