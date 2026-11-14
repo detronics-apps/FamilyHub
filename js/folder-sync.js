@@ -176,6 +176,9 @@ export const fingerprint = (h) => (h ? stableStringify({ ...h, events: sortEvent
  *   - 'conflict': both changed the same thing; `household` is the merge with this device's
  *                 values, `conflicts` lists what a person must choose. Nothing was written.
  */
+/** A household with nothing of its own yet: no people, no chores, no history. */
+export const isEmptyHousehold = (h) => !h || (!(h.people?.length) && !(h.chores?.length) && !(h.events?.length));
+
 export async function syncHousehold(store, { base, mine }) {
   const current = await readHouseholdFiles(store);
   const theirs = filesToHousehold(current);
@@ -193,9 +196,13 @@ export async function syncHousehold(store, { base, mine }) {
   const fpMine = fingerprint(mine);
   if (fpTheirs === fpMine) return { status: 'unchanged', household: mine, conflicts: [], written: [] };
 
-  // First connect to a folder that already holds a family (a second laptop, say):
-  // a person decides whether to use the folder's family or merge this device's into it.
-  if (!base) return { status: 'first-connect', household: mine, theirs, conflicts: [], written: [] };
+  // First connect to a folder that already holds a family (a second laptop, say). A device with
+  // nothing on it - no people, chores or history, as at a new address - simply takes the folder's
+  // family: there is nothing to choose (D-136). Otherwise a person decides.
+  if (!base) {
+    if (isEmptyHousehold(mine)) return { status: 'adopted', household: theirs, first: true, conflicts: [], written: [] };
+    return { status: 'first-connect', household: mine, theirs, conflicts: [], written: [] };
+  }
 
   const fpBase = fingerprint(base);
   if (fpTheirs === fpBase) {

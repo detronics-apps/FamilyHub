@@ -590,6 +590,13 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### Connecting Drive on a new device (v0.26.1, 2026-11-14)
+**What it does:** a device with nothing on it simply opens the family from your Drive folder. When both have a
+family, it asks "Which family should this device use?" and says what Use Drive, Combine and Cancel each do.
+**Why it is there:** "Use folder does not tell me which one of those 2 options you just gave me you're going to
+use." (D-136)
+**Show it:** a new browser at familyhub.detronics.co.za › Settings › Google Drive › Choose folder.
+
 #### Safer by design (v0.26.0, 2026-11-14)
 **What it does:**
 - **Its own address:** Family Hub moves to familyhub.detronics.co.za, so no other app can reach a family's

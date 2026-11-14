@@ -885,6 +885,15 @@ tests are green and the owner has read the diff.
 **D-135 Small things (security audit, 2026-11-14).** The two links with only `noopener` now also have
 `noreferrer`. Family files and CSVs over 50 MB are refused before they are read, with a plain message.
 
+**D-136 Connecting Drive says which family it means (owner, 2026-11-14).** At the new address a laptop starts
+empty, and choosing the Drive folder asked "Your Drive folder already has a family" with Cancel, Merge and Use
+folder - "Use what folder? ... Use folder does not tell me which one of those 2 options you just gave me you're
+going to use." A device with nothing on it (no people, chores or history) now simply takes the family from Drive,
+with no question. When both have a family, the question is "Which family should this device use?", each button
+is explained beside it by name - Use Drive (this device opens the Drive family; what is on this device is
+dropped; Drive is not changed), Combine (this device's people and chores are added into the Drive family),
+Cancel (nothing changes).
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in
