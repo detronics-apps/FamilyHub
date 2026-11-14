@@ -748,6 +748,11 @@ apps - under the top bar, following you down the page, foldable to "a little tab
 - The bar is the header's second row, so it is sticky with it: small chips, the chosen level's sentence
   (hidden on a phone), and **Hide**; folded, a small ⋯ tab under the header opens it again.
 - The seven Finance tools' own bars are gone; they read the one level.
+- **A bug it brought (fixed in v0.25.6):** Finance's shared pod.js passed the level on with
+  `export { shows } from`, which makes no name inside the file - its own input panels then stopped every
+  Finance tool that uses them ("shows is not defined"; the owner found it in Salary and costs). It now
+  imports and passes on; `tests/imports.test.js` fails on any file calling a name it only passes on (shown
+  to fail with the bug put back).
 - **Thin (v0.25.5):** the first bar used the page's full-size chips - the general .chip rule, later in the
   file, overrode the small one. Now a 26px row of 22px pills in 12px text, the chosen one filled, as in the
   Detronics mode bar the owner pointed to.

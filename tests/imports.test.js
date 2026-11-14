@@ -35,3 +35,23 @@ test('every function a screen calls from a sibling module is imported', () => {
   }
   assert.deepEqual(missing, []);
 });
+
+// `export { shows } from '...'` passes a name on without making it usable in that file. Finance's
+// shared pod.js did that with the level (v0.25.1) and every tool's input panel stopped with "shows is
+// not defined" (fixed in v0.25.6). So: a file never calls a name it only passes on.
+test('no file calls a name it only passes on with export-from', () => {
+  const root = join(import.meta.dirname, '..', 'js');
+  const files = [];
+  const walk = (d) => { for (const f of readdirSync(d)) { const p = join(d, f); if (statSync(p).isDirectory()) walk(p); else if (f.endsWith('.js')) files.push(p); } };
+  walk(root);
+  const bad = [];
+  for (const p of files) {
+    const src = readFileSync(p, 'utf8');
+    const passed = [...src.matchAll(/export \{([^}]+)\} from/g)].flatMap((m) => m[1].split(',').map((s) => s.trim().split(/\s+as\s+/)[0]).filter(Boolean));
+    if (!passed.length) continue;
+    const imported = new Set([...src.matchAll(/import \{([^}]+)\}/gs)].flatMap((m) => m[1].split(',').map((s) => s.trim().split(/\s+as\s+/).pop()).filter(Boolean)));
+    const body = code(src.replace(/export \{[^}]+\} from[^;]+;/g, ''));
+    for (const n of passed) if (!imported.has(n) && new RegExp(`(^|[^\w$.])${esc(n)}\s*\(`).test(body)) bad.push(`${p.split(/[\/]js[\/]/).pop()} calls ${n}()`);
+  }
+  assert.deepEqual(bad, []);
+});

@@ -11,7 +11,9 @@ import { saveRecord } from '../kit.js';
 /* ------------------------------------------------------------ levels */
 
 // One level for the whole app, chosen in the bar under the top bar (D-121).
-export { LEVELS, level, shows } from '../../ui/levels.js';
+// Imported as well as passed on: this file uses shows() itself (a bare `export ... from` makes no local name).
+import { LEVELS, level, shows } from '../../ui/levels.js';
+export { LEVELS, level, shows };
 
 /* ------------------------------------------------------------ amounts */
 
