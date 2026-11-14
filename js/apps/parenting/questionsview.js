@@ -3,6 +3,7 @@
 // and what would change your mind - and Decide, which makes it a decision. And the fever plan,
 // written by the two of you, with the warning signs to choose from.
 
+import { buildPrint } from '../../print.js';
 import { el } from '../../ui/dom.js';
 import { answersFor, setAnswer, adultsOf, normalisePlan, planText, rangeLabel, ageLabel, normaliseQuestions } from './logic.js';
 import { FEVER_SIGNS } from './questions.js';
@@ -112,19 +113,20 @@ export function feverPlanPanel(hub, t, put) {
       el('button', { class: 'btn', type: 'button', text: 'Add band', title: 'Add an age band', on: { click: () => { plan.bands.push({ from: null, to: null, steps: [{}], signs: [], own: '' }); draw(); } } }),
       el('button', { class: 'btn btn-primary', type: 'button', text: 'Save', 'data-field': 'plan-save', on: { click: () => put({ plan: normalisePlan(plan) }) } }),
       text && hub.data.installed('decisions') ? el('a', { class: 'btn', href: decideHref(`${t.id}:plan`), text: 'Decide', title: 'Agree it together in Decisions', 'data-field': 'plan-decide' }) : null,
-      text ? el('button', { class: 'btn btn-quiet', type: 'button', text: 'Print', on: { click: () => printText('Our fever plan', text) } }) : null,
+      text ? el('button', { class: 'btn btn-quiet', type: 'button', text: 'Print', on: { click: () => printText({ title: 'Our fever plan', text }) } }) : null,
     ]),
     text ? el('pre', { class: 'small', style: { whiteSpace: 'pre-wrap', fontFamily: 'inherit', margin: 0 }, 'data-field': 'plan-text', text }) : null,
   ]);
 }
 
-/** A plain page to print (or save as PDF) - opened in a new window so the app's chrome stays out. */
-export function printText(title, text, note = '') {
+/**
+ * A plain page to print (or save as PDF) - opened in a new window so the app's chrome stays out.
+ * Callers pass text or columns and rows, never markup: buildPrint puts every value in as text (D-129).
+ */
+export function printText(page) {
   const w = globalThis.open?.('', '_blank');
   if (!w) return;
-  const esc = (x) => String(x).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-  w.document.write(`<!doctype html><meta charset="utf-8"><title>${esc(title)}</title><style>body{font:16px/1.5 system-ui,sans-serif;margin:2rem;color:#222}h1{font-size:1.4rem}pre{white-space:pre-wrap;font:inherit}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4px 8px;text-align:left;vertical-align:top}.n{color:#555;font-size:.9rem}</style><h1>${esc(title)}</h1>${text.startsWith('<table') ? text : `<pre>${esc(text)}</pre>`}<p class="n">${esc(note || `Printed ${new Date().toLocaleDateString('en-ZA')} from Family Hub. If you are wondering whether to go to a doctor, go.`)}</p>`);
-  w.document.close();
+  buildPrint(w.document, { ...page, today: new Date().toLocaleDateString('en-ZA') });
   w.focus();
   w.print();
 }
@@ -145,8 +147,6 @@ export function chartPanel(hub, t, put, o) {
   ])));
   draw();
   const clean = () => rows.filter((r) => o.columns.some(([k]) => String(r[k] ?? '').trim())).map((r) => Object.fromEntries(o.columns.map(([k]) => [k, String(r[k] ?? '').trim().slice(0, 300)])));
-  const esc = (x) => String(x).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-  const table = (list) => `<table><tr>${o.columns.map(([, label]) => `<th>${esc(label)}</th>`).join('')}</tr>${list.map((r) => `<tr>${o.columns.map(([k]) => `<td>${esc(r[k] ?? '')}</td>`).join('')}</tr>`).join('')}</table>`;
   return el('div', { class: 'panel stack', 'data-field': `chart:${o.key}` }, [
     el('h2', { text: o.title, style: { margin: 0 } }),
     el('p', { class: 'small muted', style: { margin: 0 }, text: o.help }),
@@ -155,7 +155,7 @@ export function chartPanel(hub, t, put, o) {
     el('div', { class: 'row' }, [
       el('button', { class: 'btn btn-small', type: 'button', text: 'Add line', on: { click: () => { rows.push({}); draw(); } } }),
       el('button', { class: 'btn btn-small btn-primary', type: 'button', text: 'Save', 'data-field': `${o.key}-save`, on: { click: () => put({ [o.key]: clean() }) } }),
-      el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Print', title: 'Print or save as PDF', on: { click: () => printText(o.title, table(clean()), o.printNote) } }),
+      el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Print', title: 'Print or save as PDF', on: { click: () => printText({ title: o.title, columns: o.columns.map(([, label]) => label), rows: clean().map((r) => o.columns.map(([k]) => r[k] ?? '')), note: o.printNote }) } }),
     ]),
   ]);
 }

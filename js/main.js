@@ -17,9 +17,9 @@ import { activeSections, appsIn, section, sectionOf } from './sections.js';
 import { starterRegistry, reconcileStarters, normaliseRegistry, setEnabled } from './miniapps.js';
 import { starterManifests, starter } from './apps/catalogue.js';
 import { levelBar } from './ui/levels.js';
-import { el, clear } from './ui/dom.js';
+import { el, clear, icon } from './ui/dom.js';
 import { renderNotices, captureFocus, restoreFocus } from './ui/patterns.js';
-import { avatar, modal, HOUSE_ICON } from './ui/common.js';
+import { avatar, modal, houseMark } from './ui/common.js';
 import { createSync, folderSupported } from './ui/sync.js';
 import { createHubFactory } from './ui/hub.js';
 import { createMedia } from './ui/media.js';
@@ -37,10 +37,11 @@ import { placeholderView } from './ui/views/placeholder.js';
 import { recoveryView } from './ui/views/recovery.js';
 import { openWelcome } from './ui/views/welcome.js';
 import { openDoc } from './ui/views/docs.js';
+import { UNENCRYPTED_NOTE } from './guide.js';
 import { syncChip, syncNotices, phoneButtons } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.25.10';
+export const APP_VERSION = '0.26.0';
 
 const store = createLocalStore(window.localStorage);
 
@@ -278,8 +279,15 @@ function applyTheme() {
 }
 
 // Buy Me a Coffee (owner's request, 2026-11-02): a line-drawn cup in currentColor, never the emoji.
+const firstVisitNotes = new Set();   // one-off notes showing during this visit (D-133)
+
+/** The note about Family Hub's own address (D-130), shown until this device presses Done. */
+export const NEW_ADDRESS = 'https://familyhub.detronics.co.za/';
+export const MOVING = {
+  id: 'moving-familyhub-detronics',
+  text: `Family Hub is moving to its own address, ${NEW_ADDRESS.replace(/^https:\/\/|\/$/g, '')}, so no other app on the old address can see your family's things. With a Drive folder: open the new address and reconnect the folder there. Without one: first save a family file (Settings › Google Drive › Family file › Save file), then open it at the new address.`,
+};
 export const COFFEE_URL = 'https://buymeacoffee.com/detronics';
-const COFFEE_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 8 H15.5 V13 A4.5 4.5 0 0 1 6.5 13 Z"/><path d="M15.5 9.5 h1.8 a2.6 2.6 0 0 1 0 5.2 h-1.8"/><path d="M4 19.5 Q 11 21.8 18 19.5"/><path d="M9.3 5.2 q -1.4 -1.1 0 -2.2 q 1.4 -1.1 0 -2.2"/><path d="M12.7 5.2 q -1.4 -1.1 0 -2.2 q 1.4 -1.1 0 -2.2"/></svg>';
 
 function buildHeader() {
   const person = currentPerson();
@@ -289,7 +297,7 @@ function buildHeader() {
   return el('header', { class: 'app-header' }, [
     el('a', { class: 'brand', href: onHome ? 'https://www.detronics.co.za/' : '#/', 'data-field': 'brand',
       ...(onHome ? { target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Family Hub - opens detronics.co.za in a new tab' } : { 'aria-label': 'Family Hub - home' }) }, [
-      el('span', { class: 'brand__mark', html: HOUSE_ICON, 'aria-hidden': 'true' }),
+      el('span', { class: 'brand__mark', 'aria-hidden': 'true' }, [houseMark()]),
       el('span', { class: 'brand__text' }, [
         el('span', { class: 'brand__name', text: 'Family Hub' }),
         app.household ? el('span', { class: 'brand__home', text: app.household.household.name }) : null,
@@ -303,7 +311,7 @@ function buildHeader() {
         on: { click: openWho },
       }, [avatar(person), el('span', { class: 'who-btn__name', text: person ? person.name : 'Who are you?' })]) : null,
       el('a', { class: 'btn btn-icon', href: COFFEE_URL, target: '_blank', rel: 'noopener noreferrer', 'data-field': 'coffee',
-        'aria-label': 'Buy me a coffee (opens in a new tab)', title: 'Buy me a coffee (opens in a new tab)', html: COFFEE_ICON }),
+        'aria-label': 'Buy me a coffee (opens in a new tab)', title: 'Buy me a coffee (opens in a new tab)' }, [icon('coffee')]),
       el('button', {
         class: 'btn btn-icon', type: 'button', 'data-field': 'theme',
         title: `${THEME_LABEL[theme]}. Click to change.`, 'aria-label': THEME_LABEL[theme],
@@ -457,6 +465,20 @@ function renderNow() {
   // the standing notices underneath it.
   const items = [];
   if (app.storageError) items.push({ id: `storage:${app.storageError}`, level: 'error', text: app.storageError });
+  // Family Hub's own address (D-130): the browser keeps a family's things per address, so before the
+  // move each device needs its family file saved, or its Drive folder reconnected after.
+  // The first time Medical or Finance opens on this device: say plainly how it is stored (D-133).
+  const careful = route.name === 'medical' || (manifestFor(route.name) && sectionOf(manifestFor(route.name)) === 'finance') || (route.name === 'section' && route.sub === 'finance');
+  const noteId = careful ? `unencrypted:${route.name === 'medical' ? 'medical' : 'finance'}` : null;
+  if (noteId && (!app.device.notesDone.includes(noteId) || firstVisitNotes.has(noteId))) {
+    // Shown on the first visit only: marked done at once, and kept on screen for the rest of this visit.
+    firstVisitNotes.add(noteId);
+    if (!app.device.notesDone.includes(noteId)) setDevice({ notesDone: [...app.device.notesDone, noteId] });
+    items.push({ id: noteId, level: 'info', text: UNENCRYPTED_NOTE, action: { label: 'Privacy', onClick: () => openDoc('privacy') } });
+  }
+  if (app.household && !app.device.notesDone.includes(MOVING.id)) {
+    items.push({ id: MOVING.id, level: 'info', text: MOVING.text, action: { label: 'Done', onClick: () => { setDevice({ notesDone: [...app.device.notesDone, MOVING.id] }); render(); } } });
+  }
   // Drive notices that need an answer get their own slot, never folded in with the rest.
   const driveItems = app.household ? syncNotices(ctx) : [];
 

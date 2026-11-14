@@ -1,0 +1,18 @@
+# The gate before publishing (D-134): every push and pull request runs the whole test suite.
+# main is published to GitHub Pages; changes reach it only by a pull request from platform
+# once this is green and the diff has been read.
+name: Tests
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test tests/*.test.js

@@ -7,6 +7,7 @@
 // The editor keeps its own rows and redraws only itself, so typing is never
 // interrupted by the rest of the page.
 
+import { tooLarge } from '../family-file.js';
 import { el } from './dom.js';
 import { fold } from './common.js';
 import { GUIDE } from '../apps/assistant/guide.js';
@@ -183,7 +184,7 @@ export function ingredientEditor({ rows, db = null, own = [], selfId = null, onC
     // A list kept elsewhere comes in as a .csv file (ingredient, amount, unit, note).
     const file = el('input', {
       type: 'file', accept: '.csv,text/csv', hidden: true, 'data-field': 'ing-csv',
-      on: { change: async (e) => { const f = e.target.files?.[0]; if (!f) return; rows.push(...ingredientsFromCSV(await f.text())); changed(); redraw(); } },
+      on: { change: async (e) => { const f = e.target.files?.[0]; if (!f) return; if (tooLarge(f)) { globalThis.alert?.(tooLarge(f)); return; } rows.push(...ingredientsFromCSV(await f.text())); changed(); redraw(); } },
     });
     box.replaceChildren(
       // What the suggestions search: everything, one of our own types, or the food database.

@@ -1,16 +1,17 @@
 // Shared UI pieces: avatars, dialogs, and the chore card used by every chore screen.
 
-import { el } from './dom.js';
+import { el, svg } from './dom.js';
 import { fmtAgo, fmtDay, fmtFrequency } from '../dates.js';
 import { personName, roomName, removeDemo } from '../model.js';
 import { KEYS } from '../storage.js';
 
-export const HOUSE_ICON = '<svg viewBox="0 0 64 64" width="32" height="32" aria-hidden="true">'
-  + '<rect width="64" height="64" rx="12" fill="var(--accent)"/>'
-  + '<path d="M14 31 L32 15 L50 31" fill="none" stroke="var(--panel)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>'
-  + '<path d="M19 29 V49 H45 V29" fill="var(--panel)"/>'
-  + '<path d="M32 45 c-6 -4 -9 -7 -9 -10.5 a4.5 4.5 0 0 1 9 -1.5 a4.5 4.5 0 0 1 9 1.5 c0 3.5 -3 6.5 -9 10.5 z" fill="var(--accent)"/>'
-  + '</svg>';
+/** The Family Hub mark: a house with a heart, built from nodes (D-129). */
+export const houseMark = () => svg('svg', { viewBox: '0 0 64 64', width: 32, height: 32, 'aria-hidden': 'true' }, [
+  svg('rect', { width: 64, height: 64, rx: 12, fill: 'var(--accent)' }),
+  svg('path', { d: 'M14 31 L32 15 L50 31', fill: 'none', stroke: 'var(--panel)', 'stroke-width': 5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
+  svg('path', { d: 'M19 29 V49 H45 V29', fill: 'var(--panel)' }),
+  svg('path', { d: 'M32 45 c-6 -4 -9 -7 -9 -10.5 a4.5 4.5 0 0 1 9 -1.5 a4.5 4.5 0 0 1 9 1.5 c0 3.5 -3 6.5 -9 10.5 z', fill: 'var(--accent)' }),
+]);
 
 // Which sections are folded, by name - remembered on this device only.
 const folds = () => { try { return JSON.parse(localStorage.getItem(KEYS.folds) || '{}') ?? {}; } catch { return {}; } };
@@ -68,14 +69,14 @@ export function modal({ title, body = [], foot = [], onClose = null, wide = fals
 }
 
 /** Ask before anything that cannot be undone. Resolves true only on the confirm button. */
-export function confirmAction({ title, text, confirmLabel, danger = false }) {
+export function confirmAction({ title, text, confirmLabel, cancelLabel = 'Cancel', danger = false }) {
   return new Promise((resolve) => {
     let answer = false;
     const { close } = modal({
       title,
       body: (Array.isArray(text) ? text : [text]).map((t) => (typeof t === 'string' ? el('p', { text: t }) : t)),
       foot: [
-        el('button', { class: 'btn', type: 'button', text: 'Cancel', on: { click: () => close() } }),
+        el('button', { class: 'btn', type: 'button', text: cancelLabel, on: { click: () => close() } }),
         el('button', { class: `btn ${danger ? 'btn-danger' : 'btn-primary'}`, type: 'button', text: confirmLabel, on: { click: () => { answer = true; close(); } } }),
       ],
       onClose: () => resolve(answer),

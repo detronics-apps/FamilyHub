@@ -3,10 +3,11 @@
 // first-connect questions, the Google Drive section of Settings, and the
 // family file (phones, backups, moving between devices).
 
+import { REMOVE_ACCESS } from '../../guide.js';
 import { el, download } from '../dom.js';
 import { modal, confirmAction } from '../common.js';
 import { conflictKey } from '../../merge.js';
-import { parseFamilyFile, describeFamilyFile, familyFileName, PHONE_DIR, PHONE_FILE } from '../../family-file.js';
+import { parseFamilyFile, describeFamilyFile, familyFileName, PHONE_DIR, PHONE_FILE, tooLarge } from '../../family-file.js';
 import { fingerprint } from '../../folder-sync.js';
 import { KEYS } from '../../storage.js';
 import { roomName, personName } from '../../model.js';
@@ -204,6 +205,8 @@ export function openFamilyFile(ctx) {
     const chosen = input.files?.[0];
     input.remove();
     if (!chosen) return;
+    const big = tooLarge(chosen);
+    if (big) { ctx.flash({ id: `file-big:${chosen.name}`, level: 'error', text: big }); ctx.render(); return; }
     const parsed = parseFamilyFile(await chosen.text());
     if (!parsed.ok) {
       ctx.flash({ id: `file-bad:${chosen.name}`, level: 'error', text: `"${chosen.name}" was not opened, and nothing was changed. ${parsed.errors.slice(0, 3).join(' ')}` });
@@ -279,6 +282,7 @@ export function driveSection(ctx) {
             click: async () => {
               if (!await confirmAction({ title: 'Stop using the Drive folder?', text: 'Nothing is deleted. The folder keeps everything; this device keeps its own copy and stops saving to Drive.', confirmLabel: 'Disconnect' })) return;
               ctx.sync.disconnect({ keepCopy: true });
+              ctx.flash({ id: `disconnected:${Date.now()}`, level: 'info', text: `Disconnected. ${REMOVE_ACCESS}` });
             },
           },
         }),
@@ -294,7 +298,7 @@ export function driveSection(ctx) {
       el('p', { text: 'Keep your family’s data in your own Google Drive, so it is never lost and every laptop you sign in on sees the same thing. Nobody else - including whoever made this app - can see it.' }),
       el('ol', { class: 'howto-steps' }, [
         el('li', { text: 'Install Google Drive for Desktop (free, from Google) and sign in. Your Drive appears as a folder on this computer.' }),
-        el('li', { text: 'Press "Choose my Drive folder" and pick a folder in your Drive - for example "My Drive". Family Hub makes a "FamilyHub" folder inside it.' }),
+        el('li', { text: 'In your Google Drive, make a folder called Family Hub. Press Choose folder and choose that folder - only that one, so Family Hub sees nothing else in your Drive.' }),
         el('li', { text: 'Allow access when the browser asks. That is all - from then on everything saves there automatically.' }),
       ]),
       privateTestMode() ? el('p', { class: 'small muted', text: 'Test mode: this uses the browser’s private storage instead of a real Drive folder.' }) : null,

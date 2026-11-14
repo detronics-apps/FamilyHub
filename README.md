@@ -1,6 +1,6 @@
 # Family Hub
 
-**Live: https://detronics-apps.github.io/FamilyHub/**
+**Live: https://familyhub.detronics.co.za/**
 
 A calm, local-first place for a household to share the everyday load. The product brief is
 [Family_Hub_Product_and_Implementation_Plan.md](Family_Hub_Product_and_Implementation_Plan.md);
@@ -86,11 +86,23 @@ and the browser's private storage stands in for the folder.
 npm test
 ```
 
-Node's built-in runner, nothing to install. 181 tests, including a 5,000-recipe performance test.
+Node's built-in runner, nothing to install - over 450 tests, including a 5,000-recipe performance
+test and the security baseline (`tests/security.test.js`, `tests/csp.test.js`). The same command runs
+on every push and pull request (`.github/workflows/test.yml`, Node 22).
 
 ## Deploying
 
-GitHub Pages from `main` / root. `.nojekyll` is present. There is nothing to build.
+GitHub Pages from `main` / root, at its own address, `familyhub.detronics.co.za` (`CNAME`) - so no
+other app shares its browser storage. `.nojekyll` is present. There is nothing to build.
+
+### How a change is published
+
+1. Work on the `platform` branch.
+2. Open a pull request from `platform` into `main`.
+3. Publish (merge) only when the Tests workflow is green **and** the owner has read the diff.
+   `main` is protected so that a pull request is the only way in.
+
+A bad version is withdrawn as described in [SECURITY.md](SECURITY.md).
 
 ## Layout of the code
 
@@ -117,8 +129,19 @@ Docs: [ARCHITECTURE.md](ARCHITECTURE.md) · [DECISIONS.md](DECISIONS.md) ·
 
 Nothing is sent to the publisher or anyone else: no server, no accounts, no analytics, no cookies,
 no third-party scripts or fonts. With a Drive folder, the family's data lives in their own Google
-Drive; without one, in this browser only (not a backup). Choosing a profile is not a login; do not
-store sensitive information in this version.
+Drive; without one, in this browser only (not a backup). Choosing a profile is not a login.
+
+- **Stored unencrypted:** everything is stored unencrypted in this browser and in your Drive folder.
+  Anyone who can use this browser profile, or open that folder, can read it. Keep only what you
+  would be comfortable keeping in that Drive folder.
+- **On a shared or public computer:** use your own computer account or browser profile. On a public
+  computer, don't connect Drive, and when you're done use Settings › Your data › Delete everything
+  on this device, then Disconnect.
+- **Removing access:** Disconnect stops Family Hub using the folder. To remove the browser's access
+  as well: click the icon left of the address › Site settings › File editing › Reset. Google Drive
+  for Desktop is managed in Google's own app.
+- **Found a security problem?** Report it privately:
+  <https://github.com/detronics-apps/FamilyHub/security/advisories/new> - see [SECURITY.md](SECURITY.md).
 
 ## Known limitations
 

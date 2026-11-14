@@ -140,7 +140,7 @@ Google Drive folder, shared between your laptops, and your phones stay in step w
 
 ## Get started
 
-1. Open **https://detronics-apps.github.io/FamilyHub/**.
+1. Open **https://familyhub.detronics.co.za/**.
 2. Add your family on the People page.
 3. Optional: connect a folder in Google Drive for Desktop, so your laptops share everything and
    nothing is lost. Your phones can then follow along.
@@ -181,5 +181,5 @@ app, free family app, open source family app, Google Drive family app, Detronics
 > Family life is full. We built Family Hub so a household can plan meals, share the chores, think
 > through big money decisions and agree on parenting together, in one warm place. It's free, needs
 > no sign-up, and your family's information stays in your own Google Drive.
-> Try it: https://detronics-apps.github.io/FamilyHub/
+> Try it: https://familyhub.detronics.co.za/
 > #FamilyHub #FamilyOrganiser #MealPlanning #RentVsBuy #IntentionalParenting #PrivacyFirst #SouthAfrica

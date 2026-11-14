@@ -10,6 +10,7 @@ export function openDoc(which) {
     title: doc.title,
     body: [
       ...doc.sections.map(([heading, text]) => el('div', {}, [el('h3', { text: heading }), el('p', { text, style: { whiteSpace: 'pre-wrap' } })])),
+      doc.report ? el('p', {}, [el('a', { href: doc.report.url, target: '_blank', rel: 'noopener noreferrer', text: doc.report.label, 'data-field': 'security-report' })]) : null,
       which === 'licence' ? el('p', {}, ['If Family Hub helps your family: ', el('a', { href: 'https://buymeacoffee.com/detronics', target: '_blank', rel: 'noopener noreferrer', text: 'Buy me a coffee', 'data-field': 'licence-coffee' }), '.']) : null,
     ],
   });

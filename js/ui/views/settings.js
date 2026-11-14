@@ -1,5 +1,6 @@
 // Settings: household, this person's dashboard, Drive, data, music. People have their own page (people.js).
 
+import { tooLarge } from '../../family-file.js';
 import { el, download } from '../dom.js';
 import { confirmAction, removeExamples } from '../common.js';
 import { setHouseholdName, hasDemo } from '../../model.js';
@@ -92,6 +93,8 @@ function dataSection(ctx) {
     const chosen = file.files?.[0];
     file.value = '';
     if (!chosen) return;
+    const big = tooLarge(chosen);
+    if (big) { ctx.flash({ id: `import-big:${chosen.name}`, level: 'error', text: big }); ctx.render(); return; }
     const result = parseImport(await chosen.text());
     if (!result.ok) {
       ctx.flash({ id: `import-bad:${chosen.name}`, level: 'error', text: `"${chosen.name}" was not imported, and nothing was changed. ${result.errors.slice(0, 3).join(' ')}` });

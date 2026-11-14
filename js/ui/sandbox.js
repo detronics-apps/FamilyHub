@@ -1,11 +1,14 @@
 // Running a third-party mini-app, isolated (DECISIONS.md D-019).
 //
-// The app's code goes into an <iframe sandbox="allow-scripts"> with no
-// same-origin access, so it has an opaque origin: it cannot read Family Hub's
-// storage, the Drive folder, the page around it, or any other app. A Content
-// Security Policy inside the frame blocks network requests, so it cannot send
-// what it sees anywhere (the residual risk - navigating its own frame - is
-// stated on the install screen).
+// The app's code runs in sandbox.html, in an <iframe sandbox="allow-scripts"> with
+// no same-origin access, so it has an opaque origin: it cannot read Family Hub's
+// storage, the Drive folder, the page around it, or any other app. sandbox.html's
+// own Content Security Policy blocks network requests, so it cannot send what it
+// sees anywhere (the residual risk - navigating its own frame - is stated on the
+// install screen). It is its own page, not srcdoc, because a srcdoc frame would
+// inherit Family Hub's strict policy and could not run the app at all (D-132):
+// the frame says ready, and gets the bridge, the theme and the checked code by
+// postMessage.
 //
 // It talks to Family Hub only through postMessage. Every request is checked
 // here against the permissions the person approved, and against the screens
@@ -14,7 +17,6 @@
 import { el } from './dom.js';
 import { cachedPackage, loadPackage } from './packages.js';
 
-const CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-src 'none'; worker-src 'none'; object-src 'none'";
 const MAX_RECORD = 200_000;
 
 /** The script every sandboxed app gets: window.FamilyHub.ready(hub => ...). */
@@ -68,24 +70,27 @@ body { margin: 0; font: 400 15px/1.55 var(--font); color: var(--text); backgroun
 button, input, select, textarea { font: inherit; }`;
 }
 
-function srcdoc(code) {
-  const safe = code.replace(/<\/script/gi, '<\\/script');
-  return `<!doctype html><html><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="${CSP}">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>${themeCss()}</style></head><body><div id="app"></div>
-<script>${BRIDGE}</script>
-<script>${safe}</script>
-</body></html>`;
-}
-
 const frames = new Map();     // contentWindow -> { id, manifest, granted, iframe, ctx }
+const waitingFrames = new Map();   // iframe -> what it gets once it says ready (once only)
 let listening = false;
+
+/** A frame that said ready: register it, then send the bridge, theme and code, then the route. */
+function boot(iframe, win) {
+  const w = waitingFrames.get(iframe);
+  waitingFrames.delete(iframe);
+  frames.set(win, { id: w.id, manifest: w.pkg.manifest, granted: w.granted, iframe, ctx: w.ctx });
+  win.postMessage({ fh: 1, type: 'boot', css: themeCss(), bridge: BRIDGE, code: w.pkg.code }, '*');
+  win.postMessage({ fh: 1, type: 'init', app: w.app, route: w.route, theme: w.theme }, '*');
+}
 
 function listen() {
   if (listening) return;
   listening = true;
   window.addEventListener('message', async (e) => {
+    if (e.data?.fh === 1 && e.data.type === 'ready') {
+      for (const iframe of waitingFrames.keys()) if (iframe.contentWindow === e.source) boot(iframe, e.source);
+      return;
+    }
     const f = frames.get(e.source);
     if (!f) return;                                   // not one of ours
     const m = e.data;
@@ -181,23 +186,20 @@ export function renderThirdParty(ctx, id, route, failed) {
 
   // Forget frames that are no longer on the page.
   for (const [win, f] of frames) if (!f.iframe.isConnected) frames.delete(win);
+  for (const iframe of waitingFrames.keys()) if (!iframe.isConnected) waitingFrames.delete(iframe);
 
   const iframe = el('iframe', {
     class: 'miniapp-frame',
     title: pkg.manifest.name,
     sandbox: 'allow-scripts',
     referrerpolicy: 'no-referrer',
-    srcdoc: srcdoc(pkg.code),
+    src: 'sandbox.html',
   });
-  iframe.addEventListener('load', () => {
-    const win = iframe.contentWindow;
-    frames.set(win, { id, manifest: pkg.manifest, granted: entry.granted, iframe, ctx });
-    win.postMessage({
-      fh: 1, type: 'init',
-      app: { id, name: pkg.manifest.name, version: pkg.manifest.version, screens: pkg.manifest.screens },
-      route: { screen: route.sub, param: route.rest[0] ?? null },
-      theme: ctx.app.device.theme,
-    }, '*');
+  waitingFrames.set(iframe, {
+    id, pkg, granted: entry.granted, ctx,
+    app: { id, name: pkg.manifest.name, version: pkg.manifest.version, screens: pkg.manifest.screens },
+    route: { screen: route.sub, param: route.rest[0] ?? null },
+    theme: ctx.app.device.theme,
   });
   return el('section', { class: 'stack' }, [
     el('p', { class: 'small muted', text: `${pkg.manifest.name} ${pkg.manifest.version} - a mini-app from your Drive folder, running in its own sealed space.` }),

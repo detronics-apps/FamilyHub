@@ -2,7 +2,7 @@
 // column per child, big cards they tick themselves. And the form to change a routine's tasks,
 // who does each, and its picture.
 
-import { el } from '../../ui/dom.js';
+import { el, icon as domIcon, ICON_PATHS } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
 import { saveRecord } from '../kit.js';
 import { ageLabel } from './logic.js';
@@ -12,24 +12,8 @@ export const routinesCol = (hub) => hub.data.collection('routines', { summary: (
 export const loadRoutines = async (hub) => routinesOf((await routinesCol(hub).list({ limit: 1000 })).items);
 const save = (hub, r) => saveRecord(hub, routinesCol(hub), normaliseRoutine({ ...r, id: `rt_${r.routineId}` }));
 
-// Line drawings in currentColor (24 viewBox) - pictures for children who cannot read yet.
-const PATHS = {
-  shoes: 'M3 17 h18 v2 H3 Z M3 17 c0-4 2-7 5-7 l3 3 h4 c3 0 6 2 6 4',
-  cup: 'M6 6 H16 V14 A5 5 0 0 1 6 14 Z M16 8 h2 a2.5 2.5 0 0 1 0 5 h-2',
-  hat: 'M3 17 h18 M7 17 c0-6 2-9 5-9 s5 3 5 9',
-  toilet: 'M6 3 h6 v8 H6 Z M4 11 h14 c0 4 -3 6 -6 6 v4 H8 v-4',
-  toothbrush: 'M4 20 L15 9 M13 7 l4 4 M15 5 v2 M17 7 v2 M19 9 v2',
-  bath: 'M3 12 h18 v2 a5 5 0 0 1 -5 5 H8 a5 5 0 0 1 -5 -5 Z M6 12 V6 a2 2 0 0 1 4 0 M7 19 l-1 2 M17 19 l1 2',
-  pyjamas: 'M8 4 L4 7 l2 3 2 -1 v11 h8 V9 l2 1 2 -3 -4 -3 c-1 2 -5 2 -6 0',
-  book: 'M3 5 h7 a2 2 0 0 1 2 2 v12 a2 2 0 0 0 -2 -2 H3 Z M21 5 h-7 a2 2 0 0 0 -2 2 M21 5 v12 h-7 a2 2 0 0 0 -2 2',
-  bag: 'M5 8 h14 l-1 12 H6 Z M9 8 V6 a3 3 0 0 1 6 0 v2',
-  sun: 'M12 8 a4 4 0 1 0 0.01 0 Z M12 2 v2 M12 20 v2 M2 12 h2 M20 12 h2 M5 5 l1.5 1.5 M17.5 17.5 L19 19 M5 19 l1.5 -1.5 M17.5 6.5 L19 5',
-  jacket: 'M8 3 L4 6 v15 h6 V9 M16 3 l4 3 v15 h-6 V9 M8 3 c1 2 7 2 8 0 M12 9 v12',
-  hands: 'M7 21 v-8 l-2 -3 a1.2 1.2 0 0 1 2 -1 l2 2 V4 a1.2 1.2 0 0 1 2.4 0 v6 V3 a1.2 1.2 0 0 1 2.4 0 v7 V5 a1.2 1.2 0 0 1 2.4 0 v9 c0 4 -2 7 -5 7 Z',
-  bed: 'M3 18 V7 M3 13 h18 v5 M21 18 v-2 M3 18 v-2 M6 13 v-2 a2 2 0 0 1 4 0 v2',
-  star: 'M12 3 l2.6 5.6 6 .7 -4.5 4.1 1.3 6 -5.4 -3.1 -5.4 3.1 1.3 -6 -4.5 -4.1 6 -.7 Z',
-};
-const icon = (name, size = 40) => el('span', { 'aria-hidden': 'true', style: { display: 'inline-flex' }, html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="${PATHS[name] ?? PATHS.star}"/></svg>` });
+// Pictures for children who cannot read yet: fixed line icons from dom.js (D-129).
+const icon = (name, size = 40) => el('span', { 'aria-hidden': 'true', style: { display: 'inline-flex' } }, [domIcon(ICON_PATHS[name] ? name : 'star', { size, strokeWidth: 1.6 })]);
 
 export function routinesHome(hub, list, kids) {
   return el('section', { class: 'stack', 'aria-label': 'Routines' }, [

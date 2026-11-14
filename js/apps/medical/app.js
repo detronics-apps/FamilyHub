@@ -107,7 +107,7 @@ function row(hub, r) {
 const proof = (label, v) => el('li', {}, [
   el('span', { class: 'list__main' }, [
     el('strong', { text: label }),
-    el('div', { class: 'small' }, [v ? (/^https?:\/\//i.test(v) ? el('a', { href: v, target: '_blank', rel: 'noopener', text: v }) : el('span', { text: v, style: { wordBreak: 'break-all' } })) : el('span', { class: 'muted', text: 'Not noted yet' })]),
+    el('div', { class: 'small' }, [v ? (/^https?:\/\//i.test(v) ? el('a', { href: v, target: '_blank', rel: 'noopener noreferrer', text: v }) : el('span', { text: v, style: { wordBreak: 'break-all' } })) : el('span', { class: 'muted', text: 'Not noted yet' })]),
   ]),
 ]);
 
