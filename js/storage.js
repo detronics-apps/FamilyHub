@@ -42,6 +42,7 @@ export const defaultDevice = () => ({
   music: normaliseMusicPrefs(null),
   fileSavedAt: null,        // last time a family file was saved (phones)
   fileOpenedAt: null,       // last time a phone got the latest family file
+  notesDone: [],            // one-off notes this device has finished with (D-130)
 });
 
 const strings = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x.length <= 64) : []);
@@ -67,6 +68,7 @@ export function normaliseDevice(raw) {
     music: normaliseMusicPrefs(d.music),
     fileSavedAt: typeof d.fileSavedAt === 'string' ? d.fileSavedAt : null,
     fileOpenedAt: typeof d.fileOpenedAt === 'string' ? d.fileOpenedAt : null,
+    notesDone: [...new Set(strings(d.notesDone))].slice(0, 50),
   };
 }
 

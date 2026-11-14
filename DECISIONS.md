@@ -838,6 +838,53 @@ bonuses at December... and we do have a mid-year performance analysis." The tabl
 start, a row in each raise's own month with that raise, today, then a year at a time ahead; each change is since
 the row above. The raises themselves stay what D-125 made them: Add raise, month and year from lists, Remove raise.
 
+**D-129 No HTML from strings (security audit, 2026-11-14).** `el()` had an `html:` attribute that set
+`innerHTML`; only constant icons used it, but the next feature to pass data through it would have been a
+cross-site-scripting hole. It now throws. Icons come from `icon(name)` in `js/ui/dom.js`, which takes only a
+name from a frozen map (and a size) and builds `<svg>`/`<path>` nodes; the house mark is built from nodes in
+`common.js`. `el()` also drops `javascript:` links and gives every new tab `rel="noopener noreferrer"` (the skill's
+hardened `dom.js`, r12). Printing (`js/print.js`) builds the page from nodes: callers pass a title and text, or
+columns and rows, never markup. `tests/security.test.js` (the skill's shared test) fails on any HTML sink in `js/`.
+
+**D-130 Family Hub's own address (security audit, 2026-11-14).** Every Detronics app is served from
+`detronics-apps.github.io`, one origin, so any of them could read Family Hub's storage and use its folder handle.
+Family Hub moves to `familyhub.detronics.co.za` (`CNAME`; the owner sets up DNS, the Pages custom domain,
+verification and Enforce HTTPS). Browser storage does not move with it, so a note on every page - until this
+device presses Done - says: with a Drive folder, reconnect it at the new address; without one, save a family
+file first and open it there. Nothing in the code depends on the host name (a test checks). The note must be
+live for a while **before** `CNAME` is published: once it is, GitHub redirects the old address at once.
+
+**D-131 Ask for a Family Hub folder, not the whole Drive (security audit, 2026-11-14).** The steps said to pick
+"My Drive"; the browser then grants read/write to the whole Drive for the session. Now: make a folder called
+Family Hub and choose that. If the picked folder has other files, no `familyhub.json` and another name, Family
+Hub asks first - Choose another folder, or Use it anyway (which makes FamilyHub inside it, as before). A folder
+already holding Family Hub, an empty one, or one called Family Hub is used without a question. `chooseRoot`
+moved to `folder-sync.js` (pure, tested).
+
+**D-132 A Content Security Policy (security audit, 2026-11-14).** `index.html` carries a strict policy as the
+first thing in `<head>` (scripts only from the app, no inline code, no `eval`, `connect-src 'self'`,
+`object-src 'none'`, `base-uri 'none'`, `form-action 'none'`), and a referrer policy. The load-failure note moved
+from inline script to `js/boot.js`. Mini-apps run in their own `sandbox.html` instead of `srcdoc` - a srcdoc frame
+inherits the app's strict policy and could not run them. The frame keeps `sandbox="allow-scripts"` (never
+same-origin) and its own sealed policy (`default-src 'none'`, `connect-src 'none'`); it says ready, and gets the
+bridge, theme and the fingerprint-checked code by `postMessage`. Every permission check is unchanged. Styles keep
+`'unsafe-inline'` because some places set `style` as a string.
+
+**D-133 Say it straight (security audit, 2026-11-14).** Privacy no longer tells families not to store medical
+details in an app made for them: it says everything is stored unencrypted in this browser and the Drive folder,
+who can read it, what to do on a shared or public computer, and how to remove the browser's own access
+(Site settings › File editing › Reset), which Disconnect now says too. The first time Medical or Finance opens
+on a device, one line says it is stored unencrypted. "Found a security problem?" (Privacy, About) goes to GitHub's
+private vulnerability reporting - no email address is published. `SECURITY.md` says what happens next and how a
+bad version is withdrawn.
+
+**D-134 A gate before publishing (security audit, 2026-11-14).** `.github/workflows/test.yml` runs every test on
+each push and pull request. From now on a change reaches `main` by a pull request from `platform`, merged when the
+tests are green and the owner has read the diff.
+
+**D-135 Small things (security audit, 2026-11-14).** The two links with only `noopener` now also have
+`noreferrer`. Family files and CSVs over 50 MB are refused before they are read, with a plain message.
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in

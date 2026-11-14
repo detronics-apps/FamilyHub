@@ -9,7 +9,8 @@
 // were written there; otherwise "On this device only" or what is needed.
 
 import { createFolderStore, FolderError, createMemoryStore } from '../folder-store.js';
-import { syncHousehold, writeHousehold, fingerprint, PATHS } from '../folder-sync.js';
+import { syncHousehold, writeHousehold, fingerprint, PATHS, chooseRoot, FOREIGN_FOLDER } from '../folder-sync.js';
+import { confirmAction } from './common.js';
 import { mergeHousehold, resolveConflicts } from '../merge.js';
 import { copyAppData } from '../collections.js';
 import { normaliseRegistry, mergeRegistry } from '../miniapps.js';
@@ -76,22 +77,9 @@ export function createSync(ctx) {
     return window.showDirectoryPicker({ id: 'familyhub', mode: 'readwrite' });
   }
 
-  /**
-   * Use the picked folder if it is (or holds) a Family Hub folder; otherwise make
-   * a "FamilyHub" folder inside it, so the structure never spills into My Drive.
-   */
-  async function chooseRoot(picked) {
-    const has = async (dir, name, kind) => {
-      try { return kind === 'file' ? await dir.getFileHandle(name) : await dir.getDirectoryHandle(name); } catch { return null; }
-    };
-    if (await has(picked, PATHS.marker, 'file')) return picked;
-    const inner = await has(picked, 'FamilyHub', 'dir');
-    if (inner && await has(inner, PATHS.marker, 'file')) return inner;
-    let empty = true;
-    for await (const _ of picked.keys()) { empty = false; break; }   // eslint-disable-line no-unused-vars
-    if (empty || /^family ?hub$/i.test(picked.name)) return picked;
-    return picked.getDirectoryHandle('FamilyHub', { create: true });
-  }
+  // Which folder to keep: folder-sync.js's chooseRoot, asking first about someone else's files (D-131).
+  const askForeign = () => confirmAction({ title: FOREIGN_FOLDER.title, text: FOREIGN_FOLDER.text, confirmLabel: FOREIGN_FOLDER.anyway, cancelLabel: FOREIGN_FOLDER.safe });
+  const pickRoot = (picked) => chooseRoot(picked, askForeign);
 
   async function adopt(h) {
     handle = h;
@@ -106,15 +94,19 @@ export function createSync(ctx) {
 
   async function connect() {
     let picked;
-    try {
-      picked = await pickFolder();
-    } catch (err) {
-      if (err?.name === 'AbortError') return;              // they closed the picker
-      set({ state: 'error', message: `The folder could not be opened: ${err.message}` });
-      return;
+    let root = null;
+    while (!root) {
+      try {
+        picked = await pickFolder();
+      } catch (err) {
+        if (err?.name === 'AbortError') return;              // they closed the picker
+        set({ state: 'error', message: `The folder could not be opened: ${err.message}` });
+        return;
+      }
+      root = await pickRoot(picked);                         // null: they chose to pick another folder
     }
     try {
-      await adopt(await chooseRoot(picked));
+      await adopt(root);
       writeJson(BASE_KEY, null);                             // a new folder: no agreed base yet
       writeJson(REG_BASE_KEY, null);
       // Mini-app records made on this device so far go into the folder too (newer wins).
@@ -130,7 +122,7 @@ export function createSync(ctx) {
     s.mode = 'folder';
     s.folderName = ctx.app.device.folderName;
     try {
-      const h = privateTestMode() ? await navigator.storage.getDirectory().then(chooseRoot) : await idbGet(HANDLE_KEY);
+      const h = privateTestMode() ? await navigator.storage.getDirectory().then((d) => chooseRoot(d, async () => true)) : await idbGet(HANDLE_KEY);
       if (!h) { set({ state: 'reconnect', message: 'Choose your Family Hub folder again to keep saving to Drive.' }); return; }
       handle = h;
       const perm = h.queryPermission ? await h.queryPermission({ mode: 'readwrite' }) : 'granted';

@@ -7,6 +7,7 @@
 // Import/Imported/        files that were brought in, with a short report
 // Import/Not imported/    files Family Hub could not use, with the reason
 
+import { tooLarge } from '../family-file.js';
 import { el, download } from './dom.js';
 import { modal } from './common.js';
 import { STARTERS } from '../apps/catalogue.js';
@@ -73,6 +74,8 @@ export function importFromDevice(ctx) {
     const file = input.files?.[0];
     input.remove();
     if (!file) return;
+    const big = tooLarge(file);
+    if (big) { ctx.flash({ id: `imp-big:${file.name}`, level: 'error', text: big }); ctx.render(); return; }
     const { imp, plan, reason } = await prepare(ctx, file.name, await file.text());
     if (!imp) { ctx.flash({ id: `imp:${file.name}`, level: 'error', text: reason }); ctx.render(); return; }
     const { close } = modal({

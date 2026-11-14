@@ -37,6 +37,35 @@ export const PATHS = {
   backups: 'Backups',
 };
 
+/** What Family Hub asks when the picked folder holds someone else's files (D-131). */
+export const FOREIGN_FOLDER = {
+  title: 'Choose a folder just for Family Hub?',
+  text: 'This folder has other files in it. Family Hub could see them until you close the browser. Choose a folder just for Family Hub instead?',
+  safe: 'Choose another folder',
+  anyway: 'Use it anyway',
+};
+
+/**
+ * Which folder Family Hub keeps, given the one the person picked (D-131). The browser grants
+ * read/write to everything in the picked folder for the session, so a folder with other files in
+ * it and no Family Hub marker is asked about first: `ask()` resolves true for "Use it anyway".
+ * Returns the folder to use, or null to choose another. A folder already holding Family Hub, an
+ * empty one, or one called Family Hub is used without a question - existing families see no change.
+ */
+export async function chooseRoot(picked, ask) {
+  const has = async (dir, name, kind) => {
+    try { return kind === 'file' ? await dir.getFileHandle(name) : await dir.getDirectoryHandle(name); } catch { return null; }
+  };
+  if (await has(picked, PATHS.marker, 'file')) return picked;
+  const inner = await has(picked, 'FamilyHub', 'dir');
+  if (inner && await has(inner, PATHS.marker, 'file')) return inner;
+  let empty = true;
+  for await (const _ of picked.entries()) { empty = false; break; }   // eslint-disable-line no-unused-vars
+  if (empty || /^family ?hub$/i.test(picked.name)) return picked;
+  if (!await ask()) return null;
+  return picked.getDirectoryHandle('FamilyHub', { create: true });
+}
+
 const README = {
   'MiniApps/README.txt': 'Family Hub mini-app packages.\n\nThe starter apps (Chores, Tasks, Tickets, Principles, Decisions) come with Family Hub; their manifests are copied here so you can see what is installed.\n\nTo add someone else\'s mini-app, copy its folder into ThirdParty/. Family Hub will find it, check it, and ask you before installing. Nothing in this folder runs by itself.\n',
   'Data/Media/Music/README.txt': 'Put music files here (mp3, m4a, ogg, wav, flac...). Family Hub can play them while you do a timed task. They are read from this folder only - never uploaded anywhere.\n',

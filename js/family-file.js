@@ -106,3 +106,11 @@ export function describeFamilyFile(parsed) {
     + (records ? `, and ${records} mini-app records` : '')
     + (parsed.exportedAt ? ` - saved ${parsed.exportedAt.slice(0, 16).replace('T', ' ')}` : '');
 }
+
+/** Files picked to bring in are refused over 50 MB, before they are read (D-135). */
+export const MAX_FILE_BYTES = 50 * 1024 * 1024;
+/** A plain message if the file is too large to open, else null. */
+export function tooLarge(file) {
+  if (!(Number(file?.size) > MAX_FILE_BYTES)) return null;
+  return `"${String(file.name ?? 'That file').slice(0, 80)}" is ${Math.round(file.size / 1024 / 1024)} MB - Family Hub opens files up to 50 MB. It was not read, and nothing was changed.`;
+}

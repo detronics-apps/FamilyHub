@@ -5,6 +5,7 @@
 // `ctx` (from the app): { hub, seed, prefix, word, screen, d, fam, famCol, rule, save, saveAs }
 //   d.values.look = { answers: { [id]: { mark, note, cost, from } }, own: [], address, link, draws, worries }
 
+import { tooLarge } from '../../family-file.js';
 import { el, download } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
 import { rand } from '../finance/pod.js';
@@ -399,6 +400,7 @@ function sheetBar(ctx, stages, what, parts = null) {
   const file = el('input', { type: 'file', accept: '.csv,text/csv', hidden: true, 'data-field': 'sheet-file', on: { change: async (e) => {
     const f = e.target.files?.[0]; e.target.value = '';
     if (!f) return;
+    if (tooLarge(f)) { hub.ui.notice(tooLarge(f), 'warn'); return; }
     const look = (d.values.look = lookOf(d.values));
     const r = readSheet(await f.text(), checksOf(ctx), look.answers);
     Object.assign(look.answers, r.taken);

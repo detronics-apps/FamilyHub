@@ -629,17 +629,29 @@ export const FEATURES = [
   { name: 'Your own dashboard', where: 'Settings › Your dashboard', what: 'Each profile has its own button order and hidden buttons on this device.' },
 ];
 
+/** How to report a security problem (D-133): GitHub's private reporting, so no address is published. */
+export const SECURITY_REPORT = { label: 'Found a security problem?', url: 'https://github.com/detronics-apps/FamilyHub/security/advisories/new' };
+/** After Disconnect, and in Privacy: the browser keeps its own permission until it is reset. */
+export const REMOVE_ACCESS = 'To remove the browser’s access as well: click the icon left of the address › Site settings › File editing › Reset. Google Drive for Desktop is managed in Google’s own app.';
+/** The one-line reminder the first time Medical or Finance is opened on a device (D-133). */
+export const UNENCRYPTED_NOTE = 'Stored unencrypted on this device and in your Drive folder - see Privacy.';
+
 export const PRIVACY = {
   title: 'Privacy & your data',
+  report: SECURITY_REPORT,
   sections: [
     ['What leaves this device', 'Nothing goes to Family Hub or to whoever made it. There is no server, no account, no analytics and no cookies, and nothing loads from other websites.'],
     ['With a Google Drive folder', 'Your data is saved as files in a folder in your own Google Drive, which Google Drive for Desktop keeps in step across your computers. It is as private as the rest of your Drive. Family Hub reads and writes only that folder.'],
     ['Without a folder', 'Your data stays in this browser’s local storage, on this device only. Clearing your browser data removes it.'],
     ['It is not a backup', 'Browser storage on its own is not a backup. Use your Drive folder (with Back up now), or save a family file somewhere you control.'],
-    ['Profiles are not security', 'Choosing a name is not a login. Anyone using this device - or with access to your Drive folder - can see and change everything. Do not store sensitive information, like medical details, in this version.'],
+    ['Stored unencrypted', 'Everything is stored unencrypted - in this browser, and in your Drive folder if you use one. Anyone who can use this browser profile, or open that folder, can read it. Keep only what you would be comfortable keeping in that Drive folder.'],
+    ['Profiles are not security', 'Choosing a name is not a login. Anyone using this device - or with access to your Drive folder - can see and change everything.'],
+    ['On a shared or public computer', 'Use your own computer account or browser profile. On a public computer, do not connect Drive, and when you are done use Settings › Your data › Delete everything on this device, then Disconnect.'],
+    ['Removing the browser’s access', `Disconnect (Settings › Google Drive) stops Family Hub using the folder. ${REMOVE_ACCESS}`],
     ['Other people’s mini-apps', 'They run sealed off, with no internet access, and see only what you approve when installing them.'],
     ['Hosting', 'If you use Family Hub from a website, that host may keep ordinary server logs of page requests, as any website does. Your family data is never sent to it.'],
     ['Removing everything', 'Settings › Your data › "Delete everything on this device" removes what is kept in this browser. Your Drive folder is yours to keep or delete in Google Drive.'],
+    ['Found a security problem?', 'Please report it privately on GitHub (the link below), not in a public issue. What happens next is in SECURITY.md in the app’s repository.'],
   ],
 };
 
@@ -660,6 +672,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 export const ABOUT = {
   title: 'About Family Hub',
+  report: SECURITY_REPORT,
   sections: [
     ['What it is', 'A calm place for a household to share the everyday load. Capture quickly, think deeply later, and keep the useful outcome.'],
     ['What this version does', 'Chores with a timer and optional music; Tasks and projects; Tickets and the family meeting; Principles; Decisions as experiments; Meals: a recipe book with weekly plan and shopping list, a calorie checker and a meal assistant; Holidays; Finance; Exercise; Faith reading plans and journal. Your data can live in your own Google Drive folder, and existing data can be brought in from spreadsheets. Each section is made of mini-apps that can be turned off, removed and added.'],

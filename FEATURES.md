@@ -13,7 +13,7 @@ spelling. Each feature shows the
 version and date it first shipped. **Show it** says where to go and what to press for a screen
 recording.
 
-Live: https://detronics-apps.github.io/FamilyHub/. Building started on 25 October 2026.
+Live: https://familyhub.detronics.co.za/. Building started on 25 October 2026.
 
 ---
 
@@ -589,6 +589,21 @@ around." (D-123)
 yourself, or if it is the cost of that thing." And: "I don't know when you get the deposit back at the end. Do you
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
+
+#### Safer by design (v0.26.0, 2026-11-14)
+**What it does:**
+- **Its own address:** Family Hub moves to familyhub.detronics.co.za, so no other app can reach a family's
+  things; a note says how to bring them along (a family file, or reconnecting the Drive folder).
+- **Only the folder it needs:** the Drive steps ask for a folder called Family Hub, and Family Hub asks before
+  using a folder with other files in it.
+- **Locked down:** a Content Security Policy on the app, mini-apps in a sealed page of their own, no HTML built
+  from text anywhere, printing built from plain text.
+- **Said straight:** Privacy says how things are stored and who can read them, what to do on a shared computer,
+  how to remove the browser's access, and how to report a security problem privately.
+**Why it is there:** a security audit of every Detronics app (score 74, grade C): "Never lose a family's data"
+- and do not leave a door open for the day a bug slips in. (D-129 to D-135)
+**Show it:** Settings › Google Drive (the new steps); the footer's Privacy (the new sections and the report link);
+open Medical for the first time on a device.
 
 #### Amounts you can read as you type (v0.25.9, 2026-11-14)
 **What it does:** every amount box in Finance groups the digits in threes while you type - 1500000 becomes

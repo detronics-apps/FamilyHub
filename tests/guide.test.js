@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { guideMatches, HOWTOS, FAQS, PRIVACY, CONNECT } from '../js/guide.js';
+import { guideMatches, HOWTOS, FAQS, PRIVACY, CONNECT, ABOUT, REMOVE_ACCESS, UNENCRYPTED_NOTE } from '../js/guide.js';
 
 const howtoText = (h) => `${h.title} ${h.steps.join(' ')}`;
 
@@ -31,6 +31,18 @@ test('the privacy notice claims no more than the app does', () => {
   assert.match(text, /not a backup/);
   assert.match(text, /not a login/);
   assert.match(text, /logs/, 'the host keeps logs; say so');
+});
+
+test('privacy says it straight: unencrypted, shared computers, removing access, and where to report (D-133)', () => {
+  const text = PRIVACY.sections.map((s) => s.join(' ')).join(' ');
+  assert.match(text, /unencrypted/);
+  assert.match(text, /shared/);
+  assert.match(text, /Site settings/);
+  assert.doesNotMatch(text, /Do not store sensitive information/, 'never tell people not to store what the app invites them to');
+  assert.equal(PRIVACY.report?.url, 'https://github.com/detronics-apps/FamilyHub/security/advisories/new');
+  assert.equal(ABOUT.report, PRIVACY.report, 'About links it too');
+  assert.match(REMOVE_ACCESS, /Site settings › File editing › Reset/);
+  assert.match(UNENCRYPTED_NOTE, /unencrypted/);
 });
 
 test('the guide says missed chores do not pile up', () => {
