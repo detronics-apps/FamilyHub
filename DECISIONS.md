@@ -748,6 +748,9 @@ apps - under the top bar, following you down the page, foldable to "a little tab
 - The bar is the header's second row, so it is sticky with it: small chips, the chosen level's sentence
   (hidden on a phone), and **Hide**; folded, a small ⋯ tab under the header opens it again.
 - The seven Finance tools' own bars are gone; they read the one level.
+- **Thin (v0.25.5):** the first bar used the page's full-size chips - the general .chip rule, later in the
+  file, overrode the small one. Now a 26px row of 22px pills in 12px text, the chosen one filled, as in the
+  Detronics mode bar the owner pointed to.
 
 **D-122 Money that is yours, and money paid out; the moments on a graph; the rental deposit (owner, 2026-11-13).**
 "Buying R50m, buying paid out R27m, renting instead paid out R20m, renting instead R13m" - which is money for

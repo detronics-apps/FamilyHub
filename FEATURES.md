@@ -626,6 +626,7 @@ part of our app design philosophy." (D-121)
 **How it was decided:** this reverses the first-day decision to have no app-wide levels in a family app; the
 Finance tools' own Simple / Advanced / Learn chips went, and Learn is now Expert.
 **Show it:** any page - choose Expert, open a home's Financing, and "How it is worked out" appears.
+**Changed (v0.25.5, 2026-11-13):** made thin - small pills, not like the other buttons: "a lot smaller in size... that bar should be a lot thinner."
 
 #### Who wins, said in full (v0.24.3, 2026-11-13)
 **What it does:** the box under a home's answer shows, for the year you sell, what buying leaves, what renting
