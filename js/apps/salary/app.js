@@ -33,7 +33,14 @@ export function render(hub) {
   const answer = el('div', { class: 'stack', 'aria-live': 'polite' });
   const refresh = () => answer.replaceChildren(...results(hub, d).filter(Boolean));
   const lists = el('div', { class: 'stack' });
-  const redraw = () => { lists.replaceChildren(...[raisesPanel(d, today, refresh, redraw), costsPanel(hub, d, today, refresh, redraw), eventsPanel(d, refresh, redraw)].filter(Boolean)); refresh(); };
+  // Simple asks only what the answer needs; your own costs and life events are nice to have - Advanced (D-137).
+  const extras = () => {
+    const c = (d.values.costs ?? []).length; const e = (d.values.events ?? []).length;
+    if (!c && !e) return null;
+    const what = [c ? `${c} cost${c === 1 ? '' : 's'}` : null, e ? `${e} life event${e === 1 ? '' : 's'}` : null].filter(Boolean).join(' and ');
+    return el('p', { class: 'small muted', style: { margin: 0 }, 'data-field': 'sal-extras', text: `Counting the ${what} you added - choose Advanced to see or change them.` });
+  };
+  const redraw = () => { lists.replaceChildren(...(shows('advanced') ? [raisesPanel(d, today, refresh, redraw), costsPanel(hub, d, today, refresh, redraw), eventsPanel(d, refresh, redraw)] : [raisesPanel(d, today, refresh, redraw), extras()]).filter(Boolean)); refresh(); };
   // A new start month, or how far ahead, changes the years a raise can be in and whether "now" applies.
   const onInput = (key) => (key === 'start' || key === 'ahead' ? redraw() : refresh());
   redraw();
@@ -216,7 +223,7 @@ function results(hub, d) {
   if (p.missing) return [el('p', { class: 'panel muted', text: `Fill in ${p.missing.join(' and ')} to see the answer.` })];
   const now = p.at(p.T); const first = p.at(0); const end = p.at(p.N);
   const hasCosts = p.basket0 > 0;
-  const by = hasCosts ? 'by your own costs' : 'by prices in general (CPI) - add your costs to use your own';
+  const by = hasCosts ? 'by your own costs' : `by prices in general (CPI) - ${shows('advanced') ? 'add your costs to use your own' : 'Advanced lets you use your own costs'}`;
   const realChange = (now.real / first.takeHome - 1) * 100;
   const cpiChange = (now.realCpi / first.takeHome - 1) * 100;
   const yearly = (f) => (p.T >= 12 ? (f ** (12 / p.T) - 1) * 100 : null);

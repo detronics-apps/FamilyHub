@@ -894,6 +894,13 @@ is explained beside it by name - Use Drive (this device opens the Drive family; 
 dropped; Drive is not changed), Combine (this device's people and chores are added into the Drive family),
 Cancel (nothing changes).
 
+**D-137 What each level is for (owner, 2026-11-14).** "Simple is the minimum information required to do the
+calculations. Advanced is all the nice to haves, and expert explains every category and like what the different
+vocabulary words mean and how the formulas are calculated." The level bar's sentences now say exactly that. In
+Salary and costs, Your costs and Life events are nice-to-haves, so they show from Advanced; at Simple the answer
+uses prices in general (CPI), and if costs or life events were added, one line says they are still counted and
+that Advanced shows them. The other tools are to be checked against the same rule.
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in
