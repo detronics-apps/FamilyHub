@@ -901,6 +901,18 @@ Salary and costs, Your costs and Life events are nice-to-haves, so they show fro
 uses prices in general (CPI), and if costs or life events were added, one line says they are still counted and
 that Advanced shows them. The other tools are to be checked against the same rule.
 
+**D-138 Every Finance tool checked against what Simple is for (owner, 2026-11-14).** Following D-137, the
+nice-to-haves move to Advanced. Homes: the month you buy in, moving in, household income, rent rises and the rental
+deposits, levies rising, maintenance, the agent's commission, the electrical certificate, money kept for
+renovations or just in case; the sections Upgrades, Getting to work and Your situation; and the panels What if,
+repairs, situations, how much of the home is yours, can you carry it, what would it take, and what each side is
+worth. Simple keeps price, deposit, rate, term, how long you stay, the similar rent, rates, levies and insurance,
+the two growth rates, selling first, the answer, the main graph and Sell after. Cars: service, tyres, oil,
+licence, repairs, where fuel is bought, fuel or electricity use and the electric shares. Job offers: the whole move,
+other costs that change and what is not about money. Budget: Food per meal; a goal's interest or growth. Money
+calculators, Children's future and Money plan already fitted. A figure you set that the level hides still counts,
+and one line at the top says so - the answer never changes silently when the level does.
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in

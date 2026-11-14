@@ -590,11 +590,12 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
-#### Simple asks only what the answer needs (v0.26.2, 2026-11-14)
+#### Simple asks only what the answer needs (v0.26.2 and v0.26.3, 2026-11-14)
 **What it does:** Simple shows only what is needed to work out the answer; Advanced adds the nice-to-haves;
 Expert explains the words and the sums. In Salary and costs, Your costs and Life events now start at Advanced.
 **Why it is there:** "Simple is the minimum information required to do the calculations." (D-137)
 **Show it:** Finance › Salary and costs - switch between Simple and Advanced in the bar under the top bar.
+**And:** Homes, Cars, Job offers and Budget follow the same rule; a figure you set that Simple hides still counts, and one line says so. (D-138, v0.26.3)
 
 #### Connecting Drive on a new device (v0.26.1, 2026-11-14)
 **What it does:** a device with nothing on it simply opens the family from your Drive folder. When both have a

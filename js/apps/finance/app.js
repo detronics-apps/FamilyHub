@@ -1,6 +1,7 @@
 // Finance: this month's budget (planned against actual) and savings and debt
 // goals. Every projection shows the assumptions it rests on.
 
+import { shows } from '../../ui/levels.js';
 import { el } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
 import { fmtDay } from '../../dates.js';
@@ -129,7 +130,7 @@ function planPanel(hub, m, save) {
             remove(x.name, () => save(removeItem(m, l.id, x.id))),
           ])) : [el('div', { class: 'row', style: { gap: 'var(--space-2)' } }, [el('span', { class: 'small', text: 'Planned' }), amount(l.planned, `${l.category} a month`, (v) => save(setLine(m, l.id, { planned: Number(v) || 0 })))])]),
           el('div', { class: 'row', style: { gap: 'var(--space-2)' } }, [newName, newAmount, el('button', { class: 'btn btn-small', type: 'button', text: 'Add item', on: { click: () => save(addItem(m, l.id, newName.value, newAmount.value)) } })]),
-          isFood ? foodPanel(hub, m, l, save) : null,
+          isFood && shows('advanced') ? foodPanel(hub, m, l, save) : null,   // a nice-to-have (D-138)
         ]),
       ]),
     ]);
@@ -269,11 +270,11 @@ function goalEdit(hub, id) {
         { key: 'target', label: 'Target amount (for saving)', type: 'money' },
         { key: 'current', label: 'Saved so far, or still owed', type: 'money' },
         { key: 'monthly', label: 'Amount each month', type: 'money' },
-        { key: 'ratePct', label: 'Yearly interest or growth (%)', type: 'number', more: true, hint: 'Optional. Used only for the projection, assumed to stay the same.' },
+        shows('advanced') ? { key: 'ratePct', label: 'Yearly interest or growth (%)', type: 'number', more: true, hint: 'Optional. Used only for the projection, assumed to stay the same.' } : null,   // D-138
         { key: 'owner', label: 'Whose goal', type: 'select', options: [['household', 'The household'], ...hub.people.list().map((p) => [p.id, p.name])], more: true },
         { key: 'notes', label: 'Notes', type: 'textarea', more: true },
         ...(hub.creators ? [{ key: 'links', label: 'Creators and videos', type: 'custom', more: true, control: () => linksControl(hub, g) }] : []),
-      ],
+      ].filter(Boolean),
       onCancel: () => (existing ? hub.go('goal', existing.id) : hub.go('goals')),
       onSave: async (values) => {
         const { links, ...rest } = values;
