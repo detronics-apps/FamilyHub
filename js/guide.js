@@ -327,7 +327,7 @@ export const HOWTOS = [
   ] },
   { id: 'salary', title: 'See if our salary is keeping up with our costs', steps: [
     'Open Finance, then Salary and costs. Put in the salary you started on - a year or a month, before tax or take-home - and the month you started. Empty means today, for a new job.',
-    'Put in each raise you have had, then under Your costs what each cost was a month when you started and what it is now. From budget takes the categories from this month’s budget.',
+    'Under Your raises press Add raise for each raise you have had - pick its month and year and put in the percentage, whenever it came. Add one you know is coming too. Then under Your costs what each cost was a month when you started and what it is now. From budget takes the categories from this month’s budget.',
     'Each cost rises at its own rate: yours from then and now, or a starting rate labelled Estimated with where it comes from - CPI, PayProp for rent, your medical scheme’s increase, NERSA for electricity.',
     'Add life events - getting married, a child, someone on the medical aid, moving - with what each adds a month and from when.',
     'It shows what your take-home buys now in the prices of when you started, and year by year the take-home you would need against the one your raises give - and where the gap opens.',

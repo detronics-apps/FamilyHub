@@ -802,6 +802,19 @@ post". The guide tile says the same. The creator stays where the owner wants her
 person to follow - with her post as a video; for new families its note no longer ties it to the example.
 `exampleCheck` stays only as a test that the model works the published figures through sensibly.
 
+**D-125 Raises are dated entries; no timeline assumed (owner, 2026-11-14).** Salary and costs put one raise on
+each anniversary of starting. The owner: "The raises I had so far is not on the anniversary... it can be every 6
+months, but it normally pulls to December and then a midterm in like June, July. But that is not for everybody...
+don't assume it's every year and don't assume any timeline. Some people get a raise a month after they start. So
+just let them add raise entries." **Your raises** is now a list: **Add raise** gives a row with the month and the
+year picked from lists and the percentage; **Remove raise** takes it away. Each raise counts from its month (one
+dated on or before the start month is shown as not counted: the start salary has it). A raise you know is coming
+goes in as an entry too. After the last entry (or today, if later) the yearly raise "After your last raise, a
+year" - yours, or the inflation rate labelled Estimated - is spread month by month, so no raise date is assumed;
+the answer says which raises are yours and which assumed. Year by year shows "Pay rose" over the 12 months before
+each row instead of an anniversary raise. Saved before this, one figure per anniversary is read as dated entries
+on those anniversaries, so nothing saved is lost.
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in

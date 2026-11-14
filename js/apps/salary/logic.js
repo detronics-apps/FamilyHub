@@ -65,12 +65,26 @@ export const DEFAULTS = {
   raises: [], raisePct: null, costs: [], events: [], ahead: 10,
 };
 
-/** The yearly raise from now on: yours, or CPI (Estimated). */
+/** The yearly raise assumed after your last raise entry: yours, or CPI (Estimated). */
 export const futureRaise = (v) => num(v.raisePct) ?? CPI.future;
 
 /**
+ * Raises are entries the person adds - a month and a percentage - on no assumed timeline
+ * (D-125): every 6 months, a month after starting, whenever. Saved before D-125 they were one
+ * figure per anniversary of starting; those are read as dated entries on those anniversaries.
+ * Only raises after the start month count: the start salary already includes anything before.
+ */
+export function raiseEntries(v, start) {
+  const list = Array.isArray(v.raises) ? v.raises : [];
+  return list.map((r, i) => {
+    if (typeof r === 'number' || r === null) return num(r) ? { month: addMonth(start, 12 * (i + 1)), pct: num(r) } : null;
+    return r && isMonth(r.month) && num(r.pct) != null ? { month: r.month, pct: num(r.pct) } : null;
+  }).filter((r) => r && r.month > start).sort((a, b) => a.month.localeCompare(b.month));
+}
+
+/**
  * Month by month from the start to `ahead` years after today.
- * Salary: the start salary with each raise on the anniversary of the start.
+ * Salary: the start salary with each raise entry in its own month, then the assumed raise.
  * Take-home: a payslip figure grows with the raises; a gross salary is worked
  * through the SARS tables each month (so tax takes a growing share).
  * Each cost grows by its own rate: the family's "then and now" for the past,
@@ -87,7 +101,11 @@ export function plan(input, today) {
   const T = monthsBetween(start, now);
   const N = T + 12 * Math.max(1, Math.min(40, num(v.ahead) ?? 10));
   const monthly = v.salaryPer === 'month' ? s0 : s0 / 12;
-  const raiseAt = (k) => (12 * k <= T ? num(v.raises?.[k - 1]) ?? 0 : futureRaise(v));
+  // Each raise on its own month; after the last one (or today, if later) the assumed yearly
+  // raise is spread month by month - no timeline is assumed for it.
+  const entries = raiseEntries(v, start);
+  const assumedFrom = [now, ...entries.map((r) => r.month)].sort().at(-1);
+  const assumedStep = (1 + futureRaise(v) / 100) ** (1 / 12);
   const costs = (v.costs ?? []).filter((c) => c && num(c.amount) > 0);
 
   // Each cost's monthly growth for the step into month m (m >= 1).
@@ -105,7 +123,9 @@ export function plan(input, today) {
   for (let m = 1; m <= N; m += 1) {
     costs.forEach((c, i) => F[i].push(F[i][m - 1] * stepOf(c, m)));
     cpi.push(cpi[m - 1] * cpiStep(m));
-    pay.push(m % 12 === 0 ? pay[m - 1] * (1 + raiseAt(m / 12) / 100) : pay[m - 1]);
+    const month = addMonth(start, m);
+    const raised = entries.filter((r) => r.month === month).reduce((f, r) => f * (1 + r.pct / 100), 1);
+    pay.push(pay[m - 1] * raised * (month > assumedFrom ? assumedStep : 1));
   }
   const estimated = v.salaryKind !== 'takehome';
   const takeHomeOf = (g) => (estimated ? estimatePay({ grossMonthly: g }).monthly : g);
@@ -136,14 +156,14 @@ export function plan(input, today) {
     const r = at(m); const p = at(m - 12);
     return {
       ...r, today: m === T,
-      raise: m > 0 && m % 12 === 0 ? raiseAt(m / 12) : null,
+      payPct: m >= 12 ? (r.salary / p.salary - 1) * 100 : null,
       ownPct: m >= 12 ? (r.own / p.own - 1) * 100 : null,
       cpiPct: m >= 12 ? (r.cpi / p.cpi - 1) * 100 : null,
     };
   });
   const where = costs.map((c, i) => ({ id: c.id, name: c.name || KINDS[c.kind] || 'A cost', start: num(c.amount), now: num(c.amount) * F[i][T], change: num(c.amount) * (F[i][T] - 1) })).sort((a, b) => b.change - a.change);
   const first = rows.find((r) => r.m >= T && r.gap < -0.5)?.m ?? null;
-  return { rows, years, where, T, N, start, estimated, left0, basket0, shortFrom: first, at };
+  return { rows, years, where, T, N, start, estimated, left0, basket0, shortFrom: first, at, entries, assumedFrom };
 }
 
 /** One rate tested 2 points either side: how much the gap at month m moves. */

@@ -23,7 +23,7 @@ const FIELDS = [
   { key: 'salaryPer', label: 'That is', type: 'choice', level: 'simple', choices: [{ value: 'year', label: 'A year' }, { value: 'month', label: 'A month' }] },
   { key: 'salaryKind', label: 'Before or after tax', type: 'choice', level: 'simple', choices: [{ value: 'gross', label: 'Before tax' }, { value: 'takehome', label: 'Take-home' }], info: `Before tax: the take-home is estimated with the ${SARS.source}, every year at the salary of that year. Take-home from a payslip is firmer.` },
   { key: 'start', label: 'When you started', type: 'month', level: 'simple', hint: 'Empty: today - a new job, looking ahead only.' },
-  { key: 'raisePct', label: 'Raises from now on', type: 'percent', level: 'simple', estimate: () => CPI.future, info: `What you expect each year from here. Left empty it is ${pct(CPI.future)}, the inflation rate (${CPI.source}) - a raise is never promised; look at what you have really had.` },
+  { key: 'raisePct', label: 'After your last raise, a year', type: 'percent', level: 'simple', estimate: () => CPI.future, info: `What you expect a year after the last raise you put in, spread month by month - no raise date is assumed. Left empty it is ${pct(CPI.future)}, the inflation rate (${CPI.source}), labelled Estimated. A raise is never promised: a raise you know is coming goes in as its own entry under Your raises.` },
   { key: 'ahead', label: 'Look ahead', type: 'choice', level: 'simple', choices: [5, 10, 20].map((y) => ({ value: y, label: `${y} years` })) },
 ];
 
@@ -33,9 +33,9 @@ export function render(hub) {
   const answer = el('div', { class: 'stack', 'aria-live': 'polite' });
   const refresh = () => answer.replaceChildren(...results(hub, d).filter(Boolean));
   const lists = el('div', { class: 'stack' });
-  const redraw = () => { lists.replaceChildren(...[raisesPanel(d, today, refresh), costsPanel(hub, d, today, refresh, redraw), eventsPanel(d, refresh, redraw)].filter(Boolean)); refresh(); };
-  // A new start month changes how many raises there are and whether "now" applies.
-  const onInput = (key) => (key === 'start' ? redraw() : refresh());
+  const redraw = () => { lists.replaceChildren(...[raisesPanel(d, today, refresh, redraw), costsPanel(hub, d, today, refresh, redraw), eventsPanel(d, refresh, redraw)].filter(Boolean)); refresh(); };
+  // A new start month, or how far ahead, changes the years a raise can be in and whether "now" applies.
+  const onInput = (key) => (key === 'start' || key === 'ahead' ? redraw() : refresh());
   redraw();
   return el('section', { class: 'stack', 'aria-labelledby': 'sal-title' }, [
     el('h1', { id: 'sal-title', text: 'Is your salary keeping up?', style: { margin: 0 } }),
@@ -52,25 +52,41 @@ export function render(hub) {
 }
 
 const start = (d, today) => (/^\d{4}-\d{2}$/.test(d.values.start ?? '') && d.values.start < today.slice(0, 7) ? d.values.start : null);
-const past = (d, today) => { const s = start(d, today); return s ? monthsBetween(s, today.slice(0, 7)) : 0; };
 const mine = (d, key) => d.mine.add(key);
 
 /* -------------------------------------------------------- the raises */
 
-function raisesPanel(d, today, refresh) {
-  const s = start(d, today);
-  const count = Math.floor(past(d, today) / 12);
-  if (!s || !count) return null;
-  const list = d.values.raises = Array.isArray(d.values.raises) ? d.values.raises : [];
+function raisesPanel(d, today, refresh, redraw) {
+  const now = today.slice(0, 7);
+  const s = start(d, today) ?? now;
+  // Saved before D-125: one figure per anniversary - shown as the dated entries they mean.
+  const list = d.values.raises = (Array.isArray(d.values.raises) ? d.values.raises : []).map((r, i) => (r && typeof r === 'object' ? r : num(r) ? { id: newId('r'), month: addMonth(s, 12 * (i + 1)), pct: num(r) } : null)).filter(Boolean);
+  const changed = (structure) => { mine(d, 'raises'); if (structure) redraw(); else refresh(); };
+  const firstYear = Number(s.slice(0, 4));
+  const lastYear = Number(now.slice(0, 4)) + (num(d.values.ahead) ?? 10);
+  const years = Array.from({ length: lastYear - firstYear + 1 }, (_, k) => firstYear + k);
+  const pick = (r, part, options, label) => el('select', { class: 'select', 'aria-label': label, style: { width: 'auto' },
+    on: { change: (e) => { const [y, m] = r.month.split('-'); r.month = part === 'year' ? `${e.target.value}-${m}` : `${y}-${e.target.value}`; changed(true); } } },
+    options.map(([value, text]) => el('option', { value, text, selected: (part === 'year' ? r.month.slice(0, 4) : r.month.slice(5)) === value })));
   return el('div', { class: 'panel stack', 'data-field': 'raises-panel' }, [
-    el('h2', { text: 'The raises you have had', style: { margin: 0 } }),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: 'On each anniversary of starting. Empty: no raise that year.' }),
-    ...Array.from({ length: count }, (_, i) => el('div', { class: 'row', style: { gap: 'var(--space-2)' } }, [
-      el('label', { class: 'small', for: `raise-${i}`, text: monthName(addMonth(s, 12 * (i + 1))), style: { minWidth: '130px' } }),
-      el('input', { class: 'input', id: `raise-${i}`, type: 'number', inputmode: 'decimal', step: 'any', value: list[i] ?? '', placeholder: 'no raise', 'data-field': `raise:${i}`, style: { maxWidth: '110px' },
-        on: { input: (e) => { list[i] = e.target.value === '' ? null : Number(e.target.value); mine(d, 'raises'); refresh(); } } }),
-      el('span', { class: 'small muted', text: '%' }),
+    el('h2', { text: 'Your raises', style: { margin: 0 } }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'Each raise you have had - and any you know is coming - in the month it started. Whenever they came: a month after you started, every six months, December and June. Nothing is assumed.' }),
+    ...list.map((r, i) => el('div', { class: 'row', style: { gap: 'var(--space-2)' }, 'data-field': `raise:${i}` }, [
+      pick(r, 'month', MONTHS.map((m, k) => [String(k + 1).padStart(2, '0'), m]), 'Month of the raise'),
+      pick(r, 'year', years.map((y) => [String(y), String(y)]), 'Year of the raise'),
+      el('span', { class: 'row', style: { gap: 'var(--space-1)', flexWrap: 'nowrap' } }, [
+        el('input', { class: 'input', type: 'number', inputmode: 'decimal', step: 'any', value: r.pct ?? '', placeholder: '%', 'aria-label': 'Raise, %', style: { maxWidth: '72px' },
+          on: { input: (e) => { r.pct = e.target.value === '' ? null : Number(e.target.value); changed(false); } } }),
+        el('span', { class: 'small muted', text: '%' }),
+      ]),
+      el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove raise', on: { click: () => { list.splice(i, 1); changed(true); } } }),
+      r.month <= s ? el('span', { class: 'small muted', style: { flexBasis: '100%' }, text: 'Before you started - not counted: the salary you started on already has it.' }) : null,
     ])),
+    el('div', {}, [el('button', { class: 'btn btn-small', type: 'button', text: 'Add raise', 'data-field': 'raise-add', on: { click: () => {
+      const last = [...list].sort((a, b) => a.month.localeCompare(b.month)).at(-1)?.month;
+      list.push({ id: newId('r'), month: last ?? (s < now ? addMonth(s, 1) : now), pct: null });
+      changed(true);
+    } } })]),
   ]);
 }
 
@@ -198,7 +214,8 @@ function results(hub, d) {
     if (hasCosts) lines.push(`By CPI alone it would be about ${pct(Math.abs(cpiChange), 1)} ${more(cpiChange)}.${yearly(now.own) != null ? ` Your own costs rose about ${pct(yearly(now.own), 1)} a year; CPI about ${pct(yearly(now.cpi), 1)}.` : ''}`);
   }
   const endName = monthName(addMonth(p.start, p.N));
-  lines.push(`With raises of ${pct(futureRaise(v))} a year, by ${endName} your take-home would be about ${rand(end.takeHome)} a month, against about ${rand(end.needed)} needed ${hasCosts ? `for your costs${(v.events ?? []).length ? ', your life events' : ''} and what was left over at the start (${rand(p.left0)}, kept in step with your prices)` : `to buy what your take-home bought at the start, by CPI${(v.events ?? []).length ? ', and your life events' : ''} - add your costs to use your own prices`}. ${Math.abs(end.gap) < 1 ? 'About the same.' : end.gap < 0 ? `That is ${rand(-end.gap)} a month short.` : `That leaves ${rand(end.gap)} a month more than needed.`}`);
+  const after = `${pct(futureRaise(v))} a year${num(v.raisePct) == null ? ' (Estimated - the inflation rate)' : ''}`;
+  lines.push(`With ${p.entries.length ? `your ${p.entries.length === 1 ? 'raise' : `${p.entries.length} raises`}, then ${after} after ${monthName(p.assumedFrom)}` : `raises of ${after}`}, by ${endName} your take-home would be about ${rand(end.takeHome)} a month, against about ${rand(end.needed)} needed ${hasCosts ? `for your costs${(v.events ?? []).length ? ', your life events' : ''} and what was left over at the start (${rand(p.left0)}, kept in step with your prices)` : `to buy what your take-home bought at the start, by CPI${(v.events ?? []).length ? ', and your life events' : ''} - add your costs to use your own prices`}. ${Math.abs(end.gap) < 1 ? 'About the same.' : end.gap < 0 ? `That is ${rand(-end.gap)} a month short.` : `That leaves ${rand(end.gap)} a month more than needed.`}`);
   if (p.shortFrom === p.T) lines.push(`Already today the take-home is ${rand(-now.gap)} a month less than what is needed.`);
   else if (p.shortFrom != null) lines.push(`From ${monthName(addMonth(p.start, p.shortFrom))} the take-home is less than what is needed.`);
   if (p.estimated) lines.push(`Take-home is estimated from the salary with the ${SARS.source}, held for every year - so tax takes a little more of each raise. SARS often moves the bands up with inflation, which would close part of any gap. A payslip figure is firmer.`);
@@ -246,10 +263,10 @@ function advanced(v, p, today) {
     el('details', { class: 'panel more' }, [
       el('summary', { text: 'Year by year' }),
       el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums' }, [
-        el('thead', {}, [el('tr', {}, ['', 'Raise', 'Salary', 'Take-home', 'Your prices rose', 'CPI', 'In start prices', 'Costs and events', 'Needed', 'Short or more'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
+        el('thead', {}, [el('tr', {}, ['', 'Pay rose', 'Salary', 'Take-home', 'Your prices rose', 'CPI', 'In start prices', 'Costs and events', 'Needed', 'Short or more'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
         el('tbody', {}, p.years.map((r) => el('tr', { class: r.today ? 'fin-sums__total' : null }, [
           el('td', { text: `${monthName(r.month)}${r.today ? ' (today)' : ''}` }),
-          el('td', { class: 'num', text: r.raise == null ? '-' : pct(r.raise) }),
+          el('td', { class: 'num', text: r.payPct == null ? '-' : pct(r.payPct, 1) }),
           ...[r.salary, r.takeHome].map((x) => el('td', { class: 'num', text: rand(x) })),
           ...[r.ownPct, r.cpiPct].map((x) => el('td', { class: 'num', text: x == null ? '-' : pct(x, 1) })),
           ...[r.real, r.basket + r.added - r.income, r.needed, r.gap].map((x) => el('td', { class: 'num', text: rand(x) })),
@@ -263,14 +280,14 @@ function learn(v, p) {
   const now = p.at(p.T);
   return el('div', { class: 'panel stack fin-learn' }, [
     el('h2', { text: 'How it is worked out', style: { margin: 0 } }),
-    step('Salary', 'The start salary × (1 + each raise), on each anniversary of starting', `${rand(now.salary)} a month now`),
+    step('Salary', 'The start salary × (1 + each raise), each in the month you put it in; after the last one, the yearly raise spread month by month', `${rand(now.salary)} a month now`),
     step('A cost', 'Past: (now ÷ then) spread evenly over the months since you started; without "now", each calendar year’s starting rate. From now on: your % or its starting rate, a twelfth of the year’s rise each month', null, `CPI: ${CPI.source}. Rent: ${RENT.source}.`),
     step('Your own inflation', 'All your costs now ÷ the same costs when you started', `${pct((now.own - 1) * 100, 1)} since ${monthName(p.start)}`),
     step('What your salary buys', 'Take-home ÷ your own inflation', `${rand(now.takeHome)} ÷ ${now.own.toFixed(3)} = ${rand(now.real)}`),
     step('Needed', 'Your costs + life events − income they add + what was left over at the start × your own inflation', `${rand(now.needed)} a month now`),
     el('h3', { text: 'What this leaves out', style: { margin: 0 } }),
     el('ul', { class: 'small', style: { margin: 0 } }, [
-      'Raises are counted on each anniversary of starting; many come in March or at a review date instead.',
+      'Raises count from the month you put them in. After your last one, the yearly raise is spread evenly month by month - real raises come in steps.',
       'The SARS tables are held at 2026/27 for every year. Before then the bands were a little lower; later SARS usually raises them.',
       'A cost you did not list is not counted - "Everything else" catches the rest.',
       'Life events are in today’s money from their date, rising like the cost you chose.',

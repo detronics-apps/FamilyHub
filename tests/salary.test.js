@@ -13,15 +13,32 @@ test('D-119 months: between and on', () => {
   assert.equal(addMonth('2026-12', 1), '2027-01');
 });
 
-test('D-119 salary: raises on each anniversary, then the future raise; a payslip figure is not taxed again', () => {
-  const p = plan({ salary: 60000, salaryPer: 'year', salaryKind: 'takehome', start: '2023-05', raises: [10, 5], raisePct: 0 }, TODAY);
+test('D-125 raises are dated entries on no assumed timeline; a payslip figure is not taxed again', () => {
+  // A raise a month after starting, then December and June ones - entered in any order.
+  const raises = [{ month: '2024-12', pct: 5 }, { month: '2023-06', pct: 10 }, { month: '2025-06', pct: 2 }];
+  const p = plan({ salary: 60000, salaryPer: 'year', salaryKind: 'takehome', start: '2023-05', raises, raisePct: 0 }, TODAY);
   assert.equal(p.T, 42);
-  near(p.at(11).takeHome, 5000);
-  near(p.at(12).takeHome, 5500);
-  near(p.at(24).takeHome, 5775);
-  near(p.at(36).takeHome, 5775);           // the third raise not filled in: counted as none
-  near(p.at(48).takeHome, 5775);           // from now on: 0%
+  near(p.at(0).takeHome, 5000);
+  near(p.at(1).takeHome, 5500);            // June 2023
+  near(p.at(18).takeHome, 5500);           // November 2024
+  near(p.at(19).takeHome, 5775);           // December 2024
+  near(p.at(25).takeHome, 5775 * 1.02);    // June 2025
+  near(p.at(80).takeHome, 5775 * 1.02);    // nothing assumed: 0% from now on
   assert.deepEqual(plan({}, TODAY).missing, ['the salary you started on']);
+});
+
+test('D-125 after the last raise entry the assumed raise is spread month by month; old anniversary raises still read', () => {
+  const v = { salary: 12000, salaryPer: 'month', salaryKind: 'takehome', raisePct: 12 };
+  const p = plan(v, TODAY);                                       // a new job, no entries
+  near(p.at(12).takeHome, 12000 * 1.12);                          // a year on: 12% in all
+  near(p.at(1).takeHome, 12000 * 1.12 ** (1 / 12));               // a twelfth of it each month, no anniversary
+  const q = plan({ ...v, raises: [{ month: '2027-03', pct: 5 }] }, TODAY);   // a raise you know is coming
+  near(q.at(4).takeHome, 12000 * 1.05);                           // nothing assumed until it
+  near(q.at(16).takeHome, 12000 * 1.05 * 1.12);                   // then 12% a year after it
+  const old = plan({ salary: 60000, salaryKind: 'takehome', start: '2023-05', raises: [10, null, 5], raisePct: 0 }, TODAY);
+  near(old.at(12).takeHome, 5500);                                // May 2024, the first anniversary
+  near(old.at(36).takeHome, 5775);                                // May 2026, the third
+  assert.equal(old.entries.length, 2);
 });
 
 test('D-119 a gross salary goes through the SARS tables; a new job starts today', () => {

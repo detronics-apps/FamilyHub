@@ -590,6 +590,14 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### Raises when they really came (v0.25.7, 2026-11-14)
+**What it does:** each raise is its own entry - Add raise, pick the month and year, put in the percentage - every
+six months, a month after starting, whenever. A raise you know is coming goes in too. After the last one, the
+yearly raise you expect (or the inflation rate, labelled Estimated) is spread month by month: no date is assumed.
+**Why it is there:** "Don't assume it's every year and don't assume any timeline. Some people get a raise a month
+after they start. So just let them add raise entries." (D-125)
+**Show it:** Finance › Salary and costs › Your raises › Add raise: June 2023 10%, December 2024 5%, June 2025 2%.
+
 #### Is your salary keeping up? (v0.25.0, 2026-11-13)
 **What it does:**
 - **Your salary against your own costs:** the salary you started on, each raise since, and your costs -
