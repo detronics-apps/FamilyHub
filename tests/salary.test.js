@@ -164,3 +164,14 @@ test('D-119 food per meal: the family’s own split of the day', () => {
   near(q.meals[2].share, 50);
   assert.equal(perMeal(6000, {}), null);
 });
+
+test('the table follows the raises: a row in each raise month, never the anniversaries of starting', () => {
+  const p = plan({ salary: 600000, start: '2022-03', raises: [{ month: '2022-12', pct: 6 }, { month: '2023-06', pct: 3 }], ahead: 5 }, '2026-11-14');
+  const rows = p.years.map((r) => r.month);
+  assert.deepEqual(rows.slice(0, 4), ['2022-03', '2022-12', '2023-06', '2026-11']);
+  assert.ok(!rows.includes('2023-03') && !rows.includes('2024-03'), 'no anniversary rows');
+  const dec = p.years[1]; const jun = p.years[2];
+  assert.ok(dec.raise && Math.abs(dec.payPct - 6) < 0.01, 'December shows its own 6%');
+  assert.ok(jun.raise && Math.abs(jun.payPct - 3) < 0.01, 'June shows its own 3%');
+  assert.equal(p.years[3].payPct, 0, 'no raise between June 2023 and today');
+});

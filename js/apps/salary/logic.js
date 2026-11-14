@@ -161,15 +161,19 @@ export function plan(input, today) {
     rows.push({ m, month, salary: pay[m], takeHome, basket, added, income, own, cpi: cpi[m], real: takeHome / own, realCpi: takeHome / cpi[m], needed, gap: takeHome - needed });
   }
   const at = (m) => rows[Math.max(0, Math.min(N, m))];
-  // Year by year: each anniversary of the start, and today.
-  const marks = [...new Set([...Array.from({ length: Math.floor(N / 12) + 1 }, (_, k) => 12 * k), T])].sort((a, b) => a - b);
-  const years = marks.map((m) => {
-    const r = at(m); const p = at(m - 12);
+  // The table's rows: the start, each raise in its own month, today, then a year at a time ahead -
+  // never the anniversaries of starting, which no raise need fall on (owner, 2026-11-14). Each row's
+  // changes are since the row above.
+  const raiseAt = new Set(entries.map((r) => monthsBetween(start, r.month)).filter((m) => m > 0 && m <= N));
+  const ahead = Array.from({ length: Math.floor((N - T) / 12) }, (_, k) => T + 12 * (k + 1));
+  const marks = [...new Set([0, ...raiseAt, T, ...ahead, N])].sort((a, b) => a - b);
+  const years = marks.map((m, i) => {
+    const r = at(m); const p = i ? at(marks[i - 1]) : null;
     return {
-      ...r, today: m === T,
-      payPct: m >= 12 ? (r.salary / p.salary - 1) * 100 : null,
-      ownPct: m >= 12 ? (r.own / p.own - 1) * 100 : null,
-      cpiPct: m >= 12 ? (r.cpi / p.cpi - 1) * 100 : null,
+      ...r, today: m === T, raise: raiseAt.has(m),
+      payPct: p ? (r.salary / p.salary - 1) * 100 : null,
+      ownPct: p ? (r.own / p.own - 1) * 100 : null,
+      cpiPct: p ? (r.cpi / p.cpi - 1) * 100 : null,
     };
   });
   const where = costs.map((c, i) => ({ id: c.id, name: c.name || KINDS[c.kind] || 'A cost', start: num(c.amount), now: num(c.amount) * F[i][T], change: num(c.amount) * (F[i][T] - 1) })).sort((a, b) => b.change - a.change);

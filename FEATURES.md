@@ -605,6 +605,7 @@ yearly raise you expect (or the inflation rate, labelled Estimated) is spread mo
 after they start. So just let them add raise entries." (D-125)
 **Show it:** Finance › Salary and costs › Your raises › Add raise: June 2023 10%, December 2024 5%, June 2025 2%.
 **And:** a raise can be the new salary instead of the percentage - each entry shows both, "R54 000 a year, +8%". (D-126, v0.25.8)
+**And:** the table under the answer is Raise by raise - a row in each raise's own month, not on the anniversary of starting. (D-128, v0.25.10)
 
 #### Is your salary keeping up? (v0.25.0, 2026-11-13)
 **What it does:**

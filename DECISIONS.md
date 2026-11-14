@@ -831,6 +831,13 @@ years and counts stay plain number boxes.
 The save box under each Finance tool suggests a name for that tool - "Our flat, selling after 10 years" on
 Homes, "My pay since 2022" on Salary and costs - instead of the car example everywhere (owner, same day).
 
+**D-128 The table follows the raises, not the anniversaries (owner, 2026-11-14).** After D-125 the raises were
+dated entries, but the Year by year table still had a row on each anniversary of starting, so raises in December
+and June showed as "March 2023 6%", "March 2024 3%" - it read as if they came on the anniversary. "We only get
+bonuses at December... and we do have a mid-year performance analysis." The table is now Raise by raise: the
+start, a row in each raise's own month with that raise, today, then a year at a time ahead; each change is since
+the row above. The raises themselves stay what D-125 made them: Add raise, month and year from lists, Remove raise.
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in

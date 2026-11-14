@@ -273,11 +273,12 @@ function advanced(v, p, today) {
     moves.length > 1 ? chartPanel('What could change the answer?', barsChart(moves.map((m) => ({ label: m.label, low: m.low, high: m.high })), { label: `Each rate 2 points lower and higher: how much the monthly gap in ${monthName(addMonth(p.start, p.N))} moves`, worse: 'short by more', better: 'more left' }),
       el('p', { class: 'small muted', style: { margin: 0 }, text: 'Each rate from now on, 2 points either side, on its own. Longest first: what matters most to the answer.' })) : null,
     el('details', { class: 'panel more' }, [
-      el('summary', { text: 'Year by year' }),
+      el('summary', { text: 'Raise by raise' }),
+      el('p', { class: 'small muted', style: { margin: 0 }, text: 'A row for each raise in its month, today, then a year at a time ahead. Each change is since the row above.' }),
       el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums' }, [
         el('thead', {}, [el('tr', {}, ['', 'Pay rose', 'Salary', 'Take-home', 'Your prices rose', 'CPI', 'In start prices', 'Costs and events', 'Needed', 'Short or more'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
         el('tbody', {}, p.years.map((r) => el('tr', { class: r.today ? 'fin-sums__total' : null }, [
-          el('td', { text: `${monthName(r.month)}${r.today ? ' (today)' : ''}` }),
+          el('td', { text: `${monthName(r.month)}${r.today ? ' (today)' : r.raise ? ' · raise' : ''}` }),
           el('td', { class: 'num', text: r.payPct == null ? '-' : pct(r.payPct, 1) }),
           ...[r.salary, r.takeHome].map((x) => el('td', { class: 'num', text: rand(x) })),
           ...[r.ownPct, r.cpiPct].map((x) => el('td', { class: 'num', text: x == null ? '-' : pct(x, 1) })),
