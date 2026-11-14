@@ -8,7 +8,7 @@
  */
 export const REFERENCE = {
   prime: { value: 10.75, label: 'Prime lending rate', source: 'SA Reserve Bank, 23 Sep 2026' },
-  cpi: { value: 4.5, label: 'Inflation (CPI)', source: 'Stats SA, September 2026' },
+  cpi: { value: 4.5, label: 'Inflation (CPI - the consumer price index: how much prices rise in general)', source: 'Stats SA, September 2026' },
   perKm: { value: 4.95, label: 'SARS rate per km', source: 'SARS, 2026/27 tax year' },
   transferDuty: { label: 'Transfer duty', source: 'SARS table from 1 April 2025, unchanged from 1 April 2026' },
 };

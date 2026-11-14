@@ -50,7 +50,7 @@ export const HOME_HELP = {
   insurance: 'Building (homeowner’s) insurance - often charged by the bank with the bond, or on your own policy schedule. In a complex (sectional title) the building is insured by the body corporate and paid for in the levy - leave this empty then.',
   maintYearly: 'What you really spend on repairs and upkeep in a year - look back at a year of slips or bank statements. Not upgrades.',
   upkeepPct: 'A rule of thumb when you do not know your own figure: about 1% of the value a year.',
-  escalatePct: `How fast running costs rise each year. Inflation (CPI) is ${REFERENCE.cpi.value}% (${REFERENCE.cpi.source}).`,
+  escalatePct: `How fast running costs rise each year. Inflation (CPI - the consumer price index: how much prices rise in general, measured by Stats SA) is ${REFERENCE.cpi.value}% (${REFERENCE.cpi.source}).`,
   rent: 'The monthly rent on the lease, or the asking rent on the listing.',
   rentRisePct: 'The yearly increase in the lease. Look at what this rent did over the last few years - many rise faster than inflation.',
   rentDeposit: 'Usually one or two months’ rent, paid before moving in and returned when you leave (less any damage).',

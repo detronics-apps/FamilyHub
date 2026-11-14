@@ -188,7 +188,7 @@ function eventsPanel(d, refresh, redraw) {
   const changed = (structure) => { mine(d, 'events'); if (structure) redraw(); else refresh(); };
   return el('div', { class: 'panel stack', 'data-field': 'events-panel' }, [
     el('h2', { text: 'Life events', style: { margin: 0 } }),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: 'What each adds a month, in today’s money, from its date - past or planned. One line for each cost, so each rises the way it really does.' }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'Getting married, a child, someone added to the medical aid, a move, a partner’s income - each one that happened or that you plan, with what it adds a month from its date, in today’s money. Press the one to add it.' }),
     ...list.map((e, i) => el('fieldset', { class: 'stack fin-group', 'data-field': `event:${i}` }, [
       el('div', { class: 'row', style: { gap: 'var(--space-2)' } }, [
         el('select', { class: 'select', 'aria-label': 'What happens', style: { width: 'auto' }, on: { change: (x) => { e.kind = x.target.value; changed(true); } } },
@@ -203,11 +203,16 @@ function eventsPanel(d, refresh, redraw) {
         el('input', { class: 'input', money: true, step: 'any', value: e.amount ?? '', placeholder: 'a month', 'aria-label': 'A month, in today’s money', style: { maxWidth: '120px' }, on: { input: (x) => { e.amount = x.target.value === '' ? null : Number(x.target.value); changed(false); } } }),
         el('span', { class: 'small muted', text: e.kind === 'income' ? 'grows like' : 'rises like' }),
         el('select', { class: 'select', 'aria-label': 'Rises like', style: { width: 'auto' }, on: { change: (x) => { e.risesWith = x.target.value; changed(false); } } },
-          [el('option', { value: 'cpi', text: 'Prices (CPI)' }), ...costs.map((c) => el('option', { value: c.id, text: c.name || KINDS[c.kind], selected: e.risesWith === c.id }))]),
+          [el('option', { value: 'cpi', text: 'Prices in general (CPI)' }), ...costs.map((c) => el('option', { value: c.id, text: c.name || KINDS[c.kind], selected: e.risesWith === c.id }))]),
       ]),
       EVENTS[e.kind]?.think ? el('p', { class: 'small muted', style: { margin: 0 }, text: EVENTS[e.kind].think }) : null,
     ])),
-    el('div', {}, [el('button', { class: 'btn btn-small', type: 'button', text: 'Add event', 'data-field': 'event-add', on: { click: () => { list.push({ id: newId('e'), kind: 'child', from: null, amount: null, risesWith: 'cpi' }); changed(true); } } })]),
+    // Every kind on show, not behind one button (owner, D-139): what can be added is seen without clicking.
+    el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' }, 'data-field': 'event-add' }, [
+      el('span', { class: 'small muted', text: 'Add:' }),
+      ...Object.entries(EVENTS).map(([k, x]) => el('button', { class: 'btn btn-small', type: 'button', text: x.label, 'data-field': `event-add:${k}`,
+        on: { click: () => { list.push({ id: newId('e'), kind: k, from: null, amount: null, risesWith: 'cpi' }); changed(true); } } })),
+    ]),
   ]);
 }
 
@@ -230,11 +235,11 @@ function results(hub, d) {
   const lines = [];
   if (p.T > 0) {
     lines.push(`Your take-home now, ${rand(now.takeHome)} a month, buys about ${rand(now.real)} of what it bought in ${monthName(p.start)} - when it was ${rand(first.takeHome)}. That is about ${pct(Math.abs(realChange), 1)} ${more(realChange)}, ${by}.`);
-    if (hasCosts) lines.push(`By CPI alone it would be about ${pct(Math.abs(cpiChange), 1)} ${more(cpiChange)}.${yearly(now.own) != null ? ` Your own costs rose about ${pct(yearly(now.own), 1)} a year; CPI about ${pct(yearly(now.cpi), 1)}.` : ''}`);
+    if (hasCosts) lines.push(`By CPI alone - how much prices rise in general - it would be about ${pct(Math.abs(cpiChange), 1)} ${more(cpiChange)}.${yearly(now.own) != null ? ` Your own costs rose about ${pct(yearly(now.own), 1)} a year; CPI about ${pct(yearly(now.cpi), 1)}.` : ''}`);
   }
   const endName = monthName(addMonth(p.start, p.N));
   const after = `${pct(futureRaise(v))} a year${num(v.raisePct) == null ? ' (Estimated - the inflation rate)' : ''}`;
-  lines.push(`With ${p.entries.length ? `your ${p.entries.length === 1 ? 'raise' : `${p.entries.length} raises`}, then ${after} after ${monthName(p.assumedFrom)}` : `raises of ${after}`}, by ${endName} your take-home would be about ${rand(end.takeHome)} a month, against about ${rand(end.needed)} needed ${hasCosts ? `for your costs${(v.events ?? []).length ? ', your life events' : ''} and what was left over at the start (${rand(p.left0)}, kept in step with your prices)` : `to buy what your take-home bought at the start, by CPI${(v.events ?? []).length ? ', and your life events' : ''} - add your costs to use your own prices`}. ${Math.abs(end.gap) < 1 ? 'About the same.' : end.gap < 0 ? `That is ${rand(-end.gap)} a month short.` : `That leaves ${rand(end.gap)} a month more than needed.`}`);
+  lines.push(`With ${p.entries.length ? `your ${p.entries.length === 1 ? 'raise' : `${p.entries.length} raises`}, then ${after} after ${monthName(p.assumedFrom)}` : `raises of ${after}`}, by ${endName} your take-home would be about ${rand(end.takeHome)} a month, against about ${rand(end.needed)} needed ${hasCosts ? `for your costs${(v.events ?? []).length ? ', your life events' : ''} and what was left over at the start (${rand(p.left0)}, kept in step with your prices)` : `to buy what your take-home bought at the start, by CPI (how much prices rise in general)${(v.events ?? []).length ? ', and your life events' : ''} - add your costs to use your own prices`}. ${Math.abs(end.gap) < 1 ? 'About the same.' : end.gap < 0 ? `That is ${rand(-end.gap)} a month short.` : `That leaves ${rand(end.gap)} a month more than needed.`}`);
   if (p.shortFrom === p.T) lines.push(`Already today the take-home is ${rand(-now.gap)} a month less than what is needed.`);
   else if (p.shortFrom != null) lines.push(`From ${monthName(addMonth(p.start, p.shortFrom))} the take-home is less than what is needed.`);
   if (p.estimated) lines.push(`Take-home is estimated from the salary with the ${SARS.source}, held for every year - so tax takes a little more of each raise. SARS often moves the bands up with inflation, which would close part of any gap. A payslip figure is firmer.`);
@@ -254,7 +259,7 @@ function results(hub, d) {
       hasCosts ? { name: 'By CPI only', points: pts((r) => (r.realCpi / first.takeHome - 1) * 100), dashed: true } : null,
     ].filter(Boolean), { label: `What your take-home buys, more or less than in ${monthName(p.start)}, month by month`, marks, xLabel: yearOf(p), percent: true,
       zones: { above: 'Buys more than at the start', below: 'Buys less' },
-      story: 'Zero is what your take-home bought when you started. Above it your take-home buys more of your own costs; below it, less. Each step up is a raise.' })),
+      story: 'Zero is what your take-home bought when you started. Above it your take-home buys more of your own costs; below it, less. Each step up is a raise. CPI, the consumer price index: how much prices rise in general, measured by Stats SA.' })),
     chartPanel('What salary would you need, year by year?', lineChart([
       { name: 'Needed', points: pts((r) => r.needed) },
       { name: 'Your take-home', points: pts((r) => r.takeHome) },
@@ -283,7 +288,7 @@ function advanced(v, p, today) {
       el('summary', { text: 'Raise by raise' }),
       el('p', { class: 'small muted', style: { margin: 0 }, text: 'A row for each raise in its month, today, then a year at a time ahead. Each change is since the row above.' }),
       el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums' }, [
-        el('thead', {}, [el('tr', {}, ['', 'Pay rose', 'Salary', 'Take-home', 'Your prices rose', 'CPI', 'In start prices', 'Costs and events', 'Needed', 'Short or more'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
+        el('thead', {}, [el('tr', {}, ['', 'Pay rose', 'Salary', 'Take-home', 'Your prices rose', 'CPI (prices in general)', 'In start prices', 'Costs and events', 'Needed', 'Short or more'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))]),
         el('tbody', {}, p.years.map((r) => el('tr', { class: r.today ? 'fin-sums__total' : null }, [
           el('td', { text: `${monthName(r.month)}${r.today ? ' (today)' : r.raise ? ' · raise' : ''}` }),
           el('td', { class: 'num', text: r.payPct == null ? '-' : pct(r.payPct, 1) }),
@@ -301,7 +306,7 @@ function learn(v, p) {
   return el('div', { class: 'panel stack fin-learn' }, [
     el('h2', { text: 'How it is worked out', style: { margin: 0 } }),
     step('Salary', 'The start salary × (1 + each raise), each in the month you put it in; after the last one, the yearly raise spread month by month', `${rand(now.salary)} a month now`),
-    step('A cost', 'Past: (now ÷ then) spread evenly over the months since you started; without "now", each calendar year’s starting rate. From now on: your % or its starting rate, a twelfth of the year’s rise each month', null, `CPI: ${CPI.source}. Rent: ${RENT.source}.`),
+    step('A cost', 'Past: (now ÷ then) spread evenly over the months since you started; without "now", each calendar year’s starting rate. From now on: your % or its starting rate, a twelfth of the year’s rise each month', null, `CPI (the consumer price index - how much prices rise in general): ${CPI.source}. Rent: ${RENT.source}.`),
     step('Your own inflation', 'All your costs now ÷ the same costs when you started', `${pct((now.own - 1) * 100, 1)} since ${monthName(p.start)}`),
     step('What your salary buys', 'Take-home ÷ your own inflation', `${rand(now.takeHome)} ÷ ${now.own.toFixed(3)} = ${rand(now.real)}`),
     step('Needed', 'Your costs + life events − income they add + what was left over at the start × your own inflation', `${rand(now.needed)} a month now`),

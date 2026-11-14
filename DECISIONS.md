@@ -913,6 +913,17 @@ other costs that change and what is not about money. Budget: Food per meal; a go
 calculators, Children's future and Money plan already fitted. A figure you set that the level hides still counts,
 and one line at the top says so - the answer never changes silently when the level does.
 
+**D-139 Life events on show (owner, 2026-11-14).** Salary and costs could already add getting married, a child,
+someone on the medical aid, a move, a partner's income or something else - but only behind one "Add event" button,
+and "I did not even think of clicking that button". Each kind is now its own button under Life events ("Add:
+Married, A child, Medical aid, Move house, Something else, Income"), and the text names them.
+
+**D-140 Terms are taught, not replaced (owner, 2026-11-14).** "If something is called CPI, then use the term, but
+also make sure that people seeing it also somewhere on the screen can see what it means... educate me." CPI stays
+wherever it shows, with its meaning beside it - "CPI, the consumer price index: how much prices rise in general,
+measured by Stats SA" - in the inflation source line every tool shows, Salary's sentences, its table, graph and
+Expert steps, Money plan, and the guide. Every term from now on gets the same: its meaning on screen or behind an (i).
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in

@@ -590,6 +590,12 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### Words explained, life events on show (v0.26.4, 2026-11-14)
+**What it does:** CPI is explained wherever it shows - the consumer price index, how much prices rise in general.
+Under Life events, every kind is its own button: Married, A child, Medical aid, Move house, Something else, Income.
+**Why it is there:** "We're here to teach people" (D-140); "I did not even think of clicking that button" (D-139).
+**Show it:** Finance › Salary and costs (Advanced) › Life events; and the sentences under the answer.
+
 #### Simple asks only what the answer needs (v0.26.2 and v0.26.3, 2026-11-14)
 **What it does:** Simple shows only what is needed to work out the answer; Advanced adds the nice-to-haves;
 Expert explains the words and the sums. In Salary and costs, Your costs and Life events now start at Advanced.

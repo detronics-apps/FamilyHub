@@ -171,7 +171,7 @@ function moneyPanel(hub, plan, set, found) {
     el('p', { class: 'small', style: { margin: 0 }, text: `That leaves ${rand(freeEachMonth(plan))} a month to put towards goals.` }),
     shows('advanced') ? el('fieldset', { class: 'stack fin-group' }, [
       el('legend', { text: 'Over the years, and the emergency fund' }),
-      field('incomeRisePct', 'Income rises by', plan.incomeRisePct, (v) => set({ incomeRisePct: v }), { unit: '% a year', tag: 'Assumption', hint: 'Once a year. Inflation (CPI, Stats SA September 2026) is 4.5%.' }),
+      field('incomeRisePct', 'Income rises by', plan.incomeRisePct, (v) => set({ incomeRisePct: v }), { unit: '% a year', tag: 'Assumption', hint: 'Once a year. Inflation (CPI - the consumer price index: how much prices rise in general; Stats SA, September 2026) is 4.5%.' }),
       field('commitmentsRisePct', 'Commitments rise by', plan.commitmentsRisePct, (v) => set({ commitmentsRisePct: v }), { unit: '% a year', tag: 'Assumption' }),
       field('emergencyMonths', 'Emergency fund: months of commitments', plan.emergencyMonths, (v) => set({ emergencyMonths: v }), { unit: 'months', tag: 'Assumption', hint: 'Three to six months is a common guide. Shown as a must-have goal.' }),
       field('emergencySaved', 'Emergency fund saved already', plan.emergencySaved, (v) => set({ emergencySaved: v })),
