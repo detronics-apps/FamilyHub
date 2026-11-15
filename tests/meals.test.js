@@ -191,3 +191,18 @@ test('cooking time adds each planned meal per day and for the week', async () =>
   assert.equal(t.week, 100);
   assert.equal(t.unknown, 2);
 });
+
+test('D-142 what to buy: in the packs the family buys, or whole ones - and what is left over', async () => {
+  const { buyNote, normalisePack, packLabel } = await import('../js/apps/meals/logic.js');
+  const packs = [{ name: 'Eggs', qty: 18, unit: '', called: 'tray' }, { name: 'Frozen peas', qty: 1, unit: 'kg', called: 'bag' }];
+  assert.equal(buyNote({ name: 'eggs', qty: 5, unit: '' }, packs), 'buy 1 × tray of 18 - 13 spare');
+  assert.equal(buyNote({ name: 'Egg', qty: 20, unit: '' }, packs), 'buy 2 × tray of 18 - 16 spare');
+  assert.equal(buyNote({ name: 'frozen peas', qty: 1.2, unit: 'kg' }, packs), 'buy 2 × bag of 1 kg - 800 g spare');
+  assert.equal(buyNote({ name: 'Tomato', qty: 0.5, unit: '' }, packs), 'buy 1 - ½ spare', 'half a tomato: buy one');
+  assert.equal(buyNote({ name: 'Iceberg lettuce', qty: 1.5, unit: 'head' }, packs), 'buy 2 - ½ spare');
+  assert.equal(buyNote({ name: 'Tomato', qty: 2, unit: '' }, packs), '', 'already whole');
+  assert.equal(buyNote({ name: 'Flour', qty: 500, unit: 'g' }, packs), '', 'no pack noted: nothing to say');
+  assert.equal(buyNote({ name: 'Frozen peas', qty: 2, unit: 'cup' }, packs), '', 'cups are not grams: no guess');
+  assert.equal(normalisePack({ name: '', qty: 6 }), null);
+  assert.equal(packLabel(normalisePack({ name: 'Milk', qty: 2, unit: 'l' })), '2 l');
+});

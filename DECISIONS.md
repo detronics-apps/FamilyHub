@@ -885,6 +885,100 @@ tests are green and the owner has read the diff.
 **D-135 Small things (security audit, 2026-11-14).** The two links with only `noopener` now also have
 `noreferrer`. Family files and CSVs over 50 MB are refused before they are read, with a plain message.
 
+**D-136 Connecting Drive says which family it means (owner, 2026-11-14).** At the new address a laptop starts
+empty, and choosing the Drive folder asked "Your Drive folder already has a family" with Cancel, Merge and Use
+folder - "Use what folder? ... Use folder does not tell me which one of those 2 options you just gave me you're
+going to use." A device with nothing on it (no people, chores or history) now simply takes the family from Drive,
+with no question. When both have a family, the question is "Which family should this device use?", each button
+is explained beside it by name - Use Drive (this device opens the Drive family; what is on this device is
+dropped; Drive is not changed), Combine (this device's people and chores are added into the Drive family),
+Cancel (nothing changes).
+
+**D-137 What each level is for (owner, 2026-11-14).** "Simple is the minimum information required to do the
+calculations. Advanced is all the nice to haves, and expert explains every category and like what the different
+vocabulary words mean and how the formulas are calculated." The level bar's sentences now say exactly that. In
+Salary and costs, Your costs and Life events are nice-to-haves, so they show from Advanced; at Simple the answer
+uses prices in general (CPI), and if costs or life events were added, one line says they are still counted and
+that Advanced shows them. The other tools are to be checked against the same rule.
+
+**D-138 Every Finance tool checked against what Simple is for (owner, 2026-11-14).** Following D-137, the
+nice-to-haves move to Advanced. Homes: the month you buy in, moving in, household income, rent rises and the rental
+deposits, levies rising, maintenance, the agent's commission, the electrical certificate, money kept for
+renovations or just in case; the sections Upgrades, Getting to work and Your situation; and the panels What if,
+repairs, situations, how much of the home is yours, can you carry it, what would it take, and what each side is
+worth. Simple keeps price, deposit, rate, term, how long you stay, the similar rent, rates, levies and insurance,
+the two growth rates, selling first, the answer, the main graph and Sell after. Cars: service, tyres, oil,
+licence, repairs, where fuel is bought, fuel or electricity use and the electric shares. Job offers: the whole move,
+other costs that change and what is not about money. Budget: Food per meal; a goal's interest or growth. Money
+calculators, Children's future and Money plan already fitted. A figure you set that the level hides still counts,
+and one line at the top says so - the answer never changes silently when the level does.
+
+**D-139 Life events on show (owner, 2026-11-14).** Salary and costs could already add getting married, a child,
+someone on the medical aid, a move, a partner's income or something else - but only behind one "Add event" button,
+and "I did not even think of clicking that button". Each kind is now its own button under Life events ("Add:
+Married, A child, Medical aid, Move house, Something else, Income"), and the text names them.
+
+**D-140 Terms are taught, not replaced (owner, 2026-11-14).** "If something is called CPI, then use the term, but
+also make sure that people seeing it also somewhere on the screen can see what it means... educate me." CPI stays
+wherever it shows, with its meaning beside it - "CPI, the consumer price index: how much prices rise in general,
+measured by Stats SA" - in the inflation source line every tool shows, Salary's sentences, its table, graph and
+Expert steps, Money plan, and the guide. Every term from now on gets the same: its meaning on screen or behind an (i).
+
+**D-141 Salary and costs: we do the thinking, one line each (owner, 2026-11-14).** "I want us to do the thinking
+... they should state if it is not applicable to them" - but "that does not mean just splitting one button into 20
+other buttons". (1) Prices rise by, in Simple: CPI (4.5%, Stats SA) until the family types its own; every cost's
+starting rate and the yearly raise follow it. (2) A new plan lists rent, medical aid, food, school or daycare,
+electricity and petrol, one line each with a tick and how fast it usually rises (and from where); unticked counts
+nothing; no amounts are filled in. (3) The children on the People page appear under Life events, each from their
+birthday, with one amount a month ("perhaps I just want to add like 4,000 rand per kid"); More detail opens school
+or daycare (or at home), medical aid, food, nappies (to about three) and clothes, used instead when filled in. A
+child already there when the job started is not counted twice - what was left over then already paid for them.
+Salary may now read birthdays (people:ages). (4) A bonus: none, a 13th cheque (one month's pay a year) or another
+yearly amount, spread over the year and taxed with the salary. (5) Life events back to one Add event button.
+No starting amounts are made up; the "R7 000 a child" the owner heard is not used.
+
+**D-142 What we buy (owner, 2026-11-14).** "If a recipe calls for half a tomato, I know I need to buy a tomato ...
+and then I know what I will have spare." Foods already knew their sizes from USDA FoodData Central ("1 medium
+tomato = 123 g", "a medium head of iceberg = 539 g"). New: the Cookbook's Packs screen ("What we buy") keeps the
+packs the family buys a food in - a tray of 18 eggs, a 1 kg bag of frozen peas - noted by them, removable. The
+shopping list and At the shop then say "buy 1 × tray of 18 - 13 spare"; anything counted whole says "buy 1 - ½
+spare". Cups are never guessed into grams.
+
+**D-143 Plan my week (owner, 2026-11-14).** "When I'm really just tired of thinking, to just plan out the week and
+get like a balanced meal plan ... I can just reject the suggestions you give me. But I don't know what I don't know."
+Plan week (Meal Planner) fills every empty breakfast, lunch and supper of this or next week from the family's own
+Cookbook: meals marked good for that meal (a meal marked for none counts as lunch or supper; recipes, fillings and
+doughs are parts of meals and are not planned), favourites first, two new ones a week while tried ones are left,
+nothing from the last two weeks until the rest are used, not the same protein or starch at the same meal two days
+running, and nothing someone cannot eat. One snack idea a day from an editable list (carrot sticks, apple slices,
+yoghurt...). Every pick has an ×; the next idea takes its place. Nothing goes in until Put in.
+
+**D-144 Two fixes from the financial tools review (owner, 2026-11-15).** (1) A car paid in cash - the deposit
+covering the price - no longer shows a loan: the default initiation fee (R1 207.50, "added to the loan") used to
+create a R1 208 loan with a R69 monthly fee, so "cash" showed about R4 000 of interest and fees. With no loan there
+is no initiation fee and no bank fee. (2) The Phone and laptop guide still said "choose My Drive" and "Use the
+folder's family"; it now says to make a folder called Family Hub and choose that (D-131), and names "Use Drive"
+(D-136). Not changed, by the owner's decision: the car tool does not count what the cash could have earned -
+"you needed the car"; renting or cycling a car is out of scope.
+
+**D-145 New or second-hand, and the balloon on its own (owner, 2026-11-15).** "It is also valid to compare buying a
+second-hand car versus buying a new car ... how would you build up the balloon payment at the end? Or are you just
+then selling the car before the balloon payment is due?" Each car is now New or Second-hand (Simple). A new car has
+no past, so its accident, owner, service-record and wear checks are left out (the papers, the test drive and the
+feeling stay), and it takes a warranty and a service plan in years and/or km (Advanced, from the dealer's offer):
+while the warranty lasts, "Other repairs" count nothing; while the service plan lasts, services and oil count
+nothing - each ends at the years or the km, whichever comes first at the distance driven. The balloon is shown on
+its own: the amount and the month it is due; sold before then, what the sale leaves after the bank is paid (or what
+would still be owed); kept to the end, three ways worked out - save for it (the balloon spread over the loan's
+months), finance it again (a 36-month loan at the same rate, with its interest and fees), or sell it then. None is
+recommended. Compare adds New or second-hand, the month from the budget (instalment and running costs), the balloon
+and the cover. No depreciation, warranty or price figures are filled in for new against used: the family puts in
+the dealer's offer and what such a car sells for.
+
+**D-146 The move is done (owner, 2026-11-15).** "All devices using the app has been moved over to the new domain
+name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
+gone. Devices that pressed Done keep the harmless mark in their settings.
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in

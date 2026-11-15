@@ -263,3 +263,57 @@ test('D-078 car loans: what-ifs month by month, the balloon still due, sections 
   assert.ok(carCost({ ...v, on: { energy: false } }).running < carCost(v).running);
   assert.equal(carCost({ ...v, on: { energy: false, running: false } }).running, 0);
 });
+
+test('D-144 a car paid in cash has no loan, no initiation fee and no monthly bank fee', async () => {
+  const { carCost } = await import('../js/apps/finance/maths.js');
+  const c = carCost({ price: 100000, deposit: 100000, keepYears: 3, resaleMode: 'amount', resaleAmount: 80000, on: { energy: false, running: false } });
+  assert.equal(c.loan, 0);
+  assert.equal(c.instalment, 0);
+  assert.equal(c.fees, 0);
+  assert.equal(c.interest, 0);
+  assert.equal(c.total, 20000, 'only the drop in value is left');
+  const financed = carCost({ price: 100000, deposit: 0, termMonths: 60, keepYears: 3, resaleMode: 'amount', resaleAmount: 80000, on: { energy: false, running: false } });
+  assert.ok(financed.fees > 0 && financed.interest > 0, 'a loan keeps its fees');
+});
+
+test('D-145 a new car: while the warranty and service plan cover it, repairs and services count nothing', async () => {
+  const { carCost, coverMonths } = await import('../js/apps/finance/maths.js');
+  assert.equal(coverMonths(5, 100000, 20000), 60);
+  assert.equal(coverMonths(5, 60000, 20000), 36, 'the km run out first');
+  assert.equal(coverMonths(null, null, 20000), 0);
+  const base = { price: 400000, deposit: 400000, keepYears: 6, kmYearly: 20000, serviceYearly: 6000, upkeep: 500, insurance: 1000, on: { energy: false } };
+  const used = carCost({ ...base, condition: 'used' });
+  const fresh = carCost({ ...base, condition: 'new', warrantyYears: 5, warrantyKm: 150000, planYears: 3, planKm: 60000 });
+  assert.ok(fresh.running < used.running, 'covered months cost less');
+  assert.equal(fresh.runningFirstMonth, 1000, 'month one: only the insurance');
+  assert.equal(fresh.planMonths, 36);
+  assert.equal(fresh.warrantyMonths, 60);
+  // Cover entered on a second-hand car is not used.
+  assert.equal(carCost({ ...base, condition: 'used', warrantyYears: 5 }).running, used.running);
+});
+
+test('D-145 the balloon on its own: sold before it is due, or saved for, financed again or sold then', async () => {
+  const { carCost } = await import('../js/apps/finance/maths.js');
+  const base = { price: 400000, deposit: 0, termMonths: 60, balloonPct: 30, ratePct: 12, on: { energy: false, running: false } };
+  const kept = carCost({ ...base, keepYears: 6, resaleMode: 'amount', resaleAmount: 150000 });
+  const b = kept.balloonDue;
+  assert.equal(b.amount, 120000);
+  assert.equal(b.month, 60);
+  assert.equal(b.beforeSale, false);
+  assert.equal(b.save, 2000, 'R120 000 over 60 months');
+  assert.ok(b.refinance.monthly > 120000 / 36 && b.refinance.interest > 0);
+  const early = carCost({ ...base, keepYears: 3, resaleMode: 'amount', resaleAmount: 200000 });
+  assert.equal(early.balloonDue.beforeSale, true);
+  assert.ok(early.owed > 120000, 'still owed at the sale includes the balloon');
+  assert.equal(carCost({ ...base, balloonPct: 0, keepYears: 3 }).balloonDue, null);
+});
+
+test('D-145 a new car has no past to check: history and wear checks are left out', async () => {
+  const { carChecksFor, CAR_CHECKS, NEW_CAR_CHECKS } = await import('../js/apps/viewing/checks.js');
+  assert.equal(carChecksFor({ condition: 'used' }), CAR_CHECKS);
+  assert.equal(carChecksFor({}), CAR_CHECKS, 'second-hand unless said otherwise');
+  const ids = carChecksFor({ condition: 'new' }).map((x) => x.id);
+  assert.ok(!ids.includes('c-q-accident') && !ids.includes('c-rust') && !ids.includes('c-q-owners'));
+  assert.ok(ids.includes('c-q-papers') && ids.includes('c-drive') && ids.includes('c-carry'));
+  assert.ok(NEW_CAR_CHECKS.length < CAR_CHECKS.length);
+});

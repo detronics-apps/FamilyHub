@@ -190,7 +190,9 @@ export function createSync(ctx) {
     if (r.status === 'first-connect') { set({ state: 'first-connect', firstConnect: { theirs: r.theirs } }); return; }
     if (r.status === 'conflict') { set({ state: 'decision', conflict: { household: r.household, conflicts: r.conflicts, theirs: r.theirs, mineAtDetection: mine } }); return; }
     if (r.status === 'adopted' || r.status === 'merged') {
-      ctx.replaceHousehold(r.household, r.status === 'adopted'
+      ctx.replaceHousehold(r.household, r.first
+        ? `Now using ${r.household.household.name} from your Drive folder.`
+        : r.status === 'adopted'
         ? 'Updated with changes made on another device.'
         : 'Changes from another device were merged with yours.');
     }

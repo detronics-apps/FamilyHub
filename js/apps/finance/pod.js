@@ -109,6 +109,16 @@ export function input(f, d, onInput) {
 }
 
 /**
+ * Figures you set yourself that this level hides (D-138): they still count, and one line says so -
+ * the answer never changes silently when the level does.
+ */
+export function hiddenNote(fields, d) {
+  const keys = [...new Set(fields.filter((f) => !shows(f.level) && (!f.when || f.when(d.values)) && d.mine?.has?.(f.key) && d.values[f.key] != null && d.values[f.key] !== '').map((f) => f.key))];
+  if (!keys.length) return null;
+  return el('p', { class: 'small muted', style: { margin: 0 }, 'data-field': 'hidden-note', text: `Counting ${keys.length === 1 ? 'a figure' : `${keys.length} figures`} you set that ${level() === 'simple' ? 'Simple' : 'this level'} does not show - choose ${level() === 'simple' ? 'Advanced' : 'Expert'} to see or change ${keys.length === 1 ? 'it' : 'them'}.` });
+}
+
+/**
  * The inputs this level shows, grouped under headings. `when(values)` hides a
  * field that does not apply (a rent with "Buy" chosen).
  */
@@ -116,6 +126,7 @@ export function inputsPanel(fields, d, groups, onChange) {
   const visible = fields.filter((f) => shows(f.level) && (!f.when || f.when(d.values)));
   return el('div', { class: 'panel stack' }, [
     el('h2', { text: 'What we need', style: { margin: 0 } }),
+    hiddenNote(fields, d),
     ...[...new Set(visible.map((f) => f.group))].map((g) => {
       const nodes = visible.filter((f) => f.group === g).map((f) => input(f, d, onChange));
       const gt = typeof groups[g] === 'string' ? { title: groups[g] } : groups[g];

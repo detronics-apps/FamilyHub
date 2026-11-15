@@ -590,6 +590,56 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### The move is done (v0.28.1, 2026-11-15)
+**What it does:** the note about moving to familyhub.detronics.co.za no longer shows - every device has moved. (D-146)
+
+#### New or second-hand, and the balloon (v0.28.0, 2026-11-15)
+**What it does:**
+- **New or second-hand** on every car. New: no history checks, and the warranty and service plan pay for repairs
+  and services for as long as they last.
+- **The balloon on its own:** when it is due, and how it gets paid - sold before it is due, saved for (R2 250 a
+  month), financed again (about R4 569 a month for 3 years) or the car sold then.
+- **Compare** a new car against a second-hand one: the month from your budget, the total, the balloon, the cover,
+  and what the checks found.
+**Why it is there:** "How would you build up the balloon payment at the end? Or are you just then selling the car
+before the balloon payment is due?" (D-145)
+**Show it:** Finance › Cars › Add › Financing: choose New, put in a 30% balloon and a 5-year warranty.
+
+#### Fixes (v0.27.1, 2026-11-15)
+**What it does:** a car paid in cash shows no loan and no bank fees; the Phone and laptop steps ask for a Family Hub
+folder in Drive. (D-144)
+
+#### Plan my week, what we buy, and costs thought of for you (v0.27.0, 2026-11-14)
+**What it does:**
+- **Plan my week:** one button in the Meal Planner fills the week from your Cookbook - balanced, favourites first -
+  with a snack idea a day. Press × on anything and the next idea takes its place; Put in when it looks right.
+- **What we buy:** note once that eggs come in a tray of 18 or peas in a 1 kg bag; the shopping list says "buy 1 ×
+  tray of 18 - 13 spare", and half a tomato says "buy 1 - ½ spare".
+- **Salary and costs:** a Prices rise by box; rent, medical aid, food, school, electricity and petrol already listed
+  to untick; each child from the People page with one amount a month (More detail if you want it); a 13th cheque.
+**Why it is there:** "I can't think of stuff out of my head when I'm tired and overworked." (D-141 to D-143)
+**Show it:** Meal Planner › Plan week; Cookbook › Packs, then Shopping; Finance › Salary and costs (Advanced).
+
+#### Words explained, life events on show (v0.26.4, 2026-11-14)
+**What it does:** CPI is explained wherever it shows - the consumer price index, how much prices rise in general.
+Under Life events, every kind is its own button: Married, A child, Medical aid, Move house, Something else, Income.
+**Why it is there:** "We're here to teach people" (D-140); "I did not even think of clicking that button" (D-139).
+**Show it:** Finance › Salary and costs (Advanced) › Life events; and the sentences under the answer.
+
+#### Simple asks only what the answer needs (v0.26.2 and v0.26.3, 2026-11-14)
+**What it does:** Simple shows only what is needed to work out the answer; Advanced adds the nice-to-haves;
+Expert explains the words and the sums. In Salary and costs, Your costs and Life events now start at Advanced.
+**Why it is there:** "Simple is the minimum information required to do the calculations." (D-137)
+**Show it:** Finance › Salary and costs - switch between Simple and Advanced in the bar under the top bar.
+**And:** Homes, Cars, Job offers and Budget follow the same rule; a figure you set that Simple hides still counts, and one line says so. (D-138, v0.26.3)
+
+#### Connecting Drive on a new device (v0.26.1, 2026-11-14)
+**What it does:** a device with nothing on it simply opens the family from your Drive folder. When both have a
+family, it asks "Which family should this device use?" and says what Use Drive, Combine and Cancel each do.
+**Why it is there:** "Use folder does not tell me which one of those 2 options you just gave me you're going to
+use." (D-136)
+**Show it:** a new browser at familyhub.detronics.co.za › Settings › Google Drive › Choose folder.
+
 #### Safer by design (v0.26.0, 2026-11-14)
 **What it does:**
 - **Its own address:** Family Hub moves to familyhub.detronics.co.za, so no other app can reach a family's

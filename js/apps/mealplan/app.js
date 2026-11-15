@@ -26,7 +26,7 @@ import {
 import { fmtMinutes } from '../../progress.js';
 import { ingredientEditor } from '../../ui/ingredient-editor.js';
 import { recipeFacts, passes, emptyFilters, describeFilters, PROTEIN, CARB, GROUP, TRIAL, MEAL_TAGS } from '../meals/facts.js';
-import { MIX, proposeWeek, analyseWeek, optimiseWeek, additionFor, applyIdea } from './logic.js';
+import { MIX, proposeWeek, analyseWeek, optimiseWeek, additionFor, applyIdea, planWeek, SNACK_IDEAS, PLAN_MEALS } from './logic.js';
 import { GUIDE } from '../assistant/guide.js';
 import { sendHref } from '../shopping/logic.js';
 import { mealNutrition, nutrientProfile } from '../../meal-nutrition.js';
@@ -75,6 +75,7 @@ export function render(hub, route) {
     case 'choose': return chooseScreen(hub, a, Number(b), c);
     case 'slot': return slotScreen(hub, a, b);
     case 'mix': return mixScreen(hub);
+    case 'auto': return autoScreen(hub);
     case 'review': return reviewScreen(hub, a);
     case 'add': return addScreen(hub, a, b, c);
     case 'modify': return modifyScreen(hub, a, b, c);
@@ -316,6 +317,7 @@ function planScreen(hub) {
       step(1, 'Gather meals', 'What are we in the mood for? Add meals or get suggestions - no need to decide which meal or which day yet.'),
       el('div', { class: 'row' }, [
         el('a', { class: 'btn btn-primary', href: hub.href('choose', `${POOL}~0~any`), text: '+ Add', title: 'Add a meal from the Cookbook, or type one', 'data-field': 'pool-add:any' }),
+        el('a', { class: 'btn', href: hub.href('auto'), text: 'Plan week', title: 'Too tired to think? A whole week from your Cookbook, with snack ideas - reject what you do not want', 'data-field': 'plan-week' }),
         el('a', { class: 'btn', href: hub.href('mix'), text: 'Suggest meals', title: 'A mix of family favourites and new ones to try, from the Cookbook', 'data-field': 'plan-my-week' }),
         // Shop for them now (D-060): no need to sort them or put them on days - cook them in any order.
         n && hub.data.installed('shopping') ? el('button', {
@@ -1175,5 +1177,90 @@ function modifyScreen(hub, monday, slotId, param) {
       el('button', { class: 'btn btn-primary', type: 'button', text: 'Change meal', 'data-field': 'modify-apply', on: { click: async () => { await savePlan(hub, monday, updateSlot(p.data, slot.id, { ingredients: next, basis })); hub.ui.notice('Changed for this meal. The shopping list updates when you send the week again.'); hub.open(back); } } }),
       el('a', { class: 'btn', href: back, text: 'Cancel' }),
     ]),
+  ]);
+}
+
+/* ------------------------------------------------- plan my week (D-143) */
+
+const ideasCol = (hub) => hub.data.collection('ideas', { summary: (x) => ({ title: 'Snack ideas', count: (x.ideas ?? []).length }) });
+const SNACKS_ID = 'snacks';
+const auto = { monday: null, rejected: new Set(), editing: false };
+
+/**
+ * Plan my week: breakfast, lunch and supper for every day still empty, from the family's own
+ * Cookbook, and a snack idea a day. Press x on anything and the next idea takes its place;
+ * nothing goes into the week until Put in.
+ */
+function autoScreen(hub) {
+  const today = hub.today();
+  const thisWeek = weekStart(today);
+  // Late in the week, the week worth planning is the next one.
+  auto.monday ??= dayDiff(thisWeek, today) >= 4 ? addDays(thisWeek, 7) : thisWeek;
+  const monday = auto.monday;
+  const list = loadSummaries(hub);
+  const week = loadPlan(hub, monday);
+  const w1 = loadPlan(hub, addDays(monday, -7));
+  const w2 = loadPlan(hub, addDays(monday, -14));
+  const saved = hub.use('snack-ideas', async () => (await ideasCol(hub).get(SNACKS_ID).catch(() => null))?.ideas ?? null);
+  if ([list, week, w1, w2, saved].some((x) => x.loading)) return loading('Looking through your meals…');
+  if (list.error || week.error) return failure(list.error ?? week.error);
+  const ideas = Array.isArray(saved.data) ? saved.data : SNACK_IDEAS;
+  const people = hub.foodProfiles();
+  const taken = week.data.slots.filter((x) => x.day != null && PLAN_MEALS.includes(x.meal));
+  const recent = new Set([...w1.data.slots, ...w2.data.slots].map((x) => x.recipeId).filter(Boolean));
+  const r = planWeek({ meals: list.data, taken, people, recent, rejected: auto.rejected, snackIdeas: ideas, seed: monday });
+  const reject = (key) => { auto.rejected.add(key); hub.render(); };
+  const x = (key, what) => el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: '×', title: 'Not this one - show the next idea', 'aria-label': `Not ${what}`, on: { click: () => reject(key) } });
+  const days = weekDays(monday);
+  const LABEL = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Supper' };
+  const putIn = async () => {
+    const serves = Math.max(1, people.length || 4);
+    let plan = week.data;
+    for (const p of r.picks) plan = setSlot(plan, p.day, p.meal, { recipeId: p.id, title: p.title, servings: serves });
+    for (const sn of r.snacks) plan = addSlot(plan, sn.day, 'snack', { recipeId: null, title: sn.title, servings: serves });
+    if (await savePlan(hub, monday, plan)) { auto.rejected = new Set(); hub.ui.notice('The week is planned. Change anything on the calendar.'); hub.go('week', monday); }
+  };
+  const saveIdeas = async (next) => { await saveRecord(hub, ideasCol(hub), { id: SNACKS_ID, ideas: next }); hub.invalidate('snack-ideas'); hub.render(); };
+  return el('section', { class: 'stack', 'aria-labelledby': 'auto-title' }, [
+    el('a', { href: hub.href(), class: 'small', text: '‹ Back' }),
+    el('h1', { id: 'auto-title', text: 'Plan my week' }),
+    el('p', { class: 'muted', style: { margin: 0 }, text: 'A whole week from your own Cookbook - favourites first, at most two new ones, not the same meat or starch two days running - and a snack idea a day. Press × on anything you do not want and the next idea takes its place. Nothing goes in until you press Put in.' }),
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Which week' }, [[thisWeek, 'This week'], [addDays(thisWeek, 7), 'Next week']].map(([mon, label]) => el('button', {
+      class: 'chip', type: 'button', 'aria-pressed': String(monday === mon), text: label, on: { click: () => { auto.monday = mon; auto.rejected = new Set(); hub.render(); } } }))),
+    r.empty.length ? el('p', { class: 'small panel', style: { margin: 0 }, text: `No meals in the Cookbook are marked good for ${r.empty.map((mm) => LABEL[mm].toLowerCase()).join(' or ')} yet - or every one was set aside. On a meal in the Cookbook, choose what it is good for, and it can be planned here.` }) : null,
+    ...days.map((date, day) => el('div', { class: 'panel stack', style: { gap: '4px' }, 'data-field': `auto-day:${day}` }, [
+      el('h2', { text: fmtDay(date, today), style: { margin: 0, fontSize: '1.05rem' } }),
+      ...PLAN_MEALS.map((meal) => {
+        const have = taken.find((t) => t.day === day && t.meal === meal);
+        const p = r.picks.find((q) => q.day === day && q.meal === meal);
+        return el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' } }, [
+          el('span', { class: 'small muted', style: { minWidth: '80px' }, text: LABEL[meal] }),
+          have ? el('span', { class: 'small', text: `${have.title} - already planned` })
+            : p ? el('span', {}, [el('strong', { text: p.title }), el('span', { class: 'small muted', text: ` · ${p.why}` })])
+              : el('span', { class: 'small muted', text: 'nothing left to suggest' }),
+          !have && p ? x(`${day}|${meal}|${p.id}`, p.title) : null,
+        ]);
+      }),
+      (() => {
+        const sn = r.snacks.find((q) => q.day === day);
+        return el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' } }, [
+          el('span', { class: 'small muted', style: { minWidth: '80px' }, text: 'Snack' }),
+          sn ? el('span', { text: sn.title }) : el('span', { class: 'small muted', text: 'none' }),
+          sn ? x(`${day}|snack|${sn.title}`, sn.title) : null,
+        ]);
+      })(),
+    ])),
+    el('div', { class: 'row' }, [
+      el('button', { class: 'btn btn-primary', type: 'button', text: 'Put in', 'data-field': 'auto-put', disabled: !r.picks.length && !r.snacks.length, on: { click: putIn } }),
+      auto.rejected.size ? el('button', { class: 'btn', type: 'button', text: 'Start over', on: { click: () => { auto.rejected = new Set(); hub.render(); } } }) : null,
+    ]),
+    fold('auto-snacks', 'Snack ideas', [
+      el('p', { class: 'small muted', style: { margin: 0 }, text: 'The snacks Plan my week takes ideas from. Change, remove or add your own.' }),
+      ...ideas.map((t, i) => el('div', { class: 'row', style: { gap: 'var(--space-2)' } }, [
+        el('input', { class: 'input', value: t, 'aria-label': 'Snack idea', style: { flex: '1 1 200px' }, on: { change: (e) => { const next = [...ideas]; next[i] = e.target.value.trim(); saveIdeas(next.filter(Boolean)); } } }),
+        el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', on: { click: () => saveIdeas(ideas.filter((_, k) => k !== i)) } }),
+      ])),
+      el('div', { class: 'row' }, [el('button', { class: 'btn btn-small', type: 'button', text: 'Add idea', on: { click: () => saveIdeas([...ideas, 'A new snack']) } })]),
+    ], { open: false }),
   ]);
 }

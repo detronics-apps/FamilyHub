@@ -225,3 +225,63 @@ export function applyIdea(ings, idea, servings) {
 }
 
 export const additionFor = (food, portions) => ({ name: food.name, qty: Math.round(food.g * portions), unit: 'g', note: '', fdcId: food.fdc });
+
+/* ----------------------------------------------- plan the week for me (D-143) */
+
+/**
+ * Snack ideas to start from - plain, everyday ones a family can reject or change. Not advice
+ * and not a diet: just things a tired parent may not think of.
+ */
+export const SNACK_IDEAS = ['Carrot sticks', 'Apple slices', 'A banana', 'Yoghurt', 'Cheese cubes', 'A boiled egg', 'Cucumber sticks', 'Popcorn', 'Peanut butter on toast', 'Raisins'];
+export const PLAN_MEALS = ['breakfast', 'lunch', 'dinner'];
+
+/**
+ * A whole week from the family's own Cookbook, for when there is no energy to think (D-143).
+ * Each empty breakfast, lunch and dinner gets a meal marked good for it; favourites come first,
+ * at most two new ones a week while tried ones are left, nothing from the last weeks until the rest are used, and not the
+ * same protein or starch at the same meal two days running. One snack idea a day.
+ * Every pick is a proposal: `rejected` ("day|meal|id", or "day|snack|title") moves to the next one.
+ * @returns {{ picks: [{ day, meal, id, title, why }], snacks: [{ day, title }], empty: [meal] }}
+ */
+export function planWeek({ meals, taken = [], people = [], recent = new Set(), rejected = new Set(), snackIdeas = SNACK_IDEAS, seed = '' }) {
+  const ok = meals.filter((s) => people.every((p) => suitableFor({ allergens: s.allergens ?? [], animal: s.animal ?? [] }, p)));
+  const MEALTAGS = ['breakfast', 'lunch', 'dinner', 'supper', 'snack'];
+  const unmarked = (s) => !(s.tags ?? []).some((t) => MEALTAGS.includes(t));
+  // A meal not marked for any meal is taken as lunch or supper - never breakfast - and says so.
+  // Only entries that are meals: a recipe for rice, a filling or a dough is part of a meal, not one.
+  const fits = (s, meal) => s.type !== 'own' && ((s.tags ?? []).includes(meal) || (meal === 'dinner' && (s.tags ?? []).includes('supper'))
+    || (meal !== 'breakfast' && unmarked(s) && s.type === 'meal'));
+  const hash = (x) => [...`${seed}${x}`].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const score = (s) => (s.rating ?? (s.tried ? 5 : 4)) + (Object.values(s.prefs ?? {}).includes('favourite') ? 2 : 0) - (recent.has(s.id) ? 6 : 0);
+  const isTaken = (day, meal) => taken.some((t) => t.day === day && t.meal === meal);
+  const picks = [];
+  const used = new Map();
+  let newOnes = 0;
+  const empty = new Set();
+  for (const meal of PLAN_MEALS) {
+    const pool = ok.filter((s) => fits(s, meal));
+    for (let day = 0; day < 7; day += 1) {
+      if (isTaken(day, meal)) continue;
+      const before = picks.find((x) => x.day === day - 1 && x.meal === meal);
+      const prev = before ? ok.find((s) => s.id === before.id) : null;
+      const clash = (s) => prev && ((s.proteins ?? []).some((x) => (prev.proteins ?? []).includes(x)) || (s.carbs ?? []).some((x) => (prev.carbs ?? []).includes(x)));
+      // Beyond two new meals a week only when nothing tried is left (a new Cookbook is all new).
+      const overNew = (s) => (!s.tried && newOnes >= 2 ? 1 : 0);
+      const ranked = pool.filter((s) => !rejected.has(`${day}|${meal}|${s.id}`))
+        .sort((a, b) => overNew(a) - overNew(b) || (used.get(a.id) ?? 0) - (used.get(b.id) ?? 0) || clash(a) - clash(b) || score(b) - score(a) || hash(`${day}${meal}${a.id}`) - hash(`${day}${meal}${b.id}`));
+      const s = ranked[0];
+      if (!s) { empty.add(meal); continue; }
+      used.set(s.id, (used.get(s.id) ?? 0) + 1);
+      if (!s.tried) newOnes += 1;
+      const why = unmarked(s) ? `not marked for a meal - taken as ${meal === 'dinner' ? 'supper' : 'lunch'}` : !s.tried ? 'new - not tried yet' : s.rating != null && s.rating >= 7 ? `rated ${s.rating}/10` : Object.values(s.prefs ?? {}).includes('favourite') ? 'someone’s favourite' : 'had before';
+      picks.push({ day, meal, id: s.id, title: s.title, why });
+    }
+  }
+  const ideas = snackIdeas.map((x) => String(x).trim()).filter(Boolean);
+  const snacks = [];
+  for (let day = 0; day < 7 && ideas.length; day += 1) {
+    const left = ideas.filter((t) => !rejected.has(`${day}|snack|${t}`));
+    if (left.length) snacks.push({ day, title: left[(day + (hash('snack') % left.length)) % left.length] });
+  }
+  return { picks, snacks, empty: [...empty] };
+}

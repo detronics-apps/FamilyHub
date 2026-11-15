@@ -11,7 +11,7 @@ import { REFERENCE, total, SELL_DEFAULTS } from '../finance/maths.js';
 import { historyGrowth, CGT } from './ownrent.js';
 import { EVENT_KINDS } from './bondlog.js';
 import { homePlan, withAndWithout, sameMoney, kindOf, KINDS, SECTIONS, SECTIONS_ON, SCENARIO_KINDS, PLAN_DEFAULTS } from './home.js';
-import { shows, draft, loadDraft, input, info, linesPanel as eventsPanel, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, RULE, savedPanel, exportBar, rand, pct, months } from '../finance/pod.js';
+import { shows, hiddenNote, draft, loadDraft, input, info, linesPanel as eventsPanel, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, RULE, savedPanel, exportBar, rand, pct, months } from '../finance/pod.js';
 import { HOME_HELP as H } from '../finance/help.js';
 import { rangePanel, rangeParts } from './range-view.js';
 import { scenarioRange, defaultRanges, measure } from './scenarios.js';
@@ -165,7 +165,7 @@ const hasHome = (v) => !isRent(v);
 /** The page's sections, in the order a decision is made. `tick`: can be left out. */
 const SECS = [
   { key: 'home', title: 'The home', when: hasHome, fields: [
-    f('fromMonth', 'Buying in', 'month', { fallback: thisMonth, fallbackLabel: 'This month', when: isBuy }),
+    f('fromMonth', 'Buying in', 'month', { level: 'advanced', fallback: thisMonth, fallbackLabel: 'This month', when: isBuy }),
     f('price', 'Price', 'money', { when: isBuy }),
     f('worthNow', 'What it would sell for now', 'money', { when: isOwn }),
     f('boughtFor', 'We bought it for', 'money', { optional: true, when: isOwn }),
@@ -175,25 +175,25 @@ const SECS = [
     f('growthPct', 'House prices grow by', 'percent', { source: { kind: 'illustrative' } }),
   ], extra: (hub, d) => historyLine(hub, d) },
   { key: 'rentSec', title: 'The rent', when: isRent, fields: [
-    f('fromMonth', 'Renting from', 'month', { fallback: thisMonth, fallbackLabel: 'This month' }),
+    f('fromMonth', 'Renting from', 'month', { level: 'advanced', fallback: thisMonth, fallbackLabel: 'This month' }),
     f('rent', 'Rent a month', 'money'),
-    f('rentRisePct', 'Rent rises by', 'percent', { source: { kind: 'illustrative' } }),
-    f('rentDeposit', 'Rental deposit', 'money', { optional: true }),
-    f('rentDepositRatePct', 'The deposit earns', 'percent', { optional: true }),
+    f('rentRisePct', 'Rent rises by', 'percent', { level: 'advanced', source: { kind: 'illustrative' } }),
+    f('rentDeposit', 'Rental deposit', 'money', { level: 'advanced', optional: true }),
+    f('rentDepositRatePct', 'The deposit earns', 'percent', { level: 'advanced', optional: true }),
     f('rentMove', 'Moving in', 'money', { optional: true, level: 'advanced' }),
   ] },
   { key: 'alt', title: 'What you compare it with', fields: [
     f('likeRent', 'Rent for a similar home, a month', 'money', { optional: true, when: isBuy }),
     f('likeRent', 'What a similar home rents for now, a month', 'money', { optional: true, when: isOwn }),
-    f('rentRisePct', 'Rent rises by', 'percent', { source: { kind: 'illustrative' }, when: hasHome }),
-    f('likeDeposit', 'Its rental deposit', 'money', { optional: true, when: hasHome }),
-    f('rentDepositRatePct', 'The deposit earns', 'percent', { optional: true, when: hasHome }),
+    f('rentRisePct', 'Rent rises by', 'percent', { level: 'advanced', source: { kind: 'illustrative' }, when: hasHome }),
+    f('likeDeposit', 'Its rental deposit', 'money', { level: 'advanced', optional: true, when: hasHome }),
+    f('rentDepositRatePct', 'The deposit earns', 'percent', { level: 'advanced', optional: true, when: hasHome }),
     f('price', 'A similar home would cost', 'money', { optional: true, when: isRent }),
     f('deposit', 'Deposit you would put down', 'money', { source: { kind: 'assumption' }, when: isRent }),
     f('ratePct', 'Bond interest rate', 'percent', { source: { ref: REFERENCE.prime }, when: isRent }),
     f('termYears', 'Bond over', 'years', { source: { kind: 'assumption' }, when: isRent }),
     f('ratesTaxes', 'Its rates, levies and insurance a month', 'money', { optional: true, when: isRent }),
-    f('maintYearly', 'Its maintenance and repairs a year', 'money', { optional: true, when: isRent }),
+    f('maintYearly', 'Its maintenance and repairs a year', 'money', { level: 'advanced', optional: true, when: isRent }),
     f('growthPct', 'House prices grow by', 'percent', { source: { kind: 'illustrative' }, when: isRent }),
     f('investPct', 'Investments grow by, before tax', 'percent', { source: { kind: 'illustrative' } }),
     f('investTaxPct', 'Share of growth lost to tax', 'percent', { level: 'advanced', unitText: '%', source: { kind: 'illustrative' } }),
@@ -202,27 +202,27 @@ const SECS = [
   { key: 'sellFirst', title: SECTIONS.sellFirst, tick: true, when: (v) => !isOwn(v), fields: [
     f('sellPrice', 'Our home will sell for', 'money'),
     f('owedNow', 'Still owed on its bond', 'money', { source: { kind: 'assumption' } }),
-    f('agentPct', 'Agent’s commission', 'percent', { unitText: '% plus VAT', source: { kind: 'illustrative' } }),
-    f('coc', 'Electrical certificate', 'money', { source: { kind: 'illustrative' } }),
+    f('agentPct', 'Agent’s commission', 'percent', { level: 'advanced', unitText: '% plus VAT', source: { kind: 'illustrative' } }),
+    f('coc', 'Electrical certificate', 'money', { level: 'advanced', source: { kind: 'illustrative' } }),
     f('cancelFee', 'Bond cancellation attorney', 'money', { level: 'advanced', source: { kind: 'illustrative' } }),
     f('noticeShort', 'Months of notice the bank will not get', 'number', { level: 'advanced', source: { kind: 'assumption' } }),
     f('beetle', 'Beetle certificate', 'money', { level: 'advanced', optional: true }),
     f('gas', 'Gas certificate', 'money', { level: 'advanced', optional: true }),
     f('fence', 'Electric fence certificate', 'money', { level: 'advanced', optional: true }),
     f('boughtFor', 'We bought it for', 'money', { level: 'advanced', optional: true, info: 'Only to check the tax on the gain: none on the first R3 million.' }),
-    f('renovations', 'Kept for renovations', 'money', { optional: true, when: isBuy }),
-    f('reserve', 'Kept free, just in case', 'money', { optional: true }),
+    f('renovations', 'Kept for renovations', 'money', { level: 'advanced', optional: true, when: isBuy }),
+    f('reserve', 'Kept free, just in case', 'money', { level: 'advanced', optional: true }),
   ], extra: (hub, d, plan) => saleBox(plan) },
   { key: 'buying', title: 'Buying it', when: isBuy, fields: [
     f('deposit', 'Deposit', 'money', { source: { kind: 'assumption' }, when: (v) => !(v.on?.sellFirst) }),
-    f('moveCost', 'Moving in', 'money', { optional: true }),
+    f('moveCost', 'Moving in', 'money', { level: 'advanced', optional: true }),
     f('quoteTransfer', 'Transfer attorney’s quote', 'money', { estimate: true, level: 'advanced' }),
     f('quoteBond', 'Bond attorney’s quote', 'money', { estimate: true, level: 'advanced' }),
   ], extra: (hub, d, plan) => buyingBox(plan) },
   { key: 'bond', title: SECTIONS.bond, tick: true, when: hasHome, fields: [
     f('ratePct', 'Interest rate', 'percent', { source: { ref: REFERENCE.prime }, when: isBuy }),
     f('termYears', 'Over', 'years', { source: { kind: 'assumption' }, when: isBuy }),
-    f('income', 'Household income a month, before tax', 'money', { optional: true, when: isBuy }),
+    f('income', 'Household income a month, before tax', 'money', { level: 'advanced', optional: true, when: isBuy }),
     f('bondLoan', 'The bond when it started', 'money', { when: isOwn }),
     f('bondStart', 'It started in', 'month', { when: isOwn }),
     f('bondYears', 'Over', 'years', { source: { kind: 'assumption' }, when: isOwn }),
@@ -231,15 +231,15 @@ const SECS = [
   { key: 'running', title: SECTIONS.running, tick: true, when: hasHome, fields: [
     f('ratesTaxes', 'Rates and taxes a month', 'money', { optional: true }),
     f('levies', 'Levies a month', 'money', { optional: true }),
-    f('leviesRisePct', 'Levies rise by', 'percent', { placeholder: 'as costs', fallback: () => null, fallbackLabel: 'As costs rise - empty', when: (v) => n(v.levies) > 0 }),
+    f('leviesRisePct', 'Levies rise by', 'percent', { level: 'advanced', placeholder: 'as costs', fallback: () => null, fallbackLabel: 'As costs rise - empty', when: (v) => n(v.levies) > 0 }),
     f('insurance', 'Building insurance a month', 'money', { optional: true }),
-    f('maintYearly', 'Maintenance and repairs a year - what you really spend', 'money', { optional: true, when: (v) => v.maintMode !== 'percent' }),
+    f('maintYearly', 'Maintenance and repairs a year - what you really spend', 'money', { level: 'advanced', optional: true, when: (v) => v.maintMode !== 'percent' }),
     f('maintMode', 'Maintenance as', 'choice', { level: 'advanced', redraw: true, choices: [{ value: 'amount', label: 'Our figure' }, { value: 'percent', label: 'Percentage' }] }),
     f('upkeepPct', 'Upkeep, of the value a year', 'percent', { level: 'advanced', source: { kind: 'illustrative' }, when: (v) => v.maintMode === 'percent' }),
     f('escalatePct', 'Costs rise by', 'percent', { level: 'advanced', source: { ref: REFERENCE.cpi } }),
   ] },
-  { key: 'upgrades', title: SECTIONS.upgrades, tick: true, when: hasHome, fields: [], extra: (hub, d, plan, refresh) => upgradesPanel(d, refresh) },
-  { key: 'travel', title: SECTIONS.travel, tick: true, fields: [
+  { key: 'upgrades', level: 'advanced', title: SECTIONS.upgrades, tick: true, when: hasHome, fields: [], extra: (hub, d, plan, refresh) => upgradesPanel(d, refresh) },
+  { key: 'travel', level: 'advanced', title: SECTIONS.travel, tick: true, fields: [
     f('km', 'Distance to work, one way', 'kmOne', { optional: true }),
     f('minutes', 'Time to get there, one way', 'minutes', { optional: true }),
     f('days', 'Days at work a month', 'number', { level: 'advanced', source: { kind: 'assumption' } }),
@@ -252,7 +252,7 @@ const SECS = [
     f('sellPct', 'Selling later costs, of the price', 'percent', { unitText: '%', level: 'advanced', source: { kind: 'illustrative' }, when: hasHome }),
     f('marginalPct', 'Your income tax rate on the last rand', 'percent', { unitText: '%', level: 'advanced', source: { kind: 'illustrative' }, when: hasHome }),
   ] },
-  { key: 'situation', title: 'Your situation', fields: [
+  { key: 'situation', level: 'advanced', title: 'Your situation', fields: [
     f('income', 'Household income a month, before tax', 'money', { optional: true, when: (v) => !isBuy(v) }),
     f('otherCosts', 'Everything else you spend a month', 'money', { optional: true }),
     f('cashNow', 'Cash and savings you have now', 'money', { optional: true }),
@@ -290,12 +290,13 @@ function homeScreen(hub, sec = 'financing') {
   };
   const changed = (key) => (ALL_FIELDS.find((x) => x.key === key)?.redraw ? hub.render() : refresh());
   const plan0 = homePlan(v, today);
-  const sections = SECS.filter((s) => !s.when || s.when(v)).map((s) => sectionPanel(hub, d, s, plan0, refresh, changed, boxes));
+  // Simple asks only what the answer needs (D-137, D-138): nice-to-have sections start at Advanced.
+  const sections = SECS.filter((s) => shows(s.level ?? 'simple') && (!s.when || s.when(v))).map((s) => sectionPanel(hub, d, s, plan0, refresh, changed, boxes));
   refresh();
   return el('section', { class: 'stack', 'aria-labelledby': 'home-title' }, [
     el('h1', { id: 'home-title', text: d.title || 'A home', style: { margin: 0 } }),
     sectionBar(hub, 'home', 'financing'),
-    repairsPanel(hub, ctx),
+    shows('advanced') ? repairsPanel(hub, ctx) : null,
     el('p', { class: 'muted', style: { margin: 0 }, text: 'Everything about one home, in sections. Tick a section off to leave it out, fold away what you do not need, and tap (i) for what a figure is and where to find yours.' }),
     el('div', { class: 'panel stack' }, [
       el('div', { class: 'chipset', role: 'group', 'aria-label': 'This home' }, Object.entries(KINDS).map(([k, label]) => el('button', {
@@ -304,8 +305,9 @@ function homeScreen(hub, sec = 'financing') {
       }))),
     ]),
     figuresFold(v, today, [
+      hiddenNote(SECS.flatMap((s) => s.fields.map((x) => (s.level ? { ...x, level: s.level } : x))), d),
       ...sections,
-      hasHome(v) && (v.on?.bond ?? true) ? eventsPanel(d, refresh, 'scenarios', SCENARIO_KINDS, isOwn(v) ? 'What if… (from today on)' : 'What if…', H.scenarios, true, true) : null,
+      shows('advanced') && hasHome(v) && (v.on?.bond ?? true) ? eventsPanel(d, refresh, 'scenarios', SCENARIO_KINDS, isOwn(v) ? 'What if… (from today on)' : 'What if…', H.scenarios, true, true) : null,
     ]),
     answer,
     savedPanel(hub, {
@@ -562,12 +564,12 @@ function results(hub, d) {
     cmp.values ? sellAfterPanel(hub, d, cmp, H, p) : null,
     range?.explore,
     range?.moves,
-    cmp.values ? worthPanel(cmp, p, span, xLabel, [payoff, todayMark, { x: H, label: 'You sell' }]) : null,
-    cmp.values && p.kind === 'buy' ? breakEvenPanel(hub, v, today, H, xLabel) : null,
-    situationsPanel(hub, v, sit, H, xLabel, span, [payoff, todayMark]),
+    cmp.values && shows('advanced') ? worthPanel(cmp, p, span, xLabel, [payoff, todayMark, { x: H, label: 'You sell' }]) : null,
+    cmp.values && p.kind === 'buy' && shows('advanced') ? breakEvenPanel(hub, v, today, H, xLabel) : null,
+    shows('advanced') ? situationsPanel(hub, v, sit, H, xLabel, span, [payoff, todayMark]) : null,
     costSplit(p, N, span, xLabel, [payoff, todayMark], v, cmp),
-    p.kind !== 'rent' ? equityPanel(hub, d, p, today, span, xLabel, [payoff, todayMark], esc) : null,
-    carryPanel(v, p, today, homeRange, H, cmp.values ? cmp : null),
+    p.kind !== 'rent' && shows('advanced') ? equityPanel(hub, d, p, today, span, xLabel, [payoff, todayMark], esc) : null,
+    shows('advanced') ? carryPanel(v, p, today, homeRange, H, cmp.values ? cmp : null) : null,
     forgotten(v, p, cmp.values ? cmp : null),
   ];
   // Year by year, folded away (D-089): every year from the start to where the graphs end, with

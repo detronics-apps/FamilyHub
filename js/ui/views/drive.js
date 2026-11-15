@@ -162,15 +162,19 @@ export function openFirstConnect(ctx) {
   const t = f.theirs;
   const mine = ctx.app.household;
   const { close } = modal({
-    title: 'Your Drive folder already has a family',
+    title: 'Which family should this device use?',
     body: [
-      el('p', { text: `The folder holds ${t.household.name}: ${t.people.length} people and ${t.chores.length} chores. This device has ${mine.household.name}: ${mine.people.length} people and ${mine.chores.length} chores.` }),
-      el('p', { class: 'small muted', text: 'On a second laptop or after reinstalling, "Use the folder’s family" is usually right.' }),
+      el('p', { text: `Your Drive folder has ${t.household.name} (${t.people.length} people, ${t.chores.length} chores). This device has ${mine.household.name} (${mine.people.length} people, ${mine.chores.length} chores).` }),
+      el('ul', {}, [
+        el('li', { text: `Use Drive: this device opens ${t.household.name} from Drive. What is on this device now is dropped; Drive is not changed. Usually right on a second laptop.` }),
+        el('li', { text: `Combine: this device’s people and chores are added into ${t.household.name} in Drive. Only if this device has things Drive does not.` }),
+        el('li', { text: 'Cancel: nothing changes, and this device does not use the Drive folder.' }),
+      ]),
     ],
     foot: [
       el('button', { class: 'btn', type: 'button', text: 'Cancel', on: { click: () => { close(); ctx.sync.chooseFirstConnect('cancel'); } } }),
-      el('button', { class: 'btn', type: 'button', text: 'Merge', title: 'Add this device’s family into the folder’s', 'data-field': 'first-merge', on: { click: () => { close(); ctx.sync.chooseFirstConnect('merge'); } } }),
-      el('button', { class: 'btn btn-primary', type: 'button', text: 'Use folder', title: 'Use the family already in the folder', 'data-field': 'first-use', on: { click: () => { close(); ctx.sync.chooseFirstConnect('use'); } } }),
+      el('button', { class: 'btn', type: 'button', text: 'Combine', title: 'Add this device’s family into the one in Drive', 'data-field': 'first-merge', on: { click: () => { close(); ctx.sync.chooseFirstConnect('merge'); } } }),
+      el('button', { class: 'btn btn-primary', type: 'button', text: 'Use Drive', title: 'Use the family already in your Drive folder', 'data-field': 'first-use', on: { click: () => { close(); ctx.sync.chooseFirstConnect('use'); } } }),
     ],
   });
 }

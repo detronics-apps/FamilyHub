@@ -537,6 +537,50 @@ export function addReservation(plan, slotId, { date, meal, portions = 1, note = 
 
 /* ---------------------------------------------------------- shopping */
 
+/**
+ * What the family buys a food in (D-142): "eggs, a tray of 18", "frozen peas, a 1 kg bag".
+ * One record each, kept by the Cookbook; nothing is filled in for them.
+ */
+export function normalisePack(p) {
+  const name = String(p?.name ?? '').trim().slice(0, 80);
+  const qty = Number(p?.qty);
+  const called = String(p?.called ?? '').trim().slice(0, 30);
+  if (!name || !(qty > 0)) return null;
+  return { id: p.id, name, qty, unit: unitKey(p.unit ?? ''), called };
+}
+
+/** "tray of 18", "bag of 1 kg" - or just "18" / "1 kg" with no name for the pack. */
+export const packLabel = (p) => { const size = `${p.qty}${p.unit ? ` ${p.unit}` : ''}`; return p.called ? `${p.called} of ${size}` : size; };
+
+const half = (x) => { const w = Math.floor(x + 1e-9); const f = x - w; const part = f > 0.7 ? '¾' : f > 0.4 ? '½' : f > 0.1 ? '¼' : ''; return `${w || ''}${part}` || '0'; };
+
+/**
+ * What to buy for one shopping line, and what is left over (D-142): in the packs the family
+ * buys that food in, or - for things counted whole, like a tomato - whole ones. '' when the
+ * line is already what you buy.
+ */
+export function buyNote(i, packs = []) {
+  if (i?.qty == null || !(i.qty > 0)) return '';
+  const u = unitKey(i.unit ?? '');
+  const fam = (x) => UNITS[x]?.[0] ?? `unit:${x}`;
+  const base = UNITS[u] ? i.qty * UNITS[u][1] : i.qty;
+  const p = packs.map(normalisePack).find((x) => x && nameKey(x.name) === nameKey(i.name) && fam(x.unit) === fam(u));
+  if (p) {
+    const size = UNITS[p.unit] ? p.qty * UNITS[p.unit][1] : p.qty;
+    const n = Math.max(1, Math.ceil(base / size - 1e-9));
+    const spare = n * size - base;
+    const spareText = fam(u) === 'mass' ? (spare >= 1000 ? `${Math.round(spare / 100) / 10} kg` : `${Math.round(spare)} g`)
+      : fam(u) === 'volume' ? (spare >= 1000 ? `${Math.round(spare / 100) / 10} l` : `${Math.round(spare)} ml`) : half(spare);
+    return `buy ${n} × ${packLabel(p)}${spare > 1e-6 ? ` - ${spareText} spare` : ''}`;
+  }
+  // Counted whole (no unit, or a size like "medium" or "head"): you cannot buy half a tomato.
+  if (!UNITS[u] && !WHOLE.test(u) && Math.abs(i.qty - Math.round(i.qty)) > 1e-6) {
+    const n = Math.ceil(i.qty - 1e-9);
+    return `buy ${n} - ${half(n - i.qty)} spare`;
+  }
+  return '';
+}
+
 const nameKey = (n) => String(n).toLowerCase().trim().replace(/\s+/g, ' ').replace(/(es|s)$/, '');
 
 /**

@@ -19,6 +19,7 @@ import {
   variationOf, asVariation, variationSays, setLinked,
   PREFS, ratingMeaning, ratingState, setRating, setTried, setPref, addNote, SUMMARY_VERSION,
   batchMultiplier, splitOwn, mergeOwn, collectRecipes, scaleCarefully, combineIngredients, goodFor, setGoodFor,
+  normalisePack, packLabel,
 } from './logic.js';
 import { ingredientEditor, UNIT_OPTIONS } from '../../ui/ingredient-editor.js';
 import { mealNutrition, batchGrams } from '../../meal-nutrition.js';
@@ -64,6 +65,7 @@ export function render(hub, route) {
   if (screen === 'variations') return variationsScreen(hub, route.rest[0]);
   if (screen === 'with') return goesWithScreen(hub, route.rest[0]);
   if (screen === 'samples') return samplesScreen(hub);
+  if (screen === 'packs') return packsScreen(hub);
   if (screen === 'goodfor') return goodForScreen(hub, route.rest[0], route.rest[1] ?? '');
   // The week and the shopping list moved to their own mini-apps (This Week, Shopping).
   if (screen === 'week' || screen === 'shopping') {
@@ -93,6 +95,7 @@ function recipesScreen(hub) {
       })]),
       el('a', { class: 'btn btn-primary', href: hub.href('new'), text: 'New item', 'data-field': 'add-recipe' }),
       el('a', { class: 'btn', href: hub.href('import'), text: 'Import', title: 'Paste a recipe from a site or a message', 'data-field': 'import-recipe' }),
+      el('a', { class: 'btn', href: hub.href('packs'), text: 'Packs', title: 'The packs you buy things in - a tray of 18 eggs, a 1 kg bag of peas - so the shopping list says how many to buy and what is left over', 'data-field': 'packs' }),
       el('a', { class: 'btn', href: hub.href('samples'), text: 'Samples', title: 'Starter meals with their versions - burgers, pasta, stew, pizza and more', 'data-field': 'samples' }),
     ]),
     fold('cookbook-filters', 'Filters', [
@@ -752,6 +755,48 @@ function importScreen(hub) {
       el('div', { class: 'row' }, [el('span', { class: 'small', text: 'Cups in this recipe are' }), cupSel]),
       el('p', { class: 'small muted', style: { margin: 0 }, text: 'Weights and spoons convert exactly. A cup becomes grams only when we know what a cup of that food weighs (from the food list, or your own size for it); otherwise it stays in ml.' }),
       el('div', { class: 'row' }, [el('button', { class: 'btn btn-primary', type: 'button', text: 'Read it', 'data-field': 'import-read', on: { click: read } })]),
+    ]),
+  ]);
+}
+
+/* ------------------------------------------------------- what we buy */
+
+const packsCol = (hub) => hub.data.collection('packs', { summary: (p) => ({ name: p.name, qty: p.qty, unit: p.unit, called: p.called }), text: (p) => p.name, prefix: 'pak' });
+
+/**
+ * What the family buys each food in (D-142) - "eggs: a tray of 18", "frozen peas: a bag of 1 kg".
+ * Noted once; the shopping list then says how many to buy and what is left over.
+ */
+function packsScreen(hub) {
+  const list = hub.use('packs', async () => (await packsCol(hub).list({ limit: 1000 })).items.map(normalisePack).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name)));
+  if (list.loading) return loading();
+  if (list.error) return failure(list.error);
+  const f = {
+    name: el('input', { class: 'input', placeholder: 'e.g. Eggs', 'aria-label': 'The food', style: { flex: '1 1 160px' }, 'data-field': 'pack-name' }),
+    called: el('input', { class: 'input', placeholder: 'e.g. tray, bag, tin', 'aria-label': 'What the pack is called', style: { maxWidth: '150px' }, 'data-field': 'pack-called' }),
+    qty: el('input', { class: 'input', type: 'number', min: '0', step: 'any', placeholder: 'e.g. 18', 'aria-label': 'How much is in one', style: { maxWidth: '100px' }, 'data-field': 'pack-qty' }),
+    unit: el('select', { class: 'select', 'aria-label': 'Unit', style: { width: 'auto' }, 'data-field': 'pack-unit' }, UNIT_OPTIONS.filter(([u]) => ['', 'g', 'kg', 'ml', 'l', 'slice'].includes(u)).map(([u, t]) => el('option', { value: u, text: t }))),
+  };
+  const add = async () => {
+    const p = normalisePack({ name: f.name.value, qty: f.qty.value, unit: f.unit.value, called: f.called.value });
+    if (!p) { hub.ui.notice('Put in the food and how much is in one.', 'warn'); return; }
+    await packsCol(hub).put(p);
+    hub.ui.notice(`${p.name}: ${packLabel(p)}.`);
+    hub.render();
+  };
+  return el('section', { class: 'stack', 'aria-labelledby': 'packs-title' }, [
+    el('a', { href: hub.href(), class: 'small', text: '‹ Cookbook' }),
+    el('h1', { id: 'packs-title', text: 'What we buy' }),
+    el('p', { class: 'muted', style: { margin: 0 }, text: 'What you buy each food in, as you find it in the shop - a tray of 18 eggs, a 1 kg bag of frozen peas. The shopping list then says how many to buy and what is left over. Things you buy one at a time, like tomatoes, need nothing here: half a tomato in a recipe already says buy 1.' }),
+    el('div', { class: 'panel stack' }, [
+      list.data.length ? el('ul', { class: 'list' }, list.data.map((p) => el('li', {}, [
+        el('span', { class: 'list__main', text: `${p.name}: ${packLabel(p)}` }),
+        el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': `Remove ${p.name}`, on: { click: async () => { await packsCol(hub).remove(p.id); hub.render(); } } }),
+      ]))) : el('p', { class: 'small muted', style: { margin: 0 }, text: 'Nothing noted yet.' }),
+      el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' } }, [
+        f.name, el('span', { class: 'small muted', text: 'comes in a' }), f.called, el('span', { class: 'small muted', text: 'of' }), f.qty, f.unit,
+        el('button', { class: 'btn btn-primary btn-small', type: 'button', text: 'Add', 'data-field': 'pack-add', on: { click: add } }),
+      ]),
     ]),
   ]);
 }

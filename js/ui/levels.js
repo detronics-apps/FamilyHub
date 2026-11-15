@@ -6,9 +6,11 @@ import { el } from './dom.js';
 import { KEYS } from '../storage.js';
 
 export const LEVELS = [
-  { id: 'simple', label: 'Simple', says: 'Just what you need - the answer and the few things that matter most.' },
-  { id: 'advanced', label: 'Advanced', says: 'Every figure and choice, the timelines, and what moves the answer.' },
-  { id: 'expert', label: 'Expert', says: 'Everything in Advanced, plus how each number is worked out, step by step.' },
+  // What each level is for (owner, D-137): Simple asks only what the answer needs; Advanced adds the
+  // nice-to-haves; Expert teaches - what each word means and how each number is worked out.
+  { id: 'simple', label: 'Simple', says: 'Only what is needed to work out the answer.' },
+  { id: 'advanced', label: 'Advanced', says: 'Everything in Simple, plus the nice-to-haves: more detail and more choices.' },
+  { id: 'expert', label: 'Expert', says: 'Everything in Advanced, plus what each word means and how each number is worked out.' },
 ];
 const RANK = { simple: 0, advanced: 1, expert: 2, learn: 2 };   // "learn": the Finance tools' old name for Expert
 

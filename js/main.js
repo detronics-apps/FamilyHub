@@ -41,7 +41,7 @@ import { UNENCRYPTED_NOTE } from './guide.js';
 import { syncChip, syncNotices, phoneButtons } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.26.0';
+export const APP_VERSION = '0.28.1';
 
 const store = createLocalStore(window.localStorage);
 
@@ -281,12 +281,6 @@ function applyTheme() {
 // Buy Me a Coffee (owner's request, 2026-11-02): a line-drawn cup in currentColor, never the emoji.
 const firstVisitNotes = new Set();   // one-off notes showing during this visit (D-133)
 
-/** The note about Family Hub's own address (D-130), shown until this device presses Done. */
-export const NEW_ADDRESS = 'https://familyhub.detronics.co.za/';
-export const MOVING = {
-  id: 'moving-familyhub-detronics',
-  text: `Family Hub is moving to its own address, ${NEW_ADDRESS.replace(/^https:\/\/|\/$/g, '')}, so no other app on the old address can see your family's things. With a Drive folder: open the new address and reconnect the folder there. Without one: first save a family file (Settings › Google Drive › Family file › Save file), then open it at the new address.`,
-};
 export const COFFEE_URL = 'https://buymeacoffee.com/detronics';
 
 function buildHeader() {
@@ -465,8 +459,6 @@ function renderNow() {
   // the standing notices underneath it.
   const items = [];
   if (app.storageError) items.push({ id: `storage:${app.storageError}`, level: 'error', text: app.storageError });
-  // Family Hub's own address (D-130): the browser keeps a family's things per address, so before the
-  // move each device needs its family file saved, or its Drive folder reconnected after.
   // The first time Medical or Finance opens on this device: say plainly how it is stored (D-133).
   const careful = route.name === 'medical' || (manifestFor(route.name) && sectionOf(manifestFor(route.name)) === 'finance') || (route.name === 'section' && route.sub === 'finance');
   const noteId = careful ? `unencrypted:${route.name === 'medical' ? 'medical' : 'finance'}` : null;
@@ -475,9 +467,6 @@ function renderNow() {
     firstVisitNotes.add(noteId);
     if (!app.device.notesDone.includes(noteId)) setDevice({ notesDone: [...app.device.notesDone, noteId] });
     items.push({ id: noteId, level: 'info', text: UNENCRYPTED_NOTE, action: { label: 'Privacy', onClick: () => openDoc('privacy') } });
-  }
-  if (app.household && !app.device.notesDone.includes(MOVING.id)) {
-    items.push({ id: MOVING.id, level: 'info', text: MOVING.text, action: { label: 'Done', onClick: () => { setDevice({ notesDone: [...app.device.notesDone, MOVING.id] }); render(); } } });
   }
   // Drive notices that need an answer get their own slot, never folded in with the rest.
   const driveItems = app.household ? syncNotices(ctx) : [];

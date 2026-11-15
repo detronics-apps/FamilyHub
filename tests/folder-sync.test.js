@@ -96,6 +96,18 @@ test('both changed the same field: conflict reported and NOTHING written', async
   assert.deepEqual(store.files, snapshot, 'the folder is untouched until a person decides');
 });
 
+test('first connect with nothing on this device (a new address): the folder’s family is used, no question (D-136)', async () => {
+  const store = createMemoryStore();
+  await writeHousehold(store, demoHousehold(TODAY));
+  const empty = { ...fixture().h, people: [], chores: [], events: [] };
+  const before = JSON.stringify(store.files);
+  const r = await syncHousehold(store, { base: null, mine: empty });
+  assert.equal(r.status, 'adopted');
+  assert.ok(r.first);
+  assert.equal(r.household.household.name, 'The Example family');
+  assert.equal(JSON.stringify(store.files), before, 'the folder is not touched');
+});
+
 test('first connect to a folder that already has a family: the person decides', async () => {
   const store = createMemoryStore();
   await writeHousehold(store, demoHousehold(TODAY));
