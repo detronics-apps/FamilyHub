@@ -961,6 +961,20 @@ folder's family"; it now says to make a folder called Family Hub and choose that
 (D-136). Not changed, by the owner's decision: the car tool does not count what the cash could have earned -
 "you needed the car"; renting or cycling a car is out of scope.
 
+**D-145 New or second-hand, and the balloon on its own (owner, 2026-11-15).** "It is also valid to compare buying a
+second-hand car versus buying a new car ... how would you build up the balloon payment at the end? Or are you just
+then selling the car before the balloon payment is due?" Each car is now New or Second-hand (Simple). A new car has
+no past, so its accident, owner, service-record and wear checks are left out (the papers, the test drive and the
+feeling stay), and it takes a warranty and a service plan in years and/or km (Advanced, from the dealer's offer):
+while the warranty lasts, "Other repairs" count nothing; while the service plan lasts, services and oil count
+nothing - each ends at the years or the km, whichever comes first at the distance driven. The balloon is shown on
+its own: the amount and the month it is due; sold before then, what the sale leaves after the bank is paid (or what
+would still be owed); kept to the end, three ways worked out - save for it (the balloon spread over the loan's
+months), finance it again (a 36-month loan at the same rate, with its interest and fees), or sell it then. None is
+recommended. Compare adds New or second-hand, the month from the budget (instalment and running costs), the balloon
+and the cover. No depreciation, warranty or price figures are filled in for new against used: the family puts in
+the dealer's offer and what such a car sells for.
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in

@@ -126,6 +126,15 @@ export const CAR_CHECKS = [
 ];
 
 /**
+ * A new car has no past: no accident history, owners, service record or wear to inspect (D-145).
+ * What stays: the papers, the test drive, and how it feels. The family's own checks stay too.
+ */
+const CAR_HISTORY = new Set(['c-o-panels', 'c-o-roof', 'c-o-km', 'c-q-why', 'c-q-accident', 'c-q-service', 'c-q-owed', 'c-q-owners',
+  'c-roof', 'c-sounds', 'c-damage', 'c-brakes', 'c-wipers', 'c-tyres', 'c-fluids', 'c-rust', 'c-elec']);
+export const NEW_CAR_CHECKS = CAR_CHECKS.filter((x) => !CAR_HISTORY.has(x.id));
+export const carChecksFor = (values) => (values?.condition === 'new' ? NEW_CAR_CHECKS : CAR_CHECKS);
+
+/**
  * The family's list: the seeded checks with their changes, less those removed, plus their
  * own (for every one), plus this one's own. `fam` = { edits, removed, added, matters }.
  */

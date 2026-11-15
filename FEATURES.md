@@ -590,6 +590,18 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### New or second-hand, and the balloon (v0.28.0, 2026-11-15)
+**What it does:**
+- **New or second-hand** on every car. New: no history checks, and the warranty and service plan pay for repairs
+  and services for as long as they last.
+- **The balloon on its own:** when it is due, and how it gets paid - sold before it is due, saved for (R2 250 a
+  month), financed again (about R4 569 a month for 3 years) or the car sold then.
+- **Compare** a new car against a second-hand one: the month from your budget, the total, the balloon, the cover,
+  and what the checks found.
+**Why it is there:** "How would you build up the balloon payment at the end? Or are you just then selling the car
+before the balloon payment is due?" (D-145)
+**Show it:** Finance › Cars › Add › Financing: choose New, put in a 30% balloon and a 5-year warranty.
+
 #### Fixes (v0.27.1, 2026-11-15)
 **What it does:** a car paid in cash shows no loan and no bank fees; the Phone and laptop steps ask for a Family Hub
 folder in Drive. (D-144)

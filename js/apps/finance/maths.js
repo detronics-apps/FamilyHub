@@ -100,7 +100,20 @@ export const CAR_DEFAULTS = {
   fuelPrice: null, homeTariff: ENERGY.home.value, publicTariff: ENERGY.public.value, chargeLoss: 10, chargerInstall: null, repairs: null,
   fuelRisePct: REFERENCE.cpi.value, elecRisePct: ENERGY.elecRise.value,
   resaleMode: 'depreciation', depreciationPct: 15, resaleAmount: null, kmYearly: null,
+  // New or second-hand (D-145). A new car's warranty and service plan, in years and/or km: while
+  // they cover it, repairs (warranty) and services and oil (service plan) count nothing.
+  condition: 'used', warrantyYears: null, warrantyKm: null, planYears: null, planKm: null,
 };
+
+/** The months a cover lasts: the sooner of its years and its kilometres (at the distance driven). */
+export function coverMonths(years, km, kmYearly) {
+  const a = num(years) > 0 ? num(years) * 12 : null;
+  const b = num(km) > 0 && num(kmYearly) > 0 ? (num(km) / num(kmYearly)) * 12 : null;
+  return a == null && b == null ? 0 : Math.floor(Math.min(a ?? Infinity, b ?? Infinity));
+}
+
+/** How long a refinanced balloon is shown over (D-145): a choice for the sum, not advice. */
+export const BALLOON_REFINANCE_MONTHS = 36;
 
 /**
  * What the car's fuel and electricity cost a month in the first year, from the distance
@@ -213,11 +226,18 @@ export function carCost(input, today = null) {
   const ownFuel = num(v.fuel);
   const fuelMonth = energyOn ? ownFuel ?? e.fuelMonth : 0;
   const elecMonth = energyOn && ownFuel == null ? e.elecMonth : 0;
-  const steady = !runningOn ? 0 : (num(v.insurance) ?? 0) + (num(v.upkeep) ?? 0)
-    + ((num(v.licenceYearly) ?? 0) + (num(v.serviceYearly) ?? 0) + (num(v.tyresYearly) ?? 0) + (USES_FUEL.has(v.power) ? num(v.oilYearly) ?? 0 : 0)) / 12;
+  // Kept apart so a new car's cover can take out what it pays for (D-145).
+  const always = !runningOn ? 0 : (num(v.insurance) ?? 0) + ((num(v.licenceYearly) ?? 0) + (num(v.tyresYearly) ?? 0)) / 12;
+  const serviced = !runningOn ? 0 : ((num(v.serviceYearly) ?? 0) + (USES_FUEL.has(v.power) ? num(v.oilYearly) ?? 0 : 0)) / 12;
+  const repairsMonth = !runningOn ? 0 : num(v.upkeep) ?? 0;
+  const isNew = v.condition === 'new';
+  const warrantyM = isNew ? coverMonths(v.warrantyYears, v.warrantyKm, v.kmYearly) : 0;
+  const planM = isNew ? coverMonths(v.planYears, v.planKm, v.kmYearly) : 0;
+  const steadyAt = (m) => always + (m <= planM ? 0 : serviced) + (m <= warrantyM ? 0 : repairsMonth);
+  const steady = steadyAt(1);
   const runMonth = steady + fuelMonth + elecMonth;
   const yr = (m) => Math.floor((m - 1) / 12);
-  const runningIn = (m) => steady * (1 + esc) ** yr(m) + fuelMonth * (1 + (num(v.fuelRisePct) ?? 0) / 100) ** yr(m) + elecMonth * (1 + (num(v.elecRisePct) ?? 0) / 100) ** yr(m);
+  const runningIn = (m) => steadyAt(m) * (1 + esc) ** yr(m) + fuelMonth * (1 + (num(v.fuelRisePct) ?? 0) / 100) ** yr(m) + elecMonth * (1 + (num(v.elecRisePct) ?? 0) / 100) ** yr(m);
 
   // Value over time: a steady yearly drop, either chosen or implied by an expected sale price.
   const resaleAmount = num(v.resaleAmount);
@@ -240,12 +260,28 @@ export function carCost(input, today = null) {
   const atSale = resale - owed;
   // Money taken back out of the loan came into your pocket.
   const total = upfront + toBank + running - atSale - takenSum;
+  // The balloon, on its own (D-145): due with the last instalment. Sold before then, the sale
+  // pays it with the rest of what is owed. Kept to the end: saved for, financed again, or the
+  // car sold then - each worked out, none recommended.
+  let balloonDue = null;
+  if (financed && balloon > 0) {
+    const rf = BALLOON_REFINANCE_MONTHS;
+    const rfMonthly = payment(balloon, r, rf);
+    const worthThen = valueAt(n);
+    balloonDue = {
+      amount: balloon, month: n, beforeSale: keep < n,
+      save: balloon / n,
+      refinance: { months: rf, monthly: rfMonthly + service, interest: rfMonthly * rf - balloon, fees: service * rf },
+      sellThen: { worth: worthThen, left: worthThen - balloon },
+    };
+  }
   return {
     price, deposit, loan, balloon, months: keep, termMonths: n, financed,
     instalment: financed ? pmt + service : 0, repayment: pmt, serviceFee: service,
     interest, fees, toBank, upfront, running, runningFirstMonth: runMonth, charger, repairs,
     energy: { ...e, fuelMonth, elecMonth, own: ownFuel != null }, steadyFirstMonth: steady,
-    resale, owed, atSale, total, taken: takenSum, loanMonths, scenarios: evs.length,
+    resale, owed, atSale, total, taken: takenSum, loanMonths, scenarios: evs.length, balloonDue,
+    budgetMonth: (financed ? pmt + service : 0) + runMonth, isNew, warrantyMonths: warrantyM, planMonths: planM,
     depreciation: price - resale,
     perMonth: total / keep,
     perKm: num(v.kmYearly) ? total / ((num(v.kmYearly) * keep) / 12) : null,

@@ -8,7 +8,7 @@ import { loading, failure } from '../kit.js';
 import { carCost, CAR_SCENARIOS, CAR_DEFAULTS, REFERENCE, sensitivity, CAR_NUDGES, monthlyRate, ENERGY, POWER, typicalLitres, typicalKwh, fuelPriceFor } from '../finance/maths.js';
 import { CAR_HELP } from '../finance/help.js';
 import { shows, draft, loadDraft, linesPanel, inputsPanel, assumed, stat, sums, step, lineChart, chartPanel, RULE, outOf, crossing, whenLabel, savedPanel, compareTable, rand, pct, months } from '../finance/pod.js';
-import { CAR_CHECKS, STAGES, tally } from '../viewing/checks.js';
+import { CAR_CHECKS, STAGES, tally, carChecksFor } from '../viewing/checks.js';
 import { sectionBar, stageScreen, storyScreen, mattersScreen, compareRows, compareTableOf, progressLine, keep, famOf, checklistCol, checksOf, lookOf } from '../viewing/view.js';
 
 const col = (hub) => hub.data.collection('saved', { summary: (r) => ({ title: r.title, kind: r.kind, savedAt: r.savedAt, headline: r.result?.headline }), text: (r) => r.title, prefix: 'car' });
@@ -16,6 +16,8 @@ const KIND = 'car';
 
 const TERMS = [36, 48, 60, 72, 84].map((m) => ({ value: m, label: `${m / 12} years` }));
 const FIELDS = [
+  { key: 'condition', label: 'New or second-hand', type: 'choice', level: 'simple', redraw: true, choices: [{ value: 'new', label: 'New' }, { value: 'used', label: 'Second-hand' }],
+    info: 'New: no history to check, and the warranty and service plan pay for repairs and services for a while. Second-hand: the checks before you buy, and repairs and services are yours from day one.' },
   { key: 'price', label: 'Price of the car', type: 'money', level: 'simple' },
   { key: 'deposit', label: 'Deposit', type: 'money', level: 'simple', source: { kind: 'assumption' } },
   { key: 'repairs', label: 'Repairs after buying', type: 'money', level: 'advanced', optional: true, hint: 'Once off: what you noted at the viewing, or a quote. Counted with what is paid up front.' },
@@ -46,6 +48,11 @@ const FIELDS = [
   { key: 'licenceYearly', label: 'Licence and other yearly costs', type: 'money', level: 'advanced', optional: true, group: 'running' },
   { key: 'upkeep', label: 'Other repairs, a month on average', type: 'money', level: 'advanced', optional: true, group: 'running', hint: 'Brakes, batteries, wipers, the unexpected. More once the warranty ends.' },
   { key: 'escalatePct', label: 'Insurance, service and repairs rise by', type: 'percent', level: 'advanced', source: { ref: REFERENCE.cpi }, group: 'running' },
+  // A new car's cover (D-145): from the dealer's offer. The sooner of the years and the km.
+  { key: 'warrantyYears', label: 'Warranty, years', type: 'years', level: 'advanced', optional: true, group: 'cover', when: (v) => v.condition === 'new', hint: 'From the dealer’s offer. While it lasts, "Other repairs" count nothing.' },
+  { key: 'warrantyKm', label: 'Warranty, km', type: 'km', level: 'advanced', optional: true, group: 'cover', when: (v) => v.condition === 'new', hint: 'It ends at the years or the km, whichever comes first - worked out from the distance driven.' },
+  { key: 'planYears', label: 'Service plan, years', type: 'years', level: 'advanced', optional: true, group: 'cover', when: (v) => v.condition === 'new', hint: 'While it lasts, services and oil count nothing.' },
+  { key: 'planKm', label: 'Service plan, km', type: 'km', level: 'advanced', optional: true, group: 'cover', when: (v) => v.condition === 'new' },
   { key: 'balloonPct', label: 'Balloon (of the price)', type: 'percent', level: 'advanced', source: { kind: 'assumption' }, hint: 'Part of the price left to pay in one go at the end. Lower instalments, more interest.', group: 'loan' },
   { key: 'initiationFee', label: 'Initiation fee', type: 'money', level: 'advanced', source: { kind: 'illustrative' }, hint: 'A once-off fee for opening the loan.', group: 'loan' },
   { key: 'feeFinanced', label: 'Initiation fee added to the loan', type: 'check', level: 'advanced', source: { kind: 'assumption' }, group: 'loan' },
@@ -58,6 +65,7 @@ for (const f of FIELDS) f.info ??= CAR_HELP[f.key];
 const GROUPS = {
   energy: { title: 'Fuel or charging', info: CAR_HELP.energy, tick: 'energy' },
   running: { title: 'Insurance, service and upkeep', info: CAR_HELP.running, tick: 'running' },
+  cover: { title: 'Warranty and service plan', info: 'A new car’s warranty pays for repairs, and its service plan for services, until the years or the kilometres run out. Put in what the dealer’s offer says - every car and dealer differs.' },
   loan: { title: 'Loan details', info: CAR_HELP.loan },
   sale: 'Selling it',
 };
@@ -82,7 +90,7 @@ const summaryOf = (values, today) => { const c = carCost(values, today); return 
 function lookCtx(hub, d, fam) {
   const summary = () => summaryOf(d.values, hub.today());
   return {
-    hub, d, fam, seed: CAR_CHECKS, prefix: 'c', word: 'car', screen: 'car', rule: null, famCol: checklistCol(hub),
+    hub, d, fam, seed: carChecksFor(d.values), prefix: 'c', word: 'car', screen: 'car', rule: null, famCol: checklistCol(hub),
     save: (loud) => keep(hub, col(hub), KIND, d, summary, { loud }),
     saveAs: async (name) => { d.title = name; await keep(hub, col(hub), KIND, d, summary, { create: true }); },
   };
@@ -105,7 +113,7 @@ function listScreen(hub) {
       all.loading ? el('p', { class: 'muted', text: 'Loading…' }) : all.error ? failure(all.error) : all.data.length ? el('ul', { class: 'list' }, all.data.map((rec) => el('li', {}, [
         el('div', { class: 'list__main' }, [el('strong', { text: rec.title || 'Untitled' }),
           el('div', { class: 'small muted', text: [summaryOf({ ...CAR_DEFAULTS, ...rec.values }, today).headline, rec.savedAt ? `saved ${rec.savedAt.slice(0, 10)}` : null].filter(Boolean).join(' · ') }),
-          fam.data ? el('div', { class: 'small muted', text: progressLine(CAR_CHECKS, fam.data, rec.values ?? {}) }) : null]),
+          fam.data ? el('div', { class: 'small muted', text: progressLine(carChecksFor(rec.values), fam.data, rec.values ?? {}) }) : null]),
         el('button', { class: 'btn btn-small', type: 'button', text: 'Open', 'aria-label': `Open ${rec.title}`, 'data-field': `open:${rec.id}`, on: { click: () => { loadDraft(KIND, CAR_DEFAULTS, rec); hub.go('car'); } } }),
         el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove', 'aria-label': `Remove ${rec.title}`, on: { click: async () => {
           if (!(await confirmAction({ title: `Remove "${rec.title || 'Untitled'}"?`, text: 'The saved car, with everything noted about it, is deleted. This cannot be undone.', confirmLabel: 'Remove', danger: true }))) return;
@@ -216,6 +224,7 @@ function results(d, today) {
         { label: 'Total', value: -c.total, total: true, note: 'The same total, counted the other way - repaying the loan is paying for the car, not a cost on top of it.' },
       ]),
     ]),
+    balloonPanel(c, today),
     c0 ? el('div', { class: 'panel stack' }, [el('h2', { text: 'With your what-ifs', style: { margin: 0 } }), el('p', { style: { margin: 0 }, text: `Loan paid off after ${months(c.loanMonths)} instead of ${months(c0.loanMonths)}${c.loanMonths < c0.loanMonths ? ` - ${months(c0.loanMonths - c.loanMonths)} sooner` : ''}, with ${rand(Math.abs(c0.interest - c.interest))} ${c.interest <= c0.interest ? 'less' : 'more'} interest. Owning it costs ${rand(Math.abs(c0.total - c.total))} ${c.total <= c0.total ? 'less' : 'more'} over ${months(c.months)}${c.taken ? `, counting the ${rand(c.taken)} taken back out` : ''}.` }), c.taken ? el('p', { class: 'small muted', style: { margin: 0 }, text: 'Most car finance cannot be drawn back out once paid - check with your bank before counting on it.' }) : null]) : null,
     carStory(c, c0),
     assumed(FIELDS, d),
@@ -227,8 +236,43 @@ function results(d, today) {
   return out.filter(Boolean);
 }
 
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const inMonths = (today, m) => { const t = Number(today.slice(0, 4)) * 12 + Number(today.slice(5, 7)) - 1 + m; return `${MONTH_NAMES[t % 12]} ${Math.floor(t / 12)}`; };
+
+/**
+ * The balloon on its own (D-145): what it is, when it is due, and how it gets paid - sold before
+ * it is due, or kept to the end and saved for, financed again, or the car sold then. Each is
+ * worked out; none is recommended.
+ */
+function balloonPanel(c, today) {
+  const b = c.balloonDue;
+  if (!b) return null;
+  const due = inMonths(today, b.month);
+  const lines = [
+    el('p', { style: { margin: 0 } }, [el('strong', { text: `Balloon: ${rand(b.amount)}, due in ${due}` }), ' - with the last instalment.']),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'A balloon is part of the price left to pay in one go at the end. It makes the instalment smaller now, but interest is charged on it the whole time, and the lump sum still has to come from somewhere.' }),
+  ];
+  if (b.beforeSale) {
+    const sold = inMonths(today, c.months);
+    lines.push(el('p', { style: { margin: 0 }, 'data-field': 'balloon-sell-before', text: c.atSale >= 0
+      ? `You plan to sell in ${sold}, before it is due. The sale (${rand(c.resale)}) pays the bank what is still owed, the balloon included - ${rand(c.owed)} - and leaves you ${rand(c.atSale)}.`
+      : `You plan to sell in ${sold}, before it is due. The bank is still owed ${rand(c.owed)}, the balloon included, but the car fetches about ${rand(c.resale)}: you would still owe ${rand(-c.atSale)} after selling it.` }));
+  } else {
+    lines.push(el('ul', { style: { margin: 0 }, 'data-field': 'balloon-ways' }, [
+      el('li', { text: `Save for it: put aside ${rand(b.save)} a month from now, for ${months(b.month)} (before any interest the savings earn).` }),
+      el('li', { text: `Finance it again: a new loan over ${months(b.refinance.months)} at the same rate is about ${rand(b.refinance.monthly)} a month - ${rand(b.refinance.interest)} more interest and ${rand(b.refinance.fees)} in fees.` }),
+      el('li', { text: b.sellThen.left >= 0
+        ? `Sell it then: worth about ${rand(b.sellThen.worth)} by ${due}; after the balloon, ${rand(b.sellThen.left)} is left.`
+        : `Sell it then: worth about ${rand(b.sellThen.worth)} by ${due} - ${rand(-b.sellThen.left)} short of the balloon.` }),
+    ]));
+    lines.push(el('p', { class: 'small muted', style: { margin: 0 }, text: 'The total above counts the balloon paid in its month, from your own money.' }));
+  }
+  return el('div', { class: 'panel stack', 'data-field': 'balloon' }, [el('h2', { text: 'The balloon', style: { margin: 0 } }), ...lines]);
+}
+
 function meaning(c, v) {
   const lines = [];
+  if (c.isNew && (c.warrantyMonths || c.planMonths)) lines.push(`New: ${[c.warrantyMonths ? `the warranty covers repairs for ${months(c.warrantyMonths)}` : null, c.planMonths ? `the service plan covers services for ${months(c.planMonths)}` : null].filter(Boolean).join(', and ')} - those count nothing until then.`);
   if (c.financed) lines.push(`You borrow ${rand(c.loan)} and pay ${rand(c.instalment)} a month for ${months(c.termMonths)}${c.balloon ? `, then ${rand(c.balloon)} as the balloon` : ''}. Of everything paid to the bank, ${rand(c.interest)} is interest and ${rand(c.fees)} fees.`);
   if (c.owed > 0.5) {
     lines.push(`Selling after ${months(c.months)}, you would still owe the bank ${rand(c.owed)}. At about ${rand(c.resale)} for the car, ${c.atSale >= 0 ? `you keep ${rand(c.atSale)} after settling the loan` : `you would need to find ${rand(-c.atSale)} to settle the loan`}.`);
@@ -387,12 +431,17 @@ function compareScreen(hub, param) {
     r.data.length >= 2 ? el('div', { class: 'panel stack' }, [
       el('h2', { text: 'What matters, and what you found', style: { margin: 0 } }),
       el('p', { class: 'small muted', style: { margin: 0 }, text: 'Your must-haves first, then each section and the repairs you noted. Set what matters in Matters.' }),
+      el('p', { class: 'small muted', style: { margin: 0 }, text: 'A new car has no history to check: its accident, owner and wear checks are left out.' }),
       compareTableOf(r.data.map((x) => x.title || 'Untitled'), compareRows(CAR_CHECKS, fam, r.data)),
     ]) : null,
     el('h2', { text: 'The money', style: { margin: 0 } }),
     el('p', { class: 'muted', style: { margin: 0 }, text: `Each saved car or finance option, worked out with today’s maths. Green is cheaper than ${items[0]?.title ?? 'the first'}, orange dearer.` }),
     items.length < 2 ? el('p', { class: 'panel', text: 'Two or more saved options are needed to compare.' }) : compareTable(items, [
+      { label: 'New or second-hand', get: (c) => (c.isNew ? 'New' : 'Second-hand') },
       { label: 'Instalment a month', get: (c) => c.instalment, lower: true },
+      { label: 'A month from your budget: instalment and running costs', get: (c) => c.budgetMonth, lower: true },
+      { label: 'Balloon due', get: (c) => (c.balloonDue ? `${rand(c.balloonDue.amount)} after ${months(c.balloonDue.month)}${c.balloonDue.beforeSale ? ' (sold before)' : ''}` : 'none') },
+      { label: 'Warranty and service plan', get: (c) => (c.isNew ? [c.warrantyMonths ? `warranty ${months(c.warrantyMonths)}` : null, c.planMonths ? `service plan ${months(c.planMonths)}` : null].filter(Boolean).join(', ') || 'not entered' : '-') },
       { label: 'Kept for', get: (c) => months(c.months) },
       { key: 1, label: 'Interest', get: (c) => c.interest, lower: true },
       { key: 1, label: 'Bank fees', get: (c) => c.fees, lower: true },
