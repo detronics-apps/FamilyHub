@@ -975,6 +975,10 @@ recommended. Compare adds New or second-hand, the month from the budget (instalm
 and the cover. No depreciation, warranty or price figures are filled in for new against used: the family puts in
 the dealer's offer and what such a car sells for.
 
+**D-146 The move is done (owner, 2026-11-15).** "All devices using the app has been moved over to the new domain
+name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
+gone. Devices that pressed Done keep the harmless mark in their settings.
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in

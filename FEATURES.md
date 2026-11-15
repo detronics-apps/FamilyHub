@@ -590,6 +590,9 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### The move is done (v0.28.1, 2026-11-15)
+**What it does:** the note about moving to familyhub.detronics.co.za no longer shows - every device has moved. (D-146)
+
 #### New or second-hand, and the balloon (v0.28.0, 2026-11-15)
 **What it does:**
 - **New or second-hand** on every car. New: no history checks, and the warranty and service plan pay for repairs
