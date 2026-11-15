@@ -170,8 +170,11 @@ export function carCost(input, today = null) {
   const price = num(v.price);
   if (price == null || price <= 0) return { missing: ['the price'] };
   const deposit = num(v.deposit) ?? 0;
-  const initiation = num(v.initiationFee) ?? 0;
-  const service = num(v.serviceFee) ?? 0;
+  // Paid in cash (the deposit covers the price): no loan, so no initiation fee and no monthly
+  // bank fee - the defaults belong to a loan (D-144).
+  const cash = price - deposit <= 0.005;
+  const initiation = cash ? 0 : num(v.initiationFee) ?? 0;
+  const service = cash ? 0 : num(v.serviceFee) ?? 0;
   const n = Math.max(0, Math.round(num(v.termMonths) ?? 0));
   const keep = Math.max(1, Math.min(MAX_MONTHS, Math.round((num(v.keepYears) ?? 0) * 12)));
   const loan = price - deposit + (v.feeFinanced ? initiation : 0);

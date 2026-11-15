@@ -263,3 +263,15 @@ test('D-078 car loans: what-ifs month by month, the balloon still due, sections 
   assert.ok(carCost({ ...v, on: { energy: false } }).running < carCost(v).running);
   assert.equal(carCost({ ...v, on: { energy: false, running: false } }).running, 0);
 });
+
+test('D-144 a car paid in cash has no loan, no initiation fee and no monthly bank fee', async () => {
+  const { carCost } = await import('../js/apps/finance/maths.js');
+  const c = carCost({ price: 100000, deposit: 100000, keepYears: 3, resaleMode: 'amount', resaleAmount: 80000, on: { energy: false, running: false } });
+  assert.equal(c.loan, 0);
+  assert.equal(c.instalment, 0);
+  assert.equal(c.fees, 0);
+  assert.equal(c.interest, 0);
+  assert.equal(c.total, 20000, 'only the drop in value is left');
+  const financed = carCost({ price: 100000, deposit: 0, termMonths: 60, keepYears: 3, resaleMode: 'amount', resaleAmount: 80000, on: { energy: false, running: false } });
+  assert.ok(financed.fees > 0 && financed.interest > 0, 'a loan keeps its fees');
+});

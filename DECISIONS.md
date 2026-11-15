@@ -953,6 +953,14 @@ nothing from the last two weeks until the rest are used, not the same protein or
 running, and nothing someone cannot eat. One snack idea a day from an editable list (carrot sticks, apple slices,
 yoghurt...). Every pick has an ×; the next idea takes its place. Nothing goes in until Put in.
 
+**D-144 Two fixes from the financial tools review (owner, 2026-11-15).** (1) A car paid in cash - the deposit
+covering the price - no longer shows a loan: the default initiation fee (R1 207.50, "added to the loan") used to
+create a R1 208 loan with a R69 monthly fee, so "cash" showed about R4 000 of interest and fees. With no loan there
+is no initiation fee and no bank fee. (2) The Phone and laptop guide still said "choose My Drive" and "Use the
+folder's family"; it now says to make a folder called Family Hub and choose that (D-131), and names "Use Drive"
+(D-136). Not changed, by the owner's decision: the car tool does not count what the cash could have earned -
+"you needed the car"; renting or cycling a car is out of scope.
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in

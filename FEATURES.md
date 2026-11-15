@@ -590,6 +590,10 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### Fixes (v0.27.1, 2026-11-15)
+**What it does:** a car paid in cash shows no loan and no bank fees; the Phone and laptop steps ask for a Family Hub
+folder in Drive. (D-144)
+
 #### Plan my week, what we buy, and costs thought of for you (v0.27.0, 2026-11-14)
 **What it does:**
 - **Plan my week:** one button in the Meal Planner fills the week from your Cookbook - balanced, favourites first -
