@@ -590,6 +590,10 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### Creators stay put (v0.28.2, 2026-11-20)
+**What it does:** creators and videos are saved in your Drive folder like everything else, and what you type
+into a form is no longer wiped when Family Hub saves in the background. (D-147)
+
 #### The move is done (v0.28.1, 2026-11-15)
 **What it does:** the note about moving to familyhub.detronics.co.za no longer shows - every device has moved. (D-146)
 

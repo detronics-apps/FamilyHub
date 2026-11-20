@@ -28,6 +28,9 @@ export const PATHS = {
   installed: 'Core/installed.json',
   people: 'Data/household/people.json',
   measurements: 'Data/household/measurements.json',
+  // The family's creators and videos (D-147): before 0.28.2 they were never written to the folder.
+  creators: 'Data/household/creators.json',
+  videos: 'Data/household/videos.json',
   rooms: 'Data/household/rooms.json',
   chores: 'Data/chores/chores.json',
   eventsDir: 'Data/chores/events',
@@ -88,6 +91,8 @@ export function householdToFiles(h) {
   files.set(PATHS.people, recordFile('family-hub-people', h.people));
   files.set(PATHS.rooms, recordFile('family-hub-rooms', h.rooms));
   files.set(PATHS.measurements, recordFile('family-hub-measurements', h.measurements ?? []));
+  files.set(PATHS.creators, recordFile('family-hub-creators', h.creators ?? []));
+  files.set(PATHS.videos, recordFile('family-hub-videos', h.videos ?? []));
   files.set(PATHS.chores, recordFile('family-hub-chores', h.chores));
   const months = new Map();
   for (const e of sortEvents(h.events)) {
@@ -119,6 +124,8 @@ export function filesToHousehold(files) {
     chores: readRecords(files.get(PATHS.chores)),
     events,
     measurements: readRecords(files.get(PATHS.measurements)),
+    creators: readRecords(files.get(PATHS.creators)),
+    videos: readRecords(files.get(PATHS.videos)),
   });
   return { ...h, events: sortEvents(h.events) };
 }
@@ -126,7 +133,7 @@ export function filesToHousehold(files) {
 /** Read every household file from the folder (one listing for the month files). */
 export async function readHouseholdFiles(store) {
   const files = new Map();
-  for (const p of [PATHS.marker, PATHS.settings, PATHS.people, PATHS.measurements, PATHS.rooms, PATHS.chores]) {
+  for (const p of [PATHS.marker, PATHS.settings, PATHS.people, PATHS.measurements, PATHS.rooms, PATHS.chores, PATHS.creators, PATHS.videos]) {
     const text = await store.read(p);
     if (text != null) files.set(p, text);
   }
@@ -181,7 +188,10 @@ export const isEmptyHousehold = (h) => !h || (!(h.people?.length) && !(h.chores?
 
 export async function syncHousehold(store, { base, mine }) {
   const current = await readHouseholdFiles(store);
-  const theirs = filesToHousehold(current);
+  let theirs = filesToHousehold(current);
+  // A folder written before creators and videos were saved there (D-147) says nothing about
+  // them - not "none". This device's copy stands, and is written to the folder this time.
+  if (theirs && !current.has(PATHS.creators)) theirs = { ...theirs, creators: mine.creators ?? [], videos: mine.videos ?? [] };
 
   if (!theirs) {
     const written = await writeHousehold(store, mine, current);
@@ -194,7 +204,11 @@ export async function syncHousehold(store, { base, mine }) {
 
   const fpTheirs = fingerprint(theirs);
   const fpMine = fingerprint(mine);
-  if (fpTheirs === fpMine) return { status: 'unchanged', household: mine, conflicts: [], written: [] };
+  if (fpTheirs === fpMine) {
+    // Nothing differs - but a folder from before D-147 still needs its creators and videos files.
+    const written = current.has(PATHS.creators) ? [] : await writeHousehold(store, mine, current);
+    return { status: written.length ? 'written' : 'unchanged', household: mine, conflicts: [], written };
+  }
 
   // First connect to a folder that already holds a family (a second laptop, say). A device with
   // nothing on it - no people, chores or history, as at a new address - simply takes the folder's

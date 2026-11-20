@@ -979,6 +979,17 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-147 Creators were never saved to Drive (owner, 2026-11-20).** "When I tried to add a creator the input bar
+refreshing to nothing ... then when I edit it it tells me there are 2x different saved files ... both end with the
+entire entry deleted." Two causes. (1) The Drive folder saved people, rooms, chores, measurements and history, but
+not the family's creators and videos (D-091, D-112): the next sync read a folder "without" them and either took
+that (the creator vanished) or, after an edit, asked which copy to keep - and neither copy in the folder had it.
+They now have their own files (Data/household/creators.json and videos.json); a folder from before says nothing
+about them rather than "none", so this device's are kept and written on the first sync. (2) The sync runs every
+minute and whenever the window gets focus (coming back from copying a link), and its "Saving" and "Saved" redrew
+the whole page, rebuilding a half-filled form empty. Those routine changes now redraw only the header and the Drive
+notices; the creator and video forms also keep what is typed across any redraw, and focus the first box once.
+
 **D-120 Who wins, said in full (owner, 2026-11-13).** (D-119 is the salary tool's.) The middle box under
 a home's answer said "R41 104 117 more with renting instead" - "more than what, and is this the delta?" It
 now shows, for the year you sell, each side's total and then who wins and by how much ("If you sell in

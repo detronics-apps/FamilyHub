@@ -41,7 +41,7 @@ import { UNENCRYPTED_NOTE } from './guide.js';
 import { syncChip, syncNotices, phoneButtons } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.28.1';
+export const APP_VERSION = '0.28.2';
 
 const store = createLocalStore(window.localStorage);
 
@@ -429,6 +429,13 @@ ctx.hubFor = (manifest, granted) => createHub(manifest, granted, { otherManifest
 ctx.collectionFor = createHub.collectionFor;
 ctx.invalidateAll = createHub.invalidateAll;
 ctx.scanImports = () => scanImportFolder(ctx);
+// Only the header (its Drive chip) and the Drive notices, for the sync's routine Saving and Saved (D-147):
+// the page underneath - and anything half typed in it - stays as it is.
+ctx.renderStatus = () => {
+  if (renderQueued || !dom.header) return;
+  clear(dom.header).append(buildHeader());
+  renderNotices(dom.drive, app.household ? syncNotices(ctx) : [], render);
+};
 
 let lastRouteKey = null;
 let renderQueued = false;

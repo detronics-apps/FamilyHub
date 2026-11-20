@@ -134,3 +134,19 @@ test('a different household in the folder is never merged into this one', async 
   const { h } = fixture();
   await assert.rejects(syncHousehold(store, { base: h, mine: h }), /different household/);
 });
+
+test('D-147 creators and videos are saved in the folder, and a folder from before keeps this device’s', async () => {
+  const store = createMemoryStore();
+  const { h } = fixture();
+  const withCreator = { ...h, creators: [{ id: 'cr1', name: 'A money channel', url: 'https://example.org/', topics: ['finance'] }], videos: [{ id: 'vd1', url: 'https://example.org/v', title: 'A video', topics: ['finance'] }] };
+  // First connect writes everything, creators and videos included.
+  await syncHousehold(store, { base: null, mine: withCreator });
+  const back = filesToHousehold(await readHouseholdFiles(store));
+  assert.equal(back.creators[0]?.name, 'A money channel');
+  assert.equal(back.videos[0]?.title, 'A video');
+  // A folder written before D-147 (no creators file): this device's creators are kept, not taken as "none", and written.
+  await store.remove('Data/household/creators.json'); await store.remove('Data/household/videos.json');
+  const r = await syncHousehold(store, { base: withCreator, mine: withCreator });
+  assert.equal(r.household.creators.length, 1, 'not dropped');
+  assert.equal(filesToHousehold(await readHouseholdFiles(store)).creators.length, 1, 'now in the folder');
+});

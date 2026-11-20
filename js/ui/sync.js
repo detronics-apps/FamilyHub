@@ -64,7 +64,14 @@ export function createSync(ctx) {
     lastReport: null,
   };
 
-  const set = (patch) => { Object.assign(s, patch); ctx.render(); };
+  // "Saving" and "Saved" are routine: only the header and the Drive notices change, so a form
+  // being filled in is never rebuilt under the person typing (D-147). Anything that needs an
+  // answer, or new data, redraws the whole page.
+  const set = (patch) => {
+    const routine = (patch.state === 'saving' || patch.state === 'saved') && (s.state === 'saving' || s.state === 'saved') && !patch.message;
+    Object.assign(s, patch);
+    if (routine && ctx.renderStatus) ctx.renderStatus(); else ctx.render();
+  };
 
   /** Where mini-app records live right now. Null while the folder needs a click to reconnect. */
   function appStore() {

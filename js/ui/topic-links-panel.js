@@ -19,6 +19,17 @@ window.addEventListener('hashchange', () => linkedCache.clear());
 // The one form open: 'creator', 'video', or the id of the creator/video being edited.
 let open = null;
 let openTopic = null;
+// What is typed in the open form, so a redraw while typing (a Drive save, coming back to the
+// window) never empties it (D-147). Cleared when the form closes.
+let typed = {};
+let focusedFor = null;
+const keepTyped = (input, key) => {
+  if (typed[key] !== undefined) input.value = typed[key];
+  input.addEventListener('input', () => { typed[key] = input.value; });
+  return input;
+};
+/** Focus the first box once, when the form opens - not on every redraw. */
+const focusOnce = (input) => { if (focusedFor !== open) { focusedFor = open; queueMicrotask(() => input.focus()); } };
 
 function linkedFor(ctx, topic, apps) {
   if (linkedCache.has(topic)) return linkedCache.get(topic);
@@ -57,9 +68,10 @@ function creatorForm(c, onSave) {
   const name = el('input', { class: 'input', value: c?.example ? '' : c?.name ?? '', maxlength: '80', placeholder: c?.example ? c.name : 'Name', 'aria-label': 'Name', style: { maxWidth: '220px' }, 'data-field': 'tl-c-name' });
   const url = el('input', { class: 'input', value: c?.url ?? '', placeholder: 'Channel or site link', 'aria-label': 'Their link', style: { maxWidth: '280px' }, 'data-field': 'tl-c-url' });
   const note = el('input', { class: 'input', value: c?.example ? '' : c?.note ?? '', maxlength: '300', placeholder: 'Why you follow them (optional)', 'aria-label': 'Note', style: { flex: '1 1 220px' }, 'data-field': 'tl-c-note' });
+  keepTyped(name, 'name'); keepTyped(url, 'url'); keepTyped(note, 'note');
   const save = () => { if (!name.value.trim()) { name.focus(); return; } onSave({ name: name.value, url: url.value, note: note.value }); };
   name.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
-  queueMicrotask(() => name.focus());
+  focusOnce(name);
   return el('div', { class: 'row', 'data-field': 'tl-c-form' }, [name, url, note,
     el('button', { class: 'btn btn-small btn-primary', type: 'button', text: 'Save', 'data-field': 'tl-c-save', on: { click: save } }),
     el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Cancel', on: { click: () => onSave(null) } }),
@@ -75,9 +87,12 @@ function videoForm(v, creators, onSave) {
     el('option', { value: '', text: 'Who made it (optional)' }),
     ...creators.map((c) => el('option', { value: c.id, text: c.name, selected: v?.creatorId === c.id })),
   ]);
+  keepTyped(url, 'url'); keepTyped(title, 'title'); keepTyped(note, 'note');
+  if (typed.by !== undefined) by.value = typed.by;
+  by.addEventListener('change', () => { typed.by = by.value; });
   const save = () => { if (!url.value.trim()) { url.focus(); return; } onSave({ url: url.value, title: title.value, note: note.value, creatorId: by.value }); };
   url.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
-  queueMicrotask(() => url.focus());
+  focusOnce(url);
   return el('div', { class: 'row', 'data-field': 'tl-v-form' }, [url, title, note, creators.length ? by : null,
     el('button', { class: 'btn btn-small btn-primary', type: 'button', text: 'Save', 'data-field': 'tl-v-save', on: { click: save } }),
     el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Cancel', on: { click: () => onSave(null) } }),
@@ -91,11 +106,11 @@ function videoForm(v, creators, onSave) {
 export function topicLinksPanel(ctx, topic, apps, { heading = true } = {}) {
   const h = ctx.app.household;
   if (!h) return null;
-  if (openTopic !== topic.id) { open = null; openTopic = topic.id; }
+  if (openTopic !== topic.id) { open = null; openTopic = topic.id; typed = {}; }
   const linked = linkedFor(ctx, topic.id, apps.filter((a) => LINKED[a.id]));
   const t = topicLinks(h, topic.id, linked.data ?? undefined);
-  const commit = (next) => { open = null; ctx.commit(next); };
-  const toggle = (what) => { open = open === what ? null : what; ctx.render(); };
+  const commit = (next) => { open = null; typed = {}; ctx.commit(next); };
+  const toggle = (what) => { open = open === what ? null : what; typed = {}; ctx.render(); };
 
   if (t.hidden) {
     return el('div', { class: 'panel row', 'data-field': 'topic-links' }, [
