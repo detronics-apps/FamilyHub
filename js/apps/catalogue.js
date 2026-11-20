@@ -82,7 +82,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'decisions', section: 'us', name: 'Decisions', version: '1.4.0',
+      fhManifest: 1, id: 'decisions', section: 'us', name: 'Decisions', version: '1.4.1',
       description: 'Agreements and experiments: try something, look back, adapt.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.2.0' },
       screens: [{ id: 'list', title: 'Decisions' }, { id: 'item', title: 'Decision', nav: false }, { id: 'new', title: 'New decision', nav: false }],
@@ -388,7 +388,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'parenting', section: 'parenting', name: 'Parenting', version: '1.7.0',
+      fhManifest: 1, id: 'parenting', section: 'parenting', name: 'Parenting', version: '1.7.1',
       description: 'Parenting topics as questions to decide together while calm - each of you writes your own reasons, and what you agree is kept in Decisions for the ages it applies to.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [

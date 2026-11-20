@@ -11,7 +11,7 @@ import {
 } from './logic.js';
 import { STARTER } from '../parenting/content.js';
 import { QUESTIONS } from '../parenting/questions.js';
-import { kidsOf, timing, rangeLabel, ageLabel, planText } from '../parenting/logic.js';
+import { kidsOf, timing, rangeLabel, ageLabel, planText, feverPlan } from '../parenting/logic.js';
 import { videosPanel } from '../parenting/videos.js';
 
 const ui = { cat: '', topic: '' };   // the list's filters (D-095)
@@ -29,7 +29,7 @@ function parentingTopic(hub, ref) {
     if (!hub.data.installed('parenting')) return { data: { ...s, title: `${s.title}: our plan` } };
     return hub.use(`pplan:${id}`, async () => {
       const { items } = await hub.data.of('parenting', 'topics').list({ filter: (r) => r.topicId === id, limit: 1 });
-      return { ...s, title: `Our ${s.title.toLowerCase()} plan`, question: 'Our plan, by age: what we do at what temperature, and when we go to a doctor.', agreementText: planText(items[0]?.plan ?? {}), options: [] };
+      return { ...s, title: `Our ${s.title.toLowerCase()} plan`, question: 'Our plan, by age: what we do at what temperature, and when we go to a doctor.', agreementText: planText(id === 'fever' ? feverPlan(items[0]?.plan) : (items[0]?.plan ?? {})), options: [] };
     });
   }
   const q = s && qid ? (QUESTIONS[id] ?? []).find((x) => x.id === qid) : null;

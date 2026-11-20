@@ -979,6 +979,15 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-148 The fever plan starts from a chart by age (owner, 2026-11-20).** "By default use this image to set up
+the six different age groups... everything is editable and people can set up their own plan." This replaces "the app
+never fills in the numbers" (D-106/D-107) for the fever plan only. Until a family saves their own, the plan, Track and
+Decisions use six age groups from the owner's chart: under 3 months (straight to a doctor at 38 °C), 3-6 months
+(phone at 38, go at 39), 6 months-2 years (phone at 38.9, or 38 for a day with no clear cause), 2-5 years and
+5-18 years (phone above 40, or a fever for 3 days), adults (39.4, or 3 days). Every step, temperature, band and sign
+can be changed, removed or added to; the plan text shows days and hours rather than 4320 min; a band with no
+"straight away" line no longer prints an empty one. "If you are wondering whether to go, go" stays.
+
 **D-147 Creators were never saved to Drive (owner, 2026-11-20).** "When I tried to add a creator the input bar
 refreshing to nothing ... then when I edit it it tells me there are 2x different saved files ... both end with the
 entire entry deleted." Two causes. (1) The Drive folder saved people, rooms, chores, measurements and history, but

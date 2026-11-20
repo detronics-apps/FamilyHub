@@ -590,6 +590,14 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### A fever plan to start from (v0.29.0, 2026-11-20)
+**What it does:** Parenting › Temperature and fever opens with a fever plan already in six age groups - under 3
+months, 3-6 months, 6 months to 2 years, 2-5 years, over 5 and teens, adults - each with the temperature and how long
+before you phone or go to a doctor. Change any of it, then Save; Track shows the line for the child's age. (D-148)
+**Why it is there:** a blank plan at 3am helps no one; families start from the chart and make it theirs.
+**Show it:** open Temperature and fever, read the 2-5 years band, change "40" to what you agree, Save, then start a
+Fever tracker for a 3-year-old.
+
 #### Creators stay put (v0.28.2, 2026-11-20)
 **What it does:** creators and videos are saved in your Drive folder like everything else, and what you type
 into a form is no longer wiped when Family Hub saves in the background. (D-147)

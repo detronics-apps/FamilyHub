@@ -408,7 +408,7 @@ export const HOWTOS = [
   ] },
   { id: 'fever-plan', title: 'Write your fever plan before you need it', steps: [
     'In Parenting, open Agreements, then Be prepared.',
-    'For each age band, write from what temperature, for how long, what you do, and when you go straight to a doctor. The app never fills in the numbers.',
+    'It starts with six age groups from a fever chart by age. Check it with your doctor, then change any temperature, time or line to what you agree, and Save.',
     'Print it or keep it on the phone. If you are wondering whether to go to the doctor, go.',
   ] },
   { id: 'dates', title: 'Plan a date, and keep the goals you share', steps: [

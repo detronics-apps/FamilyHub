@@ -185,8 +185,7 @@ export function normaliseQuestions(qs) {
 
 /**
  * Our fever plan (D-106), written by the parents: per age band, what we do at what temperature
- * for how long and how often we check, and when we go straight to a doctor. The app never fills
- * in the numbers.
+ * for how long and how often we check, and when we go straight to a doctor.
  */
 export function normalisePlan(p = {}) {
   const n = (v) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
@@ -199,6 +198,35 @@ export function normalisePlan(p = {}) {
     })),
   };
 }
+/**
+ * The starting plan (D-148): the six age groups of the fever chart by age the owner chose, until a
+ * family saves their own. Every number and line can be changed, removed or added to.
+ */
+const DAY = 1440, DAYS3 = 3 * DAY;
+export const FEVER_START = normalisePlan({ bands: [
+  { from: 0, to: 3, steps: [], goTemp: 38, signs: ['Any fever, even if they look fine'] },
+  { from: 3, to: 6, steps: [{ temp: 38, actions: 'Phone the doctor' }], goTemp: 39, signs: ['Irritable, lethargic or unwell'] },
+  { from: 6, to: 24, steps: [
+    { temp: 38, actions: 'Phone the doctor if they are uncomfortable or not drinking enough' },
+    { temp: 38, forMins: DAY, actions: 'Phone the doctor if there is no clear cause' },
+    { temp: 38.9, actions: 'Phone the doctor' }] },
+  { from: 24, to: 60, steps: [
+    { temp: 38, actions: 'Phone the doctor if they seem unusually ill or dehydrated' },
+    { temp: 38, forMins: DAYS3, actions: 'Phone the doctor' },
+    { temp: 40, actions: 'Phone the doctor' }] },
+  { from: 60, to: 216, steps: [
+    { temp: 38, actions: 'Phone the doctor if fever medicine does not help, or with severe symptoms' },
+    { temp: 38, forMins: DAYS3, actions: 'Phone the doctor' },
+    { temp: 40, actions: 'Phone the doctor' }] },
+  { from: 216, to: null, steps: [
+    { temp: 38, actions: 'See a doctor if there are severe symptoms' },
+    { temp: 38, forMins: DAYS3, actions: 'See a doctor' },
+    { temp: 39.4, actions: 'See a doctor' }] },
+] });
+/** The family's saved plan, or the starting one. */
+export const feverPlan = (saved) => (saved ? normalisePlan(saved) : FEVER_START);
+/** 1440 → "1 day", 4320 → "3 days", 90 → "90 min". */
+export const durationLabel = (m) => (m % DAY === 0 ? `${m / DAY} day${m === DAY ? '' : 's'}` : m % 60 === 0 && m >= 120 ? `${m / 60} hours` : `${m} min`);
 /** The band for a child of this age, or null. */
 export const bandFor = (plan, months) => normalisePlan(plan).bands.find((b) => months != null && (b.from == null || months >= b.from) && (b.to == null || months < b.to)) ?? null;
 /** The plan in words - for the card, the decision and Track. */
@@ -207,9 +235,9 @@ export function planText(plan) {
   return normalisePlan(plan).bands.map((b) => ({ ...b, steps: b.steps.filter((s) => s.temp != null || s.actions) }))
     .filter((b) => b.steps.length || b.goTemp != null || b.signs.length || b.own).map((b) => [
     `${rangeLabel(b.from, b.to)}:`,
-    ...b.steps.map((s) => `- From ${s.temp ?? '?'} °C${s.forMins ? ` for ${s.forMins} min` : ''}: ${dot(s.actions || '…')}${s.every ? ` Check every ${s.every} min.` : ''}`),
-    `- We go to a doctor or hospital straight away${b.goTemp != null ? ` at ${b.goTemp} °C${b.goMins ? ` for ${b.goMins} min` : ''}` : ''}${b.signs.length || b.own ? `${b.goTemp != null ? ', or' : ''} if: ${[...b.signs, b.own].filter(Boolean).join('; ')}` : ''}.`,
-  ].join('\n')).join('\n\n');
+    ...b.steps.map((s) => `- From ${s.temp ?? '?'} °C${s.forMins ? ` for ${durationLabel(s.forMins)}` : ''}: ${dot(s.actions || '…')}${s.every ? ` Check every ${s.every} min.` : ''}`),
+    b.goTemp == null && !b.signs.length && !b.own ? null : `- We go to a doctor or hospital straight away${b.goTemp != null ? ` at ${b.goTemp} °C${b.goMins ? ` for ${durationLabel(b.goMins)}` : ''}` : ''}${b.signs.length || b.own ? `${b.goTemp != null ? ', or' : ''} if: ${[...b.signs, b.own].filter(Boolean).join('; ')}` : ''}.`,
+  ].filter(Boolean).join('\n')).join('\n\n');
 }
 export const STATUS_LABEL = { new: 'Not started', discussing: 'Discussing', agreed: 'Agreed' };
 

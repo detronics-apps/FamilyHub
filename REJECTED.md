@@ -79,7 +79,8 @@ A decision that says what the app stands for is also written up as a principle i
   Where people disagree, recommending either way risks a family choosing something because the app
   said so. Awareness, not direction. (D-107)
 - **The vitamin D question, and flowcharts using the app's own thresholds** (2026-11-03). They assumed
-  an answer. The parents write their own fever plan instead. (D-107)
+  an answer. The parents write their own fever plan instead. (D-107) The fever plan now starts from
+  a fever chart by age the owner chose, every line changeable. (D-148)
 - **Any suggestion not to see a doctor** (2026-11-02). If you are wondering whether to go, go.
 - **Asking about babysitters, for families whose rule is "only us"** (2026-11-02). "We never even want
   to be asked if a babysitter will be needed." (D-102)

@@ -4,6 +4,7 @@
 // and Screen time (awareness, and shows rated on our values). Decisions themselves are kept in
 // the Decisions app; this reads them back.
 
+import { FEVER_START } from './logic.js';
 import { el } from '../../ui/dom.js';
 import { confirmAction, modal } from '../../ui/common.js';
 import { loading, failure, recordForm, saveRecord } from '../kit.js';
@@ -75,7 +76,7 @@ export function render(hub, route) {
   if (route.sub === 'routine-new') return routineEdit(hub, r.data.routines, null, ctx.kids);
   if (route.sub === 'numbers') return numbersScreen(hub, r.data.settings);
   if (route.sub === 'track') return trackHome(hub, r.data.track, ctx.kids);
-  if (route.sub === 'tracker') return trackerScreen(hub, r.data.track, route.rest[0], ctx.kids, Object.fromEntries(r.data.records.filter((x) => x.plan).map((x) => [x.topicId, x.plan])));
+  if (route.sub === 'tracker') return trackerScreen(hub, r.data.track, route.rest[0], ctx.kids, { fever: FEVER_START, ...Object.fromEntries(r.data.records.filter((x) => x.plan).map((x) => [x.topicId, x.plan])) });
   if (route.sub === 'scenario-new') return scenarioEdit(hub, r.data.track, null);
   if (route.sub === 'scenario-edit') return scenarioEdit(hub, r.data.track, route.rest[0]);
   if (route.sub === 'screen') return screenHome(hub, r.data.screen, ctx.kids, r.data.decisions);

@@ -5,7 +5,7 @@
 
 import { buildPrint } from '../../print.js';
 import { el } from '../../ui/dom.js';
-import { answersFor, setAnswer, adultsOf, normalisePlan, planText, rangeLabel, ageLabel, normaliseQuestions } from './logic.js';
+import { answersFor, setAnswer, adultsOf, normalisePlan, planText, feverPlan, rangeLabel, ageLabel, normaliseQuestions } from './logic.js';
 import { FEVER_SIGNS } from './questions.js';
 
 const decideHref = (id) => `#/decisions/new/${encodeURIComponent(`parenting:${id}`)}`;
@@ -78,7 +78,8 @@ const AGES = [0, 3, 6, 12, 24, 36, 60, 96, 144, 216];
 
 /** Our fever plan: per age band, steps by temperature, and when we go straight to a doctor. */
 export function feverPlanPanel(hub, t, put) {
-  const plan = normalisePlan(t.record?.plan ?? { bands: [{ from: 0, to: 3, steps: [{}], signs: [] }, { from: 3, to: null, steps: [{}], signs: [] }] });
+  // Until the family saves their own, the starting plan by age (D-148) - every line theirs to change.
+  const plan = structuredClone(feverPlan(t.record?.plan));
   const box = el('div', { class: 'stack' });
   const numIn = (obj, key, ph, w = '90px') => el('input', { class: 'input', type: 'number', step: 'any', inputmode: 'decimal', placeholder: ph, value: obj[key] ?? '', style: { maxWidth: w }, 'aria-label': ph, on: { input: (e) => { obj[key] = e.target.value === '' ? null : Number(e.target.value); } } });
   const ageSel = (b, key, none) => el('select', { class: 'select', style: { maxWidth: '150px' }, 'aria-label': key === 'from' ? 'From the age of' : 'Until', on: { change: (e) => { b[key] = e.target.value === '' ? null : Number(e.target.value); } } },
@@ -104,10 +105,11 @@ export function feverPlanPanel(hub, t, put) {
       el('div', { class: 'chipset' }, FEVER_SIGNS.filter((x) => !b.signs.includes(x)).map((x) => el('button', { class: 'chip', type: 'button', text: x, on: { click: () => { b.signs.push(x); draw(); } } })))]) : null,
   ])));
   draw();
-  const text = planText(t.record?.plan ?? {});
+  const text = planText(feverPlan(t.record?.plan));
   return el('div', { class: 'panel stack', 'data-field': 'fever-plan' }, [
     el('h2', { text: 'Our fever plan', style: { margin: 0 } }),
-    el('p', { class: 'small muted', style: { margin: 0 }, text: 'Written by the two of you, with a clear head: at what temperature, for how long, what you do and how often you check - and when you go straight to a doctor. The app fills in nothing; the signs are yours to keep, change, remove and add to. You can always go sooner than your plan says.' }),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: 'Written by the two of you, with a clear head: at what temperature, for how long, what you do and how often you check - and when you go straight to a doctor. Times are in minutes: a day is 1440, three days 4320. Every line is yours to keep, change, remove and add to. You can always go sooner than your plan says - if you are wondering whether to go, go.' }),
+    t.record?.plan ? null : el('p', { class: 'small', style: { margin: 0 }, 'data-field': 'plan-start', text: 'This is a starting plan in six age groups, from a fever chart by age. Check it with your doctor, change it to what you agree, then Save - it becomes yours.' }),
     box,
     el('div', { class: 'row' }, [
       el('button', { class: 'btn', type: 'button', text: 'Add band', title: 'Add an age band', on: { click: () => { plan.bands.push({ from: null, to: null, steps: [{}], signs: [], own: '' }); draw(); } } }),

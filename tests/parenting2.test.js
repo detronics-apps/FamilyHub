@@ -50,7 +50,7 @@ test('our fever plan: the parents’ own numbers, by age band, in words', () => 
   assert.equal(bandFor(plan, 1).goTemp, 38);
   const text = planText({ bands: [bandFor(plan, 40)] });
   assert.match(text, /From 38 °C for 60 min: cool cloth, fluids. Check every 10 min\./);
-  assert.match(text, /straight away at 39.5 °C for 120 min, or if: not drinking/);
+  assert.match(text, /straight away at 39.5 °C for 2 hours, or if: not drinking/);
 });
 
 test('the childcare rule from its question counts too', () => {
@@ -92,4 +92,20 @@ test('planner: workouts from Exercise on the days they were done - none are due 
   const done = { workoutId: 'wko_1', title: 'Morning stretch', day: '2026-11-03' };
   assert.deepEqual(alongside('2026-11-03', { workouts: [done] }).map((x) => x.title), ['Morning stretch']);
   assert.equal(alongside('2026-11-04', { workouts: [done] }).length, 0);
+});
+
+test('the fever plan starts from six age groups until the family saves their own (D-148)', async () => {
+  const { FEVER_START, feverPlan, durationLabel } = await import('../js/apps/parenting/logic.js');
+  assert.deepEqual(FEVER_START.bands.map((b) => [b.from, b.to]), [[0, 3], [3, 6], [6, 24], [24, 60], [60, 216], [216, null]]);
+  assert.equal(bandFor(feverPlan(null), 1).goTemp, 38);
+  assert.equal(bandFor(feverPlan(null), 4).goTemp, 39);
+  assert.equal(bandFor(feverPlan(null), 300).steps.at(-1).temp, 39.4);
+  const own = { bands: [{ from: 0, to: null, steps: [{ temp: 37.5, actions: 'ours' }] }] };
+  assert.equal(bandFor(feverPlan(own), 1).steps[0].temp, 37.5);
+  const text = planText({ bands: [bandFor(FEVER_START, 40)] });
+  assert.match(text, /From 38 °C for 3 days: Phone the doctor\./);
+  assert.doesNotMatch(text, /straight away/);
+  assert.equal(durationLabel(1440), '1 day');
+  assert.equal(durationLabel(180), '3 hours');
+  assert.equal(durationLabel(90), '90 min');
 });
