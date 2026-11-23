@@ -7,12 +7,17 @@ import { avatar } from '../common.js';
 import { shows } from '../levels.js';
 import { updatePerson, stageOf } from '../../model.js';
 import { weeklyLoad } from '../../progress.js';
-import { kindsOf, normaliseDay, normaliseKinds, timeline, totals, choreShare, nextBlock, fmtSpan, KIND_COLOURS, DAY_MINUTES, EIGHT, eightEight, fmtDelta, PART_GROUPS, personalParts } from '../../day.js';
+import { kindsOf, normaliseDay, normaliseKinds, timeline, totals, choreShare, nextBlock, fmtSpan, KIND_COLOURS, DAY_MINUTES, EIGHT, eightEight, fmtDelta, PART_GROUPS, personalParts, keepCopy, removeCopy, sinceCopy } from '../../day.js';
 
 // What this screen shows, kept while it redraws (a save redraws the page).
-const view = { version: 'now', mode: 'day', only: null, open: new Set() };
+const view = { version: 'now', mode: 'day', only: null, open: new Set(), compare: {} };
+// "2 Nov", with the year when it is not this year.
+const shortDay = (day, today) => new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', ...(day.slice(0, 4) === today.slice(0, 4) ? {} : { year: 'numeric' }) });
 const pct = (m) => `${(m / DAY_MINUTES) * 100}%`;
 const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+
+/** The copy a person's day is compared with: the one chosen, or the latest. */
+const compareCopy = (d, p) => d.copies.find((c) => c.day === view.compare[p.id]) ?? d.copies.at(-1) ?? null;
 
 export function dayView(ctx) {
   const h = ctx.app.household;
@@ -81,7 +86,18 @@ export function dayView(ctx) {
       el('div', { class: 'small muted', style: { marginLeft: '88px' }, 'data-field': `day-words:${p.id}`, text: [words,
         t.unplanned && blocks.length && !view.only ? `Not planned ${fmtSpan(t.unplanned)}` : null,
         t.overlap ? `Two blocks overlap at ${t.overlap} - the later one counts` : null].filter(Boolean).join(' · ') }),
+      view.version === 'now' && shows('advanced') ? sinceLine(p) : null,
     ]);
+  };
+  // Since a kept copy (D-153): what changed, and - with a goal day - how much closer to it.
+  const sinceLine = (p) => {
+    const d = normaliseDay(p.day);
+    const copy = compareCopy(d, p);
+    if (!copy) return null;
+    const changes = sinceCopy(d.now, copy.blocks, d.goal, kinds).filter((x) => !view.only || x.id === view.only);
+    const one = (x) => `${x.name} ${fmtDelta(x.change)}${x.closer === null ? '' : x.closer === 0 ? '' : ` (${fmtSpan(Math.abs(x.closer))} ${x.closer > 0 ? 'closer to' : 'further from'} your goal)`}`;
+    return el('div', { class: 'small', style: { marginLeft: '88px' }, 'data-field': `day-since:${p.id}`,
+      text: `Since ${shortDay(copy.day, ctx.today())}: ${changes.length ? changes.map(one).join(' · ') : 'no change'}` });
   };
 
   const axis = el('div', { class: 'small muted', style: { marginLeft: '88px', display: 'flex', justifyContent: 'space-between' } },
@@ -173,7 +189,30 @@ function editor(ctx, p, h, kinds, saveDay) {
           on: { click: () => { const { o, v } = others[Number(from.value)]; put(normaliseDay(o.day)[v]); } } }) : null,
       ]),
       el('p', { class: 'small muted', style: { margin: 0 }, text: 'A block that ends before it starts runs past midnight - 22:00 to 01:00 is fine.' }),
+      key === 'now' && shows('advanced') ? copiesRow(ctx, p, saveDay) : null,
     ]),
+  ]);
+}
+
+/** Keep a dated copy of the day as it is now, to compare with later (D-153) - whenever you like. */
+function copiesRow(ctx, p, saveDay) {
+  const d = normaliseDay(p.day);
+  const today = ctx.today();
+  const chosen = compareCopy(d, p);
+  const pick = d.copies.length ? el('select', { class: 'select', 'aria-label': 'Compare with the copy of', style: { maxWidth: '170px' }, 'data-field': `day-compare:${p.id}`,
+    on: { change: (e) => { view.compare[p.id] = e.target.value; ctx.render(); } } },
+  [...d.copies].reverse().map((c) => el('option', { value: c.day, text: shortDay(c.day, today), selected: c.day === chosen?.day }))) : null;
+  return el('div', { class: 'stack', style: { gap: '4px', borderTop: '1px solid var(--border)', paddingTop: '8px' } }, [
+    el('div', { class: 'row', style: { gap: '6px', alignItems: 'center' } }, [
+      el('button', { class: 'btn btn-small', type: 'button', text: 'Keep copy', title: 'Keep this day with today’s date, to see later what changed', 'data-field': `day-keep:${p.id}`,
+        on: { click: () => { view.compare[p.id] = null; saveDay(p, keepCopy(p.day, today)); } } }),
+      pick ? el('span', { class: 'small', text: 'Compare with' }) : null, pick,
+      pick ? el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove copy', 'data-field': `day-remove-copy:${p.id}`,
+        on: { click: () => { view.compare[p.id] = null; saveDay(p, removeCopy(p.day, chosen.day)); } } }) : null,
+    ]),
+    el('p', { class: 'small muted', style: { margin: 0 }, text: d.copies.length
+      ? `${d.copies.length} cop${d.copies.length === 1 ? 'y' : 'ies'} kept. The line under ${p.name}’s day says what changed since the one chosen - and, with a goal day, how much closer to it.`
+      : 'Keep a copy now and then - every week, every month, whenever. Later, the line under the day shows what changed since.' }),
   ]);
 }
 

@@ -56,17 +56,19 @@ test('our day: bad input is dropped, and the starting categories stand until cha
 
 test('our day: kept through the Drive folder, the family file and two laptops (D-149)', () => {
   const { h: h0, ann, kid } = fixture();
-  let h = updatePerson(h0, ann, { day: { now: late, goal: early, choreShare: 60 } });
+  let h = updatePerson(h0, ann, { day: { now: late, goal: early, choreShare: 60, copies: [{ day: '2026-11-02', blocks: early }] } });
   h = { ...h, household: { ...h.household, dayKinds: normaliseKinds([...DAY_KINDS, { id: 'biz', name: 'Own business', colour: '#123456' }]) } };
   const back = filesToHousehold(householdToFiles(h));
   assert.equal(fingerprint(back), fingerprint(h));
   assert.deepEqual(back.people.find((p) => p.id === ann).day.goal, early);
+  assert.deepEqual(back.people.find((p) => p.id === ann).day.copies, [{ day: '2026-11-02', blocks: early }], 'kept copies are in the folder too (D-153)');
   assert.equal(back.household.dayKinds.at(-1).name, 'Own business');
   assert.equal('day' in back.people.find((p) => p.id === kid), false, 'someone without a day keeps their record as it was');
 
   const parsed = parseFamilyFile(buildFamilyFile({ household: h, registry: { apps: {} } }));
   assert.equal(parsed.ok, true);
   assert.deepEqual(parsed.household.people.find((p) => p.id === ann).day.now, late);
+  assert.equal(parsed.household.people.find((p) => p.id === ann).day.copies.length, 1);
 
   // One laptop changes Ann's day, the other renames the family: both are kept.
   const mine = updatePerson(h, ann, { day: { now: early, goal: early, choreShare: 60 } });
@@ -112,4 +114,26 @@ test('3 Fs, 3 Hs and 3 Ss: personal life by part, and what has no part yet (D-15
   assert.deepEqual(p.none.map((k) => k.id), ['eat'], 'eating has no part until the family gives it one');
   assert.equal(nk([{ id: 'free', name: 'Free time', part: '' }])[0].part, '', 'a part taken away stays away');
   assert.deepEqual(DAY_KINDS.filter((k) => ['screen', 'planning'].includes(k.id)).map((k) => k.eight), ['other', 'other'], 'screens and planning are not in the 1800s rule (D-152)');
+});
+
+test('since last time: changes from a kept copy, and closer to your own goal (D-153)', async () => {
+  const { keepCopy, removeCopy, sinceCopy } = await import('../js/day.js');
+  const then = [{ from: '19:00', to: '21:30', kind: 'screen' }, { from: '21:30', to: '22:00', kind: 'play' }];
+  const now = [{ from: '19:00', to: '21:00', kind: 'screen' }, { from: '21:00', to: '22:00', kind: 'play' }, { from: '22:00', to: '22:30', kind: 'travel' }];
+  const goal = [{ from: '19:00', to: '20:00', kind: 'screen' }, { from: '20:00', to: '22:00', kind: 'play' }];
+  let d = keepCopy({ now: then }, '2026-11-02');
+  d = keepCopy({ ...d, now }, '2026-11-02');
+  assert.equal(d.copies.length, 1, 'one copy a date');
+  assert.deepEqual(d.copies[0].blocks, now);
+  d = keepCopy({ ...d, now: then }, '2026-10-01');
+  assert.deepEqual(d.copies.map((c) => c.day), ['2026-10-01', '2026-11-02'], 'oldest first');
+  const s = Object.fromEntries(sinceCopy(now, then, goal).map((x) => [x.id, x]));
+  assert.equal(s.screen.change, -30);
+  assert.equal(s.screen.closer, 30);
+  assert.equal(s.play.change, 30);
+  assert.equal(s.play.closer, 30);
+  assert.equal(s.travel.closer, -30, 'further from a goal with no travel');
+  assert.equal(sinceCopy(now, then, []).find((x) => x.id === 'screen').closer, null, 'without a goal: only more or less');
+  assert.equal(sinceCopy(then, then, goal).length, 0);
+  assert.deepEqual(removeCopy(d, '2026-10-01').copies.map((c) => c.day), ['2026-11-02']);
 });

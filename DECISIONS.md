@@ -979,6 +979,15 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-153 Better than last time, by your own goal (owner, 2026-11-23).** "The entire purpose is not to judge but rather
+give clarity and visibility and show areas that can improve, as every day / week just being a bit more conscious and
+better than the last can make a big difference." Our day remembered nothing, so there was no "last".
+- **Keep copy** (Advanced, under Edit day): the day as it is now, with today's date; one per date (a second the same
+  day replaces it); whenever the family likes - no schedule. **Compare with** an older one; **Remove copy**.
+- **Since** line under the day: only the categories that changed ("Free time −30 min"), and with a goal day, how many
+  minutes closer to or further from the family's own goal. The app never says better or worse by its own measure.
+- Kept on the person (`day.copies`, up to 60), so in the Drive folder, the family file and the merge, with a test.
+
 **D-152 Screens and planning (owner, 2026-11-23).** "As this was developed over a 100 years ago, things like screen
 time and planning / family meeting time should also be added." Two new starting categories in Our day: **Screen time**
 and **Planning and meetings**, both "Not in 8/8/8" (change it under Categories). The 8/8/8 note says the rule began

@@ -70,12 +70,21 @@ const normaliseBlocks = (list) => (Array.isArray(list) ? list : [])
   .filter((b) => b && HHMM.test(b.from) && HHMM.test(b.to))
   .map((b) => ({ from: b.from, to: b.to, kind: str(b.kind, 40) })).slice(0, 80);
 
-/** A person's day: now, the goal, and their share of the family's chores (percent). */
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+/** Dated copies of the day as it was (D-153), oldest first, one per date. */
+const normaliseCopies = (list) => {
+  const byDay = new Map();
+  for (const c of Array.isArray(list) ? list : []) if (c && DAY.test(c.day)) byDay.set(c.day, { day: c.day, blocks: normaliseBlocks(c.blocks) });
+  return [...byDay.values()].sort((a, b) => a.day.localeCompare(b.day)).slice(-60);
+};
+
+/** A person's day: now, the goal, dated copies, and their share of the family's chores (percent). */
 export function normaliseDay(d = {}) {
   const share = Number(d?.choreShare);
   return {
     now: normaliseBlocks(d?.now),
     goal: normaliseBlocks(d?.goal),
+    copies: normaliseCopies(d?.copies),
     choreShare: d?.choreShare === null || d?.choreShare === '' || d?.choreShare === undefined || !Number.isFinite(share) ? null : Math.min(100, Math.max(0, Math.round(share))),
   };
 }
@@ -181,4 +190,23 @@ export function personalParts(blocks, kinds = DAY_KINDS) {
   const of = (part) => personal.filter((k) => k.part === part).reduce((s, k) => s + k.minutes, 0);
   const groups = PART_GROUPS.map((g) => { const parts = g.parts.map((x) => ({ ...x, minutes: of(x.id) })); return { ...g, parts, minutes: parts.reduce((s, x) => s + x.minutes, 0) }; });
   return { groups, none: personal.filter((k) => !PART_IDS.includes(k.part)) };
+}
+
+/** Keep a copy of the day as it is now (D-153); a second copy on the same date replaces the first. */
+export const keepCopy = (day, today) => { const d = normaliseDay(day); return { ...d, copies: normaliseCopies([...d.copies.filter((c) => c.day !== today), { day: today, blocks: d.now }]) }; };
+export const removeCopy = (day, date) => { const d = normaliseDay(day); return { ...d, copies: d.copies.filter((c) => c.day !== date) }; };
+
+/**
+ * Since a copy (D-153): each category whose time changed - how much, and, when there is a goal
+ * day, how many minutes closer to the family's own goal (negative: further). Never better or
+ * worse by the app's own measure.
+ */
+export function sinceCopy(nowBlocks, copyBlocks, goalBlocks, kinds = DAY_KINDS) {
+  const of = (blocks) => new Map(totals(blocks, kinds).byKind.map((k) => [k.id, k.minutes]));
+  const now = of(nowBlocks); const then = of(copyBlocks); const goal = goalBlocks?.length ? of(goalBlocks) : null;
+  return kinds.map((k) => {
+    const n = now.get(k.id) ?? 0; const t = then.get(k.id) ?? 0;
+    const g = goal ? goal.get(k.id) ?? 0 : null;
+    return { id: k.id, name: k.name, now: n, then: t, change: n - t, goal: g, closer: g === null ? null : Math.abs(t - g) - Math.abs(n - g) };
+  }).filter((x) => x.change !== 0);
 }

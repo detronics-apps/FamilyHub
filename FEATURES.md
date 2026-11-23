@@ -590,6 +590,14 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### Better than last time (v0.34.0, 2026-11-23)
+**What it does:** in Our day (Advanced), Keep copy saves each person's day with the date. Later, a line under the day
+says what changed since - "Screen time −30 min (30 min closer to your goal)". Compare with any copy kept. (D-153)
+**Why it is there:** "Not to judge but rather give clarity and visibility... every day / week just being a bit more
+conscious and better than the last can make a big difference." The direction comes from the family's own goal, never
+from the app.
+**Show it:** keep a copy, move half an hour from screens to play, and read the line under the day.
+
 #### Screens and planning (v0.33.0, 2026-11-23)
 **What it does:** Our day starts with two more categories, Screen time and Planning and meetings, and 8/8/8 counts them
 as not in the rule. (D-152)
