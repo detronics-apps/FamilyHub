@@ -590,6 +590,13 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### Screens and planning (v0.33.0, 2026-11-23)
+**What it does:** Our day starts with two more categories, Screen time and Planning and meetings, and 8/8/8 counts them
+as not in the rule. (D-152)
+**Why it is there:** "As this was developed over a 100 years ago, things like screen time and planning / family meeting
+time should also be added." The rule has no hours for what did not exist when it began.
+**Show it:** add an hour of Screen time and half an hour of Planning, press 8/8/8, and see them under Not in 8/8/8.
+
 #### The 3 Fs, 3 Hs and 3 Ss (v0.32.0, 2026-11-23)
 **What it does:** in 8/8/8, each adult's personal life is split into the 3 Fs (Family, Friends, Faith), 3 Hs (Health,
 Hygiene, Hobby) and 3 Ss (Soul, Service, Smile), with the hours each gets. Each personal-life category chooses its

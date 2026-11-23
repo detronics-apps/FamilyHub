@@ -27,6 +27,9 @@ export const DAY_KINDS = [
   { id: 'play', name: 'Kids: play', colour: '#1d9e75', eight: 'personal', part: 'family' },
   { id: 'lessons', name: 'Lessons', colour: '#6f9fb8', eight: 'work' },
   { id: 'free', name: 'Free time', colour: '#97c459', eight: 'personal', part: 'hobby' },
+  // The rule is from the 1800s: nothing in it for screens, or for running a family (owner, D-152).
+  { id: 'screen', name: 'Screen time', colour: '#c07aa6', eight: 'other' },
+  { id: 'planning', name: 'Planning and meetings', colour: '#5f9a8b', eight: 'other' },
 ];
 
 /** The 8/8/8 rule's parts, and the time it leaves out. */

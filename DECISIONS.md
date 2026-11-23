@@ -979,6 +979,12 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-152 Screens and planning (owner, 2026-11-23).** "As this was developed over a 100 years ago, things like screen
+time and planning / family meeting time should also be added." Two new starting categories in Our day: **Screen time**
+and **Planning and meetings**, both "Not in 8/8/8" (change it under Categories). The 8/8/8 note says the rule began
+in the 1800s, before screens, and has no time for running a family. A family that already changed its categories
+adds them with Add category.
+
 **D-151 The 3 Fs, 3 Hs and 3 Ss (owner, 2026-11-23).** "Do the 3F, 3H and 3S." In 8/8/8, each adult gets a line:
 personal life by part - 3 Fs (Family, Friends, Faith), 3 Hs (Health, Hygiene, Hobby), 3 Ss (Soul, Service, Smile) - the
 hours of each part and group, and the personal-life categories with no part yet. Under Categories (Advanced), a

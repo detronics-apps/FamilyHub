@@ -111,4 +111,5 @@ test('3 Fs, 3 Hs and 3 Ss: personal life by part, and what has no part yet (D-15
   assert.equal(g.s.minutes, 0);
   assert.deepEqual(p.none.map((k) => k.id), ['eat'], 'eating has no part until the family gives it one');
   assert.equal(nk([{ id: 'free', name: 'Free time', part: '' }])[0].part, '', 'a part taken away stays away');
+  assert.deepEqual(DAY_KINDS.filter((k) => ['screen', 'planning'].includes(k.id)).map((k) => k.eight), ['other', 'other'], 'screens and planning are not in the 1800s rule (D-152)');
 });

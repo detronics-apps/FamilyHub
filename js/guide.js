@@ -29,7 +29,7 @@ export const SEARCH_ALIASES = {
   creator: ['youtuber', 'youtube', 'tiktok', 'tiktoker', 'instagram', 'channel', 'pastor', 'preacher', 'sermon', 'video', 'videos', 'link', 'links', 'source', 'influencer', 'coach'],
   workout: ['gym', 'training', 'train', 'circuit', 'amrap', 'as many rounds', 'to failure', 'reps', 'sets', 'push-ups', 'pull-ups', 'squats', 'stopwatch', 'session'],
   'one exercise a day': ['rotation', 'rotate', 'in turn', 'one a day', 'split', 'next exercise'],
-  'our day': ['8/8/8', '888', '3 fs', '3 hs', '3 ss', 'friends', 'faith', 'health', 'hobby', 'soul', 'service', 'smile', 'eight hours', 'work life balance', 'balance', 'daily breakdown', 'my day', 'timeline', 'hours', 'time of day', 'awake', 'wake up', 'go to bed', 'late', 'early', 'schedule', 'who does what', 'chores share', 'homeschool', 'average day'],
+  'our day': ['8/8/8', '888', 'family meeting', 'planning time', '3 fs', '3 hs', '3 ss', 'friends', 'faith', 'health', 'hobby', 'soul', 'service', 'smile', 'eight hours', 'work life balance', 'balance', 'daily breakdown', 'my day', 'timeline', 'hours', 'time of day', 'awake', 'wake up', 'go to bed', 'late', 'early', 'schedule', 'who does what', 'chores share', 'homeschool', 'average day'],
   'fever plan': ['temperature', 'when to go to the doctor', 'hospital', 'medicine chart', 'emergency', 'prepare'],
   'date ideas': ['date night', 'romance', 'couple', 'spouse', 'partner', 'go out'],
   'sample meals': ['starter', 'default', 'burgers', 'pizza', 'filling', 'sauce', 'variant', 'version', 'goes with', 'porridge', 'pap'],
