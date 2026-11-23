@@ -41,7 +41,7 @@ import { UNENCRYPTED_NOTE } from './guide.js';
 import { syncChip, syncNotices, phoneButtons } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.29.0';
+export const APP_VERSION = '0.30.0';
 
 const store = createLocalStore(window.localStorage);
 

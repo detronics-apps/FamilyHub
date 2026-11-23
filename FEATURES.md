@@ -590,6 +590,15 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### Our day (v0.30.0, 2026-11-23)
+**What it does:** People › Our day shows each person's average day from midnight to midnight, side by side, in coloured
+blocks - sleep, work, travel, cooking, the kids, chores - or added up by category. Tap a category to see only that for
+everyone. In Advanced, a goal day beside what it is now, and each person's share of the family's chores. (D-149)
+**Why it is there:** "If we do from 10 o'clock in the morning till 1 o'clock the next morning, we have the exact same
+amount of hours than somebody waking up at 5 and going to bed at 7." And so partners see each other's side, and can
+plan the children's day.
+**Show it:** fill in a late day and an early one, then press Totals - the same hours. Tap Travel: one of you has none.
+
 #### A fever plan to start from (v0.29.0, 2026-11-20)
 **What it does:** Parenting › Temperature and fever opens with a fever plan already in six age groups - under 3
 months, 3-6 months, 6 months to 2 years, 2-5 years, over 5 and teens, adults - each with the temperature and how long

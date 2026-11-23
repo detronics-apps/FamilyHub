@@ -19,6 +19,12 @@ test('everyday words find the app\'s own terms', () => {
   assert.deepEqual(find('zzzz'), []);
 });
 
+test('our day is found in everyday words (D-149)', () => {
+  const find = (q) => HOWTOS.filter((h) => guideMatches(howtoText(h), q)).map((h) => h.id);
+  assert.ok(find('daily breakdown').includes('our-day'));
+  assert.ok(find('who does what').includes('our-day'));
+});
+
 test('every word must match (narrows, never widens)', () => {
   const all = HOWTOS.filter((h) => guideMatches(howtoText(h), 'chore')).length;
   const narrow = HOWTOS.filter((h) => guideMatches(howtoText(h), 'chore depends')).length;

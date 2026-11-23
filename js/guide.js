@@ -29,6 +29,7 @@ export const SEARCH_ALIASES = {
   creator: ['youtuber', 'youtube', 'tiktok', 'tiktoker', 'instagram', 'channel', 'pastor', 'preacher', 'sermon', 'video', 'videos', 'link', 'links', 'source', 'influencer', 'coach'],
   workout: ['gym', 'training', 'train', 'circuit', 'amrap', 'as many rounds', 'to failure', 'reps', 'sets', 'push-ups', 'pull-ups', 'squats', 'stopwatch', 'session'],
   'one exercise a day': ['rotation', 'rotate', 'in turn', 'one a day', 'split', 'next exercise'],
+  'our day': ['daily breakdown', 'my day', 'timeline', 'hours', 'time of day', 'awake', 'wake up', 'go to bed', 'late', 'early', 'schedule', 'who does what', 'chores share', 'homeschool', 'average day'],
   'fever plan': ['temperature', 'when to go to the doctor', 'hospital', 'medicine chart', 'emergency', 'prepare'],
   'date ideas': ['date night', 'romance', 'couple', 'spouse', 'partner', 'go out'],
   'sample meals': ['starter', 'default', 'burgers', 'pizza', 'filling', 'sauce', 'variant', 'version', 'goes with', 'porridge', 'pap'],
@@ -237,6 +238,13 @@ export const HOWTOS = [
     'Open People from the home screen. Type a name and a birthday, and press Add person.',
     'With a birthday, Family Hub shows whether someone is a baby, toddler, child, teen or adult, and keeps it up to date. Without one, choose adult or child.',
     'Choose a gender, then press Food details for allergies, diet and what they would like more of.',
+  ] },
+  { id: 'our-day', title: 'See each person’s day, side by side', steps: [
+    'Open People, then Our day.',
+    'Under each person, open Edit day and press Add block: the first is the night’s sleep. Set from, to and what - a block may run past midnight.',
+    'Day shows the blocks from 00:00 to 24:00; Totals adds each category up. Tap a category to see only that, for everyone.',
+    'In Advanced: Goal is the day you want to get to, beside what it is now; Chores gives each person a share of the family’s chores, in minutes a day.',
+    'Categories are yours: rename, recolour, remove or add your own, such as Own business.',
   ] },
   { id: 'measures', title: 'Keep a record of height and weight', steps: [
     'Open People from the home screen and open "Height and weight" under the person.',
@@ -568,6 +576,7 @@ export const FEATURES = [
   { name: 'Who looks after the children', where: 'Parenting › Decide together', what: 'Agree who, if anyone, looks after the children and from what age. The app follows it - with "Only us", nothing ever asks about a babysitter.' },
   { name: 'Creators and videos', where: 'Every app, "Creators" at the top right', what: 'The creators and videos your family follows on that topic - your own, plus every one linked on a recipe, entry, workout or decision inside it, with where. Examples to replace, never real people; add, edit, remove or hide.' },
   { name: 'Videos to weigh up', where: 'Parenting and Decisions', what: 'Add the creators and videos that explain an activity, a topic or a decision. On a topic or decision, each of you says whether you agree with each video - the other’s view shows once you have given yours.' },
+  { name: 'Our day', where: 'People', what: 'Each person’s average day from midnight to midnight, side by side, or added up by category - the same 24 hours, wherever they fall. With your own categories, a goal day, and each person’s share of the chores.' },
   { name: 'Track', where: 'Parenting', what: 'Start tracking a concern for a child - a temperature every half hour, wees and poos, sleep - with a time and value each time, and a summary for the doctor.' },
   { name: 'Screen time', where: 'Parenting', what: 'A quick log of what was watched and how it left them, each child’s week beside the minutes you agreed, and shows ranked on your own values - each parent rating separately.' },
   { name: 'Ideas and Play now', where: 'Parenting', what: 'Activities and games by age, weather, setup time, how long they last and what they cost - planned with time to think, found in a few taps when you have none, and scored afterwards by the children and by you.' },
@@ -687,7 +696,7 @@ export const ABOUT = {
 
 /** The how-to picker's groups, in the order a family meets them. Every how-to belongs to one. */
 export const HOWTO_GROUPS = [
-  ['Getting started', ['people', 'who', 'demo', 'dash', 'modes', 'miniapps', 'import', 'measures']],
+  ['Getting started', ['people', 'our-day', 'who', 'demo', 'dash', 'modes', 'miniapps', 'import', 'measures']],
   ['Phones and Drive', ['drive', 'phone', 'reconnect', 'conflict', 'backup']],
   ['Chores and tasks', ['quick', 'add', 'later', 'music']],
   ['Family life and us', ['ticket', 'meeting', 'decision', 'dates']],

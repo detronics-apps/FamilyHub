@@ -3,6 +3,7 @@
 // she weigh in March?"). Its own page on the home screen, not inside Settings.
 
 import { el } from '../dom.js';
+import { dayView } from './day.js';
 import { guidanceFor } from '../../guidance.js';
 import { fmtWeight, fmtHeight, kgFrom, cmFrom } from '../../units.js';
 import { avatar, confirmAction, modal } from '../common.js';
@@ -14,7 +15,8 @@ const fmt = (n) => (n === null ? null : String(n).replace(/\.0$/, ''));
 // A record someone may read out at a clinic: always the full date, with the year.
 const fmtDay = (day) => new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
-export function peopleView(ctx) {
+export function peopleView(ctx, route) {
+  if (route?.sub === 'day') return dayView(ctx);
   const h = ctx.app.household;
   const newName = el('input', { class: 'input', id: 'new-person', placeholder: 'Name', 'data-field': 'new-person', style: { maxWidth: '200px' } });
   const newBorn = el('input', { class: 'input', id: 'new-born', type: 'date', max: ctx.today(), 'data-field': 'new-born', style: { width: 'auto' } });
@@ -31,7 +33,8 @@ export function peopleView(ctx) {
   const former = [...new Set(h.measurements.map((m) => m.personId))].filter((id) => !current.has(id));
 
   return el('section', { class: 'stack', 'aria-labelledby': 'people-title' }, [
-    el('h1', { id: 'people-title', text: 'People' }),
+    el('div', { class: 'row' }, [el('h1', { id: 'people-title', text: 'People', style: { margin: 0 } }),
+      el('a', { class: 'btn', href: '#/people/day', text: 'Our day', title: 'Each person’s average day, side by side', 'data-field': 'people-day' })]),
     el('p', { class: 'muted', text: 'Everyone in the family. Choosing a name at the top of the screen is a convenience, not a login - anyone using this device can pick any name, and everyone in the family can see what is here.' }),
     ...h.people.map((p) => personCard(ctx, p)),
     h.people.length ? null : el('p', { class: 'panel', text: 'No one added yet.' }),

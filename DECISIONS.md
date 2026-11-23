@@ -979,6 +979,25 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-149 Our day: each person's day, side by side (owner, 2026-11-23).** "A bar chart showing each person's daily
+breakdown... from 00 till midnight... if we do from 10 o'clock in the morning till 1 o'clock the next morning, we have the
+exact same amount of hours than somebody waking up at 5 and going to bed at 7." People › Our day:
+- **Day:** one bar per person, 00:00 to 24:00, in blocks by category; a block whose end is before its start runs past
+  midnight. **Totals:** each category added up. Tap a category to see only that, for everyone. "Awake" shows once the
+  whole day is filled in - no verdict on early or late, only the hours.
+- **Blocks** (from, to, what): Add block (the first is the night's sleep, 00:00-07:00), Remove block, Copy day (from
+  anyone's now or goal). Overlaps are said; the later block counts.
+- **Categories** are the family's: the starting eleven (Sleep, Hygiene, Eating, Cooking, Travel, Work, Chores, Kids:
+  care, Kids: play, Lessons, Free time) until changed; rename, recolour, Remove category (its blocks keep, shown as
+  "Removed category"), Add category.
+- **Advanced:** Goal beside Now ("Work 6 h (now 7 h 30)"), and Chores: each person's percent of the family's chores a
+  day (from Chores' weekly load), in minutes, with how much is already in their day as Chores blocks. The app does not
+  place it - only the family knows they clean before work. **Expert:** how a day across midnight is split and added up.
+- **Where it lives:** on the person (`day: { now, goal, choreShare }`, only once filled in) and the household
+  (`dayKinds`, only once changed) - so it is in the Drive folder, the family file and the two-laptop merge from the
+  first day, with a test for each (the creators lesson, D-147). js/day.js is pure; tests/day.test.js.
+- Not yet: separate weekday and weekend days.
+
 **D-148 The fever plan starts from a chart by age (owner, 2026-11-20).** "By default use this image to set up
 the six different age groups... everything is editable and people can set up their own plan." This replaces "the app
 never fills in the numbers" (D-106/D-107) for the fever plan only. Until a family saves their own, the plan, Track and

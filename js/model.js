@@ -22,6 +22,7 @@
 
 import { isDay, toDay, dayDiff, addDays } from './dates.js';
 import { normaliseCreator, normaliseVideo } from './links.js';
+import { normaliseDay, normaliseKinds } from './day.js';
 
 export const SCHEMA_VERSION = 1;
 
@@ -106,6 +107,8 @@ export function normalisePerson(p) {
     energyGoal: Object.keys(ENERGY_GOALS).includes(String(p.energyGoal)) ? Number(p.energyGoal) : 0,
     goals: str(p.goals, 1000),
     demo: p.demo === true,
+    // Our day (D-149): kept only once someone fills it in, so older records stay as they were.
+    ...(p.day && typeof p.day === 'object' ? { day: normaliseDay(p.day) } : {}),
   };
 }
 
@@ -288,6 +291,8 @@ export function normaliseHousehold(data) {
       // Creators and videos per topic (D-112): topics whose panel is folded away, and examples removed or made your own - kept only once used.
       ...(topicList(hh.hiddenTopics).length ? { hiddenTopics: topicList(hh.hiddenTopics) } : {}),
       ...(topicList(hh.examplesOff).length ? { examplesOff: topicList(hh.examplesOff) } : {}),
+      // Our day's categories (D-149), once the family changes the starting ones.
+      ...(Array.isArray(hh.dayKinds) ? { dayKinds: normaliseKinds(hh.dayKinds) } : {}),
     },
     people,
     rooms,
