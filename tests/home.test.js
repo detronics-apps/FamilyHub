@@ -2,7 +2,7 @@
 // and any homes compared on the same money.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { homePlan, withAndWithout, sameMoney, kindOf } from '../js/apps/homes/home.js';
+import { homePlan, withAndWithout, sameMoney, kindOf, inToday } from '../js/apps/homes/home.js';
 import { homeCost } from '../js/apps/finance/maths.js';
 
 const near = (a, b, tol = 1) => assert.ok(Math.abs(a - b) <= tol, `${a} is not ${b}`);
@@ -140,4 +140,15 @@ test('D-162 50 years, and rent first then buy: the rent, then the home at its pr
   // Not enough saved by then: the shortfall is said, not hidden.
   const poor = sameMoney([homePlan({ ...v, kind: 'rent', rent: 30000 }, TODAY), homePlan({ ...v, rentFirstYears: 1 }, TODAY)], { investPct: 7, investTaxPct: 0 });
   assert.ok(poor.short[1] > 0);
+});
+
+test('D-163 today\'s money: an amount years on, divided by inflation', async () => {
+  near(inToday(1052000, 12, 5.2), 1000000, 0.01);
+  near(inToday(1000000, 600, 0), 1000000, 0.01);
+  // The range reads the same gap, deflated month by month - where it crosses zero does not move.
+  const { measure } = await import('../js/apps/homes/scenarios.js');
+  const vs = [buy, { ...buy, kind: 'rent', rent: 9000 }];
+  const future = measure(vs, TODAY); const real = measure(vs, TODAY, {}, { realPct: 5 });
+  near(real.series[239][1], future.series[239][1] / 1.05 ** 20, 0.01);
+  assert.deepEqual(real.series.map(([, d]) => Math.sign(d)), future.series.map(([, d]) => Math.sign(d)));
 });

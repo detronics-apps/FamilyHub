@@ -4,7 +4,7 @@
 // how the assumptions really interact. It is a sensitivity range, not a probability.
 // Pure - no DOM.
 
-import { homePlan, sameMoney, PLAN_DEFAULTS } from './home.js';
+import { homePlan, sameMoney, inToday, PLAN_DEFAULTS } from './home.js';
 
 /**
  * What can be varied. `apply(v, d)` returns the home's values moved by d (points, or
@@ -62,14 +62,15 @@ const moved = (values, deltas) => values.map((v) => VARS.reduce((acc, x) => (del
  * The measure, month by month, for one set of deltas.
  * One home: how far ahead or behind if you left then (its own `ahead`).
  * Two or more: home `a` minus home `b` on the same money (positive: `a` leaves you more).
+ * `realPct`: in today's money, divided by that inflation a year (D-163).
  */
-export function measure(values, today, deltas = {}, { a = 0, b = 1, share = {} } = {}) {
+export function measure(values, today, deltas = {}, { a = 0, b = 1, share = {}, realPct = 0 } = {}) {
   const vs = moved(values, deltas);
   const plans = vs.map((v) => homePlan(v, today));
   if (plans.some((p) => p.missing)) return null;
   if (vs.length === 1) return { series: plans[0].months.slice(Math.max(0, plans[0].now)).map((m, i) => [i + 1, m.ahead]), plans };
   const sm = sameMoney(plans, { investPct: n(vs[0].investPct, 9), investTaxPct: n(vs[0].investTaxPct, 15), investShare: share.investShare ?? vs[0].investShare ?? 100, cash: vs[0].diffCash === true });
-  return { series: sm.series[a].map((s, i) => [s.t, s.wealth - sm.series[b][i].wealth]), wealthA: sm.series[a], wealthB: sm.series[b], plans, sm };
+  return { series: sm.series[a].map((s, i) => [s.t, inToday(s.wealth - sm.series[b][i].wealth, s.t, realPct)]), wealthA: sm.series[a], wealthB: sm.series[b], plans, sm };
 }
 
 /**

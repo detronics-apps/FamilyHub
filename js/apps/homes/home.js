@@ -26,6 +26,9 @@ export const SECTIONS_ON = { sellFirst: false, bond: true, running: true, upgrad
 export const YEARS = 50;
 const MONTHS = YEARS * 12;
 
+/** An amount `t` months on, in today's money (D-163): divided by inflation of `pct` a year, so it buys what that much buys now. */
+export const inToday = (x, t, pct) => x / (1 + (Number(pct) || 0) / 100) ** (t / 12);
+
 export const SCENARIO_KINDS = { more: 'Pay more each month', extra: 'Pay in once', withdraw: 'Take out', rate: 'Rate changes' };
 
 export const PLAN_DEFAULTS = {

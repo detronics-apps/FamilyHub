@@ -979,6 +979,13 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-163 Compare in today's money (owner, 2026-11-24).** Over 50 years, amounts in future rands run to hundreds of
+millions and say little; the owner agreed to show them in today's money. Compare has **Today's money** (the default)
+and **Future rands**. Today's money divides each amount t months on by inflation - the first home's "Costs rise by",
+CPI unless changed - so it reads as what it would buy now (`inToday()` in js/apps/homes/home.js). The stats, the
+words, the table, the line graph and the range (measure's `realPct`) all follow it; which home leaves more, and when
+one overtakes the other, do not change. A note under the answer says which it is, with CPI explained.
+
 **D-162 Own or rent over 50 years, rent first then buy, and hours in the Our day bars (owner, 2026-11-24).**
 "Extend own or rent to 50 years with rent then buy; and with the personal daily hours for both the day and the total
 add the values into the color bars where they fit, same as the 8/8/8 chart; and also sort the total from largest to

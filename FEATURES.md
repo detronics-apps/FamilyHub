@@ -599,6 +599,12 @@ families make, and it lands between the other two.
 **Show it:** Finance › Homes › Compare, tick a home to buy and a rental, tick "Also: rent first, then buy", then press
 50 years and watch the three lines.
 
+#### Compare in today's money (v0.37.1, 2026-11-24)
+**What it does:** Compare shows every amount in today's money by default - divided by inflation, so a figure 50 years
+on reads as what it would buy now. Future rands shows them as written then. (D-163)
+**Why it is there:** fifty years on, a home "worth R800m" means nothing until you know what R800m buys then.
+**Show it:** Finance › Homes › Compare, 50 years, then switch between Today's money and Future rands.
+
 #### Hours in the Our day bars (v0.37.0, 2026-11-24)
 **What it does:** Day and Totals write each part's hours inside the bar where they fit, as 8/8/8 does, and Totals runs
 biggest first, left to right. (D-162)

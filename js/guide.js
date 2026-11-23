@@ -369,6 +369,7 @@ export const HOWTOS = [
     'For selling yours to rent, tick "Selling our current home first" on the rental: what the sale leaves is invested while you rent.',
     'Press Compare and tick both. "Where each would leave you" shows, year by year for 50 years, what each would leave you - and when the other one starts to leave you more.',
     'With a rental and a home to buy ticked, tick "Also: rent first, then buy" and choose after how many years: a third line rents first, then buys the same home at what it costs by then.',
+    'Amounts show in Today’s money: divided by inflation ("Costs rise by"), so a figure 50 years on reads as what it would buy now. Future rands shows them as they would be written then.',
   ] },
   { id: 'car', title: 'Work out the true cost of a car - and compare', steps: [
     'Open Finance, then Cars, and Add a car (or Open one). In Financing, fill in the price, the rate on your quote, how long the loan runs and how long you will keep the car.',

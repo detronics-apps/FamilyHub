@@ -10,7 +10,7 @@ import { loading, failure } from '../kit.js';
 import { REFERENCE, total, SELL_DEFAULTS } from '../finance/maths.js';
 import { historyGrowth, CGT } from './ownrent.js';
 import { EVENT_KINDS } from './bondlog.js';
-import { homePlan, withAndWithout, sameMoney, kindOf, YEARS, KINDS, SECTIONS, SECTIONS_ON, SCENARIO_KINDS, PLAN_DEFAULTS } from './home.js';
+import { homePlan, withAndWithout, sameMoney, kindOf, YEARS, inToday, KINDS, SECTIONS, SECTIONS_ON, SCENARIO_KINDS, PLAN_DEFAULTS } from './home.js';
 import { shows, hiddenNote, draft, loadDraft, input, info, linesPanel as eventsPanel, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, RULE, savedPanel, exportBar, rand, pct, months } from '../finance/pod.js';
 import { HOME_HELP as H } from '../finance/help.js';
 import { rangePanel, rangeParts } from './range-view.js';
@@ -889,7 +889,7 @@ const scenarioCount = (v) => (v.scenarios ?? []).filter((s) => s && s.on !== fal
 
 /* ----------------------------------------------------------------- compare */
 
-const cmp = { picked: null, years: 10, a: null, b: null, rentFirst: 0 };
+const cmp = { picked: null, years: 10, a: null, b: null, rentFirst: 0, today: true };
 const cmpRange = {};   // the scenario range's settings, kept while you move around
 
 function compareScreen(hub, param) {
@@ -921,6 +921,9 @@ function compareScreen(hub, param) {
     el('div', { class: 'chipset', role: 'group', 'aria-label': 'Compare after' }, [1, 3, 5, 10, 15, 20, 30, 40, 50].map((y) => el('button', {
       class: 'chip', type: 'button', 'aria-pressed': String(cmp.years === y), text: yrs(y), on: { click: () => { cmp.years = y; hub.render(); } },
     }))),
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Amounts in' }, [['Today’s money', true], ['Future rands', false]].map(([label, on]) => el('button', {
+      class: 'chip', type: 'button', 'aria-pressed': String(cmp.today === on), text: label, 'data-field': `cmp-money:${on ? 'today' : 'future'}`, on: { click: () => { cmp.today = on; hub.render(); } },
+    }))),
     canRentFirst ? el('div', { class: 'row', style: { gap: '8px' } }, [
       el('label', { class: 'checkline' }, [
         el('input', { type: 'checkbox', checked: !!cmp.rentFirst, 'data-field': 'cmp-rent-first', on: { change: (e) => { cmp.rentFirst = e.target.checked ? 10 : 0; hub.render(); } } }),
@@ -947,7 +950,10 @@ function compareScreen(hub, param) {
   const sm = sameMoney(items.map((x) => x.plan), { investPct: n(v0.investPct) || 9, investTaxPct: n(v0.investTaxPct) || 15, investShare: v0.investShare ?? 100, cash: v0.diffCash === true });
   const H = cmp.years * 12;
   const fromLater = sm.align !== today.slice(0, 7);
-  const wealth = sm.series.map((s) => s[H - 1].wealth);
+  // Today's money (D-163): divided by inflation - the household's own "costs rise" figure, CPI unless changed.
+  const infl = n(v0.escalatePct ?? PLAN_DEFAULTS.escalatePct);
+  const real = (x, t) => (cmp.today ? inToday(x, t, infl) : x);
+  const wealth = sm.series.map((s) => real(s[H - 1].wealth, H));
   const best = wealth.indexOf(Math.max(...wealth));
   const words = items.map((x, i) => (i === best ? null : `${x.rec.title} would leave you ${rand(wealth[best] - wealth[i])} less than ${items[best].rec.title} after ${yrs(cmp.years)}.`)).filter(Boolean);
   const flips = items.map((x, i) => {
@@ -958,8 +964,9 @@ function compareScreen(hub, param) {
   const rentFirstWords = items.flatMap((x, i) => {
     const f = x.plan.rentFirst;
     if (!f) return [];
-    return [`${x.rec.title}: buying in ${ymName(f.ym)} at about ${rand(f.price)}, with ${rand(f.fromSaved)} from what was saved by then (the rental deposit back counted).`,
-      sm.short[i] > 0 ? `That is ${rand(sm.short[i])} more than this household would have saved by then on the same money - it would need to come from somewhere else.` : null].filter(Boolean);
+    const K = f.years * 12;
+    return [`${x.rec.title}: buying in ${ymName(f.ym)} at about ${rand(real(f.price, K))}, with ${rand(real(f.fromSaved, K))} from what was saved by then (the rental deposit back counted).`,
+      sm.short[i] > 0 ? `That is ${rand(real(sm.short[i], K))} more than this household would have saved by then on the same money - it would need to come from somewhere else.` : null].filter(Boolean);
   });
   // The two being weighed up (D-084): the one you are looking at, and its alternative.
   const ids = items.map((x) => x.rec.id);
@@ -994,16 +1001,19 @@ function compareScreen(hub, param) {
       ]),
       el('p', { style: { margin: 0, fontWeight: 600 }, text: answer }),
       el('p', { class: 'small', style: { margin: 0 }, text: `Mainly assuming ${assumptions.join(', ')}. If these turn out differently, so can the answer - the range below shows how much.` }),
+      el('p', { class: 'small', style: { margin: 0 }, 'data-field': 'cmp-money-note', text: cmp.today
+        ? `In today’s money: every amount is divided by inflation (CPI, the consumer price index - how fast prices rise in general) of ${pct(infl)} a year, so it buys what that much buys now. Over 50 years, a rand then buys far less than a rand today. The figure is "Costs rise by" on the first home ticked.`
+        : 'In future rands: each amount as it would be written then. Prices rise over the years, so these buy less than the same number today - choose Today’s money to compare with what money buys now.' }),
       el('p', { class: 'small muted', style: { margin: 0 }, text: '"What you would have" is the home sold (or the deposit back) plus everything invested, on the same money each month. It is about money only: whether a home gains value, whether you can carry it, and what you would prefer to live in are separate questions - each home\'s own page has "Can you carry it?".' }),
     ]),
     el('div', { class: 'panel stack' }, [el('h2', { text: 'In plain words', style: { margin: 0 } }), ...[...words, ...flips, ...rentFirstWords].map((t) => el('p', { style: { margin: 0 }, text: t })),
       fromLater ? el('p', { style: { margin: 0 }, text: `Compared from ${ymName(sm.align)}, when the last of them starts - until then nothing differs between them.` }) : null,
       el('p', { class: 'small muted', style: { margin: 0 }, text: 'Each home is worked out with its own ticks and what-ifs, as saved. Change one by opening it. A home started earlier (ours, since we bought it) joins with what it has by then - what it cost before is the same whichever you choose.' })]),
-    chartPanel('Where each would leave you', lineChart(items.map((x, i) => ({ name: x.rec.title || `Home ${i + 1}`, points: sm.series[i].filter((s) => s.t % 6 === 0).map((s) => [s.t, s.wealth]) })), {
-      label: 'What each household would have, year by year, on the same money', marks: [{ x: H, label: `${yrs(cmp.years)}` }],
+    chartPanel('Where each would leave you', lineChart(items.map((x, i) => ({ name: x.rec.title || `Home ${i + 1}`, points: sm.series[i].filter((s) => s.t % 6 === 0).map((s) => [s.t, real(s.wealth, s.t)]) })), {
+      label: `What each household would have, year by year, on the same money${cmp.today ? ', in today’s money' : ''}`, marks: [{ x: H, label: `${yrs(cmp.years)}` }],
       xLabel: fromLater ? (x) => String(Number(sm.align.slice(0, 4)) + Math.floor((Number(sm.align.slice(5)) - 1 + x) / 12)) : null,
       story: 'Each line is what that choice would leave you if you stopped then: the home sold after selling costs, bonds and tax (or the rental deposit back), plus everything invested - on the same money each month.' })),
-    rangePanel({ values: items.map((x) => x.v), today, state: cmpRange, names: [nameOf(ia), nameOf(ib)], H, opts: { a: ia, b: ib }, xLabel: fromLater ? (x) => String(Number(sm.align.slice(0, 4)) + Math.floor((Number(sm.align.slice(5)) - 1 + x) / 12)) : null }),
+    rangePanel({ values: items.map((x) => x.v), today, state: cmpRange, names: [nameOf(ia), nameOf(ib)], H, opts: { a: ia, b: ib, realPct: cmp.today ? infl : 0 }, xLabel: fromLater ? (x) => String(Number(sm.align.slice(0, 4)) + Math.floor((Number(sm.align.slice(5)) - 1 + x) / 12)) : null }),
     el('div', { class: 'panel stack' }, [
       el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums fin-compare' }, [
         el('thead', {}, [el('tr', {}, [el('th', { text: '' }), ...items.map((x) => el('th', { class: 'num', text: x.rec.title || 'Untitled' }))])]),
