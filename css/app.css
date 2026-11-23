@@ -629,3 +629,9 @@ table.plain .num { text-align: right; white-space: nowrap; font-variant-numeric:
 .load-failed { max-width: 520px; margin: 15vh auto; padding: 24px; font: 16px/1.5 system-ui, sans-serif; text-align: center; }
 .load-failed h1 { font-size: 22px; }
 .load-failed button { font: inherit; padding: 10px 20px; border-radius: 999px; border: 1px solid #a8461f; background: #a8461f; color: #fff; cursor: pointer; }
+
+/* Our day's 8/8/8 bar (D-159): the hours inside a part, only where they fit. The fills are the same
+   light-to-mid colours in both themes, so the text is a fixed dark ink. */
+.seg-label { container-type: inline-size; display: flex; align-items: center; justify-content: center; overflow: hidden; min-width: 0; }
+.seg-label span { font-size: 12px; font-weight: 700; white-space: nowrap; color: rgba(20, 20, 20, 0.8); }
+@container (max-width: 34px) { .seg-label span { display: none; } }

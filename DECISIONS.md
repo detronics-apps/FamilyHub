@@ -979,6 +979,11 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-159 Percent beside the label, hours in the bar (owner, 2026-11-24).** "Next to the label, instead of time put the
+% of the day; and add the amount of time in the bar chart for sections big enough to take on text." The legend reads
+"Sleep · 38%"; each part of the day bar carries its hours ("7.5h"), hidden by a container query where the part is
+narrower than 34 px, so nothing is cut off on a phone.
+
 **D-158 8/8/8, simply (owner, 2026-11-24).** "Delete the paragraph underneath the bar chart and rather make it simple."
 Under each adult's two bars, a legend like the owner's sketch: a dot and "Sleep · 7h", "Work · 8.5h", "Personal · 3.5h",
 "Other · 5h" (and "Not planned" when some is). The detail moved behind the legend: tap an entry for one line - how far

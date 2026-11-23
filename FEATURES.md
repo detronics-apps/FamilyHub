@@ -640,7 +640,7 @@ cooking, chores, caring for the kids - in hours. Each category says what it coun
 **Why it is there:** "I believe most people don't have the luxury of sticking to this... I want to see what is the
 others that's missing and how much hours that takes up." Hearing what you should do makes people feel they are
 failing; seeing where the other hours really go shows why.
-Since v0.35.4 (D-158) a short legend sits under each bar - "Work · 8.5h" - and a tap shows the detail.
+Since v0.35.4 (D-158, D-159) the hours sit inside the bar where they fit, a short legend under it gives each part's share of the day - "Work · 31%" - and a tap shows the detail.
 **Show it:** fill in a day with travel and a lunch break, press 8/8/8: work is 8 hours, the day at work is 9, and the
 orange part is everything the rule never mentions.
 

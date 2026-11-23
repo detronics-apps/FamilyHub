@@ -43,8 +43,11 @@ export function dayView(ctx) {
   const SHORT = { sleep: 'Sleep', work: 'Work', personal: 'Personal', other: 'Other' };
   const hrs = (m) => `${Math.round(m / 6) / 10}h`;
   const vs8 = (d) => (d > 0 ? `${fmtSpan(d)} more than 8 h` : d < 0 ? `${fmtSpan(-d)} less than 8 h` : 'exactly 8 h');
-  const segs = (parts, height) => el('div', { style: { flex: '1 1 auto', display: 'flex', gap: '2px', height, borderRadius: '8px', overflow: 'hidden', minWidth: 0 } },
-    parts.filter((x) => x.minutes).map((x) => el('div', { title: x.tip, style: { flex: `${x.minutes} 1 0`, background: x.colour } })));
+  const pctOfDay = (m) => `${Math.round((m / DAY_MINUTES) * 100)}%`;
+  // `label`: the hours written in each part - shown only where they fit (a container query in app.css).
+  const segs = (parts, height, label = false) => el('div', { style: { flex: '1 1 auto', display: 'flex', gap: '2px', height, borderRadius: '8px', overflow: 'hidden', minWidth: 0 } },
+    parts.filter((x) => x.minutes).map((x) => el('div', { class: label ? 'seg-label' : null, title: x.tip, style: { flex: `${x.minutes} 1 0`, background: x.colour } },
+      label ? [el('span', { text: hrs(x.minutes) })] : [])));
   const eightRow = (p) => {
     const adult = (stageOf(p, ctx.today()) ?? p.role) === 'adult';
     const blocks = blocksOf(p);
@@ -66,7 +69,7 @@ export function dayView(ctx) {
     const openKey = view.eightOpen?.startsWith(`${p.id}:`) ? view.eightOpen.slice(p.id.length + 1) : null;
     const open = items.find((x) => x.id === openKey);
     return el('div', { class: 'stack', style: { gap: '4px' }, 'data-field': `day-row:${p.id}` }, [
-      head(segs(items, '28px')),
+      head(segs(items, '28px', true)),
       el('div', { class: 'row', style: { gap: '8px', flexWrap: 'nowrap', alignItems: 'center' } }, [
         el('span', { class: 'small muted', style: { width: '80px', flex: '0 0 80px' }, text: '8/8/8' }),
         segs(EIGHT.filter((g) => g.minutes).map((g) => ({ ...g, tip: `The rule: ${g.name} 8 h` })), '8px')]),
@@ -74,7 +77,7 @@ export function dayView(ctx) {
         type: 'button', class: 'linkish small', 'aria-expanded': String(open?.id === x.id), title: x.tip, 'data-field': `day-legend:${p.id}:${x.id}`,
         style: { display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text)', textDecoration: 'none', fontWeight: open?.id === x.id ? '700' : '400' },
         on: { click: () => { view.eightOpen = open?.id === x.id ? null : `${p.id}:${x.id}`; ctx.render(); } },
-      }, [el('span', { 'aria-hidden': 'true', style: { width: '10px', height: '10px', borderRadius: '50%', background: x.colour, flex: '0 0 auto' } }), `${x.name} · ${hrs(x.minutes)}`]))),
+      }, [el('span', { 'aria-hidden': 'true', style: { width: '10px', height: '10px', borderRadius: '50%', background: x.colour, flex: '0 0 auto' } }), `${x.name} · ${pctOfDay(x.minutes)}`]))),
       open ? el('div', { class: 'small muted', style: { marginLeft: '88px' }, 'data-field': `day-detail:${p.id}`, text: open.tip }) : null,
     ]);
   };
