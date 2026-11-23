@@ -33,10 +33,12 @@ export function dayView(ctx) {
   const choreDay = weeklyLoad(h).day;
 
   const chip = (label, on, click, field) => el('button', { class: 'chip', type: 'button', 'aria-pressed': String(on), text: label, 'data-field': field, on: { click } });
+  // Each part carries its hours where they fit (D-162), as the 8/8/8 bar does.
   const seg = (start, end, k, faded) => el('div', {
+    class: k && !faded ? 'seg-label' : null,
     title: `${k ? k.name : 'Not planned'} ${hhmm(start)}-${hhmm(end)}`,
     style: { width: pct(end - start), background: k ? k.colour : 'transparent', opacity: faded ? '0.15' : '1' },
-  });
+  }, k && !faded ? [el('span', { text: hrs(end - start) })] : []);
   const bar = (children) => el('div', { style: { flex: '1 1 auto', display: 'flex', height: '28px', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)', minWidth: 0 } }, children);
 
   const nameCell = (p) => el('span', { class: 'small', style: { width: '80px', flex: '0 0 80px', overflow: 'hidden', textOverflow: 'ellipsis' }, text: p.name });
@@ -89,15 +91,17 @@ export function dayView(ctx) {
     if (view.mode === 'eight') return eightRow(p);
     const blocks = blocksOf(p);
     const t = totals(blocks, kinds);
+    // Totals: the biggest first, left to right (D-162).
+    const byKind = [...t.byKind].sort((a, b) => b.minutes - a.minutes);
     const only = view.only ? t.byKind.find((k) => k.id === view.only)?.minutes ?? 0 : null;
     const nowT = view.version === 'goal' ? totals(shown(p, normaliseDay(p.day).now).blocks, kinds) : null;
     const tr = shown(p, normaliseDay(p.day)[view.version]);
     const parts = view.mode === 'day'
       ? timeline(blocks).map((r) => seg(r.start, r.end, kind(r.kind), view.only && r.kind !== view.only))
-      : t.byKind.filter((k) => !view.only || k.id === view.only).map((k) => seg(0, k.minutes, k, false));
+      : byKind.filter((k) => !view.only || k.id === view.only).map((k) => seg(0, k.minutes, k, false));
     const words = !blocks.length ? 'Nothing planned yet - Edit day below.'
       : view.only ? `${kind(view.only)?.name}: ${fmtSpan(only)}${nowT ? ` (now ${fmtSpan(nowT.byKind.find((k) => k.id === view.only)?.minutes ?? 0)})` : ''}`
-        : view.mode === 'totals' ? t.byKind.map((k) => `${k.name} ${fmtSpan(k.minutes)}${nowT ? ` (now ${fmtSpan(nowT.byKind.find((x) => x.id === k.id)?.minutes ?? 0)})` : ''}`).join(' · ')
+        : view.mode === 'totals' ? byKind.map((k) => `${k.name} ${fmtSpan(k.minutes)}${nowT ? ` (now ${fmtSpan(nowT.byKind.find((x) => x.id === k.id)?.minutes ?? 0)})` : ''}`).join(' · ')
           : [t.unplanned ? '' : `Awake ${fmtSpan(t.awake)}`, tr.count ? `${tr.count} switches, ${fmtSpan(tr.minutes)} in transitions` : ''].filter(Boolean).join(' · ');
     return el('div', { class: 'stack', style: { gap: '2px' }, 'data-field': `day-row:${p.id}` }, [
       el('div', { class: 'row', style: { gap: '8px', flexWrap: 'nowrap', alignItems: 'center' } }, [

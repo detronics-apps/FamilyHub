@@ -979,6 +979,23 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-162 Own or rent over 50 years, rent first then buy, and hours in the Our day bars (owner, 2026-11-24).**
+"Extend own or rent to 50 years with rent then buy; and with the personal daily hours for both the day and the total
+add the values into the color bars where they fit, same as the 8/8/8 chart; and also sort the total from largest to
+smallest from left to right."
+- **50 years** (`YEARS` in js/apps/homes/home.js): every home is followed for 50 years from today, not 30 - the bond
+  ends around year 20, and that is when owning gets cheap while rent keeps rising, so stopping there hides the part
+  that matters most for retirement. Compare after offers 40 and 50 years; Sell after and the break-even go to 50.
+- **Rent first, then buy:** in Compare, with a rental and a home to buy ticked, "Also: rent first, then buy" adds a
+  third line, after 3, 5, 10, 15 or 20 years. It rents the ticked rental, then buys the ticked home at its price and
+  deposit grown with house prices. On the same money, what buying takes then (less the rental deposit back) comes out
+  of what that household saved while renting; if that is more than it saved, the shortfall is said. Selling a home
+  first is left out of this line. Built inside homePlan (`rentFirstYears`), so the range and every chart work with it.
+  Cape Town base case (R3.36m, 10% down, prime, rent R12 561 +6%, investments 10%): after 20 years in today's money,
+  buy now R4.2m, rent 10 years then buy R5.1m, rent for life R6.5m - the same as the video script's figures.
+- **Our day:** Day and Totals carry each part's hours inside the bar where they fit (the 8/8/8 container query), and
+  Totals is sorted biggest first, left to right, its line under the bar in the same order.
+
 **D-161 Exercise, faith and transition time in Our day (owner, 2026-11-24).** "Add topics like exercise and faith, with a
 toggle to turn on transition time for the person - someone with ADHD might need 5 min to transition between tasks, so
 too many in a day might take an hour in transitions."

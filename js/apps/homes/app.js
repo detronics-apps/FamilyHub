@@ -10,7 +10,7 @@ import { loading, failure } from '../kit.js';
 import { REFERENCE, total, SELL_DEFAULTS } from '../finance/maths.js';
 import { historyGrowth, CGT } from './ownrent.js';
 import { EVENT_KINDS } from './bondlog.js';
-import { homePlan, withAndWithout, sameMoney, kindOf, KINDS, SECTIONS, SECTIONS_ON, SCENARIO_KINDS, PLAN_DEFAULTS } from './home.js';
+import { homePlan, withAndWithout, sameMoney, kindOf, YEARS, KINDS, SECTIONS, SECTIONS_ON, SCENARIO_KINDS, PLAN_DEFAULTS } from './home.js';
 import { shows, hiddenNote, draft, loadDraft, input, info, linesPanel as eventsPanel, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, RULE, savedPanel, exportBar, rand, pct, months } from '../finance/pod.js';
 import { HOME_HELP as H } from '../finance/help.js';
 import { rangePanel, rangeParts } from './range-view.js';
@@ -889,7 +889,7 @@ const scenarioCount = (v) => (v.scenarios ?? []).filter((s) => s && s.on !== fal
 
 /* ----------------------------------------------------------------- compare */
 
-const cmp = { picked: null, years: 10, a: null, b: null };
+const cmp = { picked: null, years: 10, a: null, b: null, rentFirst: 0 };
 const cmpRange = {};   // the scenario range's settings, kept while you move around
 
 function compareScreen(hub, param) {
@@ -900,6 +900,16 @@ function compareScreen(hub, param) {
   if (cmp.picked == null) cmp.picked = new Set(param ? param.split(',') : all.data.slice(0, 2).map((r) => r.id));
   const recs = all.data.filter((r) => cmp.picked.has(r.id));
   const items = recs.map((rec) => ({ rec, v: valuesOf(rec) })).map((x) => ({ ...x, plan: homePlan(x.v, today) })).filter((x) => !x.plan.missing);
+  // Rent first, then buy (D-162): a third way, made from a ticked rental and a ticked home to buy.
+  const rentItem = items.find((x) => x.plan.kind === 'rent');
+  const buyItem = items.find((x) => x.rec.id === cmp.a && x.plan.kind === 'buy') ?? items.find((x) => x.plan.kind === 'buy');
+  const canRentFirst = rentItem && buyItem;
+  if (canRentFirst && cmp.rentFirst) {
+    const r = rentItem.v;
+    const v = { ...buyItem.v, rentFirstYears: cmp.rentFirst, rent: r.rent, rentRisePct: r.rentRisePct, rentDeposit: r.rentDeposit, rentMove: r.rentMove, rentDepositRatePct: r.rentDepositRatePct, rentToday: r.rentToday, fromMonth: r.fromMonth ?? null };
+    const plan = homePlan(v, today);
+    if (!plan.missing) items.push({ rec: { id: 'rent-first', title: `Rent ${yrs(cmp.rentFirst)}, then buy ${buyItem.rec.title || 'the home'}` }, v, plan });
+  }
   const pickList = el('div', { class: 'panel stack' }, [
     el('h2', { text: 'Which homes', style: { margin: 0 } }),
     el('ul', { class: 'list' }, all.data.map((rec) => el('li', {}, [
@@ -908,9 +918,18 @@ function compareScreen(hub, param) {
         el('span', {}, [el('strong', { text: rec.title || 'Untitled' }), el('span', { class: 'small muted', text: ` · ${KINDS[valuesOf(rec).kind]}` })]),
       ]),
     ]))),
-    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Compare after' }, [1, 3, 5, 10, 15, 20, 30].map((y) => el('button', {
+    el('div', { class: 'chipset', role: 'group', 'aria-label': 'Compare after' }, [1, 3, 5, 10, 15, 20, 30, 40, 50].map((y) => el('button', {
       class: 'chip', type: 'button', 'aria-pressed': String(cmp.years === y), text: yrs(y), on: { click: () => { cmp.years = y; hub.render(); } },
     }))),
+    canRentFirst ? el('div', { class: 'row', style: { gap: '8px' } }, [
+      el('label', { class: 'checkline' }, [
+        el('input', { type: 'checkbox', checked: !!cmp.rentFirst, 'data-field': 'cmp-rent-first', on: { change: (e) => { cmp.rentFirst = e.target.checked ? 10 : 0; hub.render(); } } }),
+        el('span', { text: `Also: rent first, then buy ${buyItem.rec.title || 'the home'}` }),
+      ]),
+      cmp.rentFirst ? el('label', { class: 'small row', style: { gap: '6px' } }, ['after', el('select', { class: 'select', style: { width: 'auto' }, 'data-field': 'cmp-rent-first-years', on: { change: (e) => { cmp.rentFirst = Number(e.target.value); hub.render(); } } },
+        [3, 5, 10, 15, 20].map((y) => el('option', { value: String(y), selected: cmp.rentFirst === y, text: yrs(y) })))]) : null,
+    ]) : null,
+    canRentFirst && cmp.rentFirst ? el('p', { class: 'small muted', style: { margin: 0 }, text: `Renting ${rentItem.rec.title || 'the rental'} first, then buying ${buyItem.rec.title || 'the home'} at what it costs by then - its price and deposit grown with house prices.` }) : null,
   ]);
   const head = [
     el('h1', { id: 'cmp-title', text: 'Compare homes', style: { margin: 0 } }),
@@ -934,8 +953,14 @@ function compareScreen(hub, param) {
   const flips = items.map((x, i) => {
     if (i === best) return null;
     const c = crossing(sm.series[best].map((s) => [s.t, s.wealth]), sm.series[i].map((s) => [s.t, s.wealth]));
-    return c != null && c < 360 ? `${items[best].rec.title} starts to leave you more than ${x.rec.title} in ${whenLabel(c)}${c > H ? ' - after the time you chose' : ''}.` : null;
+    return c != null && c < YEARS * 12 ? `${items[best].rec.title} starts to leave you more than ${x.rec.title} in ${whenLabel(c)}${c > H ? ' - after the time you chose' : ''}.` : null;
   }).filter(Boolean);
+  const rentFirstWords = items.flatMap((x, i) => {
+    const f = x.plan.rentFirst;
+    if (!f) return [];
+    return [`${x.rec.title}: buying in ${ymName(f.ym)} at about ${rand(f.price)}, with ${rand(f.fromSaved)} from what was saved by then (the rental deposit back counted).`,
+      sm.short[i] > 0 ? `That is ${rand(sm.short[i])} more than this household would have saved by then on the same money - it would need to come from somewhere else.` : null].filter(Boolean);
+  });
   // The two being weighed up (D-084): the one you are looking at, and its alternative.
   const ids = items.map((x) => x.rec.id);
   if (!ids.includes(cmp.a)) cmp.a = items.find((x) => x.plan.kind === 'buy')?.rec.id ?? ids[0];
@@ -971,7 +996,7 @@ function compareScreen(hub, param) {
       el('p', { class: 'small', style: { margin: 0 }, text: `Mainly assuming ${assumptions.join(', ')}. If these turn out differently, so can the answer - the range below shows how much.` }),
       el('p', { class: 'small muted', style: { margin: 0 }, text: '"What you would have" is the home sold (or the deposit back) plus everything invested, on the same money each month. It is about money only: whether a home gains value, whether you can carry it, and what you would prefer to live in are separate questions - each home\'s own page has "Can you carry it?".' }),
     ]),
-    el('div', { class: 'panel stack' }, [el('h2', { text: 'In plain words', style: { margin: 0 } }), ...[...words, ...flips].map((t) => el('p', { style: { margin: 0 }, text: t })),
+    el('div', { class: 'panel stack' }, [el('h2', { text: 'In plain words', style: { margin: 0 } }), ...[...words, ...flips, ...rentFirstWords].map((t) => el('p', { style: { margin: 0 }, text: t })),
       fromLater ? el('p', { style: { margin: 0 }, text: `Compared from ${ymName(sm.align)}, when the last of them starts - until then nothing differs between them.` }) : null,
       el('p', { class: 'small muted', style: { margin: 0 }, text: 'Each home is worked out with its own ticks and what-ifs, as saved. Change one by opening it. A home started earlier (ours, since we bought it) joins with what it has by then - what it cost before is the same whichever you choose.' })]),
     chartPanel('Where each would leave you', lineChart(items.map((x, i) => ({ name: x.rec.title || `Home ${i + 1}`, points: sm.series[i].filter((s) => s.t % 6 === 0).map((s) => [s.t, s.wealth]) })), {
@@ -983,7 +1008,7 @@ function compareScreen(hub, param) {
       el('div', { class: 'table-scroll' }, [el('table', { class: 'plain fin-sums fin-compare' }, [
         el('thead', {}, [el('tr', {}, [el('th', { text: '' }), ...items.map((x) => el('th', { class: 'num', text: x.rec.title || 'Untitled' }))])]),
         el('tbody', {}, [
-          ['Kind', (x) => KINDS[x.plan.kind]],
+          ['Kind', (x) => (x.plan.rentFirst ? 'Renting, then buying' : KINDS[x.plan.kind])],
           ['From savings on day one', (x, i) => rand(-sm.day1[i])],
           ['A month now', (x) => rand(-x.plan.monthNow)],
           ['Bond paid off', (x) => (x.plan.bond ? ymName(x.plan.bond.paidOff) : '-')],
@@ -1006,7 +1031,7 @@ function sellAfterPanel(hub, d, cmp, H, p) {
   const [A, B] = cmp.names;
   const yearOf = (y) => p.months[Math.min(p.months.length, Math.max(1, Math.max(0, p.now) + Math.round(y * 12))) - 1].ym.slice(0, 4);
   const label = el('strong', { 'data-field': 'sell-after-years', text: `${yrsNow} years (${yearOf(yrsNow)})` });
-  const slider = el('input', { type: 'range', min: '1', max: '30', step: '0.5', value: String(yrsNow), 'aria-label': 'Sell after, in years', 'data-field': 'sell-after', style: { flex: '1 1 220px' },
+  const slider = el('input', { type: 'range', min: '1', max: String(YEARS), step: '0.5', value: String(yrsNow), 'aria-label': 'Sell after, in years', 'data-field': 'sell-after', style: { flex: '1 1 220px' },
     on: { input: (e) => { label.textContent = `${e.target.value} years (${yearOf(Number(e.target.value))})`; }, change: (e) => { v.stayYears = Number(e.target.value); d.mine.add('stayYears'); hub.render(); } } });
   // Bond over (D-117): slide 20 years to 14 and watch when the home pulls ahead.
   const bondYrs = v.kind === 'buy' && p.bond ? Math.round(n(v.termYears)) || 20 : null;
@@ -1028,10 +1053,10 @@ const beCache = new Map();
 function breakEvenPanel(hub, v, today, H, xLabel) {
   const key = beState.key;
   const ck = `${key}|${JSON.stringify(v)}`;
-  if (!beCache.has(ck)) { if (beCache.size > 12) beCache.clear(); beCache.set(ck, breakEven(v, today, key, 30)); }
+  if (!beCache.has(ck)) { if (beCache.size > 12) beCache.clear(); beCache.set(ck, breakEven(v, today, key, YEARS)); }
   const r = beCache.get(ck);
   if (!r) return null;
-  const sellYear = Math.max(1, Math.min(30, Math.round(H / 12)));
+  const sellYear = Math.max(1, Math.min(YEARS, Math.round(H / 12)));
   const pts = r.rows.filter((x) => x.needed != null).map((x) => [x.year * 12, x.needed]);
   const rentYears = r.rows.filter((x) => x.always === 'rent').map((x) => x.year);
   const buyYears = r.rows.filter((x) => x.always === 'buy').map((x) => x.year);

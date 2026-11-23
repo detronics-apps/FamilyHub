@@ -22,6 +22,10 @@ export const SECTIONS = {
 };
 export const SECTIONS_ON = { sellFirst: false, bond: true, running: true, upgrades: true, travel: true, forgone: true };
 
+/** How far the money is followed (D-162): 50 years from today - to retirement and past it, not only to the bond's end. */
+export const YEARS = 50;
+const MONTHS = YEARS * 12;
+
 export const SCENARIO_KINDS = { more: 'Pay more each month', extra: 'Pay in once', withdraw: 'Take out', rate: 'Rate changes' };
 
 export const PLAN_DEFAULTS = {
@@ -33,6 +37,7 @@ export const PLAN_DEFAULTS = {
   growthLow: null, growthHigh: null,   // the band on "How much of the home is yours?" (empty: 2 points either side)
   income: null,
   fromMonth: null,     // buying or renting: the month it starts (empty: this month)
+  rentFirstYears: 0,   // buying: rent for these years first, then buy (D-162) - set by Compare
   ownFrom: 'today',    // ours already: 'today' (as if selling today) or 'bought' (the whole story)
 };
 
@@ -57,7 +62,7 @@ export function scenarioEvents(list, onlyTicked = true) {
 export const investRate = (v) => (1 + (num(v.investPct) / 100) * (1 - num(v.investTaxPct) / 100)) ** (1 / 12) - 1;
 
 /**
- * Month by month from today, for 30 years. `withScenarios: false` gives the same home
+ * Month by month from today, for 50 years (YEARS). `withScenarios: false` gives the same home
  * without the ticked "what ifs", for the with-and-without graphs.
  * Each month: what came out of your pocket (out), money taken back out of the bond
  * (taken), what is owed, what the home is worth, invested money, what it would bring
@@ -68,13 +73,14 @@ export const investRate = (v) => (1 + (num(v.investPct) / 100) * (1 - num(v.inve
 export function homePlan(input, today, { withScenarios = true } = {}) {
   const v = { ...PLAN_DEFAULTS, ...input };
   const kind = kindOf(v);
+  if (kind === 'buy' && num(v.rentFirstYears) > 0) return rentFirst(v, today, withScenarios);
   const on = { ...SECTIONS_ON, ...(v.on ?? {}) };
   const nowYM = today.slice(0, 7);
   // The whole story of the home we own: from the month we bought it, at what we paid.
   const story = kind === 'own' && v.ownFrom === 'bought' && num(v.boughtFor) > 0 && isMonth(v.boughtWhen) && v.boughtWhen < nowYM;
   const ym = story ? v.boughtWhen : kind !== 'own' && isMonth(v.fromMonth) ? v.fromMonth : nowYM;
   const now = monthsFrom(ym, nowYM);           // months from the start to today (negative: it starts later)
-  const M = 360 + Math.max(0, now);            // always 30 years on from today
+  const M = MONTHS + Math.max(0, now);         // always 50 years on from today
   const g = num(v.growthPct) / 100;
   const esc = num(v.escalatePct) / 100;
   // Levies often rise at their own pace (a complex's budget, not inflation) - empty: as costs rise.
@@ -185,6 +191,32 @@ export function homePlan(input, today, { withScenarios = true } = {}) {
   };
 }
 
+/**
+ * Rent first, then buy (D-162): one household renting for `rentFirstYears`, then buying this
+ * home at what it costs by then (today's price and deposit grown with house prices). The
+ * rental deposit comes back; the rest of what buying takes on day one comes from what the
+ * household saved while renting (`fromSaved`, taken by sameMoney). Selling a home first is
+ * left out of this line. ponytail: travel stays the home's own in both parts.
+ */
+function rentFirst(v, today, withScenarios) {
+  const years = num(v.rentFirstYears); const K = Math.round(years * 12);
+  const off = { ...(v.on ?? {}), sellFirst: false };
+  const r = homePlan({ ...v, kind: 'rent', rentFirstYears: 0, on: off, upgrades: [], scenarios: [] }, today, { withScenarios });
+  if (r.missing) return r;
+  const grow = (1 + num(v.growthPct) / 100) ** years;
+  const b = homePlan({ ...v, rentFirstYears: 0, on: off, price: num(v.price) * grow, deposit: num(v.deposit) * grow, fromMonth: addMonthsYM(r.startYM, K) }, today, { withScenarios });
+  if (b.missing) return b;
+  const back = r.months[K - 1].homeNet;   // the rental deposit, back when moving out
+  const months = [...r.months.slice(0, K), ...b.months.map((m, i) => ({ ...m, t: K + i + 1, fromSaved: i === 0 ? b.fromPocket - back : 0 }))];
+  const N = Math.max(0, r.now);
+  const S = Math.max(1, Math.min(months.length, N + (Math.round(num(v.stayYears) * 12) || 120)));
+  return {
+    ...b, kind: 'buy', rentFirst: { years, ym: b.startYM, price: b.value0, fromSaved: b.fromPocket - back },
+    months, stay: S, at: months[S - 1], ahead: months[S - 1].ahead, monthNow: r.monthNow,
+    upfront: r.upfront, fromPocket: r.fromPocket, inv0: 0, start: r.start, startYM: r.startYM, now: r.now, story: false,
+  };
+}
+
 /** The same home with and without the ticked "what ifs". */
 export function withAndWithout(input, today) {
   const a = homePlan(input, today, { withScenarios: false });
@@ -220,14 +252,16 @@ export function sameMoney(plans, v = {}) {
   const up = Math.max(...day1);
   const side = day1.map((x) => up - x);
   const series = plans.map(() => []);
-  for (let t = 1; t <= 360; t += 1) {
+  const short = plans.map(() => 0);
+  for (let t = 1; t <= MONTHS; t += 1) {
     const need = plans.map((p, i) => { const m = rowOf(p, i, t); return m.out - m.taken; });
     const top = Math.max(...need);
     plans.forEach((p, i) => {
-      side[i] = side[i] * (1 + r) + (top - need[i]) * s;
       const m = rowOf(p, i, t);
+      side[i] = side[i] * (1 + r) + (top - need[i]) * s - (m.fromSaved ?? 0);
+      if (m.fromSaved) short[i] = Math.max(0, -side[i]);   // buying later: more than was saved by then
       series[i].push({ t, wealth: m.homeNet + m.inv + side[i] });
     });
   }
-  return { series, up, align, day1 };
+  return { series, up, align, day1, short };
 }

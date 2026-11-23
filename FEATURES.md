@@ -590,6 +590,21 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### Own or rent over 50 years, and rent first then buy (v0.37.0, 2026-11-24)
+**What it does:** Compare follows every home for 50 years, not 30, and can add a third way: rent first for some
+years, then buy the same home at what it costs by then. (D-162)
+**Why it is there:** most comparisons stop when the bond is paid off - exactly when owning gets cheap and rent keeps
+climbing. "I don't want to get stuck with a 20-year view." Renting for ten years and buying after is a real choice
+families make, and it lands between the other two.
+**Show it:** Finance › Homes › Compare, tick a home to buy and a rental, tick "Also: rent first, then buy", then press
+50 years and watch the three lines.
+
+#### Hours in the Our day bars (v0.37.0, 2026-11-24)
+**What it does:** Day and Totals write each part's hours inside the bar where they fit, as 8/8/8 does, and Totals runs
+biggest first, left to right. (D-162)
+**Why it is there:** the biggest part of the day reads first, without hovering or counting.
+**Show it:** People › Our day › Totals.
+
 #### Exercise, faith and transition time (v0.36.0, 2026-11-24)
 **What it does:** Our day starts with Exercise and Faith. Each person can switch on Transition time - the minutes they
 need to switch from one thing to the next - and the day shows how many switches it has and what they add up to. (D-161)

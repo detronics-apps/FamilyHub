@@ -25,7 +25,7 @@ test('D-087 each one on its own, on the same money', () => {
   assert.ok(out.sooner < 0 && out.interest < 0);                   // taking out: later, more interest
   assert.ok(more.kept > 0 && more.keptPaidOff);                     // had it gone on: sooner still
   assert.ok(r.together && Number.isFinite(r.together.effect));
-  assert.equal(more.points.length, 360);
+  assert.equal(more.points.length, 600);
   // Spent, the money taken out is gone: taking it out leaves you less than investing it.
   const spent = situationEffects({ ...own, bondEvents: [own.bondEvents[0], { ...own.bondEvents[1], use: 'spent' }] }, TODAY, 120);
   assert.ok(spent.items[1].effect < out.effect - 100000);

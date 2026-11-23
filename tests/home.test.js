@@ -12,7 +12,7 @@ const buy = { kind: 'buy', price: 1800000, deposit: 180000, ratePct: 11, termYea
 test('D-078 buying: the same answer as before, counted month by month', () => {
   const p = homePlan(buy, TODAY);
   near(-p.ahead, homeCost({ ...buy, mode: 'buy' }).total, 50);
-  assert.equal(p.months.length, 360);
+  assert.equal(p.months.length, 600);   // 50 years (D-162)
   assert.ok(p.months[0].ahead < 0);                        // selling at once loses duty, fees and the agent
 });
 
@@ -111,11 +111,33 @@ test('D-083 ours from when we bought it: the whole story, landing on today as be
   for (const t of [1, 12, 120]) near(story.months[story.now + t - 1].homeNet, today.months[t - 1].homeNet, 1);
   near(story.monthNow, today.monthNow, 0.01);
   near(story.bond.owedNow, today.bond.owedNow, 0.01);
-  assert.equal(story.months.length, 360 + 82, '30 years on from today');
+  assert.equal(story.months.length, 600 + 82, '50 years on from today');
   // Compared with buying now: on one calendar from today; what ours cost before is behind it.
   const sm = sameMoney([story, homePlan(buy, TODAY)]);
   assert.equal(sm.align, '2026-10');
   assert.deepEqual(sm.day1.map((x) => x > 0), [false, true]);
   const smToday = sameMoney([today, homePlan(buy, TODAY)]);
   near(sm.series[0][119].wealth, smToday.series[0][119].wealth, 5);
+});
+
+test('D-162 50 years, and rent first then buy: the rent, then the home at its price then, paid from what was saved', () => {
+  const v = { ...buy, on: { travel: false }, rent: 9000, rentRisePct: 6, rentDeposit: 9000 };
+  const now = homePlan(v, TODAY);
+  const rent = homePlan({ ...v, kind: 'rent' }, TODAY);
+  const later = homePlan({ ...v, rentFirstYears: 10 }, TODAY);
+  assert.equal(now.months.length, 600);
+  // The first ten years are the rental's, month for month; then the home, bought at its price grown 5% a year.
+  near(later.months[119].out, rent.months[119].out, 0.01);
+  assert.equal(later.rentFirst.ym, '2036-10');
+  near(later.rentFirst.price, 1800000 * 1.05 ** 10, 1);
+  near(later.months[120].value, 1800000 * 1.05 ** 10 * 1.05 ** (1 / 12), 1);
+  // What buying takes then, less the rental deposit back, comes out of what this household saved.
+  assert.ok(later.rentFirst.fromSaved > 0 && later.months[120].fromSaved === later.rentFirst.fromSaved);
+  const sm = sameMoney([now, rent, later], { investPct: 7, investTaxPct: 0 });
+  assert.equal(sm.series[0].length, 600);
+  near(sm.series[2][118].wealth, sm.series[1][118].wealth, 1);   // the same as renting while it rents
+  assert.ok(sm.series[2][121].wealth < sm.series[1][121].wealth, 'buying costs money the renter keeps invested');
+  // Not enough saved by then: the shortfall is said, not hidden.
+  const poor = sameMoney([homePlan({ ...v, kind: 'rent', rent: 30000 }, TODAY), homePlan({ ...v, rentFirstYears: 1 }, TODAY)], { investPct: 7, investTaxPct: 0 });
+  assert.ok(poor.short[1] > 0);
 });
