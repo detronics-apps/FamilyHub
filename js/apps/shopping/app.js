@@ -9,12 +9,12 @@ import { loading, failure, saveRecord } from '../kit.js';
 import { formatIngredient, combineIngredients, parseIngredient, buyNote } from '../meals/logic.js';
 import { inSystem } from '../../units.js';
 import {
-  GROUPS, KINDS, LIST_ID, normaliseShopping, addFromSource, addMore, addShoppingItem, toggleItem, clearBought, removeItem, byGroup, readSend, listText,
+  GROUPS, KINDS, LIST_ID, normaliseShopping, addFromSource, addMore, addShoppingItem, toggleItem, clearBought, clearAll, removeItem, byGroup, readSend, listText,
   findItems, kindOf, categorise,
 } from './logic.js';
 
 // find: what the finder shows - words, a kind, and only our own items or everything there is.
-const ui = { find: { query: '', kind: '', ours: true } };
+const ui = { find: { query: '', kind: '', ours: true }, clearing: false };
 const shopping = (hub) => hub.data.collection('list', { summary: (l) => ({ title: 'Shopping list', count: l.items.filter((i) => !i.checked).length }) });
 
 const loadList = (hub) => hub.use('list', async () => {
@@ -118,6 +118,14 @@ function listScreen(hub, list, save) {
 
   return el('section', { class: 'stack', 'aria-label': 'Shopping list' }, [
     list.items.some((i) => !i.checked) ? el('a', { class: 'btn btn-primary no-print', href: hub.href('shop'), text: 'Start shopping', title: 'At the shop: just the list, big, to tick off', 'data-field': 'go-shop', style: { alignSelf: 'flex-start' } }) : null,
+    // Asked once, on the page itself (D-160): emptying the list cannot be undone.
+    ui.clearing && list.items.length ? el('div', { class: 'panel stack no-print', role: 'alertdialog', 'aria-label': 'Clear the list', 'data-field': 'shop-clear-ask' }, [
+      el('p', { style: { margin: 0 }, text: `Clear the whole list - all ${list.items.length} item${list.items.length === 1 ? '' : 's'}? Use this when the shopping is done: everything on it counts as bought.` }),
+      el('div', { class: 'row' }, [
+        el('button', { class: 'btn btn-primary', type: 'button', text: 'Clear', 'data-field': 'shop-clear-yes', on: { click: async () => { ui.clearing = false; await save(clearAll(list, hub.today())); } } }),
+        el('button', { class: 'btn', type: 'button', text: 'Cancel', on: { click: () => { ui.clearing = false; hub.render(); } } }),
+      ]),
+    ]) : null,
     finder(hub, list, save),
     ...byGroup({ items: list.items.filter((i) => !i.checked) }).map(([g, items]) => el('div', { class: 'panel' }, [
       el('h2', { text: `${GROUPS[g]} (${items.length})` }),
@@ -129,6 +137,7 @@ function listScreen(hub, list, save) {
         on: { click: async () => { try { await navigator.clipboard.writeText(listText(list, (i) => formatIngredient(inSystem(i, hub.units())))); hub.ui.notice('Copied - paste it into a message or notes.'); } catch { hub.ui.notice('This browser would not allow copying. Use Print instead.', 'warn'); } } },
       }),
       el('button', { class: 'btn btn-small', type: 'button', text: 'Print', 'data-field': 'shop-print', on: { click: () => window.print() } }),
+      el('button', { class: 'btn btn-small', type: 'button', text: 'Clear list', title: 'The shopping is done - empty the whole list', 'data-field': 'shop-clear-all', on: { click: () => { ui.clearing = true; hub.render(); } } }),
     ]) : el('p', { class: 'panel', text: 'Nothing to buy. Send a meal or the week’s plan from the Meals section, supplies from Chores - or type things in above.' }),
     bought.length ? el('div', { class: 'panel' }, [
       el('h2', { text: `Bought (${bought.length})` }),

@@ -172,7 +172,7 @@ const RAW = [
   },
   {
     manifest: {
-      fhManifest: 1, id: 'shopping', section: 'shopping', name: 'Shopping', version: '1.2.0',
+      fhManifest: 1, id: 'shopping', section: 'shopping', name: 'Shopping', version: '1.2.1',
       description: 'One family shopping list. Find what you buy by kind - food, cleaning, hygiene - add anything new, and tick it off at the shop.',
       author: 'Family Hub', requires: { api: 1, core: '>=0.3.0' },
       screens: [{ id: 'list', title: 'Shopping list' }, { id: 'shop', title: 'At the shop' }, { id: 'add', title: 'Add to the list', nav: false }],

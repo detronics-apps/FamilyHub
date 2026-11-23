@@ -4,7 +4,7 @@ import {
   parseIngredient, formatIngredient, normaliseRecipe, recipeSummary, scaleIngredients, nutritionRows,
   weekStart, weekDays, normalisePlan, setSlot, slotAt, copyPlan, combineIngredients, ingredientsForPlan,
 } from '../js/apps/meals/logic.js';
-import { normaliseShopping, refreshFromPlan, addShoppingItem, toggleItem, clearBought } from '../js/apps/shopping/logic.js';
+import { normaliseShopping, refreshFromPlan, addShoppingItem, toggleItem, clearBought, clearAll } from '../js/apps/shopping/logic.js';
 
 test('ingredient lines: numbers, fractions, units, and plain things', () => {
   assert.deepEqual(parseIngredient('200 g flour'), { qty: 200, unit: 'g', name: 'flour' });
@@ -205,4 +205,17 @@ test('D-142 what to buy: in the packs the family buys, or whole ones - and what 
   assert.equal(buyNote({ name: 'Frozen peas', qty: 2, unit: 'cup' }, packs), '', 'cups are not grams: no guess');
   assert.equal(normalisePack({ name: '', qty: 6 }), null);
   assert.equal(packLabel(normalisePack({ name: 'Milk', qty: 2, unit: 'l' })), '2 l');
+});
+
+test('Clear list: the shopping is done - all gone, and the unticked count as bought (D-160)', () => {
+  let list = normaliseShopping({});
+  list = addShoppingItem(list, 'milk', 'a', 'food');
+  list = addShoppingItem(list, 'bread', 'b', 'food');
+  list = toggleItem(list, 'a', '2026-11-24');
+  const done = clearAll(list, '2026-11-24');
+  assert.equal(done.items.length, 0);
+  const known = Object.fromEntries(done.known.map((k) => [k.name, k]));
+  assert.equal(known.milk.times, 1, 'ticked already counted - not twice');
+  assert.equal(known.bread.times, 1);
+  assert.equal(known.bread.last, '2026-11-24');
 });

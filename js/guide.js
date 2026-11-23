@@ -171,6 +171,7 @@ export const HOWTOS = [
     'Open Shopping from the home screen. Type what you need, or choose a kind - Food, Cleaning, Hygiene, Medical, Stationery... - to see the things you buy and add them with "+ Add".',
     '"Ours" shows what the family has bought before or added; "Everything" also shows common things of each kind, for something you are buying for the first time. Anything not there: "+ Add ...".',
     'At the shop, press "Start shopping": just the list, big, by aisle. "Done" clears what you bought.',
+    'Shopping done without ticking? "Clear list" empties the whole list, after asking - everything on it counts as bought.',
     'Send things to it from elsewhere: "To Shopping" on a meal, "To Shopping" in Meal Planner, or a chore’s supplies in Chores.',
     'You see what is being sent and untick what you already have before it is added.',
   ] },

@@ -979,6 +979,11 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-160 Clear list (owner, 2026-11-24).** "With the shopping list, add a clear button for when we already finished
+shopping." Clear bought only took the ticked items; **Clear list** (beside Copy list and Print) empties the whole list,
+after asking once on the page ("Clear the whole list - all 12 items?"). What was not ticked counts as bought, so it is
+found again under Ours; what was ticked already counted. `clearAll()` in shopping/logic.js, tested.
+
 **D-159 Percent beside the label, hours in the bar (owner, 2026-11-24).** "Next to the label, instead of time put the
 % of the day; and add the amount of time in the bar chart for sections big enough to take on text." The legend reads
 "Sleep · 38%"; each part of the day bar carries its hours ("7.5h"), hidden by a container query where the part is

@@ -170,6 +170,11 @@ export function findItems(list, { query = '', kind = null, ours = true } = {}) {
   return [...mine, ...more];
 }
 export const clearBought = (list) => ({ ...list, items: list.items.filter((i) => !i.checked) });
+/**
+ * The shopping is done (D-160): the whole list empties. What was not ticked counts as bought
+ * too (so it is found again later); what was ticked already counted.
+ */
+export const clearAll = (list, day = '') => ({ ...list.items.filter((i) => !i.checked).reduce((l, i) => remember(l, i, { bought: true, day }), list), items: [] });
 export const removeItem = (list, id) => ({ ...list, items: list.items.filter((i) => i.id !== id) });
 
 /** Items by group, in the order the groups are listed; empty groups left out. */

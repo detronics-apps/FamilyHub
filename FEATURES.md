@@ -590,6 +590,13 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### Clear list (v0.35.6, 2026-11-24)
+**What it does:** Shopping has Clear list: when the shopping is done, the whole list empties after one question.
+Everything on it counts as bought, so it is still found under Ours next time. (D-160)
+**Why it is there:** "Add a clear button for when we already finished shopping" - not everyone ticks things off at the
+shop.
+**Show it:** put three things on the list, press Clear list, then Clear.
+
 #### Typing a time is never cut off (v0.35.3, 2026-11-24)
 **What it does:** times in Our day, and birthdays in People, save when you leave the box or press Enter - not halfway
 through typing. (D-157)
