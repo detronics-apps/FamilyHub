@@ -10,19 +10,34 @@ export const DAY_MINUTES = 1440;
 export const KIND_COLOURS = ['#b4b2a9', '#85b7eb', '#ed93b1', '#d4537e', '#f0997b', '#7f77dd', '#ef9f27', '#5dcaa5', '#1d9e75', '#97c459', '#d9a441', '#6f9fb8'];
 
 /** The starting categories - rename, recolour, remove or add to them. */
+// `eight` is what it counts as in the 8/8/8 rule (D-150): sleep, work, personal life, or not in it.
 export const DAY_KINDS = [
-  { id: 'sleep', name: 'Sleep', colour: '#b4b2a9' },
-  { id: 'hygiene', name: 'Hygiene', colour: '#85b7eb' },
-  { id: 'eat', name: 'Eating', colour: '#ed93b1' },
-  { id: 'cook', name: 'Cooking', colour: '#d4537e' },
-  { id: 'travel', name: 'Travel', colour: '#f0997b' },
-  { id: 'work', name: 'Work', colour: '#7f77dd' },
-  { id: 'chores', name: 'Chores', colour: '#ef9f27' },
-  { id: 'care', name: 'Kids: care', colour: '#5dcaa5' },
-  { id: 'play', name: 'Kids: play', colour: '#1d9e75' },
-  { id: 'lessons', name: 'Lessons', colour: '#6f9fb8' },
-  { id: 'free', name: 'Free time', colour: '#97c459' },
+  { id: 'sleep', name: 'Sleep', colour: '#b4b2a9', eight: 'sleep' },
+  { id: 'hygiene', name: 'Hygiene', colour: '#85b7eb', eight: 'personal' },
+  { id: 'eat', name: 'Eating', colour: '#ed93b1', eight: 'personal' },
+  { id: 'cook', name: 'Cooking', colour: '#d4537e', eight: 'other' },
+  { id: 'travel', name: 'Travel', colour: '#f0997b', eight: 'other' },
+  { id: 'work', name: 'Work', colour: '#7f77dd', eight: 'work' },
+  // At work, but not working: lunch and breaks (owner, D-150).
+  { id: 'break', name: 'Work breaks', colour: '#b58a62', eight: 'other' },
+  // Switching from one thing to the next: winding down, getting going (owner, D-150).
+  { id: 'transition', name: 'Transition', colour: '#d3d1c7', eight: 'other' },
+  { id: 'chores', name: 'Chores', colour: '#ef9f27', eight: 'other' },
+  { id: 'care', name: 'Kids: care', colour: '#5dcaa5', eight: 'other' },
+  { id: 'play', name: 'Kids: play', colour: '#1d9e75', eight: 'personal' },
+  { id: 'lessons', name: 'Lessons', colour: '#6f9fb8', eight: 'work' },
+  { id: 'free', name: 'Free time', colour: '#97c459', eight: 'personal' },
 ];
+
+/** The 8/8/8 rule's parts, and the time it leaves out. */
+export const EIGHT = [
+  { id: 'sleep', name: 'Sleep', colour: '#b4b2a9', minutes: 480 },
+  { id: 'work', name: 'Work', colour: '#7f77dd', minutes: 480 },
+  { id: 'personal', name: 'Personal life', colour: '#97c459', minutes: 480 },
+  { id: 'other', name: 'Not in 8/8/8', colour: '#ef9f27', minutes: 0 },
+];
+const EIGHT_IDS = EIGHT.map((g) => g.id);
+const startingEight = (id) => DAY_KINDS.find((k) => k.id === id)?.eight ?? 'other';
 
 export function normaliseKinds(list) {
   const seen = new Set();
@@ -30,6 +45,7 @@ export function normaliseKinds(list) {
     id: str(k.id, 40) || `k${i}`,
     name: str(k.name, 40) || 'Something',
     colour: /^#[0-9a-f]{6}$/i.test(k.colour) ? k.colour.toLowerCase() : KIND_COLOURS[i % KIND_COLOURS.length],
+    eight: EIGHT_IDS.includes(k.eight) ? k.eight : startingEight(str(k.id, 40)),
   })).filter((k) => !seen.has(k.id) && seen.add(k.id)).slice(0, 30);
 }
 /** The family's categories, or the starting ones until they change them. */
@@ -124,3 +140,19 @@ export function choreShare(day, familyMinutesADay, blocks) {
 
 /** 90 → "1 h 30", 45 → "45 min", 480 → "8 h". */
 export const fmtSpan = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60}` : ''}` : `${m} min`);
+
+/**
+ * The day against the 8/8/8 rule (D-150): each part's hours and how far from 8 they are, and
+ * what is not in the rule at all - by category, largest first. Not planned time is apart.
+ */
+export function eightEight(blocks, kinds = DAY_KINDS) {
+  const t = totals(blocks, kinds);
+  const groups = EIGHT.map((g) => {
+    const minutes = t.byKind.filter((k) => (k.eight ?? 'other') === g.id).reduce((s, k) => s + k.minutes, 0) + (g.id === 'other' ? t.other : 0);
+    return { ...g, minutes, delta: g.id === 'other' ? null : minutes - g.minutes };
+  });
+  const left = t.byKind.filter((k) => (k.eight ?? 'other') === 'other').sort((a, b) => b.minutes - a.minutes);
+  return { groups, left: t.other ? [...left, { id: '', name: 'Removed category', minutes: t.other }] : left, unplanned: t.unplanned };
+}
+/** +1 h, −30 min (a real minus, easy to see), same. */
+export const fmtDelta = (m) => (m === 0 ? 'same' : `${m > 0 ? '+' : '−'}${fmtSpan(Math.abs(m))}`);

@@ -590,6 +590,16 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### How close we get to 8/8/8 (v0.31.0, 2026-11-23)
+**What it does:** in Our day (Advanced), 8/8/8 puts each adult's day over the rule of 8 hours work, 8 sleep and 8
+personal life: how far each part is from 8, and what the rule leaves out - travel, lunch at work, the time in between,
+cooking, chores, caring for the kids - in hours. Each category says what it counts as. (D-150)
+**Why it is there:** "I believe most people don't have the luxury of sticking to this... I want to see what is the
+others that's missing and how much hours that takes up." Hearing what you should do makes people feel they are
+failing; seeing where the other hours really go shows why.
+**Show it:** fill in a day with travel and a lunch break, press 8/8/8: work is 8 hours, the day at work is 9, and the
+orange part is everything the rule never mentions.
+
 #### Our day (v0.30.0, 2026-11-23)
 **What it does:** People › Our day shows each person's average day from midnight to midnight, side by side, in coloured
 blocks - sleep, work, travel, cooking, the kids, chores - or added up by category. Tap a category to see only that for

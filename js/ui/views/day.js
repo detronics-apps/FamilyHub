@@ -5,9 +5,9 @@
 import { el } from '../dom.js';
 import { avatar } from '../common.js';
 import { shows } from '../levels.js';
-import { updatePerson } from '../../model.js';
+import { updatePerson, stageOf } from '../../model.js';
 import { weeklyLoad } from '../../progress.js';
-import { kindsOf, normaliseDay, normaliseKinds, timeline, totals, choreShare, nextBlock, fmtSpan, KIND_COLOURS, DAY_MINUTES } from '../../day.js';
+import { kindsOf, normaliseDay, normaliseKinds, timeline, totals, choreShare, nextBlock, fmtSpan, KIND_COLOURS, DAY_MINUTES, EIGHT, eightEight, fmtDelta } from '../../day.js';
 
 // What this screen shows, kept while it redraws (a save redraws the page).
 const view = { version: 'now', mode: 'day', only: null, open: new Set() };
@@ -18,7 +18,7 @@ export function dayView(ctx) {
   const h = ctx.app.household;
   const kinds = kindsOf(h);
   const kind = (id) => kinds.find((k) => k.id === id);
-  if (!shows('advanced')) view.version = 'now';
+  if (!shows('advanced')) { view.version = 'now'; if (view.mode === 'eight') view.mode = 'day'; }
   const blocksOf = (p) => normaliseDay(p.day)[view.version];
   const saveDay = (p, patch) => ctx.commit(updatePerson(ctx.app.household, p.id, { day: { ...normaliseDay(p.day), ...patch } }));
   const saveKinds = (list) => ctx.commit({ ...ctx.app.household, household: { ...ctx.app.household.household, dayKinds: normaliseKinds(list) } });
@@ -31,7 +31,29 @@ export function dayView(ctx) {
   });
   const bar = (children) => el('div', { style: { flex: '1 1 auto', display: 'flex', height: '28px', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)', minWidth: 0 } }, children);
 
+  const nameCell = (p) => el('span', { class: 'small', style: { width: '80px', flex: '0 0 80px', overflow: 'hidden', textOverflow: 'ellipsis' }, text: p.name });
+  // 8/8/8 (D-150): the day grouped as the rule groups it, over the rule's own 8 | 8 | 8.
+  const eightRow = (p) => {
+    const adult = (stageOf(p, ctx.today()) ?? p.role) === 'adult';
+    const blocks = blocksOf(p);
+    const e = eightEight(blocks, kinds);
+    const words = !adult ? '8/8/8 is a rule for adults.' : !blocks.length ? 'Nothing planned yet - Edit day below.' : [
+      ...e.groups.filter((g) => g.id !== 'other').map((g) => `${g.name} ${fmtSpan(g.minutes)} (${fmtDelta(g.delta)})`),
+      e.groups.at(-1).minutes ? `Not in 8/8/8: ${fmtSpan(e.groups.at(-1).minutes)} - ${e.left.map((k) => `${k.name} ${fmtSpan(k.minutes)}`).join(', ')}` : 'Nothing outside 8/8/8',
+      e.unplanned ? `Not planned ${fmtSpan(e.unplanned)}` : null,
+    ].filter(Boolean).join(' · ');
+    return el('div', { class: 'stack', style: { gap: '2px' }, 'data-field': `day-row:${p.id}` }, [
+      el('div', { class: 'row', style: { gap: '8px', flexWrap: 'nowrap', alignItems: 'center' } }, [nameCell(p),
+        adult && blocks.length ? bar(e.groups.map((g) => seg(0, g.minutes, g, false))) : el('div', { style: { flex: '1 1 auto' } })]),
+      adult && blocks.length ? el('div', { class: 'row', style: { gap: '8px', flexWrap: 'nowrap', alignItems: 'center' } }, [
+        el('span', { class: 'small muted', style: { width: '80px', flex: '0 0 80px' }, text: '8/8/8' }),
+        el('div', { style: { flex: '1 1 auto', display: 'flex', height: '12px', borderRadius: '4px', overflow: 'hidden', minWidth: 0 } }, EIGHT.filter((g) => g.minutes).map((g) => seg(0, g.minutes, g, false)))]) : null,
+      el('div', { class: 'small muted', style: { marginLeft: '88px' }, 'data-field': `day-words:${p.id}`, text: words }),
+    ]);
+  };
+
   const row = (p) => {
+    if (view.mode === 'eight') return eightRow(p);
     const blocks = blocksOf(p);
     const t = totals(blocks, kinds);
     const only = view.only ? t.byKind.find((k) => k.id === view.only)?.minutes ?? 0 : null;
@@ -45,7 +67,7 @@ export function dayView(ctx) {
           : t.unplanned ? '' : `Awake ${fmtSpan(t.awake)}`;
     return el('div', { class: 'stack', style: { gap: '2px' }, 'data-field': `day-row:${p.id}` }, [
       el('div', { class: 'row', style: { gap: '8px', flexWrap: 'nowrap', alignItems: 'center' } }, [
-        el('span', { class: 'small', style: { width: '80px', flex: '0 0 80px', overflow: 'hidden', textOverflow: 'ellipsis' }, text: p.name }), bar(parts)]),
+        nameCell(p), bar(parts)]),
       el('div', { class: 'small muted', style: { marginLeft: '88px' }, 'data-field': `day-words:${p.id}`, text: [words,
         t.unplanned && blocks.length && !view.only ? `Not planned ${fmtSpan(t.unplanned)}` : null,
         t.overlap ? `Two blocks overlap at ${t.overlap} - the later one counts` : null].filter(Boolean).join(' · ') }),
@@ -62,14 +84,16 @@ export function dayView(ctx) {
       el('div', { class: 'row', style: { gap: '6px' } }, [
         chip('Day', view.mode === 'day', () => { view.mode = 'day'; ctx.render(); }, 'day-mode:day'),
         chip('Totals', view.mode === 'totals', () => { view.mode = 'totals'; ctx.render(); }, 'day-mode:totals'),
+        shows('advanced') ? chip('8/8/8', view.mode === 'eight', () => { view.mode = 'eight'; view.only = null; ctx.render(); }, 'day-mode:eight') : null,
         shows('advanced') ? el('span', { style: { width: '12px' } }) : null,
         shows('advanced') ? chip('Now', view.version === 'now', () => { view.version = 'now'; ctx.render(); }, 'day-version:now') : null,
         shows('advanced') ? chip('Goal', view.version === 'goal', () => { view.version = 'goal'; ctx.render(); }, 'day-version:goal') : null,
       ]),
+      view.mode === 'eight' ? el('p', { class: 'small muted', style: { margin: 0 }, 'data-field': 'day-eight-note', text: 'A rule of thumb you will often hear: 8 hours work, 8 hours sleep, 8 hours personal life. The top bar is the day grouped the same way; under it, the rule. In brackets: more or less than 8. What is not in the rule is shown too - travel, breaks at work, the time in between. Choose what each category counts as under Categories.' }) : null,
       view.version === 'goal' ? el('p', { class: 'small muted', style: { margin: 0 }, text: 'The day you want to get to. In brackets: what it is now.' }) : null,
       ...h.people.map(row),
       h.people.length ? axis : el('p', { text: 'Add the family in People first.' }),
-      el('div', { class: 'stack', style: { gap: '4px' } }, [
+      view.mode === 'eight' ? null : el('div', { class: 'stack', style: { gap: '4px' } }, [
         el('span', { class: 'small muted', text: view.only ? 'Showing one category - tap it again for all of them.' : 'Tap a category to see only that, for everyone:' }),
         el('div', { class: 'chipset' }, kinds.map((k) => el('button', {
           class: 'chip', type: 'button', 'aria-pressed': String(view.only === k.id), 'data-field': `day-only:${k.id}`,
@@ -83,6 +107,7 @@ export function dayView(ctx) {
     shows('expert') ? el('div', { class: 'panel stack' }, [
       el('h2', { text: 'How it is worked out', style: { margin: 0 } }),
       el('p', { class: 'small', style: { margin: 0 }, text: 'The day is a circle laid flat: a block whose end is before its start crosses midnight, so 18:30 to 01:00 is drawn from 18:30 to 24:00 and from 00:00 to 01:00. A total is the minutes a category covers - every block of it added together, wherever it falls. Awake = 24 h - Sleep. Where two blocks overlap, the later one in the list counts, and the app says where.' }),
+      el('p', { class: 'small', style: { margin: 0 }, text: '8/8/8: each part is the minutes of the categories that count as it, and the difference is that less 8 hours. Not in 8/8/8 is everything else. The idea of a day in three eights is widely credited to Robert Owen, who campaigned for shorter working days in the 1800s: "eight hours labour, eight hours recreation, eight hours rest".' }),
       el('p', { class: 'small', style: { margin: 0 }, text: 'Chores share = the family’s chores a day × the person’s percent. The family’s chores a day = each chore’s minutes × how often it comes round in a week ÷ 7, from Chores.' }),
     ]) : null,
   ]);
@@ -153,6 +178,9 @@ function kindsPanel(kinds, saveKinds) {
           on: { change: (e) => saveKinds(kinds.map((x, j) => (j === i ? { ...x, colour: e.target.value } : x))) } }),
         el('input', { class: 'input', value: k.name, 'aria-label': 'Category name', style: { maxWidth: '200px' },
           on: { change: (e) => saveKinds(kinds.map((x, j) => (j === i ? { ...x, name: e.target.value } : x))) } }),
+        shows('advanced') ? el('select', { class: 'select', 'aria-label': `In 8/8/8, ${k.name} counts as`, title: 'What it counts as in 8/8/8', style: { maxWidth: '170px' }, 'data-field': `day-eight:${k.id}`,
+          on: { change: (e) => saveKinds(kinds.map((x, j) => (j === i ? { ...x, eight: e.target.value } : x))) } },
+        EIGHT.map((g) => el('option', { value: g.id, text: g.id === 'other' ? 'Not in 8/8/8' : `8/8/8: ${g.name}`, selected: k.eight === g.id }))) : null,
         el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove category', on: { click: () => saveKinds(kinds.filter((_, j) => j !== i)) } }),
       ])),
       el('div', {}, [el('button', { class: 'btn btn-small', type: 'button', text: 'Add category', 'data-field': 'day-add-kind',

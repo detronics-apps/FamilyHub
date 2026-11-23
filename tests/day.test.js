@@ -57,7 +57,7 @@ test('our day: bad input is dropped, and the starting categories stand until cha
 test('our day: kept through the Drive folder, the family file and two laptops (D-149)', () => {
   const { h: h0, ann, kid } = fixture();
   let h = updatePerson(h0, ann, { day: { now: late, goal: early, choreShare: 60 } });
-  h = { ...h, household: { ...h.household, dayKinds: [...DAY_KINDS, { id: 'biz', name: 'Own business', colour: '#123456' }] } };
+  h = { ...h, household: { ...h.household, dayKinds: normaliseKinds([...DAY_KINDS, { id: 'biz', name: 'Own business', colour: '#123456' }]) } };
   const back = filesToHousehold(householdToFiles(h));
   assert.equal(fingerprint(back), fingerprint(h));
   assert.deepEqual(back.people.find((p) => p.id === ann).day.goal, early);
@@ -76,4 +76,24 @@ test('our day: kept through the Drive folder, the family file and two laptops (D
   assert.deepEqual(merged.people.find((p) => p.id === ann).day.now, early);
   assert.equal(merged.household.name, 'Renamed');
   assert.equal(merged.household.dayKinds.at(-1).name, 'Own business');
+});
+
+test('8/8/8: the day grouped against the rule, with what it leaves out (D-150)', async () => {
+  const { eightEight, fmtDelta } = await import('../js/day.js');
+  const day = [{ from: '00:00', to: '07:00', kind: 'sleep' }, { from: '07:00', to: '07:30', kind: 'transition' }, { from: '07:30', to: '08:30', kind: 'travel' },
+    { from: '08:30', to: '12:30', kind: 'work' }, { from: '12:30', to: '13:30', kind: 'break' }, { from: '13:30', to: '17:30', kind: 'work' },
+    { from: '17:30', to: '18:30', kind: 'travel' }, { from: '18:30', to: '20:00', kind: 'cook' }, { from: '20:00', to: '23:00', kind: 'free' }];
+  const e = eightEight(day);
+  const g = Object.fromEntries(e.groups.map((x) => [x.id, x]));
+  assert.equal(g.sleep.delta, -60);
+  assert.equal(g.work.delta, 0, 'work is 8 h - but the day at work is 9 with lunch');
+  assert.equal(g.personal.minutes, 180);
+  assert.equal(g.other.minutes, 30 + 120 + 60 + 90);
+  assert.deepEqual(e.left.map((k) => k.id), ['travel', 'cook', 'break', 'transition']);
+  assert.equal(e.unplanned, 60);
+  assert.equal(fmtDelta(-60), '−1 h');
+  assert.equal(fmtDelta(0), 'same');
+  assert.equal(fmtDelta(90), '+1 h 30');
+  // A family's own category counts as not in it until they say otherwise; a starting one keeps its place.
+  assert.equal(normaliseKinds([{ id: 'biz', name: 'Own business' }, { id: 'sleep', name: 'Rest' }]).map((k) => k.eight).join(), 'other,sleep');
 });

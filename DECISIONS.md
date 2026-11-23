@@ -979,6 +979,24 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-150 8/8/8, and what it leaves out (owner, 2026-11-23).** "The ideal balanced approach... given by a lot of
+gurus... I believe most people don't have the luxury of sticking to this... I want to see what is the others that's
+missing and how much hours that takes up." And: "you're not 8 hours at work, you're 9 hours at work" (lunch), and "there's
+a transition time period as well to switch from one to another."
+- Our day gains **8/8/8** (Advanced), beside Day and Totals: per adult, the day grouped as the rule groups it (Sleep,
+  Work, Personal life, Not in 8/8/8) over the rule's own 8 | 8 | 8 bar, with each part's difference ("Work 7 h 30
+  (−30 min)") and what is not in the rule, largest first. Children: "8/8/8 is a rule for adults" - no claims about
+  how much they should sleep.
+- Each category says what it **counts as** (a select under Categories, Advanced). Starting: Sleep; Work and Lessons
+  (study counts as work); Hygiene, Eating, Kids: play, Free time as personal life; Cooking, Travel, Chores, Kids: care
+  and the two new categories as not in it. A family's own category starts as "Not in 8/8/8" until they say.
+- Two new starting categories from the owner: **Work breaks** (at work, not working - lunch) and **Transition** (the
+  time between one thing and the next).
+- Neutral: "A rule of thumb you will often hear". No verdict on any day. Expert: how it is added up, and that the idea
+  is widely credited to Robert Owen's campaign for shorter working days ("eight hours labour, eight hours
+  recreation, eight hours rest") - credited, as the sources differ on when he first said it.
+- Not yet: the 3 Fs / 3 Hs / 3 Ss split of personal life.
+
 **D-149 Our day: each person's day, side by side (owner, 2026-11-23).** "A bar chart showing each person's daily
 breakdown... from 00 till midnight... if we do from 10 o'clock in the morning till 1 o'clock the next morning, we have the
 exact same amount of hours than somebody waking up at 5 and going to bed at 7." People › Our day:
