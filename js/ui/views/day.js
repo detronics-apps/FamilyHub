@@ -10,7 +10,7 @@ import { weeklyLoad } from '../../progress.js';
 import { kindsOf, normaliseDay, normaliseKinds, timeline, totals, choreShare, nextBlock, fmtSpan, KIND_COLOURS, DAY_MINUTES, EIGHT, eightEight, fmtDelta, PART_GROUPS, personalParts, keepCopy, removeCopy, sinceCopy } from '../../day.js';
 
 // What this screen shows, kept while it redraws (a save redraws the page).
-const view = { version: 'now', mode: 'day', only: null, open: new Set(), compare: {} };
+const view = { version: 'now', mode: 'day', only: null, open: new Set(), compare: {}, eightOpen: null };
 // "2 Nov", with the year when it is not this year.
 const shortDay = (day, today) => new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', ...(day.slice(0, 4) === today.slice(0, 4) ? {} : { year: 'numeric' }) });
 const pct = (m) => `${(m / DAY_MINUTES) * 100}%`;
@@ -38,33 +38,45 @@ export function dayView(ctx) {
 
   const nameCell = (p) => el('span', { class: 'small', style: { width: '80px', flex: '0 0 80px', overflow: 'hidden', textOverflow: 'ellipsis' }, text: p.name });
   // 8/8/8 (D-150): the day grouped as the rule groups it, over the rule's own 8 | 8 | 8.
+  // 8/8/8 (D-150, D-158): one bar of the day grouped as the rule groups it, the rule's own 8 | 8 | 8
+  // under it, and a short legend. Tap a legend entry for its detail - one line, only when asked.
+  const SHORT = { sleep: 'Sleep', work: 'Work', personal: 'Personal', other: 'Other' };
+  const hrs = (m) => `${Math.round(m / 6) / 10}h`;
+  const vs8 = (d) => (d > 0 ? `${fmtSpan(d)} more than 8 h` : d < 0 ? `${fmtSpan(-d)} less than 8 h` : 'exactly 8 h');
+  const segs = (parts, height) => el('div', { style: { flex: '1 1 auto', display: 'flex', gap: '2px', height, borderRadius: '8px', overflow: 'hidden', minWidth: 0 } },
+    parts.filter((x) => x.minutes).map((x) => el('div', { title: x.tip, style: { flex: `${x.minutes} 1 0`, background: x.colour } })));
   const eightRow = (p) => {
     const adult = (stageOf(p, ctx.today()) ?? p.role) === 'adult';
     const blocks = blocksOf(p);
+    const head = (child) => el('div', { class: 'row', style: { gap: '8px', flexWrap: 'nowrap', alignItems: 'center' } }, [nameCell(p), child]);
+    if (!adult || !blocks.length) {
+      return el('div', { class: 'stack', style: { gap: '2px' }, 'data-field': `day-row:${p.id}` }, [head(el('span', { class: 'small muted', 'data-field': `day-words:${p.id}`, text: adult ? 'Nothing planned yet - Edit day below.' : '8/8/8 is a rule for adults.' }))]);
+    }
     const e = eightEight(blocks, kinds);
-    const words = !adult ? '8/8/8 is a rule for adults.' : !blocks.length ? 'Nothing planned yet - Edit day below.' : [
-      ...e.groups.filter((g) => g.id !== 'other').map((g) => `${g.name} ${fmtSpan(g.minutes)} (${fmtDelta(g.delta)})`),
-      e.groups.at(-1).minutes ? `Not in 8/8/8: ${fmtSpan(e.groups.at(-1).minutes)} - ${e.left.map((k) => `${k.name} ${fmtSpan(k.minutes)}`).join(', ')}` : 'Nothing outside 8/8/8',
-      e.unplanned ? `Not planned ${fmtSpan(e.unplanned)}` : null,
-    ].filter(Boolean).join(' · ');
-    return el('div', { class: 'stack', style: { gap: '2px' }, 'data-field': `day-row:${p.id}` }, [
-      el('div', { class: 'row', style: { gap: '8px', flexWrap: 'nowrap', alignItems: 'center' } }, [nameCell(p),
-        adult && blocks.length ? bar(e.groups.map((g) => seg(0, g.minutes, g, false))) : el('div', { style: { flex: '1 1 auto' } })]),
-      adult && blocks.length ? el('div', { class: 'row', style: { gap: '8px', flexWrap: 'nowrap', alignItems: 'center' } }, [
-        el('span', { class: 'small muted', style: { width: '80px', flex: '0 0 80px' }, text: '8/8/8' }),
-        el('div', { style: { flex: '1 1 auto', display: 'flex', height: '12px', borderRadius: '4px', overflow: 'hidden', minWidth: 0 } }, EIGHT.filter((g) => g.minutes).map((g) => seg(0, g.minutes, g, false)))]) : null,
-      el('div', { class: 'small muted', style: { marginLeft: '88px' }, 'data-field': `day-words:${p.id}`, text: words }),
-      adult && blocks.length ? partsLine(p, blocks) : null,
-    ]);
-  };
-  // Personal life by the 3 Fs, 3 Hs and 3 Ss (D-151) - the rule gives no hours for each part.
-  const partsLine = (p, blocks) => {
     const pp = personalParts(blocks, kinds);
-    const text = [
-      ...pp.groups.map((g) => `${g.name} ${fmtSpan(g.minutes)} (${g.parts.map((x) => `${x.name} ${x.minutes ? fmtSpan(x.minutes) : 0}`).join(', ')})`),
-      pp.none.length ? `No part yet: ${pp.none.map((k) => `${k.name} ${fmtSpan(k.minutes)}`).join(', ')}` : null,
-    ].filter(Boolean).join(' · ');
-    return el('div', { class: 'small muted', style: { marginLeft: '88px' }, 'data-field': `day-parts:${p.id}`, text: `Personal life: ${text}` });
+    const detail = {
+      sleep: (g) => `Sleep ${fmtSpan(g.minutes)} - ${vs8(g.delta)}.`,
+      work: (g) => `Work ${fmtSpan(g.minutes)} - ${vs8(g.delta)}.`,
+      personal: (g) => `Personal life ${fmtSpan(g.minutes)} - ${vs8(g.delta)}. ${pp.groups.map((x) => `${x.name} ${x.minutes ? fmtSpan(x.minutes) : 0} (${x.parts.map((y) => `${y.name} ${y.minutes ? fmtSpan(y.minutes) : 0}`).join(', ')})`).join(' · ')}${pp.none.length ? ` · No part yet: ${pp.none.map((k) => `${k.name} ${fmtSpan(k.minutes)}`).join(', ')}` : ''}`,
+      other: (g) => (g.minutes ? `Not in 8/8/8: ${e.left.map((k) => `${k.name} ${fmtSpan(k.minutes)}`).join(', ')}.` : 'Nothing outside 8/8/8.'),
+      unplanned: () => `Not planned yet: ${fmtSpan(e.unplanned)} - add blocks under Edit day.`,
+    };
+    const items = [...e.groups.map((g) => ({ id: g.id, name: SHORT[g.id], colour: g.colour, minutes: g.minutes, tip: detail[g.id](g) })),
+      ...(e.unplanned ? [{ id: 'unplanned', name: 'Not planned', colour: 'var(--border)', minutes: e.unplanned, tip: detail.unplanned() }] : [])];
+    const openKey = view.eightOpen?.startsWith(`${p.id}:`) ? view.eightOpen.slice(p.id.length + 1) : null;
+    const open = items.find((x) => x.id === openKey);
+    return el('div', { class: 'stack', style: { gap: '4px' }, 'data-field': `day-row:${p.id}` }, [
+      head(segs(items, '28px')),
+      el('div', { class: 'row', style: { gap: '8px', flexWrap: 'nowrap', alignItems: 'center' } }, [
+        el('span', { class: 'small muted', style: { width: '80px', flex: '0 0 80px' }, text: '8/8/8' }),
+        segs(EIGHT.filter((g) => g.minutes).map((g) => ({ ...g, tip: `The rule: ${g.name} 8 h` })), '8px')]),
+      el('div', { class: 'row', style: { gap: '4px 14px', marginLeft: '88px' }, 'data-field': `day-words:${p.id}` }, items.filter((x) => x.minutes || x.id !== 'other').map((x) => el('button', {
+        type: 'button', class: 'linkish small', 'aria-expanded': String(open?.id === x.id), title: x.tip, 'data-field': `day-legend:${p.id}:${x.id}`,
+        style: { display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text)', textDecoration: 'none', fontWeight: open?.id === x.id ? '700' : '400' },
+        on: { click: () => { view.eightOpen = open?.id === x.id ? null : `${p.id}:${x.id}`; ctx.render(); } },
+      }, [el('span', { 'aria-hidden': 'true', style: { width: '10px', height: '10px', borderRadius: '50%', background: x.colour, flex: '0 0 auto' } }), `${x.name} · ${hrs(x.minutes)}`]))),
+      open ? el('div', { class: 'small muted', style: { marginLeft: '88px' }, 'data-field': `day-detail:${p.id}`, text: open.tip }) : null,
+    ]);
   };
 
   const row = (p) => {
@@ -115,7 +127,7 @@ export function dayView(ctx) {
         shows('advanced') ? chip('Now', view.version === 'now', () => { view.version = 'now'; ctx.render(); }, 'day-version:now') : null,
         shows('advanced') ? chip('Goal', view.version === 'goal', () => { view.version = 'goal'; ctx.render(); }, 'day-version:goal') : null,
       ]),
-      view.mode === 'eight' ? el('p', { class: 'small muted', style: { margin: 0 }, 'data-field': 'day-eight-note', text: 'A rule of thumb you will often hear: 8 hours work, 8 hours sleep, 8 hours personal life. The top bar is the day grouped the same way; under it, the rule. In brackets: more or less than 8. What is not in the rule is shown too - travel, breaks at work, the time in between, and what did not exist when it began in the 1800s, such as screens, or planning and family meetings. Some versions split personal life into 3 Fs (Family, Friends, Faith), 3 Hs (Health, Hygiene, Hobby) and 3 Ss (Soul, Service, Smile), with no hours for each. Choose what each category counts as, and its part, under Categories.' }) : null,
+      view.mode === 'eight' ? el('p', { class: 'small muted', style: { margin: 0 }, 'data-field': 'day-eight-note', text: 'A rule of thumb you will often hear: 8 hours work, 8 hours sleep, 8 hours personal life. The top bar is the day grouped the same way; under it, the rule. Other is what the rule leaves out - travel, breaks at work, the time in between, screens, planning. Tap an entry under a bar for its detail, such as the 3 Fs, 3 Hs and 3 Ss of personal life. Choose what each category counts as under Categories.' }) : null,
       view.version === 'goal' ? el('p', { class: 'small muted', style: { margin: 0 }, text: 'The day you want to get to. In brackets: what it is now.' }) : null,
       ...h.people.map(row),
       h.people.length ? axis : el('p', { text: 'Add the family in People first.' }),

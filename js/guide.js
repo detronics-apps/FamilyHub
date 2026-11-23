@@ -245,7 +245,7 @@ export const HOWTOS = [
     'Day shows the blocks from 00:00 to 24:00; Totals adds each category up. Tap a category to see only that, for everyone.',
     'In Advanced: Goal is the day you want to get to, beside what it is now; Chores gives each person a share of the family’s chores, in minutes a day.',
     'Categories are yours: rename, recolour, remove or add your own, such as Own business.',
-    'In Advanced, 8/8/8 puts each adult’s day over the rule of 8 hours work, sleep and personal life: how far from 8 each is, and what the rule leaves out - travel, breaks at work, the time in between. Under Categories, choose what each one counts as.',
+    'In Advanced, 8/8/8 puts each adult’s day over the rule of 8 hours work, sleep and personal life: with a short legend under each bar - tap an entry for its detail: how far from 8 it is, what Other is made of. Under Categories, choose what each one counts as.',
     'In Advanced, Keep copy (under Edit day) keeps the day with today’s date. Later, a line under the day says what changed since - and, with a goal day, how much closer to it. Compare with an older copy, or Remove copy.',
     'Personal life is also split into the 3 Fs (Family, Friends, Faith), 3 Hs (Health, Hygiene, Hobby) and 3 Ss (Soul, Service, Smile). Under Categories, give each personal-life category its part.',
   ] },

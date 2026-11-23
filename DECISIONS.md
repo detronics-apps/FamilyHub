@@ -979,6 +979,12 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-158 8/8/8, simply (owner, 2026-11-24).** "Delete the paragraph underneath the bar chart and rather make it simple."
+Under each adult's two bars, a legend like the owner's sketch: a dot and "Sleep · 7h", "Work · 8.5h", "Personal · 3.5h",
+"Other · 5h" (and "Not planned" when some is). The detail moved behind the legend: tap an entry for one line - how far
+from 8 h, what Other is made of, the 3 Fs, 3 Hs and 3 Ss - and tap again to hide it (a hover title shows the same).
+Segments are separated by a thin gap, as in the sketch. The note above the bars is shorter.
+
 **D-157 Times and dates save when you leave the box (owner, 2026-11-24).** "I'm typing 18:30 and it picks up 01:00...
 then I type 30 which it registers as 03 because I was too slow and it saved." Browsers fire "change" after each part
 of a time or date box (the "18" of 18:30); Our day saved on it, which redrew the page and threw the person out of the
