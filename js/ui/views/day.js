@@ -2,7 +2,7 @@
 // the day, or added up by category - with the day we want to get to, and the share of the
 // chores each person takes. People › Our day.
 
-import { el } from '../dom.js';
+import { el, saveOnLeave } from '../dom.js';
 import { avatar } from '../common.js';
 import { shows } from '../levels.js';
 import { updatePerson, stageOf } from '../../model.js';
@@ -168,8 +168,9 @@ function editor(ctx, p, h, kinds, saveDay) {
   const kindSel = (b, i) => el('select', { class: 'select', 'aria-label': 'What', style: { maxWidth: '170px' }, on: { change: (e) => put(blocks.map((x, j) => (j === i ? { ...x, kind: e.target.value } : x))) } },
     [...(kinds.some((k) => k.id === b.kind) ? [] : [el('option', { value: b.kind, text: 'Removed category', selected: true })]),
       ...kinds.map((k) => el('option', { value: k.id, text: k.name, selected: k.id === b.kind }))]);
-  const time = (b, i, f, label) => el('input', { class: 'input', type: 'time', step: '60', value: b[f], 'aria-label': label, style: { width: 'auto' },
-    on: { change: (e) => { if (e.target.value) put(blocks.map((x, j) => (j === i ? { ...x, [f]: e.target.value } : x))); } } });
+  // Saved when you leave the box (D-157), so typing 18:30 is never cut off at 18.
+  const time = (b, i, f, label) => saveOnLeave(el('input', { class: 'input', type: 'time', step: '60', value: b[f], 'aria-label': label, style: { width: 'auto' }, 'data-field': `day-${f}:${p.id}:${i}` }),
+    (v) => { if (v) put(blocks.map((x, j) => (j === i ? { ...x, [f]: v } : x))); });
   const others = h.people.flatMap((o) => ['now', 'goal'].filter((v) => v === 'now' || shows('advanced')).map((v) => ({ o, v })))
     .filter(({ o, v }) => !(o.id === p.id && v === key) && normaliseDay(o.day)[v].length);
   const from = others.length ? el('select', { class: 'select', 'aria-label': 'Copy from', style: { maxWidth: '200px' } },

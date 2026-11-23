@@ -590,6 +590,12 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### Typing a time is never cut off (v0.35.3, 2026-11-24)
+**What it does:** times in Our day, and birthdays in People, save when you leave the box or press Enter - not halfway
+through typing. (D-157)
+**Why it is there:** typing 18:30 saved "18" and threw Dad out of the box; the "30" then became "03".
+**Show it:** type 18:30 into a block's time without stopping, then press Enter.
+
 #### No block after Done (v0.35.2, 2026-11-24)
 **What it does:** after Done on Do something now, the list simply carries on. A line at the top says it is recorded,
 with Undo. (D-156)

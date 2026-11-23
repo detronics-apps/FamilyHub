@@ -2,7 +2,7 @@
 // record of height and weight (handy at the clinic or hospital: "what did
 // she weigh in March?"). Its own page on the home screen, not inside Settings.
 
-import { el } from '../dom.js';
+import { el, saveOnLeave } from '../dom.js';
 import { dayView } from './day.js';
 import { guidanceFor } from '../../guidance.js';
 import { fmtWeight, fmtHeight, kgFrom, cmFrom } from '../../units.js';
@@ -77,10 +77,9 @@ function personCard(ctx, p) {
         class: 'input', value: p.name, 'aria-label': `Name for ${p.name}`, 'data-field': `pname:${p.id}`, style: { flex: '1 1 140px', width: 'auto' },
         on: { change: (e) => update({ name: e.target.value }) },
       }),
-      el('input', {
+      saveOnLeave(el('input', {
         class: 'input', type: 'date', value: p.born, max: ctx.today(), 'aria-label': `Birthday: ${p.name}`, 'data-field': `pborn:${p.id}`, style: { width: 'auto' },
-        on: { change: (e) => update({ born: e.target.value }) },
-      }),
+      }), (v) => update({ born: v })),
       stage ? null : el('select', {
         class: 'select', 'aria-label': `Adult or child: ${p.name} (until a birthday is added)`, 'data-field': `prole:${p.id}`, style: { width: 'auto' },
         on: { change: (e) => update({ role: e.target.value }) },
@@ -154,10 +153,9 @@ function pregnancyRow(ctx, p, update) {
       on: { change: (e) => update({ lifeStage: e.target.value }) },
     }, [['', 'Not pregnant or breastfeeding'], ['pregnant', 'Pregnant'], ['breastfeeding', 'Breastfeeding']].map(([v, t]) => el('option', { value: v, text: t, selected: p.lifeStage === v }))),
     p.lifeStage === 'pregnant' ? el('label', { class: 'small', for: `pconc-${p.id}`, text: 'Conception date' }) : null,
-    p.lifeStage === 'pregnant' ? el('input', {
+    p.lifeStage === 'pregnant' ? saveOnLeave(el('input', {
       class: 'input', type: 'date', id: `pconc-${p.id}`, value: p.conceived, max: today, min: addDaysIso(today, -300), 'data-field': `pconc:${p.id}`, style: { width: 'auto' },
-      on: { change: (e) => update({ conceived: e.target.value }) },
-    }) : null,
+    }), (v) => update({ conceived: v })) : null,
     p.lifeStage === 'pregnant' && !p.conceived ? el('span', { class: 'small muted', text: 'An estimate is fine - it gives the weeks and the due date.' }) : null,
     pregnancyInfo(p, today)?.overdue ? el('span', { class: 'small muted', text: 'The due date has passed - change this to Breastfeeding or Not pregnant once the baby has arrived.' }) : null,
   ]);

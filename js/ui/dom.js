@@ -50,6 +50,19 @@ export function moneyBox(node, { negative = false } = {}) {
 }
 
 /** Same as `el`, in the SVG namespace. */
+/**
+ * Save a time or date box when the person leaves it or presses Enter - never while typing (D-157).
+ * Browsers fire "change" after each part of a time or date ("18" of 18:30), and saving then redraws
+ * the page and throws them out of the box. `save` gets the value, only when it changed.
+ */
+export function saveOnLeave(input, save) {
+  let start = input.value;
+  input.addEventListener('focus', () => { start = input.value; });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } });
+  input.addEventListener('blur', () => { if (input.value !== start) { start = input.value; save(input.value); } });
+  return input;
+}
+
 export function svg(tag, attrs = {}, children = []) {
   const node = document.createElementNS(SVG_NS, tag);
   applyAttrs(node, attrs, true);

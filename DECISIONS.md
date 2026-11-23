@@ -979,6 +979,12 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-157 Times and dates save when you leave the box (owner, 2026-11-24).** "I'm typing 18:30 and it picks up 01:00...
+then I type 30 which it registers as 03 because I was too slow and it saved." Browsers fire "change" after each part
+of a time or date box (the "18" of 18:30); Our day saved on it, which redrew the page and threw the person out of the
+box. `saveOnLeave()` in js/ui/dom.js saves only when the box is left or Enter is pressed, and only if the value changed.
+Used by Our day's from/to and People's birthday and conception date, which had the same trap.
+
 **D-156 No block after Done (owner, 2026-11-24).** "Remove this green block that keeps asking finish or something
 else, as it is just extra buttons to click and has no purpose, it just takes up valuable screen space." After Done on
 Do something now, the list simply carries on; the notice at the top says "Done: ..." with Undo. Gone with it: the
