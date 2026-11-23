@@ -979,6 +979,13 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-164 A typed 0 is 0 on the same money (owner asked why, 2026-11-24).** Compare's answer and the range graph's
+answer under it differed by about 2% (R39.8m against R39.1m on the example homes). Compare read "Share of growth lost
+to tax" with `Number(x) || 15`, so the 0 the example homes have (no tax, as in the post they come from) became 15%;
+the range read it as 0. The same habit turned an empty "Of the difference, really invested" into 0% in Compare, and
+Situations read the figures a third way. `sameMoney()` now reads all three itself, once - a 0 typed is 0, only an
+empty box takes the default (9%, 15%, 100%) - and every caller passes the home's figures as they are. Tested.
+
 **D-163 Compare in today's money (owner, 2026-11-24).** Over 50 years, amounts in future rands run to hundreds of
 millions and say little; the owner agreed to show them in today's money. Compare has **Today's money** (the default)
 and **Future rands**. Today's money divides each amount t months on by inflation - the first home's "Costs rise by",

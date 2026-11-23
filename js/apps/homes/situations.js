@@ -71,7 +71,7 @@ export function situationEffects(v, today, H, off = []) {
     }
   }
   const all = live.length > 1 ? addPlan(without(v, live.map((s) => s.key))) : null;
-  const sm = sameMoney(plans, { investPct: v.investPct ?? 9, investTaxPct: v.investTaxPct ?? 15, investShare: v.investShare ?? 100, cash: v.diffCash === true });
+  const sm = sameMoney(plans, { investPct: v.investPct, investTaxPct: v.investTaxPct, investShare: v.investShare, cash: v.diffCash === true });
   const S = sm.series;
   const at = Math.min(H, S[0].length) - 1;
   const diff = (a, b) => S[a].map((x, j) => [x.t, x.wealth - S[b][j].wealth]);

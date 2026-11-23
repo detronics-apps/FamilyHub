@@ -947,7 +947,7 @@ function compareScreen(hub, param) {
   ]) : null);
   if (items.length < 2) return el('section', { class: 'stack', 'aria-labelledby': 'cmp-title' }, [...head, el('p', { class: 'panel muted', text: recs.length >= 2 ? 'Fill in Financing for two or more of these to compare the money.' : 'Tick two or more homes.' })]);
   const v0 = items[0].v;
-  const sm = sameMoney(items.map((x) => x.plan), { investPct: n(v0.investPct) || 9, investTaxPct: n(v0.investTaxPct) || 15, investShare: v0.investShare ?? 100, cash: v0.diffCash === true });
+  const sm = sameMoney(items.map((x) => x.plan), { investPct: v0.investPct, investTaxPct: v0.investTaxPct, investShare: v0.investShare, cash: v0.diffCash === true });
   const H = cmp.years * 12;
   const fromLater = sm.align !== today.slice(0, 7);
   // Today's money (D-163): divided by inflation - the household's own "costs rise" figure, CPI unless changed.

@@ -152,3 +152,12 @@ test('D-163 today\'s money: an amount years on, divided by inflation', async () 
   near(real.series[239][1], future.series[239][1] / 1.05 ** 20, 0.01);
   assert.deepEqual(real.series.map(([, d]) => Math.sign(d)), future.series.map(([, d]) => Math.sign(d)));
 });
+
+test('D-164 the same money reads a typed 0 as 0, and an empty box as the default', () => {
+  const plans = [homePlan(buy, TODAY), homePlan({ ...buy, kind: 'rent', rent: 9000 }, TODAY)];
+  const at = (o) => sameMoney(plans, o).series[1][239].wealth;
+  near(at({ investPct: 7, investTaxPct: 0 }), at({ investPct: 7, investTaxPct: '0' }), 0.01);
+  assert.ok(at({ investPct: 7, investTaxPct: 0 }) > at({ investPct: 7, investTaxPct: 15 }), 'no tax leaves more than 15% tax');
+  near(at({ investPct: 7, investTaxPct: '' }), at({ investPct: 7, investTaxPct: 15 }), 0.01);
+  near(at({ investPct: 7, investShare: '' }), at({ investPct: 7, investShare: 100 }), 0.01);   // empty: all of it, not none
+});

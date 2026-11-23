@@ -241,9 +241,11 @@ export function withAndWithout(input, today) {
  * investments + those savings.
  */
 export function sameMoney(plans, v = {}) {
-  // The differences invested - or kept as cash, growing nothing (`cash`).
-  const r = v.cash ? 0 : investRate({ investPct: v.investPct ?? 9, investTaxPct: v.investTaxPct ?? 15 });
-  const s = Math.min(100, Math.max(0, v.investShare ?? 100)) / 100;
+  // The differences invested - or kept as cash, growing nothing (`cash`). The figures are read
+  // here, once, for every caller (D-164): a 0 typed is 0; only an empty box takes the default.
+  const fig = (x, d) => (x === null || x === undefined || x === '' || !Number.isFinite(Number(x)) ? d : Number(x));
+  const r = v.cash ? 0 : investRate({ investPct: fig(v.investPct, 9), investTaxPct: fig(v.investTaxPct, 15) });
+  const s = Math.min(100, Math.max(0, fig(v.investShare, 100))) / 100;
   // One calendar (D-083): compared from the month the last of them starts - until then
   // nothing differs. A home that started earlier (ours, since we bought it) joins with
   // what it has then; what it cost before is behind it whichever is chosen.

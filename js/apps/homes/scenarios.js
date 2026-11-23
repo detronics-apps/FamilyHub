@@ -69,7 +69,7 @@ export function measure(values, today, deltas = {}, { a = 0, b = 1, share = {}, 
   const plans = vs.map((v) => homePlan(v, today));
   if (plans.some((p) => p.missing)) return null;
   if (vs.length === 1) return { series: plans[0].months.slice(Math.max(0, plans[0].now)).map((m, i) => [i + 1, m.ahead]), plans };
-  const sm = sameMoney(plans, { investPct: n(vs[0].investPct, 9), investTaxPct: n(vs[0].investTaxPct, 15), investShare: share.investShare ?? vs[0].investShare ?? 100, cash: vs[0].diffCash === true });
+  const sm = sameMoney(plans, { investPct: vs[0].investPct, investTaxPct: vs[0].investTaxPct, investShare: share.investShare ?? vs[0].investShare, cash: vs[0].diffCash === true });
   return { series: sm.series[a].map((s, i) => [s.t, inToday(s.wealth - sm.series[b][i].wealth, s.t, realPct)]), wealthA: sm.series[a], wealthB: sm.series[b], plans, sm };
 }
 
