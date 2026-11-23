@@ -2,7 +2,7 @@
 
 import { el, svg } from './dom.js';
 import { fmtAgo, fmtDay, fmtFrequency } from '../dates.js';
-import { personName, roomName, removeDemo } from '../model.js';
+import { personName, roomName, removeDemo, doneOn } from '../model.js';
 import { KEYS } from '../storage.js';
 
 /** The Family Hub mark: a house with a heart, built from nodes (D-129). */
@@ -114,6 +114,7 @@ export function choreCard(ctx, chore, occ, { label = null, reasons = [], onDone 
   const today = ctx.today();
   const details = [chore.description, chore.instructions && `How: ${chore.instructions}`, chore.easier && `Makes it easier: ${chore.easier}`].filter(Boolean);
 
+  const doneToday = doneOn(h, chore.id, today);
   const pillClass = (r) => (r === 'Important' ? 'pill pill--important' : r === 'Optional improvement' ? 'pill pill--optional' : 'pill');
 
   return el('article', { class: 'card', 'aria-label': chore.name }, [
@@ -146,8 +147,12 @@ export function choreCard(ctx, chore, occ, { label = null, reasons = [], onDone 
           }),
         },
       }) : null,
+      // Done today (D-154): said plainly on the card, with Undo - so a second press is a choice, not a guess.
+      doneToday ? el('span', { class: 'badge', role: 'status', 'data-field': `done-today:${chore.id}`, text: `✓ Done today${doneToday.by ? ` by ${personName(h, doneToday.by)}` : ''}` }) : null,
+      doneToday ? el('button', { class: 'btn btn-quiet', type: 'button', text: 'Undo', title: 'Take back today’s Done', 'data-field': `undo-done:${chore.id}`, on: { click: () => ctx.undo(doneToday.id) } }) : null,
       el('button', {
-        class: 'btn btn-primary', type: 'button', 'data-field': `done:${chore.id}`, text: 'Done',
+        class: doneToday ? 'btn' : 'btn btn-primary', type: 'button', 'data-field': `done:${chore.id}`, text: doneToday ? 'Again' : 'Done',
+        title: doneToday ? 'Done once more today - recorded as a second time' : 'Record it as done',
         on: {
           click: () => {
             if (ctx.session?.state()?.id === chore.id) { ctx.session.done(); return; }

@@ -112,3 +112,21 @@ test('dependencies block until the earlier chore is done', () => {
   h = updateChore(h, ids.floor, { dependsOn: [dep.id] });
   assert.equal(blockedBy(floor(), h, occurrences(h, TODAY)).length, 1);
 });
+
+test('closing "Worth a conversation" counts the cycles again from that day (D-154)', async () => {
+  const { markReviewed, doneOn, removeEvent } = await import('../js/model.js');
+  const { h, ids } = fixture();
+  assert.equal(occ(h, ids.basin, '2026-11-03').needsReview, true);
+  const closed = markReviewed(h, [ids.basin], '2026-11-03');
+  assert.equal(occ(closed, ids.basin, '2026-11-03').needsReview, false, 'closed');
+  assert.equal(occ(closed, ids.basin, '2026-11-03').state, 'ready', 'the chore itself still waits - nothing is hidden');
+  assert.equal(occ(closed, ids.basin, '2026-11-16').needsReview, false);
+  assert.equal(occ(closed, ids.basin, '2026-11-17').needsReview, true, 'back after two more whole weeks');
+  assert.equal(closed.chores.find((c) => c.id === ids.floor).reviewedOn, undefined, 'only the chosen chores');
+
+  // Done today on the card, and its Undo.
+  const done = recordEvent(h, { choreId: ids.basin, type: 'done' }, at(TODAY)).household;
+  const ev = doneOn(done, ids.basin, TODAY);
+  assert.ok(ev);
+  assert.equal(doneOn(removeEvent(done, ev.id), ids.basin, TODAY), null);
+});

@@ -979,6 +979,20 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-154 Done shows, every entry can come out, conversations close (owner, 2026-11-24).** "Scrub the toilet in the
+bathroom is on the list 4x today because I did not realise it was picking up when I pressed the Done button, because it
+stayed on the list... The worth a conversation section should also have an x to close them and perhaps even a clear all;
+because we are still learning to use the app, now we have to have conversations on all items, which is more
+overwhelming."
+- **Cause:** Rooms shows every chore, so after Done the card stayed with its Done button; the only signs were a small
+  status line and a notice at the top, out of view.
+- **The card** now says "✓ Done today by Mom" with **Undo** beside it, and the button becomes **Again** (a real second
+  time is still one press - a dishwasher can be done twice a day).
+- **Recent activity:** a × on every entry removes it, after asking (every add has a remove).
+- **Worth a conversation:** a × per chore and **Clear all** (with two or more). Closing sets the chore's `reviewedOn`;
+  the cycles count again from that day, so it comes back only after two more whole cycles waiting. The chore itself
+  still shows as ready - nothing is hidden. The Plan tab's review notices follow the same rule.
+
 **D-153 Better than last time, by your own goal (owner, 2026-11-23).** "The entire purpose is not to judge but rather
 give clarity and visibility and show areas that can improve, as every day / week just being a bit more conscious and
 better than the last can make a big difference." Our day remembered nothing, so there was no "last".

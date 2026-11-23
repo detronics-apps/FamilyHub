@@ -590,6 +590,14 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### Done shows, entries come out, conversations close (v0.35.0, 2026-11-24)
+**What it does:** a chore's card says "Done today by Mom" with Undo, and its button becomes Again. Every Recent activity
+entry has a × to remove it. Worth a conversation has a × per chore and Clear all; a closed one comes back only if it
+waits two more whole cycles. (D-154)
+**Why it is there:** Mom pressed Done four times because nothing seemed to happen - and a new family had a conversation
+waiting on every chore. "We are still learning to use the app."
+**Show it:** in Rooms, press Done and watch the card change; in Progress, close a conversation and remove an entry.
+
 #### Better than last time (v0.34.0, 2026-11-23)
 **What it does:** in Our day (Advanced), Keep copy saves each person's day with the date. Later, a line under the day
 says what changed since - "Screen time −30 min (30 min closer to your goal)". Compare with any copy kept. (D-153)

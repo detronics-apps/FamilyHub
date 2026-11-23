@@ -3,10 +3,10 @@
 import { el } from '../../ui/dom.js';
 import { findTasks, momentum, TIME_CHOICES, ENERGY_CHOICES, ORDER_RULES, defaultFilters } from '../../matching.js';
 import { occurrences, occurrence } from '../../recurrence.js';
-import { hasDemo, roomName, updateChore } from '../../model.js';
+import { hasDemo, roomName, updateChore, markReviewed, removeEvent } from '../../model.js';
 import { householdProgress, activity, timeSuggestions } from '../../progress.js';
 import { fmtDay } from '../../dates.js';
-import { choreCard, demoNotice } from '../../ui/common.js';
+import { choreCard, demoNotice, confirmAction } from '../../ui/common.js';
 import { planView, openSamples, loadPanel } from './plan.js';
 
 const TABS = [
@@ -242,8 +242,12 @@ function progressView(ctx) {
     ]) : null,
     p.review.length ? el('div', { class: 'panel' }, [
       el('h2', { text: 'Worth a conversation' }),
-      el('p', { class: 'small muted', text: 'These keep not fitting in. That is information about the plan, not about anyone. The Plan tab has a review for each.' }),
-      el('ul', { class: 'list' }, p.review.map((c) => el('li', {}, [el('span', { class: 'list__main', text: c.name }), el('a', { href: '#/chores/plan', text: 'Review' })]))),
+      el('p', { class: 'small muted', text: 'These keep not fitting in. That is information about the plan, not about anyone. The Plan tab has a review for each. Close one once you have talked about it - it comes back only if it waits two more whole cycles.' }),
+      el('ul', { class: 'list' }, p.review.map((c) => el('li', {}, [el('span', { class: 'list__main', text: c.name }), el('a', { href: '#/chores/plan', text: 'Review' }),
+        el('button', { class: 'btn btn-quiet btn-small', type: 'button', text: '×', 'aria-label': `Close: ${c.name}`, title: 'Talked about - close it', 'data-field': `review-close:${c.id}`,
+          on: { click: () => ctx.commit(markReviewed(ctx.app.household, [c.id], today)) } })]))),
+      p.review.length > 1 ? el('div', {}, [el('button', { class: 'btn btn-small', type: 'button', text: 'Clear all', title: 'Close every one - each comes back only if it waits two more whole cycles', 'data-field': 'review-clear',
+        on: { click: () => ctx.commit(markReviewed(ctx.app.household, p.review.map((c) => c.id), today)) } })]) : null,
     ]) : null,
     p.rooms.length ? el('div', { class: 'panel' }, [
       el('h2', { text: 'By room' }),
@@ -258,6 +262,12 @@ function progressView(ctx) {
         ? el('ul', { class: 'list' }, log.map((a) => el('li', {}, [
           el('span', { class: 'list__main' }, [el('strong', { text: a.what }), el('span', { class: 'small muted', text: a.room ? ` · ${a.room}` : '' })]),
           el('span', { class: 'small', text: `${a.action}${a.until ? ` to ${fmtDay(a.until, today)}` : ''}${a.minutes ? ` in ${a.minutes} min` : ''} · ${a.who} · ${fmtDay(a.day, today)}` }),
+          // Every entry can come out - a Done pressed twice by mistake, say (D-154).
+          el('button', { class: 'btn btn-quiet btn-small', type: 'button', text: '×', 'aria-label': `Remove: ${a.what}, ${a.action.toLowerCase()} ${fmtDay(a.day, today)}`, title: 'Remove this entry', 'data-field': `activity-remove:${a.id}`,
+            on: { click: async () => {
+              if (!await confirmAction({ title: 'Remove this entry?', text: `"${a.what} - ${a.action.toLowerCase()} by ${a.who}, ${fmtDay(a.day, today)}" comes out of the history. If it was the only time it was done, the chore shows as ready again.`, confirmLabel: 'Remove' })) return;
+              ctx.commit(removeEvent(ctx.app.household, a.id));
+            } } }),
         ])))
         : el('p', { class: 'muted', text: 'Nothing recorded yet. When a chore is done it appears here.' }),
     ]),

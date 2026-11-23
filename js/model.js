@@ -209,6 +209,8 @@ export function normaliseChore(c, now = nowIso()) {
     // What it uses up (bleach, sponges...), to send to the shopping list.
     supplies: [...new Set((Array.isArray(c.supplies) ? c.supplies : String(c.supplies ?? '').split(/[,\n]/)).map((x) => str(String(x), 80)).filter(Boolean))].slice(0, 30),
     visibility: oneOf(c.visibility, VISIBILITY, 'shared'),
+    // Talked about (D-154): "Worth a conversation" counts its cycles again from this day. Kept only once set.
+    ...(isDay(c.reviewedOn) ? { reviewedOn: c.reviewedOn } : {}),
     demo: c.demo === true,
     createdAt: created,
     updatedAt: typeof c.updatedAt === 'string' ? c.updatedAt : created,
@@ -429,6 +431,15 @@ export function recordEvent(h, fields, now = new Date()) {
   if (!h.chores.some((c) => c.id === event.choreId)) throw new Error('That chore no longer exists.');
   return { household: touch(h, { events: [...h.events, event] }), event };
 }
+
+/** "Worth a conversation" closed for these chores (D-154): they come back only after two more whole cycles waiting. */
+export function markReviewed(h, choreIds, today, now = nowIso()) {
+  const set = new Set(choreIds);
+  return touch(h, { chores: h.chores.map((c) => (set.has(c.id) ? normaliseChore({ ...c, reviewedOn: today, updatedAt: now }, now) : c)) });
+}
+
+/** The latest Done of a chore on this day, or null - for the card's Undo (D-154). */
+export const doneOn = (h, choreId, day) => h.events.findLast((e) => e.choreId === choreId && e.type === 'done' && e.day === day) ?? null;
 
 /** Undo: remove one event. */
 export function removeEvent(h, eventId) {

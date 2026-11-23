@@ -10,7 +10,7 @@
 //   - A one-off chore stays ready until it is done or dropped. It never moves
 //     on by itself: important unfinished work stays visible.
 //   - Waiting two or more whole cycles asks for a review of the plan. It never
-//     adds work.
+//     adds work. Closing that review counts the cycles again from that day (D-154).
 
 import { addInterval, dayDiff, intervalDays } from './dates.js';
 
@@ -53,7 +53,8 @@ export function occurrence(chore, events, today) {
     dueDay,
     waitingDays: state === 'ready' ? waitingDays : 0,
     missedCycles,
-    needsReview: missedCycles >= 2,
+    // Closed in "Worth a conversation" (D-154): the cycles count again from that day.
+    needsReview: (chore.reviewedOn && cycle ? Math.floor(Math.max(0, dayDiff(chore.reviewedOn > dueDay ? chore.reviewedOn : dueDay, today)) / cycle) : missedCycles) >= 2,
   };
 }
 
