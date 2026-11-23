@@ -538,7 +538,7 @@ export const CONNECT = {
 };
 
 export const FAQS = [
-  { q: 'I pressed Done twice by mistake - how do I take one out?', a: 'Today: the chore’s card says "Done today" with Undo beside it. Any day: Chores › Progress › Recent activity - the × at the end of an entry removes it. Again on the card records a real second time.' },
+  { q: 'I pressed Done twice by mistake - how do I take one out?', a: 'Today: the chore’s card shows how many times it was done today in a circle at the top right (I, II, III), with Undo at the bottom. Any day: Chores › Progress › Recent activity - the × at the end of an entry removes it. Again on the card records a real second time.' },
   { q: 'Worth a conversation lists too much - can I close it?', a: 'Yes. The × beside a chore closes it once you have talked about it; Clear all closes them all. One comes back only if it waits two more whole cycles.' },
   { q: 'Where is our data kept?', a: 'If you connected your Google Drive folder: in that folder, as ordinary files you can see and back up in Drive. Nobody else - including whoever made this app - can see it. If not: only in this browser, on this device, which is not a backup. The header always says which.' },
   { q: 'Will I lose my details when the app is updated?', a: 'No. Updates change the app, not your data. Data in your Drive folder or in this browser stays, and older data is brought up to date automatically.' },

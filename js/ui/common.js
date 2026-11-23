@@ -3,6 +3,7 @@
 import { el, svg } from './dom.js';
 import { fmtAgo, fmtDay, fmtFrequency } from '../dates.js';
 import { personName, roomName, removeDemo, doneOn } from '../model.js';
+import { roman } from '../digits.js';
 import { KEYS } from '../storage.js';
 
 /** The Family Hub mark: a house with a heart, built from nodes (D-129). */
@@ -115,6 +116,7 @@ export function choreCard(ctx, chore, occ, { label = null, reasons = [], onDone 
   const details = [chore.description, chore.instructions && `How: ${chore.instructions}`, chore.easier && `Makes it easier: ${chore.easier}`].filter(Boolean);
 
   const doneToday = doneOn(h, chore.id, today);
+  const timesToday = h.events.filter((e) => e.choreId === chore.id && e.type === 'done' && e.day === today).length;
   const pillClass = (r) => (r === 'Important' ? 'pill pill--important' : r === 'Optional improvement' ? 'pill pill--optional' : 'pill');
 
   return el('article', { class: 'card', 'aria-label': chore.name }, [
@@ -125,6 +127,12 @@ export function choreCard(ctx, chore, occ, { label = null, reasons = [], onDone 
         el('div', { class: 'card__meta', text: choreMeta(h, chore, { room: showRoom }) }),
         el('div', { class: 'card__meta muted', text: statusLine(h, occ, today) }),
       ]),
+      // How many times it was done today (D-155), top right; who did it is in the line on the left.
+      timesToday ? el('span', {
+        role: 'status', 'data-field': `times-today:${chore.id}`, text: roman(timesToday),
+        'aria-label': `Done ${timesToday} time${timesToday === 1 ? '' : 's'} today`, title: `Done ${timesToday} time${timesToday === 1 ? '' : 's'} today`,
+        style: { flex: '0 0 auto', minWidth: '30px', height: '30px', padding: '0 6px', borderRadius: '15px', display: 'grid', placeItems: 'center', background: 'var(--accent-soft)', border: '1px solid var(--accent)', fontWeight: '700', fontSize: '13px' },
+      }) : null,
     ]),
     reasons.length ? el('div', { class: 'pills' }, reasons.map((r) => el('span', { class: pillClass(r), text: r }))) : null,
     details.length ? el('details', { class: 'more' }, [el('summary', { text: 'Details' }), ...details.map((t) => el('p', { class: 'small', text: t }))]) : null,
@@ -147,8 +155,7 @@ export function choreCard(ctx, chore, occ, { label = null, reasons = [], onDone 
           }),
         },
       }) : null,
-      // Done today (D-154): said plainly on the card, with Undo - so a second press is a choice, not a guess.
-      doneToday ? el('span', { class: 'badge', role: 'status', 'data-field': `done-today:${chore.id}`, text: `✓ Done today${doneToday.by ? ` by ${personName(h, doneToday.by)}` : ''}` }) : null,
+      // Done today (D-154): the count top right, Undo takes back the latest - so a second press is a choice, not a guess.
       doneToday ? el('button', { class: 'btn btn-quiet', type: 'button', text: 'Undo', title: 'Take back today’s Done', 'data-field': `undo-done:${chore.id}`, on: { click: () => ctx.undo(doneToday.id) } }) : null,
       el('button', {
         class: doneToday ? 'btn' : 'btn btn-primary', type: 'button', 'data-field': `done:${chore.id}`, text: doneToday ? 'Again' : 'Done',

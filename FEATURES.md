@@ -591,7 +591,7 @@ get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
 #### Done shows, entries come out, conversations close (v0.35.0, 2026-11-24)
-**What it does:** a chore's card says "Done today by Mom" with Undo, and its button becomes Again. Every Recent activity
+**What it does:** a chore's card shows how many times it was done today in a circle at the top right - I, II, III (v0.35.1, D-155) - with Undo, and its button becomes Again. Every Recent activity
 entry has a × to remove it. Worth a conversation has a × per chore and Clear all; a closed one comes back only if it
 waits two more whole cycles. (D-154)
 **Why it is there:** Mom pressed Done four times because nothing seemed to happen - and a new family had a conversation

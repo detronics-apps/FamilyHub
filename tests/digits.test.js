@@ -25,3 +25,9 @@ test('the caret stays after the same digit', () => {
   assert.equal(g2.text, '10 500');
   assert.equal(caretAfter(g2.text, countBefore(raw2, 2)), 2);
 });
+
+test('roman numerals for the times done today (D-155)', async () => {
+  const { roman } = await import('../js/digits.js');
+  assert.deepEqual([1, 2, 3, 4, 5, 9, 12, 14, 40].map(roman), ['I', 'II', 'III', 'IV', 'V', 'IX', 'XII', 'XIV', 'XL']);
+  assert.equal(roman(0), '');
+});

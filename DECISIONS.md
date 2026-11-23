@@ -979,6 +979,12 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-155 Times done today, top right (owner, 2026-11-24).** "The 'done today by Dad' is not correct, it is in the wrong
+place... top right should just show a number in a circle of the total amount it has been done that day, perhaps in
+roman characters, as it already states done by who under the heading." The badge among the buttons is gone; the card's
+top right shows a circle with the times done today in Roman numerals (I, II, III - `roman()` in js/digits.js), read
+aloud as "Done 2 times today". Undo (the latest) and Again stay.
+
 **D-154 Done shows, every entry can come out, conversations close (owner, 2026-11-24).** "Scrub the toilet in the
 bathroom is on the list 4x today because I did not realise it was picking up when I pressed the Done button, because it
 stayed on the list... The worth a conversation section should also have an x to close them and perhaps even a clear all;

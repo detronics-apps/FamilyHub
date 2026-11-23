@@ -39,3 +39,12 @@ export const countBefore = (raw, pos) => [...String(raw).slice(0, pos)].filter(m
 
 /** A stored number shown grouped: 1500000 → "1 500 000". */
 export const showGrouped = (n, opts) => (n === null || n === undefined || n === '' ? '' : groupDigits(String(n), opts).text);
+
+/** 1 → "I", 4 → "IV", 12 → "XII" (D-155: how many times a chore was done today). */
+export function roman(n) {
+  let left = Math.floor(n); let out = '';
+  for (const [v, s] of [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]) {
+    while (left >= v) { out += s; left -= v; }
+  }
+  return out;
+}
