@@ -27,6 +27,9 @@ export const DAY_KINDS = [
   { id: 'play', name: 'Kids: play', colour: '#1d9e75', eight: 'personal', part: 'family' },
   { id: 'lessons', name: 'Lessons', colour: '#6f9fb8', eight: 'work' },
   { id: 'free', name: 'Free time', colour: '#97c459', eight: 'personal', part: 'hobby' },
+  // Owner, D-161: exercise and faith as their own categories.
+  { id: 'exercise', name: 'Exercise', colour: '#d77a7a', eight: 'personal', part: 'health' },
+  { id: 'faith', name: 'Faith', colour: '#9a86c4', eight: 'personal', part: 'faith' },
   // The rule is from the 1800s: nothing in it for screens, or for running a family (owner, D-152).
   { id: 'screen', name: 'Screen time', colour: '#c07aa6', eight: 'other' },
   { id: 'planning', name: 'Planning and meetings', colour: '#5f9a8b', eight: 'other' },
@@ -85,6 +88,8 @@ export function normaliseDay(d = {}) {
     now: normaliseBlocks(d?.now),
     goal: normaliseBlocks(d?.goal),
     copies: normaliseCopies(d?.copies),
+    // Minutes this person needs to switch from one thing to the next (D-161); 0 is off.
+    transitionMins: Math.min(30, Math.max(0, Math.round(Number(d?.transitionMins) || 0))),
     choreShare: d?.choreShare === null || d?.choreShare === '' || d?.choreShare === undefined || !Number.isFinite(share) ? null : Math.min(100, Math.max(0, Math.round(share))),
   };
 }
@@ -209,4 +214,27 @@ export function sinceCopy(nowBlocks, copyBlocks, goalBlocks, kinds = DAY_KINDS) 
     const g = goal ? goal.get(k.id) ?? 0 : null;
     return { id: k.id, name: k.name, now: n, then: t, change: n - t, goal: g, closer: g === null ? null : Math.abs(t - g) - Math.abs(n - g) };
   }).filter((x) => x.change !== 0);
+}
+
+/**
+ * Transition time (D-161): some people need a few minutes to switch from one thing to the next.
+ * At every change to a different activity, the first `mins` of the new block (never more than
+ * half of it) count as Transition - so the day still adds up to 24 hours, and many short blocks
+ * show what they cost. Unplanned time is not a switch; a block running on past midnight is one.
+ * @returns { blocks, count, minutes }
+ */
+export function withTransitions(blocks, mins) {
+  const m = Math.max(0, Math.round(Number(mins) || 0));
+  const runs = timeline(blocks);
+  if (!m || runs.length < 2) return { blocks: normaliseBlocks(blocks), count: 0, minutes: 0 };
+  const wraps = runs[0].kind === runs.at(-1).kind;
+  const out = []; let count = 0; let minutes = 0;
+  runs.forEach((r, i) => {
+    if (r.kind === null) return;
+    const prev = i === 0 ? (wraps ? null : runs.at(-1)) : runs[i - 1];
+    const take = prev && prev.kind !== null && prev.kind !== r.kind && r.kind !== 'transition' ? Math.min(m, Math.floor((r.end - r.start) / 2)) : 0;
+    if (take) { out.push({ from: toHHMM(r.start), to: toHHMM(r.start + take), kind: 'transition' }); count += 1; minutes += take; }
+    out.push({ from: toHHMM(r.start + take), to: toHHMM(r.end), kind: r.kind });
+  });
+  return { blocks: out, count, minutes };
 }

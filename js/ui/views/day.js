@@ -7,7 +7,7 @@ import { avatar } from '../common.js';
 import { shows } from '../levels.js';
 import { updatePerson, stageOf } from '../../model.js';
 import { weeklyLoad } from '../../progress.js';
-import { kindsOf, normaliseDay, normaliseKinds, timeline, totals, choreShare, nextBlock, fmtSpan, KIND_COLOURS, DAY_MINUTES, EIGHT, eightEight, fmtDelta, PART_GROUPS, personalParts, keepCopy, removeCopy, sinceCopy } from '../../day.js';
+import { kindsOf, normaliseDay, normaliseKinds, timeline, totals, choreShare, nextBlock, fmtSpan, KIND_COLOURS, DAY_MINUTES, EIGHT, eightEight, fmtDelta, PART_GROUPS, personalParts, keepCopy, removeCopy, sinceCopy, withTransitions } from '../../day.js';
 
 // What this screen shows, kept while it redraws (a save redraws the page).
 const view = { version: 'now', mode: 'day', only: null, open: new Set(), compare: {}, eightOpen: null };
@@ -24,7 +24,10 @@ export function dayView(ctx) {
   const kinds = kindsOf(h);
   const kind = (id) => kinds.find((k) => k.id === id);
   if (!shows('advanced')) { view.version = 'now'; if (view.mode === 'eight') view.mode = 'day'; }
-  const blocksOf = (p) => normaliseDay(p.day)[view.version];
+  // What is shown and added up: the person's blocks with their transition time in (D-161).
+  // The editor below keeps the blocks as they were typed.
+  const shown = (p, list) => withTransitions(list, normaliseDay(p.day).transitionMins);
+  const blocksOf = (p) => shown(p, normaliseDay(p.day)[view.version]).blocks;
   const saveDay = (p, patch) => ctx.commit(updatePerson(ctx.app.household, p.id, { day: { ...normaliseDay(p.day), ...patch } }));
   const saveKinds = (list) => ctx.commit({ ...ctx.app.household, household: { ...ctx.app.household.household, dayKinds: normaliseKinds(list) } });
   const choreDay = weeklyLoad(h).day;
@@ -87,14 +90,15 @@ export function dayView(ctx) {
     const blocks = blocksOf(p);
     const t = totals(blocks, kinds);
     const only = view.only ? t.byKind.find((k) => k.id === view.only)?.minutes ?? 0 : null;
-    const nowT = view.version === 'goal' ? totals(normaliseDay(p.day).now, kinds) : null;
+    const nowT = view.version === 'goal' ? totals(shown(p, normaliseDay(p.day).now).blocks, kinds) : null;
+    const tr = shown(p, normaliseDay(p.day)[view.version]);
     const parts = view.mode === 'day'
       ? timeline(blocks).map((r) => seg(r.start, r.end, kind(r.kind), view.only && r.kind !== view.only))
       : t.byKind.filter((k) => !view.only || k.id === view.only).map((k) => seg(0, k.minutes, k, false));
     const words = !blocks.length ? 'Nothing planned yet - Edit day below.'
       : view.only ? `${kind(view.only)?.name}: ${fmtSpan(only)}${nowT ? ` (now ${fmtSpan(nowT.byKind.find((k) => k.id === view.only)?.minutes ?? 0)})` : ''}`
         : view.mode === 'totals' ? t.byKind.map((k) => `${k.name} ${fmtSpan(k.minutes)}${nowT ? ` (now ${fmtSpan(nowT.byKind.find((x) => x.id === k.id)?.minutes ?? 0)})` : ''}`).join(' · ')
-          : t.unplanned ? '' : `Awake ${fmtSpan(t.awake)}`;
+          : [t.unplanned ? '' : `Awake ${fmtSpan(t.awake)}`, tr.count ? `${tr.count} switches, ${fmtSpan(tr.minutes)} in transitions` : ''].filter(Boolean).join(' · ');
     return el('div', { class: 'stack', style: { gap: '2px' }, 'data-field': `day-row:${p.id}` }, [
       el('div', { class: 'row', style: { gap: '8px', flexWrap: 'nowrap', alignItems: 'center' } }, [
         nameCell(p), bar(parts)]),
@@ -109,7 +113,7 @@ export function dayView(ctx) {
     const d = normaliseDay(p.day);
     const copy = compareCopy(d, p);
     if (!copy) return null;
-    const changes = sinceCopy(d.now, copy.blocks, d.goal, kinds).filter((x) => !view.only || x.id === view.only);
+    const changes = sinceCopy(shown(p, d.now).blocks, shown(p, copy.blocks).blocks, shown(p, d.goal).blocks, kinds).filter((x) => !view.only || x.id === view.only);
     const one = (x) => `${x.name} ${fmtDelta(x.change)}${x.closer === null ? '' : x.closer === 0 ? '' : ` (${fmtSpan(Math.abs(x.closer))} ${x.closer > 0 ? 'closer to' : 'further from'} your goal)`}`;
     return el('div', { class: 'small', style: { marginLeft: '88px' }, 'data-field': `day-since:${p.id}`,
       text: `Since ${shortDay(copy.day, ctx.today())}: ${changes.length ? changes.map(one).join(' · ') : 'no change'}` });
@@ -163,7 +167,7 @@ function choresPanel(ctx, h, choreDay, saveDay) {
       ? `The family’s chores take about ${fmtSpan(Math.round(choreDay))} a day, from Chores. Give each person a share; put it in their day as Chores blocks.`
       : 'Give chores a time in Chores to see how long they take a day. Until then, the shares have nothing to share out.' }),
     ...h.people.map((p) => {
-      const c = choreShare(p.day, choreDay, normaliseDay(p.day)[view.version]);
+      const c = choreShare(p.day, choreDay, withTransitions(normaliseDay(p.day)[view.version], normaliseDay(p.day).transitionMins).blocks);
       return el('div', { class: 'row', style: { gap: '6px', alignItems: 'center' } }, [
         el('span', { class: 'small', style: { width: '80px' }, text: p.name }),
         el('input', { class: 'input', type: 'number', min: '0', max: '100', step: '5', inputmode: 'numeric', value: normaliseDay(p.day).choreShare ?? '', placeholder: '%', 'aria-label': `${p.name}’s share of the chores, percent`, 'data-field': `day-share:${p.id}`, style: { maxWidth: '80px' },
@@ -205,6 +209,7 @@ function editor(ctx, p, h, kinds, saveDay) {
           on: { click: () => { const { o, v } = others[Number(from.value)]; put(normaliseDay(o.day)[v]); } } }) : null,
       ]),
       el('p', { class: 'small muted', style: { margin: 0 }, text: 'A block that ends before it starts runs past midnight - 22:00 to 01:00 is fine.' }),
+      transitionRow(p, saveDay),
       key === 'now' && shows('advanced') ? copiesRow(ctx, p, saveDay) : null,
     ]),
   ]);
@@ -255,5 +260,24 @@ function kindsPanel(kinds, saveKinds) {
         on: { click: () => saveKinds([...kinds, { id: `k${Date.now().toString(36)}`, name: 'New category', colour: KIND_COLOURS[kinds.length % KIND_COLOURS.length] }]) } })]),
       el('p', { class: 'small muted', style: { margin: 0 }, text: 'Removing a category keeps its blocks; they show as "Removed category" until you choose another.' }),
     ]),
+  ]);
+}
+
+/**
+ * Transition time for this person (D-161): some people need a few minutes to switch from one thing
+ * to the next - ADHD, small children, anyone. On, every switch to a different activity starts with
+ * that many minutes of Transition, so a day of many short blocks shows what it costs.
+ */
+function transitionRow(p, saveDay) {
+  const mins = normaliseDay(p.day).transitionMins;
+  return el('div', { class: 'row', style: { gap: '8px', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '8px' } }, [
+    el('label', { class: 'checkline' }, [
+      el('input', { type: 'checkbox', checked: mins > 0, 'data-field': `day-transition:${p.id}`, on: { change: (e) => saveDay(p, { transitionMins: e.target.checked ? 5 : 0 }) } }),
+      el('span', { text: 'Transition time' }),
+    ]),
+    mins > 0 ? el('input', { class: 'input', type: 'number', min: '1', max: '30', step: '1', inputmode: 'numeric', value: mins, 'aria-label': 'Minutes to switch between things', 'data-field': `day-transition-mins:${p.id}`, style: { maxWidth: '80px' },
+      on: { change: (e) => saveDay(p, { transitionMins: Number(e.target.value) || 5 }) } }) : null,
+    mins > 0 ? el('span', { class: 'small', text: 'min at every switch' }) : null,
+    el('span', { class: 'small muted', style: { flex: '1 1 240px' }, text: 'Some people need a few minutes to switch from one thing to the next. Many short blocks in a day then add up - the bar shows it as Transition.' }),
   ]);
 }

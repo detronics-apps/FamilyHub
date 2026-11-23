@@ -137,3 +137,18 @@ test('since last time: changes from a kept copy, and closer to your own goal (D-
   assert.equal(sinceCopy(then, then, goal).length, 0);
   assert.deepEqual(removeCopy(d, '2026-10-01').copies.map((c) => c.day), ['2026-11-02']);
 });
+
+test('transition time: minutes taken from the start of each new activity, the day still 24 hours (D-161)', async () => {
+  const { withTransitions, totals: tt, DAY_KINDS: K, normaliseDay: nd } = await import('../js/day.js');
+  const day = [{ from: '00:00', to: '07:00', kind: 'sleep' }, { from: '07:00', to: '07:30', kind: 'hygiene' }, { from: '07:30', to: '08:00', kind: 'travel' },
+    { from: '08:00', to: '12:00', kind: 'work' }, { from: '12:00', to: '12:06', kind: 'eat' }, { from: '12:06', to: '17:00', kind: 'work' }, { from: '17:00', to: '00:00', kind: 'free' }];
+  const t = withTransitions(day, 5);
+  assert.equal(t.count, 7, 'seven switches - free time into sleep at midnight is one too');
+  assert.equal(t.minutes, 6 * 5 + 3, 'a 6-minute lunch gives at most half of itself');
+  const sum = tt(t.blocks, K);
+  assert.equal(sum.unplanned, 0);
+  assert.equal(sum.byKind.find((k) => k.id === 'transition').minutes, t.minutes);
+  assert.equal(withTransitions(day, 0).count, 0, 'off');
+  assert.equal(nd({ transitionMins: 45 }).transitionMins, 30);
+  assert.ok(K.some((k) => k.id === 'exercise' && k.part === 'health') && K.some((k) => k.id === 'faith' && k.part === 'faith'));
+});

@@ -590,6 +590,13 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### Exercise, faith and transition time (v0.36.0, 2026-11-24)
+**What it does:** Our day starts with Exercise and Faith. Each person can switch on Transition time - the minutes they
+need to switch from one thing to the next - and the day shows how many switches it has and what they add up to. (D-161)
+**Why it is there:** "Someone with ADHD might need 5 min to transition between tasks, so too many in a day might take
+an hour in transitions." A day of many short blocks costs more than its blocks.
+**Show it:** a day of 12 short blocks, switch on Transition time at 5 minutes, and read "12 switches, 1 h in transitions".
+
 #### Clear list (v0.35.6, 2026-11-24)
 **What it does:** Shopping has Clear list: when the shopping is done, the whole list empties after one question.
 Everything on it counts as bought, so it is still found under Ours next time. (D-160)

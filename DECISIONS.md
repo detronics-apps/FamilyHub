@@ -979,6 +979,17 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-161 Exercise, faith and transition time in Our day (owner, 2026-11-24).** "Add topics like exercise and faith, with a
+toggle to turn on transition time for the person - someone with ADHD might need 5 min to transition between tasks, so
+too many in a day might take an hour in transitions."
+- Two starting categories: **Exercise** (personal life, part Health) and **Faith** (personal life, part Faith). A family
+  that already changed its categories adds them with Add category.
+- **Transition time**, per person, under Edit day: off, or 1-30 minutes (5 when switched on). At every switch to a
+  different activity, the first minutes of the new block count as Transition - never more than half the block - so the
+  day still adds up to 24 hours. Unplanned time is not a switch. The blocks stay as typed; what is drawn and added up
+  (Day, Totals, 8/8/8, Since, the chores share) has the transitions in. The Day line says "7 switches, 35 min in
+  transitions". `withTransitions()` in js/day.js, tested; kept on the person (`day.transitionMins`).
+
 **D-160 Clear list (owner, 2026-11-24).** "With the shopping list, add a clear button for when we already finished
 shopping." Clear bought only took the ticked items; **Clear list** (beside Copy list and Print) empties the whole list,
 after asking once on the page ("Clear the whole list - all 12 items?"). What was not ticked counts as bought, so it is
