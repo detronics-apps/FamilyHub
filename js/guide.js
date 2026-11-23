@@ -86,7 +86,7 @@ export const HOWTOS = [
     'On the home screen, press Chores. It opens on "Do something now".',
     'Optionally say how much time you have, how your energy is, and where you want to be.',
     'Pick any suggestion and press Done when it is finished - or Start, for a timer and optional music. The ring fills to the expected time and turns honey if it takes longer; Done records how long it took, Cancel records nothing.',
-    'Do another one if you like, or press "Finish". Stopping is always fine.',
+    'A line at the top says it is recorded, with Undo, and the list carries on: do another one if you like, or just stop. Stopping is always fine.',
   ] },
   { id: 'drive', title: 'Keep everything safe in your Google Drive folder (computer)', steps: [
     'Install Google Drive for Desktop (free, from Google) and sign in. Your Drive appears as a folder on the computer.',

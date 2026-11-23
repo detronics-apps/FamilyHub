@@ -1,7 +1,7 @@
 // Chores: Do something now (execute) · Rooms · Plan · Progress.
 
 import { el } from '../../ui/dom.js';
-import { findTasks, momentum, TIME_CHOICES, ENERGY_CHOICES, ORDER_RULES, defaultFilters } from '../../matching.js';
+import { findTasks, TIME_CHOICES, ENERGY_CHOICES, ORDER_RULES, defaultFilters } from '../../matching.js';
 import { occurrences, occurrence } from '../../recurrence.js';
 import { hasDemo, roomName, updateChore, markReviewed, removeEvent } from '../../model.js';
 import { householdProgress, activity, timeSuggestions } from '../../progress.js';
@@ -71,44 +71,7 @@ function executeView(ctx) {
     ]);
   }
 
-  if (ex.phase === 'finished') {
-    return el('div', { class: 'done-panel stack' }, [
-      el('h2', { text: 'All done for now' }),
-      el('p', { text: 'Thank you. Stopping here is a perfectly good finish.' }),
-      el('div', { class: 'row' }, [
-        el('a', { class: 'btn btn-primary', href: '#/', text: 'Home', on: { click: () => { ex.phase = 'choose'; } } }),
-        el('button', { class: 'btn', type: 'button', text: 'One more', on: { click: () => { ex.phase = 'choose'; ctx.render(); } } }),
-      ]),
-    ]);
-  }
-
-  const onDone = (event) => {
-    if (!event) return;
-    // The panel below carries its own Undo, so the top notice would only repeat it.
-    ctx.app.flash = ctx.app.flash.filter((n) => n.id !== `act:${event.id}`);
-    ex.phase = 'after';
-    ex.justDone = { eventId: event.id, choreId: event.choreId };
-    ctx.render();
-  };
-
-  if (ex.phase === 'after' && ex.justDone) {
-    const picks = momentum(h, f, ctx.today(), ex.justDone.choreId);
-    const doneChore = h.chores.find((c) => c.id === ex.justDone.choreId);
-    return el('div', { class: 'stack' }, [
-      el('div', { class: 'done-panel stack', role: 'status' }, [
-        el('h2', { text: 'That’s one thing taken care of.' }),
-        el('p', { text: `${doneChore?.name ?? 'It'} is recorded${person ? ` for ${person.name}` : ''}. Want to do anything else? No pressure either way.` }),
-        el('div', { class: 'row' }, [
-          el('button', { class: 'btn btn-primary', type: 'button', text: 'Finish', 'data-field': 'finish', on: { click: () => { ex.phase = 'finished'; ex.justDone = null; ctx.render(); } } }),
-          el('button', { class: 'btn', type: 'button', text: 'Something else', 'data-field': 'choose-else', on: { click: () => { ex.phase = 'choose'; ex.justDone = null; ctx.render(); } } }),
-          el('button', { class: 'btn btn-quiet', type: 'button', text: 'Undo', on: { click: () => ctx.undo(ex.justDone.eventId) } }),
-        ]),
-      ]),
-      picks.length ? el('h2', { text: 'If you want to keep going' }) : el('p', { class: 'muted', text: 'Nothing else fits your choices right now - a good moment to stop.' }),
-      el('div', { class: 'cards' }, picks.map((t) => choreCard(ctx, t.chore, t.occ, { label: t.label, reasons: t.reasons, onDone }))),
-    ]);
-  }
-
+  // After Done, the list simply carries on (D-156): the notice at the top and the card say it is recorded, with Undo.
   const results = findTasks(h, f, ctx.today());
   const shown = ex.showAll ? results : results.slice(0, 5);
   const rooms = h.rooms;
@@ -147,7 +110,7 @@ function executeView(ctx) {
 
     el('h2', { text: results.length ? 'Suggestions' : 'Nothing fits those choices right now' }),
     results.length
-      ? el('div', { class: 'cards' }, shown.map((t) => choreCard(ctx, t.chore, t.occ, { reasons: t.reasons, onDone })))
+      ? el('div', { class: 'cards' }, shown.map((t) => choreCard(ctx, t.chore, t.occ, { reasons: t.reasons })))
       : el('div', { class: 'panel empty' }, [
         el('p', { text: 'That is fine - it may simply be a good moment to rest. Or widen the search:' }),
         el('div', { class: 'row', style: { justifyContent: 'center' } }, [

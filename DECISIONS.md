@@ -979,6 +979,12 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-156 No block after Done (owner, 2026-11-24).** "Remove this green block that keeps asking finish or something
+else, as it is just extra buttons to click and has no purpose, it just takes up valuable screen space." After Done on
+Do something now, the list simply carries on; the notice at the top says "Done: ..." with Undo. Gone with it: the
+Finish / Something else / "All done for now" screens and the "If you want to keep going" picks (momentum() in
+js/matching.js and its two tests) - the list itself already suggests what fits.
+
 **D-155 Times done today, top right (owner, 2026-11-24).** "The 'done today by Dad' is not correct, it is in the wrong
 place... top right should just show a number in a circle of the total amount it has been done that day, perhaps in
 roman characters, as it already states done by who under the heading." The badge among the buttons is gone; the card's

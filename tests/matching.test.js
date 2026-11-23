@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { findTasks, momentum, eligible } from '../js/matching.js';
+import { findTasks, eligible } from '../js/matching.js';
 import { recordEvent, updateChore } from '../js/model.js';
 import { demoHousehold } from '../js/demo.js';
 import { fixture, TODAY } from './helpers.js';
@@ -93,26 +93,6 @@ test('blocked chores are not suggested', () => {
   let { h, ids } = fixture();
   h = updateChore(h, ids.floor, { dependsOn: [ids.counters] });
   assert.ok(!names(findTasks(h, {}, TODAY)).includes('Kitchen floor'));
-});
-
-test('momentum offers up to three distinct, labelled options, never the one just done', () => {
-  let { h, ids, ann } = fixture();
-  ({ household: h } = recordEvent(h, { choreId: ids.counters, type: 'done', by: ann }, at(TODAY)));
-  const picks = momentum(h, {}, TODAY, ids.counters);
-  assert.ok(picks.length >= 2 && picks.length <= 3);
-  assert.equal(new Set(picks.map((p) => p.chore.id)).size, picks.length);
-  assert.ok(picks.every((p) => p.chore.id !== ids.counters && p.label));
-  assert.ok(picks.some((p) => p.label === 'While you are in there'), 'a same-room option');
-  assert.equal(picks.find((p) => p.label === 'While you are in there').chore.roomId, h.chores.find((c) => c.id === ids.counters).roomId);
-});
-
-test('momentum respects the filters the person already chose', () => {
-  let { h, ids, ann } = fixture();
-  ({ household: h } = recordEvent(h, { choreId: ids.counters, type: 'done', by: ann }, at(TODAY)));
-  for (const p of momentum(h, { minutes: 5, energy: 'low' }, TODAY, ids.counters)) {
-    assert.ok((p.chore.minutes ?? 0) <= 5);
-    assert.ok(p.chore.effort !== 'high' && p.chore.effort !== 'medium');
-  }
 });
 
 test('the example household: five minutes and low energy finds something, and asks no one to do the oven', () => {

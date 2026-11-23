@@ -41,7 +41,7 @@ import { UNENCRYPTED_NOTE } from './guide.js';
 import { syncChip, syncNotices, phoneButtons } from './ui/views/drive.js';
 import { scanImportFolder } from './ui/imports.js';
 
-export const APP_VERSION = '0.35.1';
+export const APP_VERSION = '0.35.2';
 
 const store = createLocalStore(window.localStorage);
 
@@ -53,7 +53,7 @@ const app = {
   registry: null,           // installed mini-apps (miniapps.js)
   flash: [],                // short-lived notices (with Undo) shown until the next navigation
   storageError: null,
-  execute: { filters: defaultFilters(), phase: 'choose', justDone: null, showAll: false },
+  execute: { filters: defaultFilters(), showAll: false },
   ui: {},
 };
 
@@ -129,7 +129,6 @@ function act(choreId, type, until = null, minutes = null) {
 
 function undo(eventId) {
   app.flash = app.flash.filter((n) => n.id !== `act:${eventId}`);
-  if (app.execute.justDone?.eventId === eventId) app.execute = { ...app.execute, phase: 'choose', justDone: null };
   commit(removeEvent(app.household, eventId));
 }
 

@@ -118,24 +118,3 @@ function reasonsFor(chore, o, f) {
   if (!chore.effort) r.push('Effort not set');
   return r;
 }
-
-/**
- * A few next options after finishing one: something useful, something easy,
- * and something in the same room. Each is labelled, none repeats, and the
- * chore just done is never offered again.
- */
-export function momentum(household, filters, today, justDoneId) {
-  const doneRoom = household.chores.find((c) => c.id === justDoneId)?.roomId ?? null;
-  const pool = findTasks(household, filters, today).filter((t) => t.chore.id !== justDoneId);
-  const picks = [];
-  const take = (label, match) => {
-    const t = pool.find((x) => !picks.some((p) => p.chore.id === x.chore.id) && match(x));
-    if (t) picks.push({ ...t, label });
-  };
-
-  take('Useful next', (t) => t.occ.state === 'ready' && t.occ.category !== 'optional');
-  take('Quick and easy', (t) => (t.chore.minutes ?? 99) <= 10 && rank(t.chore.effort ?? 'medium') <= 0);
-  if (doneRoom) take('While you are in there', (t) => t.chore.roomId === doneRoom);
-  if (picks.length < 2) take('Also fits', () => true);
-  return picks.slice(0, 3);
-}
