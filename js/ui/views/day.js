@@ -7,7 +7,7 @@ import { avatar } from '../common.js';
 import { shows } from '../levels.js';
 import { updatePerson, stageOf } from '../../model.js';
 import { weeklyLoad } from '../../progress.js';
-import { kindsOf, normaliseDay, normaliseKinds, timeline, totals, choreShare, nextBlock, fmtSpan, KIND_COLOURS, DAY_MINUTES, EIGHT, eightEight, fmtDelta } from '../../day.js';
+import { kindsOf, normaliseDay, normaliseKinds, timeline, totals, choreShare, nextBlock, fmtSpan, KIND_COLOURS, DAY_MINUTES, EIGHT, eightEight, fmtDelta, PART_GROUPS, personalParts } from '../../day.js';
 
 // What this screen shows, kept while it redraws (a save redraws the page).
 const view = { version: 'now', mode: 'day', only: null, open: new Set() };
@@ -49,7 +49,17 @@ export function dayView(ctx) {
         el('span', { class: 'small muted', style: { width: '80px', flex: '0 0 80px' }, text: '8/8/8' }),
         el('div', { style: { flex: '1 1 auto', display: 'flex', height: '12px', borderRadius: '4px', overflow: 'hidden', minWidth: 0 } }, EIGHT.filter((g) => g.minutes).map((g) => seg(0, g.minutes, g, false)))]) : null,
       el('div', { class: 'small muted', style: { marginLeft: '88px' }, 'data-field': `day-words:${p.id}`, text: words }),
+      adult && blocks.length ? partsLine(p, blocks) : null,
     ]);
+  };
+  // Personal life by the 3 Fs, 3 Hs and 3 Ss (D-151) - the rule gives no hours for each part.
+  const partsLine = (p, blocks) => {
+    const pp = personalParts(blocks, kinds);
+    const text = [
+      ...pp.groups.map((g) => `${g.name} ${fmtSpan(g.minutes)} (${g.parts.map((x) => `${x.name} ${x.minutes ? fmtSpan(x.minutes) : 0}`).join(', ')})`),
+      pp.none.length ? `No part yet: ${pp.none.map((k) => `${k.name} ${fmtSpan(k.minutes)}`).join(', ')}` : null,
+    ].filter(Boolean).join(' · ');
+    return el('div', { class: 'small muted', style: { marginLeft: '88px' }, 'data-field': `day-parts:${p.id}`, text: `Personal life: ${text}` });
   };
 
   const row = (p) => {
@@ -89,7 +99,7 @@ export function dayView(ctx) {
         shows('advanced') ? chip('Now', view.version === 'now', () => { view.version = 'now'; ctx.render(); }, 'day-version:now') : null,
         shows('advanced') ? chip('Goal', view.version === 'goal', () => { view.version = 'goal'; ctx.render(); }, 'day-version:goal') : null,
       ]),
-      view.mode === 'eight' ? el('p', { class: 'small muted', style: { margin: 0 }, 'data-field': 'day-eight-note', text: 'A rule of thumb you will often hear: 8 hours work, 8 hours sleep, 8 hours personal life. The top bar is the day grouped the same way; under it, the rule. In brackets: more or less than 8. What is not in the rule is shown too - travel, breaks at work, the time in between. Choose what each category counts as under Categories.' }) : null,
+      view.mode === 'eight' ? el('p', { class: 'small muted', style: { margin: 0 }, 'data-field': 'day-eight-note', text: 'A rule of thumb you will often hear: 8 hours work, 8 hours sleep, 8 hours personal life. The top bar is the day grouped the same way; under it, the rule. In brackets: more or less than 8. What is not in the rule is shown too - travel, breaks at work, the time in between. Some versions split personal life into 3 Fs (Family, Friends, Faith), 3 Hs (Health, Hygiene, Hobby) and 3 Ss (Soul, Service, Smile), with no hours for each. Choose what each category counts as, and its part, under Categories.' }) : null,
       view.version === 'goal' ? el('p', { class: 'small muted', style: { margin: 0 }, text: 'The day you want to get to. In brackets: what it is now.' }) : null,
       ...h.people.map(row),
       h.people.length ? axis : el('p', { text: 'Add the family in People first.' }),
@@ -181,6 +191,9 @@ function kindsPanel(kinds, saveKinds) {
         shows('advanced') ? el('select', { class: 'select', 'aria-label': `In 8/8/8, ${k.name} counts as`, title: 'What it counts as in 8/8/8', style: { maxWidth: '170px' }, 'data-field': `day-eight:${k.id}`,
           on: { change: (e) => saveKinds(kinds.map((x, j) => (j === i ? { ...x, eight: e.target.value } : x))) } },
         EIGHT.map((g) => el('option', { value: g.id, text: g.id === 'other' ? 'Not in 8/8/8' : `8/8/8: ${g.name}`, selected: k.eight === g.id }))) : null,
+        shows('advanced') && k.eight === 'personal' ? el('select', { class: 'select', 'aria-label': `Part of personal life for ${k.name}`, title: 'Which of the 3 Fs, 3 Hs and 3 Ss', style: { maxWidth: '150px' }, 'data-field': `day-part:${k.id}`,
+          on: { change: (e) => saveKinds(kinds.map((x, j) => (j === i ? { ...x, part: e.target.value } : x))) } },
+        [el('option', { value: '', text: 'No part', selected: !k.part }), ...PART_GROUPS.map((g) => el('optgroup', { label: g.name }, g.parts.map((x) => el('option', { value: x.id, text: x.name, selected: k.part === x.id }))))]) : null,
         el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: 'Remove category', on: { click: () => saveKinds(kinds.filter((_, j) => j !== i)) } }),
       ])),
       el('div', {}, [el('button', { class: 'btn btn-small', type: 'button', text: 'Add category', 'data-field': 'day-add-kind',

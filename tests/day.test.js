@@ -97,3 +97,18 @@ test('8/8/8: the day grouped against the rule, with what it leaves out (D-150)',
   // A family's own category counts as not in it until they say otherwise; a starting one keeps its place.
   assert.equal(normaliseKinds([{ id: 'biz', name: 'Own business' }, { id: 'sleep', name: 'Rest' }]).map((k) => k.eight).join(), 'other,sleep');
 });
+
+test('3 Fs, 3 Hs and 3 Ss: personal life by part, and what has no part yet (D-151)', async () => {
+  const { personalParts, normaliseKinds: nk } = await import('../js/day.js');
+  const day = [{ from: '07:00', to: '07:30', kind: 'hygiene' }, { from: '17:00', to: '18:30', kind: 'play' }, { from: '18:30', to: '19:30', kind: 'eat' },
+    { from: '20:00', to: '22:00', kind: 'free' }, { from: '22:00', to: '23:00', kind: 'church' }, { from: '09:00', to: '17:00', kind: 'work' }];
+  const kinds = nk([...DAY_KINDS, { id: 'church', name: 'Church', eight: 'personal', part: 'faith' }]);
+  const p = personalParts(day, kinds);
+  const g = Object.fromEntries(p.groups.map((x) => [x.id, x]));
+  assert.equal(g.f.minutes, 150);
+  assert.deepEqual(g.f.parts.map((x) => x.minutes), [90, 0, 60]);
+  assert.equal(g.h.minutes, 150);
+  assert.equal(g.s.minutes, 0);
+  assert.deepEqual(p.none.map((k) => k.id), ['eat'], 'eating has no part until the family gives it one');
+  assert.equal(nk([{ id: 'free', name: 'Free time', part: '' }])[0].part, '', 'a part taken away stays away');
+});

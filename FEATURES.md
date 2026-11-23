@@ -590,6 +590,14 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### The 3 Fs, 3 Hs and 3 Ss (v0.32.0, 2026-11-23)
+**What it does:** in 8/8/8, each adult's personal life is split into the 3 Fs (Family, Friends, Faith), 3 Hs (Health,
+Hygiene, Hobby) and 3 Ss (Soul, Service, Smile), with the hours each gets. Each personal-life category chooses its
+part under Categories. (D-151)
+**Why it is there:** the fuller version of the rule asks for nine things in 8 hours. Seeing which get none shows what
+the day really leaves room for.
+**Show it:** press 8/8/8 and read the Personal life line - then give Free time the part Friends and watch it move.
+
 #### How close we get to 8/8/8 (v0.31.0, 2026-11-23)
 **What it does:** in Our day (Advanced), 8/8/8 puts each adult's day over the rule of 8 hours work, 8 sleep and 8
 personal life: how far each part is from 8, and what the rule leaves out - travel, lunch at work, the time in between,

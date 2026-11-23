@@ -979,6 +979,13 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-151 The 3 Fs, 3 Hs and 3 Ss (owner, 2026-11-23).** "Do the 3F, 3H and 3S." In 8/8/8, each adult gets a line:
+personal life by part - 3 Fs (Family, Friends, Faith), 3 Hs (Health, Hygiene, Hobby), 3 Ss (Soul, Service, Smile) - the
+hours of each part and group, and the personal-life categories with no part yet. Under Categories (Advanced), a
+personal-life category chooses its part, or No part. Starting parts: Hygiene → Hygiene, Kids: play → Family, Free time
+→ Hobby; Eating has none until the family chooses. The rule gives no hours per part, so none are shown - only what
+each part gets, so the zeros speak for themselves.
+
 **D-150 8/8/8, and what it leaves out (owner, 2026-11-23).** "The ideal balanced approach... given by a lot of
 gurus... I believe most people don't have the luxury of sticking to this... I want to see what is the others that's
 missing and how much hours that takes up." And: "you're not 8 hours at work, you're 9 hours at work" (lunch), and "there's
