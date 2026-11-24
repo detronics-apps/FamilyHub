@@ -245,8 +245,10 @@ function niceStep(span, n = 4) {
 /**
  * Options (D-086): `stack` piles the series into areas that add up; `zones` names what
  * above and below zero mean; `dots` [{ x, y, label }] write a value on the graph;
- * `yLines` [{ y, label }] are dotted levels (30% of income); each line's name and last
- * value sit at its end. Tapping or moving over the graph reads every series at that point.
+ * `yLines` [{ y, label }] are dotted levels (30% of income). Nothing is written inside the
+ * plot but the axes (D-165): each line's name and its value at the end of the graph, the
+ * dotted levels, what above and below zero mean and the marked moments are all in the key
+ * under it. Tapping or moving over the graph reads every series at that point.
  */
 function drawChart(series, { label, marks = [], story = null, xLabel = null, band = null, stack = false, zones = null, dots = [], yLines = [], percent = false }) {
   // A graph of rates (D-116) reads in %, every other in rand.
@@ -254,7 +256,7 @@ function drawChart(series, { label, marks = [], story = null, xLabel = null, ban
   const yFull = percent ? yShort : rand;
   // Drawn narrower on a phone, so the writing stays readable when it is scaled to fit.
   const narrow = typeof window !== 'undefined' && window.innerWidth < 560;
-  const W = narrow ? 340 : 640; const H = narrow ? 230 : 260; const L = 48; const B = 26; const R = narrow ? 80 : 118;
+  const W = narrow ? 340 : 640; const H = narrow ? 230 : 260; const L = 48; const B = 26; const R = 14;
   const colours = ['var(--accent-strong)', 'var(--warn)', 'var(--ok)', 'var(--text-dim)'];
   const colourOf = (s, i) => s.colour ?? colours[i % colours.length];
   // A dashed line's key is dashed too.
@@ -278,17 +280,10 @@ function drawChart(series, { label, marks = [], story = null, xLabel = null, ban
   const T = shown.length ? 34 : 16;
   // Tags kept at least 20 apart; each joined to its line.
   const tags = []; for (const m of shown) { const x = X(m.x); tags.push({ m, x, tx: Math.max(x, (tags.at(-1)?.tx ?? -99) + 20) }); }
+  const levels = yLines.filter((l) => l && Number.isFinite(l.y));
+  const dotsIn = dots.filter((d) => d && Number.isFinite(d.x) && Number.isFinite(d.y) && d.x >= x0 && d.x <= x1);
+  const endOf = (s) => { const last = s.points.at(-1); return last ? ` ${yShort(last[1])}` : ''; };
   const pts = (p) => p.map(([x, y]) => `${X(x).toFixed(1)},${Y(y).toFixed(1)}`).join(' ');
-  // Each line's name and last value at its end, nudged apart so none overlap.
-  const ends = drawn.map((s, i) => {
-    const last = s.points.at(-1); if (!last) return null;
-    const mid = piled(series[i]) ? (last[1] + (below(i)?.points.at(-1)[1] ?? 0)) / 2 : last[1];
-    return { i, y: Y(mid), name: s.name, value: series[i].points.at(-1)[1], colour: colourOf(s, i) };
-  }).filter(Boolean).sort((p, q) => p.y - q.y);
-  for (let k = 1; k < ends.length; k += 1) ends[k].y = Math.max(ends[k].y, ends[k - 1].y + 26);
-  // ...and kept inside the graph: pushed back up from the bottom when they run past it.
-  for (let k = ends.length - 1; k >= 0; k -= 1) ends[k].y = Math.min(ends[k].y, k === ends.length - 1 ? H - B - 4 : ends[k + 1].y - 26);
-  const cut = (t, n = narrow ? 13 : 18) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
   const cursor = svg('line', { x1: -10, x2: -10, y1: T, y2: H - B, stroke: 'var(--text-dim)', 'stroke-width': 1 });
   const readout = el('div', { class: 'small muted fin-read', 'aria-live': 'polite', text: 'Tap or move over the graph to read it.' });
   const when = (x) => (xLabel ? xLabel(x) : x % 12 === 0 ? `After ${x / 12} year${x === 12 ? '' : 's'}` : `After ${x} months`);
@@ -317,13 +312,7 @@ function drawChart(series, { label, marks = [], story = null, xLabel = null, ban
         fill: colourOf(s, i), opacity: 0.45, stroke: 'none',
       }) : null)),
       ...drawn.map((s, i) => svg('polyline', { points: pts(s.points), fill: 'none', stroke: colourOf(s, i), 'stroke-width': piled(series[i]) ? 1.5 : 2.5, 'stroke-dasharray': s.dashed ? '6 4' : null })),
-      // What above and below zero mean, in words, at the edges.
-      zones && y1 > 0 ? svg('text', { x: L + 6, y: T + 12, 'font-size': 12, 'font-weight': 700, fill: 'var(--ok)' }, [`↑ ${zones.above}`]) : null,
-      zones && y0 < 0 ? svg('text', { x: L + 6, y: H - B - 8, 'font-size': 12, 'font-weight': 700, fill: 'var(--warn)' }, [`↓ ${zones.below}`]) : null,
-      ...yLines.filter((l) => l && Number.isFinite(l.y)).map((l) => svg('g', {}, [
-        svg('line', { x1: L, x2: W - R, y1: Y(l.y), y2: Y(l.y), stroke: 'var(--text-dim)', 'stroke-dasharray': '2 3' }),
-        svg('text', { x: L + 6, y: Y(l.y) - 4, 'font-size': 11, fill: 'var(--text-dim)' }, [l.label]),
-      ])),
+      ...levels.map((l) => svg('line', { x1: L, x2: W - R, y1: Y(l.y), y2: Y(l.y), stroke: 'var(--text-dim)', 'stroke-dasharray': '2 3' })),
       ...tags.map(({ m, x, tx }, i) => svg('g', {}, [
         svg('title', {}, [m.label]),
         svg('line', { x1: x, x2: x, y1: 22, y2: H - B, stroke: 'var(--text)', 'stroke-width': 1, 'stroke-dasharray': '3 3' }),
@@ -331,25 +320,28 @@ function drawChart(series, { label, marks = [], story = null, xLabel = null, ban
         svg('circle', { cx: tx, cy: 11, r: 9, fill: 'var(--panel)', stroke: 'var(--text)', 'stroke-width': 1.5 }),
         svg('text', { x: tx, y: 15, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: 'var(--text)' }, [String(i + 1)]),
       ])),
-      ...dots.filter((d) => d && Number.isFinite(d.x) && Number.isFinite(d.y) && d.x >= x0 && d.x <= x1).map((d) => svg('g', {}, [
+      ...dotsIn.map((d) => svg('g', {}, [
+        svg('title', {}, [d.label]),
         svg('circle', { cx: X(d.x), cy: Y(d.y), r: 5, fill: 'var(--accent-strong)', stroke: 'var(--panel)', 'stroke-width': 2 }),
-        svg('text', { x: X(d.x) - 8, y: Y(d.y) + (d.below ? 18 : -10), 'text-anchor': 'end', 'font-size': 12, 'font-weight': 700, fill: 'var(--text)' }, [d.label]),
-      ])),
-      ...ends.map((e) => svg('g', {}, [
-        svg('text', { x: W - R + 8, y: e.y, 'font-size': 11, fill: 'var(--text)' }, [cut(e.name)]),
-        svg('text', { x: W - R + 8, y: e.y + 12, 'font-size': 11, 'font-weight': 700, fill: e.colour }, [yShort(e.value)]),
       ])),
       cursor,
     ]),
     el('figcaption', { class: 'stack', style: { gap: 'var(--space-1)' } }, [
       readout,
       tags.length ? el('div', { class: 'row small', style: { gap: 'var(--space-3)' }, 'data-field': 'chart-marks' }, tags.map(({ m }, i) => el('span', {}, [el('strong', { class: 'fin-tagno', text: String(i + 1) }), ' ', m.label]))) : null,
-      // A line with a `note` is named shortly on the graph and explained here.
+      // The key (D-165): every line in full, with its value where the graph ends - never on the plot.
+      el('div', { class: 'small muted' }, [`${when(x1)}:`]),
       series.some((s) => s.note) ? el('ul', { class: 'small', style: { margin: 0, paddingLeft: 0, listStyle: 'none' }, 'data-field': 'chart-key' }, series.map((s, i) => el('li', {}, [
-        el('span', { class: 'fin-key', style: { background: keyOf(s, i) } }), el('strong', { text: s.name }), s.note ? `: ${s.note}` : '',
-      ]))) : el('div', { class: 'row small', style: { gap: 'var(--space-3)' } }, [...series.map((s, i) => el('span', {}, [
-        el('span', { class: 'fin-key', style: { background: keyOf(s, i) } }), s.name,
+        el('span', { class: 'fin-key', style: { background: keyOf(s, i) } }), el('strong', { text: s.name }), endOf(s), s.note ? ` - ${s.note}` : '',
+      ]))) : el('div', { class: 'row small', style: { gap: 'var(--space-1) var(--space-3)' }, 'data-field': 'chart-key' }, [...series.map((s, i) => el('span', {}, [
+        el('span', { class: 'fin-key', style: { background: keyOf(s, i) } }), s.name, el('strong', { text: endOf(s) }),
       ])), band ? el('span', {}, [el('span', { class: 'fin-key', style: { background: 'var(--accent-soft)', outline: '1px solid var(--border-strong)' } }), band.name]) : null]),
+      levels.length || dotsIn.length || zones ? el('div', { class: 'row small', style: { gap: 'var(--space-1) var(--space-3)' }, 'data-field': 'chart-levels' }, [
+        ...levels.map((l) => el('span', {}, [el('span', { class: 'fin-key', style: { background: 'repeating-linear-gradient(90deg, var(--text-dim) 0 2px, transparent 2px 5px)' } }), l.label])),
+        ...dotsIn.map((d) => el('span', {}, [el('span', { class: 'fin-key', style: { width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-strong)' } }), `${d.label} · ${when(d.x)}`])),
+        zones && y1 > 0 ? el('span', { style: { color: 'var(--ok)', fontWeight: 700 }, text: `↑ above zero: ${zones.above}` }) : null,
+        zones && y0 < 0 ? el('span', { style: { color: 'var(--warn)', fontWeight: 700 }, text: `↓ below zero: ${zones.below}` }) : null,
+      ]) : null,
       series.some((s) => s.note) && band ? el('div', { class: 'small' }, [el('span', { class: 'fin-key', style: { background: 'var(--accent-soft)', outline: '1px solid var(--border-strong)' } }), band.name]) : null,
       story ? el('p', { class: 'small', style: { margin: 0 }, text: story }) : null,
     ]),

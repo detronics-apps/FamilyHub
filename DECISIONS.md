@@ -979,6 +979,18 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-165 The key goes under the graph, never on it (owner, 2026-11-24).** "Do you never add legends inside the graph
+on the line? Because it cannot be read. This is just not how legends work. It's either on the side, it's either at
+the bottom, and it's for a reason. It's because you overclutter the actual visual window." Every line chart drew each
+line's name and last value at its end, in a strip to the right, nudged apart and cut short ("Oranjezicht 2-bed..."),
+with "30% of income", "↑ Buying leaves more" and the chosen-year value written inside the plot. Now `drawChart`
+(js/apps/finance/pod.js) writes nothing in the plot but the axes and the numbered moment tags; the right strip is
+gone, so the plot is wider. Under the graph: the year it ends ("After 50 years:"), then each line's swatch, full name
+and value there; then the dotted levels, the chosen-year dot with its year, and what above and below zero mean.
+Tapping still reads every line. One shared function, so every graph in the app changed at once. The rule is in the
+detronics-app skill (decision-tools.md, r13) - its old line "each line's name and last value sit at its end, no
+separate key" is what caused it.
+
 **D-164 A typed 0 is 0 on the same money (owner asked why, 2026-11-24).** Compare's answer and the range graph's
 answer under it differed by about 2% (R39.8m against R39.1m on the example homes). Compare read "Share of growth lost
 to tax" with `Number(x) || 15`, so the 0 the example homes have (no tax, as in the post they come from) became 15%;
