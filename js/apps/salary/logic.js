@@ -15,17 +15,17 @@ export const CPI = {
 
 /** Medical schemes' weighted average contribution increases, as each scheme announced them. */
 export const SCHEMES = {
-  discovery: { label: 'Discovery', byYear: { 2025: 9.3, 2026: 7.2 } },
-  bonitas: { label: 'Bonitas', byYear: { 2025: 10.2, 2026: 8.8 } },
-  momentum: { label: 'Momentum', byYear: { 2026: 9.9 } },
+  discovery: { label: 'Discovery', byYear: { 2025: 9.3, 2026: 7.2, 2027: 8.2 } },
+  bonitas: { label: 'Bonitas', byYear: { 2025: 10.2, 2026: 8.8, 2027: 8.7 } },
+  momentum: { label: 'Momentum', byYear: { 2026: 9.9, 2027: 7.9 } },
   fedhealth: { label: 'Fedhealth', byYear: { 2026: 9.6 } },
   medihelp: { label: 'Medihelp', byYear: { 2026: 8.46 } },
   bestmed: { label: 'Bestmed', byYear: { 2026: 6.8 } },
 };
-export const SCHEME_SOURCE = 'The schemes’ announced 2026 averages (2025 for Discovery and Bonitas), as reported by Moonstone and BusinessTech';
+export const SCHEME_SOURCE = 'The schemes’ announced averages: 2027 for Discovery, Bonitas and Momentum, 2026 for the others (and 2025 for Discovery and Bonitas), as reported by Moonstone, BusinessTech and The Citizen';
 
 export const RENT = { national: 4.7, wc: 9.7, source: 'PayProp Rental Index, 2026: national (Q1), Western Cape (Q2)' };
-export const ELECTRICITY = { byYear: { 2026: 9.01 }, future: 9.01, source: 'NERSA municipal increase for 2026/27' };
+export const ELECTRICITY = { byYear: { 2026: 6.64 }, future: 6.64, source: 'City of Cape Town household increase for 2026/27 - other municipalities differ (Eskom’s increase to municipalities was 9.01%)' };
 
 /** What each cost is, and so which starting rate it rises by. */
 export const KINDS = {
@@ -62,7 +62,9 @@ export function startingRate(cost, year = null, future = CPI.future) {
   if (cost.kind === 'rent' && (year == null || year >= 2026)) return { pct: cost.region === 'wc' ? RENT.wc : RENT.national, source: RENT.source };
   if (cost.kind === 'medical' && SCHEMES[cost.scheme]) {
     const s = SCHEMES[cost.scheme].byYear;
-    const p = year == null ? s[2026] : s[year] ?? (year > 2026 ? s[2026] : null);
+    // From now on, and any year past the last announced: the latest the scheme announced.
+    const last = Math.max(...Object.keys(s).map(Number));
+    const p = year == null ? s[last] : s[year] ?? (year > last ? s[last] : null);
     if (p != null) return { pct: p, source: SCHEME_SOURCE };
   }
   return cpi();

@@ -979,6 +979,13 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-167 Reference figures updated (owner's video brief, 2026-11-26).** CPI 4.5% (Sep) to **5.2%** (Stats SA,
+October 2026; the Reserve Bank's site shows the same). Electricity rises by **6.64%**, the City of Cape Town's household
+increase for 2026/27, not 9.01%, which is Eskom's increase to municipalities - other municipalities differ, and the
+source says so. Medical aid gets the **2027** increases (Discovery 8.2%, Bonitas 8.7%, Momentum 7.9%; Moonstone,
+BusinessTech, The Citizen); "from now on" and later years use the latest a scheme has announced. Every default that
+follows CPI (costs rise, fuel rises) moves with it.
+
 **D-166 Prime plus your margin, prime's history, and bad or good starts (owner, 2026-11-26).** "To be more accurate,
 we want to use prime plus a percentage... stating what is normal, and also giving a chart of what has been historically
 accurate as prime... adding in the tolerance... so that we can see the effects if we hit a good few years versus if we

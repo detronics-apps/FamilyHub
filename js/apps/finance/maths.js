@@ -8,7 +8,7 @@
  */
 export const REFERENCE = {
   prime: { value: 10.75, label: 'Prime lending rate', source: 'SA Reserve Bank, from 25 Sep 2026 (held 19 Nov 2026)' },
-  cpi: { value: 4.5, label: 'Inflation (CPI - the consumer price index: how much prices rise in general)', source: 'Stats SA, September 2026' },
+  cpi: { value: 5.2, label: 'Inflation (CPI - the consumer price index: how much prices rise in general)', source: 'Stats SA, October 2026' },
   perKm: { value: 4.95, label: 'SARS rate per km', source: 'SARS, 2026/27 tax year' },
   transferDuty: { label: 'Transfer duty', source: 'SARS table from 1 April 2025, unchanged from 1 April 2026' },
 };
@@ -80,7 +80,7 @@ export const ENERGY = {
   fuel: { petrol: { inland: 30.25, coastal: 29.38 }, diesel: { inland: 31.95, coastal: 31.08 } },
   home: { value: 4.16, source: 'Typical home electricity, as reported September 2026' },
   public: { value: 7.5, source: 'Typical public fast charging (R7 to R8 a kWh), 2026' },
-  elecRise: { value: 9, source: 'NERSA municipal increase for 2026/27 (9.01%)' },
+  elecRise: { value: 6.64, source: 'City of Cape Town household increase for 2026/27 (other municipalities differ; Eskom’s increase to municipalities was 9.01%)' },
 };
 export const POWER = { petrol: 'Petrol', diesel: 'Diesel', hybrid: 'Hybrid', plugin: 'Plug-in hybrid', electric: 'Electric' };
 const USES_FUEL = new Set(['petrol', 'diesel', 'hybrid', 'plugin']);

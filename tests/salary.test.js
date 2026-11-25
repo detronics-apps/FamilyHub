@@ -85,9 +85,11 @@ test('D-119 starting rates name their source', () => {
   assert.equal(startingRate({ kind: 'rent', region: 'wc' }).pct, RENT.wc);
   assert.equal(startingRate({ kind: 'rent' }, 2024).pct, CPI.byYear[2024]);   // no rent figure for 2024: CPI
   assert.equal(startingRate({ kind: 'medical', scheme: 'bonitas' }, 2025).pct, 10.2);
-  assert.equal(startingRate({ kind: 'medical', scheme: 'bonitas' }).pct, 8.8);
+  assert.equal(startingRate({ kind: 'medical', scheme: 'bonitas' }).pct, 8.7);   // from now on: its 2027 increase
+  assert.equal(startingRate({ kind: 'medical', scheme: 'bonitas' }, 2026).pct, 8.8);
+  assert.equal(startingRate({ kind: 'medical', scheme: 'fedhealth' }, 2028).pct, 9.6);   // past the last announced: the latest
   assert.equal(startingRate({ kind: 'medical' }).pct, CPI.future);
-  assert.equal(startingRate({ kind: 'electricity' }).pct, 9.01);
+  assert.equal(startingRate({ kind: 'electricity' }).pct, 6.64);
   for (const k of ['bond', 'rent', 'medical', 'electricity', 'other']) assert.ok(startingRate({ kind: k, scheme: 'discovery' }).source);
 });
 
