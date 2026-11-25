@@ -13,6 +13,8 @@ import { saveRecord } from '../kit.js';
 // One level for the whole app, chosen in the bar under the top bar (D-121).
 // Imported as well as passed on: this file uses shows() itself (a bare `export ... from` makes no local name).
 import { LEVELS, level, shows } from '../../ui/levels.js';
+import { primeStats, MARGIN_NORMAL } from './prime.js';
+import { REFERENCE } from './maths.js';
 export { LEVELS, level, shows };
 
 /* ------------------------------------------------------------ amounts */
@@ -73,6 +75,7 @@ export function info(text, label = 'this') {
 }
 
 export function input(f, d, onInput) {
+  if (f.type === 'rate') return rateInput(f, d, onInput);
   const id = `fin-${f.key}`;
   const tag = el('span', { class: 'fin-tag', 'data-field': `origin:${f.key}`, text: origin(f, d) ?? '' });
   const set = (v) => { d.values[f.key] = v; d.mine.add(f.key); tag.textContent = origin(f, d) ?? ''; onInput(f.key); };
@@ -105,6 +108,44 @@ export function input(f, d, onInput) {
     ix,
     el('div', { class: 'row', style: { gap: 'var(--space-2)' } }, [unit === 'R' ? el('span', { class: 'muted', text: 'R' }) : null, control, unit && unit !== 'R' ? el('span', { class: 'small muted', text: unit }) : null]),
     f.hint ? el('div', { class: 'field__hint', text: f.hint }) : null,
+  ]);
+}
+
+/**
+ * A loan rate as prime plus your margin (D-166). The rate itself stays the figure every sum
+ * uses (`f.key`); prime is kept as `primePct` (empty: today's), and the margin is the rate less
+ * prime, so a rate saved before keeps its value. `f.primeOf(values)` fixes prime instead (an
+ * existing bond: prime when it started).
+ */
+function rateInput(f, d, onInput) {
+  const r2 = (x) => Math.round(x * 100) / 100;
+  const fixed = f.primeOf ? f.primeOf(d.values) : null;
+  const primeOf = () => fixed?.pct ?? (Number.isFinite(Number(d.values.primePct)) && d.values.primePct !== null && d.values.primePct !== '' ? Number(d.values.primePct) : REFERENCE.prime.value);
+  const rateOf = () => Number(d.values[f.key]) || 0;
+  const tag = el('span', { class: 'fin-tag', 'data-field': `origin:${f.key}`, text: origin(f, d) ?? '' });
+  const sum = el('strong', { 'data-field': `rate-sum:${f.key}` });
+  const show = () => { sum.textContent = `= ${r2(rateOf())}% a year`; tag.textContent = origin(f, d) ?? ''; };
+  const setRate = (prime, margin) => { d.values[f.key] = r2(prime + margin); d.mine.add(f.key); show(); onInput(f.key); };
+  const marginBox = el('input', { class: 'input', type: 'number', inputmode: 'decimal', step: '0.05', value: String(r2(rateOf() - primeOf())), 'data-field': `in:${f.key}-margin`, 'aria-label': 'Your margin over prime, in points', style: { maxWidth: '110px' },
+    on: { input: (e) => { if (e.target.value !== '') setRate(primeOf(), Number(e.target.value)); } } });
+  const setPrime = (p) => { const margin = r2(rateOf() - primeOf()); d.values.primePct = p; d.mine.add('primePct'); if (primeBox) primeBox.value = String(p ?? REFERENCE.prime.value); setRate(primeOf(), margin); };
+  const primeBox = fixed ? null : el('input', { class: 'input', type: 'number', inputmode: 'decimal', step: '0.05', min: '0', value: String(primeOf()), 'data-field': 'in:primePct', 'aria-label': 'Prime, % a year', style: { maxWidth: '110px' },
+    on: { input: (e) => { if (e.target.value !== '') setPrime(Number(e.target.value)); } } });
+  const s = primeStats();
+  const pick = (label, p, field) => el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: label, 'data-field': field, on: { click: () => setPrime(p) } });
+  const [ib, ix] = info(f.info, f.label);
+  show();
+  return el('div', { class: 'field', 'data-field': `rate:${f.key}` }, [
+    el('label', { class: 'field__label', for: `fin-${f.key}-m` }, [f.label, ' ', tag, ib]),
+    ix,
+    el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' } }, fixed
+      ? [el('span', { class: 'small', text: `Prime ${fixed.label}: ${fixed.pct}%` })]
+      : [el('span', { class: 'small', style: { minWidth: '92px' }, text: 'Prime' }), primeBox, el('span', { class: 'small muted', text: '%' }),
+        pick('Today', null, 'prime:today'), pick('Average', s.avg, 'prime:average')]),
+    el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' } }, [
+      el('span', { class: 'small', style: { minWidth: '92px' }, text: 'Your margin' }), Object.assign(marginBox, { id: `fin-${f.key}-m` }), el('span', { class: 'small muted', text: 'points' }), sum]),
+    el('div', { class: 'field__hint' }, [f.hint ?? `What is normal: through a bond originator the average bond was granted at prime ${MARGIN_NORMAL.value < 0 ? 'less' : 'plus'} ${Math.abs(MARGIN_NORMAL.value)} (${MARGIN_NORMAL.source}); your bank sets yours from the deposit, income and credit record. Starting at +1 is on the cautious side. Prime over the last 20 years: ${s.low}% at its lowest, ${s.high}% at its highest, ${s.avg}% on average - "Average" uses that.`]),
+    shows('expert') ? el('div', { class: 'field__hint' }, [`Prime is the Reserve Bank's repo rate plus 3.5 points; banks lend at prime plus or minus a margin, so your rate moves when prime moves. Here: ${r2(primeOf())}% + ${r2(rateOf() - primeOf())} = ${r2(rateOf())}%.`]) : null,
   ]);
 }
 
@@ -252,7 +293,7 @@ function niceStep(span, n = 4) {
  */
 function drawChart(series, { label, marks = [], story = null, xLabel = null, band = null, stack = false, zones = null, dots = [], yLines = [], percent = false }) {
   // A graph of rates (D-116) reads in %, every other in rand.
-  const yShort = percent ? (y) => `${Number(Number(y).toFixed(1))}%` : short;
+  const yShort = percent ? (y) => `${Number(Number(y).toFixed(2))}%` : short;
   const yFull = percent ? yShort : rand;
   // Drawn narrower on a phone, so the writing stays readable when it is scaled to fit.
   const narrow = typeof window !== 'undefined' && window.innerWidth < 560;
@@ -385,12 +426,13 @@ export const outOf = (points) => points.map(([x, y]) => [x, -y]);
 export const chartPanel = (title, ...charts) => el('div', { class: 'panel stack' }, [el('h2', { text: title, style: { margin: 0 } }), ...charts.filter(Boolean)]);
 
 /** A list of lines: what happened on the bond, or the "what if" scenarios (ticked to count). */
-export function linesPanel(d, refresh, key, kinds, title, help, tickable = false, uses = false) {
+export function linesPanel(d, refresh, key, kinds, title, help, tickable = false, uses = false, presets = []) {
   const list = Array.isArray(d.values[key]) ? d.values[key] : (d.values[key] = []);
   const box = el('div', { class: 'stack' });
   const save = () => { d.mine.add(key); refresh(); };
   const draw = () => box.replaceChildren(...list.map((e, i) => el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' }, 'data-field': `${key}:${i}` }, [
     tickable ? el('input', { type: 'checkbox', checked: e.on !== false, 'aria-label': 'Count this what-if', on: { change: (x) => { e.on = x.target.checked; save(); } } }) : null,
+    e.note ? el('strong', { class: 'small', text: e.note }) : null,
     el('select', { class: 'select', 'aria-label': 'What happens', style: { width: 'auto' }, on: { change: (x) => { e.kind = x.target.value; draw(); save(); } } },
       Object.entries(kinds).map(([k, label]) => el('option', { value: k, text: label, selected: e.kind === k }))),
     el('span', { class: 'small muted', text: e.kind === 'pay' || e.kind === 'more' ? 'from' : 'in' }),
@@ -415,7 +457,10 @@ export function linesPanel(d, refresh, key, kinds, title, help, tickable = false
     ix,
     tickable ? el('p', { class: 'small muted', style: { margin: 0 }, text: 'Ticked lines are counted; "What each one did" shows each one on its own.' }) : null,
     box,
-    el('div', {}, [el('button', { class: 'btn btn-small', type: 'button', text: 'Add line', 'data-field': `${key}-add`, on: { click: () => { list.push({ kind: tickable ? 'more' : 'pay', from: tickable ? today : d.values.bondStart ?? null, to: null, amount: null, on: true }); draw(); } } })]),
+    el('div', { class: 'row', style: { gap: 'var(--space-2)' } }, [el('button', { class: 'btn btn-small', type: 'button', text: 'Add line', 'data-field': `${key}-add`, on: { click: () => { list.push({ kind: tickable ? 'more' : 'pay', from: tickable ? today : d.values.bondStart ?? null, to: null, amount: null, on: true }); draw(); } } }),
+      // Ready-made lines (D-166): added like any other, each removable on its own.
+      ...presets.map((p) => el('button', { class: 'btn btn-small btn-quiet', type: 'button', text: p.label, title: p.hint ?? null, 'data-field': `${key}-preset:${p.label}`, on: { click: () => { list.push(...p.lines()); draw(); save(); } } })),
+      presets.length ? el('span', { class: 'small muted', text: presets.map((p) => p.hint).filter(Boolean).join(' ') }) : null]),
   ]);
 }
 

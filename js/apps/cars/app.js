@@ -21,7 +21,7 @@ const FIELDS = [
   { key: 'price', label: 'Price of the car', type: 'money', level: 'simple' },
   { key: 'deposit', label: 'Deposit', type: 'money', level: 'simple', source: { kind: 'assumption' } },
   { key: 'repairs', label: 'Repairs after buying', type: 'money', level: 'advanced', optional: true, hint: 'Once off: what you noted at the viewing, or a quote. Counted with what is paid up front.' },
-  { key: 'ratePct', label: 'Interest rate', type: 'percent', level: 'simple', source: { ref: REFERENCE.prime, note: '+ 1.5 points (illustrative)' }, hint: 'The rate on your quote. Car loans are usually a little above prime, and move when prime moves.' },
+  { key: 'ratePct', label: 'Interest rate', type: 'rate', level: 'simple', source: { ref: REFERENCE.prime, note: '+ 1.5 points (illustrative)' }, hint: 'The rate on your quote, as prime plus the margin the lender gives you. Car loans are usually above prime, and move when prime moves.' },
   { key: 'termMonths', label: 'Pay it off over', type: 'choice', level: 'simple', choices: TERMS },
   { key: 'keepYears', label: 'Keep it for', type: 'years', level: 'simple', source: { kind: 'assumption' }, hint: 'When you expect to sell it. It can be before the loan is paid off.' },
   // Fuel and charging (D-076): worked out from distance and consumption.

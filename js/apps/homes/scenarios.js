@@ -5,6 +5,10 @@
 // Pure - no DOM.
 
 import { homePlan, sameMoney, inToday, PLAN_DEFAULTS } from './home.js';
+import { primeStats } from '../finance/prime.js';
+
+// Prime over the last 20 years (D-166): the bond rate is tested from its lowest to its highest.
+const PRIME = primeStats(20);
 
 /**
  * What can be varied. `apply(v, d)` returns the home's values moved by d (points, or
@@ -21,8 +25,10 @@ export const VARS = [
     how: 'Returns jump about from year to year; over many years a wider range is honest. Lower: the money not in a home earns less; higher: more.',
     apply: (v, d) => ({ ...v, investPct: n(v.investPct, PLAN_DEFAULTS.investPct) + d }) },
   { key: 'rate', label: 'The bond rate', unit: 'points', spread: 2, step: 0.25, max: 5,
-    why: 'A higher rate means a bigger instalment and more interest in all.', field: (v) => (v.kind === 'own' ? 'bondRate' : 'ratePct'),
-    how: 'Test a higher rate to see whether the instalment stays affordable if rates rise. Lower: rates fall; higher: they rise.',
+    // Prime's own 20-year low and high, from today's prime - the margin stays the same.
+    bounds: { low: PRIME.low - PRIME.now, high: PRIME.high - PRIME.now },
+    why: `A higher rate means a bigger instalment and more interest in all. Over the last 20 years prime was ${PRIME.low}% at its lowest and ${PRIME.high}% at its highest (${PRIME.avg}% on average); the range tests that whole span, your margin on top.`, field: (v) => (v.kind === 'own' ? 'bondRate' : 'ratePct'),
+    how: 'Prime moves after Reserve Bank meetings, and your rate moves with it. The range starts at prime’s 20-year low and high; a bad few years at the start is under What if… (Bad start). Lower: rates fall; higher: they rise.',
     apply: (v, d) => ({ ...v, ratePct: n(v.ratePct, PLAN_DEFAULTS.ratePct) + d, bondRate: n(v.bondRate, PLAN_DEFAULTS.bondRate) + d }) },
   { key: 'rent', label: 'Rent rises', unit: 'points', spread: 2, step: 0.5, max: 6,
     why: 'Rent usually goes up every year; how fast decides what renting costs later.', field: () => 'rentRisePct',
@@ -51,6 +57,8 @@ export function relevant(values) {
 /** Narrow is each assumption's own spread; wider is half as much again. Testing choices, not forecasts. */
 export const PRESETS = { narrow: 1, wider: 1.5 };
 export const presetRanges = (values, preset) => Object.fromEntries(relevant(values).map((x) => {
+  // What really happened sets the range where it is known (prime's 20 years): the same for both presets.
+  if (x.bounds) return [x.key, { on: true, low: x.bounds.low, high: x.bounds.high, preset }];
   const d = Math.round((x.spread * PRESETS[preset]) / x.step) * x.step;
   return [x.key, { on: true, low: -d, high: d, preset }];
 }));

@@ -979,6 +979,28 @@ the dealer's offer and what such a car sells for.
 name. So remove that tag at the top of the screen." The note about moving to familyhub.detronics.co.za (D-130) is
 gone. Devices that pressed Done keep the harmless mark in their settings.
 
+**D-166 Prime plus your margin, prime's history, and bad or good starts (owner, 2026-11-26).** "To be more accurate,
+we want to use prime plus a percentage... stating what is normal, and also giving a chart of what has been historically
+accurate as prime... adding in the tolerance... so that we can see the effects if we hit a good few years versus if we
+hit a bad few years." Owner's choices: today's prime, 20 years of history, +1 to start.
+- **The rate is two boxes** (`type: 'rate'` in pod.js `input`): Prime (today's, or Average, or typed - kept as
+  `primePct`) and Your margin; "= 11.75% a year" beside. The rate itself (`ratePct`, `bondRate`) stays the figure
+  every sum uses, so saved homes and cars keep their rate - their margin is simply shown as rate less prime. A new home
+  starts at prime + 1 (cautious, the owner's choice); cars keep prime + 1.5. Ours already shows prime in the month the
+  bond started, from the history.
+- **What is normal:** through ooba the average bond was granted at prime less 0.66 in Q2 2026 (ooba quarterly data);
+  each bank sets its own margin from deposit, income and credit record.
+- **Prime's history** (js/apps/finance/prime.js, tested): every change since 2005 - BetterBond's table for 2005-2016
+  (its year-end values match TradeAnswers', except 2008, where TradeAnswers has 15.5% and BetterBond 15% from 12 Dec),
+  Unmapped Dataworks' list of every Reserve Bank change since 2015 for 2016-2026 (TradeAnswers agrees to the day or
+  one day off), and 10.75% today confirmed on resbank.co.za. The Reserve Bank's own pages only show the last month.
+  Last 20 years (Dec 2006 - Nov 2026): low 7% (Jul 2020), high 15.5% (Jun 2008), average 10.18%.
+  "What prime has been" under the bond (Advanced): the graph, and this bond's instalment at the low, average and high.
+- **Tolerance:** the range's bond rate now runs from prime's 20-year low to its high (-3.75 to +4.75 points from
+  today), margin on top, for both Narrow and Wider.
+- **Bad start / Good start** in What if…: two "Rate changes" lines - prime at its 20-year high (or low) plus the
+  margin for five years, then the average plus the margin. Timing matters: bad years early cost more, while more is owed.
+
 **D-165 The key goes under the graph, never on it (owner, 2026-11-24).** "Do you never add legends inside the graph
 on the line? Because it cannot be read. This is just not how legends work. It's either on the side, it's either at
 the bottom, and it's for a reason. It's because you overclutter the actual visual window." Every line chart drew each

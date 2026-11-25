@@ -17,7 +17,7 @@ export const CGT = {
 export const OWN_RENT_DEFAULTS = {
   rbMode: 'buy',
   // Buying
-  price: null, deposit: 0, ratePct: REFERENCE.prime.value, termYears: 20, fees: null, moveCost: null,
+  price: null, deposit: 0, ratePct: REFERENCE.prime.value + 1, termYears: 20,   // prime + 1 to start (D-166) fees: null, moveCost: null,
   // Keeping the home we own
   worthNow: null, owedNow: 0, yearsLeft: 5, boughtFor: null, boughtWhen: null, improvedSoFar: null,
   // Owning, either way

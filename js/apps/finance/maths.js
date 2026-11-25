@@ -7,7 +7,7 @@
  * reference figure is never mistaken for a fact about the family's own loan.
  */
 export const REFERENCE = {
-  prime: { value: 10.75, label: 'Prime lending rate', source: 'SA Reserve Bank, 23 Sep 2026' },
+  prime: { value: 10.75, label: 'Prime lending rate', source: 'SA Reserve Bank, from 25 Sep 2026 (held 19 Nov 2026)' },
   cpi: { value: 4.5, label: 'Inflation (CPI - the consumer price index: how much prices rise in general)', source: 'Stats SA, September 2026' },
   perKm: { value: 4.95, label: 'SARS rate per km', source: 'SARS, 2026/27 tax year' },
   transferDuty: { label: 'Transfer duty', source: 'SARS table from 1 April 2025, unchanged from 1 April 2026' },
@@ -328,7 +328,7 @@ export function transferDuty(price) {
 export const feesEstimate = (price, loan) => buyingCosts(price, loan).filter((x) => x.key !== 'duty').reduce((s, x) => s + x.amount, 0);
 
 export const HOME_DEFAULTS = {
-  mode: 'buy', price: null, deposit: 0, ratePct: REFERENCE.prime.value, termYears: 20, stayYears: 5,
+  mode: 'buy', price: null, deposit: 0, ratePct: REFERENCE.prime.value + 1, termYears: 20, stayYears: 5,
   fees: null, growthPct: 4, sellPct: 7.5,
   ratesTaxes: null, levies: null, insurance: null, upkeepPct: 1,
   rent: null, rentRisePct: 6, rentDeposit: null, moveCost: null,

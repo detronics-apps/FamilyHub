@@ -7,7 +7,8 @@
 import { el } from '../../ui/dom.js';
 import { confirmAction } from '../../ui/common.js';
 import { loading, failure } from '../kit.js';
-import { REFERENCE, total, SELL_DEFAULTS } from '../finance/maths.js';
+import { REFERENCE, total, SELL_DEFAULTS, payment, monthlyRate } from '../finance/maths.js';
+import { primeAt, primeStats, primeMonths, startTest, PRIME_SOURCE } from '../finance/prime.js';
 import { historyGrowth, CGT } from './ownrent.js';
 import { EVENT_KINDS } from './bondlog.js';
 import { homePlan, withAndWithout, sameMoney, kindOf, YEARS, inToday, KINDS, SECTIONS, SECTIONS_ON, SCENARIO_KINDS, PLAN_DEFAULTS } from './home.js';
@@ -190,7 +191,7 @@ const SECS = [
     f('rentDepositRatePct', 'The deposit earns', 'percent', { level: 'advanced', optional: true, when: hasHome }),
     f('price', 'A similar home would cost', 'money', { optional: true, when: isRent }),
     f('deposit', 'Deposit you would put down', 'money', { source: { kind: 'assumption' }, when: isRent }),
-    f('ratePct', 'Bond interest rate', 'percent', { source: { ref: REFERENCE.prime }, when: isRent }),
+    f('ratePct', 'Bond interest rate', 'rate', { source: { ref: REFERENCE.prime, note: '+ your margin' }, when: isRent }),
     f('termYears', 'Bond over', 'years', { source: { kind: 'assumption' }, when: isRent }),
     f('ratesTaxes', 'Its rates, levies and insurance a month', 'money', { optional: true, when: isRent }),
     f('maintYearly', 'Its maintenance and repairs a year', 'money', { level: 'advanced', optional: true, when: isRent }),
@@ -220,13 +221,13 @@ const SECS = [
     f('quoteBond', 'Bond attorney’s quote', 'money', { estimate: true, level: 'advanced' }),
   ], extra: (hub, d, plan) => buyingBox(plan) },
   { key: 'bond', title: SECTIONS.bond, tick: true, when: hasHome, fields: [
-    f('ratePct', 'Interest rate', 'percent', { source: { ref: REFERENCE.prime }, when: isBuy }),
+    f('ratePct', 'Interest rate', 'rate', { source: { ref: REFERENCE.prime, note: '+ your margin' }, when: isBuy }),
     f('termYears', 'Over', 'years', { source: { kind: 'assumption' }, when: isBuy }),
     f('income', 'Household income a month, before tax', 'money', { level: 'advanced', optional: true, when: isBuy }),
     f('bondLoan', 'The bond when it started', 'money', { when: isOwn }),
     f('bondStart', 'It started in', 'month', { when: isOwn }),
     f('bondYears', 'Over', 'years', { source: { kind: 'assumption' }, when: isOwn }),
-    f('bondRate', 'Rate at the start', 'percent', { source: { ref: REFERENCE.prime }, when: isOwn }),
+    f('bondRate', 'Rate at the start', 'rate', { source: { kind: 'assumption' }, when: isOwn, primeOf: (v) => { const pct = /^\d{4}-\d{2}$/.test(v.bondStart ?? '') ? primeAt(v.bondStart) : null; return pct == null ? null : { pct, label: `when it started (${ymName(v.bondStart)})` }; } }),
   ], extra: (hub, d, plan, refresh) => [bondBox(hub, d, plan), isOwn(d.values) ? eventsPanel(d, refresh, 'bondEvents', EVENT_KINDS, 'What happened (from your statements)', H.history, false, true) : null] },
   { key: 'running', title: SECTIONS.running, tick: true, when: hasHome, fields: [
     f('ratesTaxes', 'Rates and taxes a month', 'money', { optional: true }),
@@ -307,7 +308,7 @@ function homeScreen(hub, sec = 'financing') {
     figuresFold(v, today, [
       hiddenNote(SECS.flatMap((s) => s.fields.map((x) => (s.level ? { ...x, level: s.level } : x))), d),
       ...sections,
-      shows('advanced') && hasHome(v) && (v.on?.bond ?? true) ? eventsPanel(d, refresh, 'scenarios', SCENARIO_KINDS, isOwn(v) ? 'What if… (from today on)' : 'What if…', H.scenarios, true, true) : null,
+      shows('advanced') && hasHome(v) && (v.on?.bond ?? true) ? eventsPanel(d, refresh, 'scenarios', SCENARIO_KINDS, isOwn(v) ? 'What if… (from today on)' : 'What if…', H.scenarios, true, true, rateStarts(v)) : null,
     ]),
     answer,
     savedPanel(hub, {
@@ -316,6 +317,24 @@ function homeScreen(hub, sec = 'financing') {
       onOpen: (rec) => { loadDraft('homes', DEFAULTS, { ...rec, values: valuesOf(rec) }); figs.open = null; hub.render(); },
     }),
   ]);
+}
+
+/**
+ * Bad start and Good start (D-166): prime at its 20-year high (or low) for the first five years,
+ * then at its average - with this bond's own margin on top - as two "Rate changes" lines.
+ */
+function rateStarts(v) {
+  // Read when pressed: the margin may have been changed since the page was drawn.
+  const now = () => {
+    const own = isOwn(v);
+    const prime = own ? (primeAt(v.bondStart ?? '') ?? REFERENCE.prime.value) : (v.primePct ?? REFERENCE.prime.value);
+    return { margin: n(own ? v.bondRate : v.ratePct) - n(prime), fromYM: own ? thisMonth() : (v.fromMonth || thisMonth()) };
+  };
+  const s = primeStats();
+  return [
+    { label: 'Bad start', lines: () => startTest('bad', now()) },
+    { label: 'Good start', lines: () => startTest('good', now()), hint: `Five years of prime at ${s.high}% (bad) or ${s.low}% (good), its 20-year high and low, then the ${s.avg}% average - your margin on top. A bad few years at the start costs more than late, when less is owed.` },
+  ];
 }
 
 /** One section: its heading with (i), a tick to count it or leave it out, and folding away. */
@@ -399,12 +418,40 @@ function bondBox(hub, d, plan) {
   const toMore = (x) => { for (const e of v.bondEvents ?? []) if (e?.kind === 'pay' && e.from === x.from && n(e.amount) === x.amount) e.kind = 'more'; d.mine.add('bondEvents'); hub.render(); };
   return el('div', { class: 'stack' }, [
     ...lines.filter(Boolean).map((t) => el('p', { class: 'small', style: { margin: 0 }, text: t })),
+    shows('advanced') ? primeHistory(v, plan) : null,
     ...low.map((x) => el('div', { class: 'row', style: { gap: 'var(--space-2)', alignItems: 'center' }, 'data-field': `low-pay:${x.from}` }, [
       el('p', { class: `small ${x.onTop ? '' : 'fin-worse'}`, style: { margin: 0, flex: '1 1 240px' }, text: x.onTop
         ? `${rand(x.amount)} a month from ${ymName(x.from)} is far below the minimum of ${rand(x.min)}, so it is counted as paid on top of the minimum. Change makes the line say so ("Paid more each month").`
         : `${rand(x.amount)} a month from ${ymName(x.from)} is less than the minimum of ${rand(x.min)}, so it changes nothing: "Paid each month" is the whole instalment. If ${rand(x.amount)} was paid on top of the minimum, it is "Paid more each month".` }),
       el('button', { class: 'btn btn-small', type: 'button', text: 'Change', title: `Make it ${rand(x.amount)} more each month`, on: { click: () => toMore(x) } }),
     ])),
+  ]);
+}
+
+/**
+ * What prime has been (D-166): the last 20 years month by month, its low, high and average,
+ * and what this bond's instalment would be at each - this bond's margin on top.
+ */
+function primeHistory(v, plan) {
+  const s = primeStats();
+  const b = plan.bond;
+  const own = isOwn(v);
+  const prime = own ? (primeAt(v.bondStart ?? '') ?? REFERENCE.prime.value) : n(v.primePct ?? REFERENCE.prime.value);
+  const margin = Math.round((n(own ? v.bondRate : v.ratePct) - prime) * 100) / 100;
+  const owed = own ? b.owedNow : plan.loan; const left = own ? b.monthsLeft : Math.round(n(v.termYears) * 12);
+  const at = (p) => (owed > 0 && left > 0 ? payment(owed, monthlyRate(p + margin), left) : 0);
+  const idx = (ym) => s.months.findIndex((m) => m.ym === ym) + 1;
+  const year = (x) => s.months[Math.max(0, Math.min(s.months.length, x) - 1)].ym.slice(0, 4);
+  return el('details', { class: 'more', 'data-field': 'prime-history' }, [
+    el('summary', { text: 'What prime has been' }),
+    el('p', { class: 'small', style: { margin: 0 } }, [`Over the last 20 years prime was ${s.low}% at its lowest (${ymName(s.lowYM)}), ${s.high}% at its highest (${ymName(s.highYM)}) and ${s.avg}% on average; it is ${s.now}% now. With your margin of ${margin >= 0 ? '+' : ''}${margin}, `,
+      el('strong', { text: `${rand(at(s.low))}, ${rand(at(s.avg))} and ${rand(at(s.high))} a month` }), ` - at the low, the average and the high${own ? ', on what is owed today' : ''}. Now: ${rand(at(s.now))}.`]),
+    lineChart([{ name: 'Prime', points: s.months.map((m, i) => [i + 1, m.pct]) }], {
+      label: 'Prime, month by month, over the last 20 years', percent: true, xLabel: year,
+      marks: [{ x: idx(s.highYM), label: `Highest: ${s.high}% (${ymName(s.highYM)})` }, { x: idx(s.lowYM), label: `Lowest: ${s.low}% (${ymName(s.lowYM)})` }],
+      yLines: [{ y: s.avg, label: `20-year average: ${s.avg}%` }],
+      story: `Prime is the Reserve Bank's repo rate plus 3.5 points; it moves after the Monetary Policy Committee's meetings, and a bond at prime plus a margin moves with it. Sources: ${PRIME_SOURCE}.`,
+    }),
   ]);
 }
 

@@ -590,6 +590,15 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### Prime plus your margin, and what prime has been (v0.38.0, 2026-11-26)
+**What it does:** a bond or car rate is prime plus your margin, with what is normal beside it. Under the bond, the
+last 20 years of prime as a graph, with your instalment at its low, average and high. The range tests prime's real
+20-year low and high, and What if… has Bad start and Good start. (D-166)
+**Why it is there:** "To be more accurate, we want to use prime plus a percentage... so that we can see the effects
+if we hit a good few years versus if we hit a bad few years." A rate typed once hides that it moves with prime.
+**Show it:** Finance › Homes › a home › Financing › The bond: change Your margin to +2, press Average, open "What prime
+has been", then What if… › Bad start.
+
 #### Own or rent over 50 years, and rent first then buy (v0.37.0, 2026-11-24)
 **What it does:** Compare follows every home for 50 years, not 30, and can add a third way: rent first for some
 years, then buy the same home at what it costs by then. (D-162)
