@@ -435,7 +435,7 @@ function compareScreen(hub, param) {
       compareTableOf(r.data.map((x) => x.title || 'Untitled'), compareRows(CAR_CHECKS, fam, r.data)),
     ]) : null,
     el('h2', { text: 'The money', style: { margin: 0 } }),
-    el('p', { class: 'muted', style: { margin: 0 }, text: `Each saved car or finance option, worked out with today’s maths. Green is cheaper than ${items[0]?.title ?? 'the first'}, orange dearer.` }),
+    el('p', { class: 'muted', style: { margin: 0 }, text: `Each saved car or finance option, worked out with today’s maths. Green is cheaper than ${items[0]?.title ?? 'the first'}, orange costs more.` }),
     items.length < 2 ? el('p', { class: 'panel', text: 'Two or more saved options are needed to compare.' }) : compareTable(items, [
       { label: 'New or second-hand', get: (c) => (c.isNew ? 'New' : 'Second-hand') },
       { label: 'Instalment a month', get: (c) => c.instalment, lower: true },

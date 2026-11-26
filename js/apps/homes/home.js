@@ -235,7 +235,7 @@ export function withAndWithout(input, today) {
 
 /**
  * Several homes on the same money (D-078): every month each household has as much as
- * the dearest of them needs; whoever needs less that month invests the difference (or
+ * the one that costs most needs; whoever needs less that month invests the difference (or
  * the share of it that really gets invested), and the cash one needs less of on day
  * one is invested too. Where each ends up = what its home would bring back + its own
  * investments + those savings.
