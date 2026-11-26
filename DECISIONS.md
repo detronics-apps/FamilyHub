@@ -986,6 +986,12 @@ source says so. Medical aid gets the **2027** increases (Discovery 8.2%, Bonitas
 BusinessTech, The Citizen); "from now on" and later years use the latest a scheme has announced. Every default that
 follows CPI (costs rise, fuel rises) moves with it.
 
+**D-168 The range Compare tests, shaded on prime's graph (owner, 2026-11-26).** "I do not see the tolerance bands on
+the graph." "What prime has been" now shades the range Compare tests for the bond rate - by default prime's own 20-year
+low to high (7% to 15.5%), or the range set in Compare. Bad years sit at the top of the band, good years at the bottom.
+Compare's "Where each would leave you" keeps its two plain lines: the range graph right under it already shades good
+and bad years for the gap between the two, which is the number that decides.
+
 **D-166 Prime plus your margin, prime's history, and bad or good starts (owner, 2026-11-26).** "To be more accurate,
 we want to use prime plus a percentage... stating what is normal, and also giving a chart of what has been historically
 accurate as prime... adding in the tolerance... so that we can see the effects if we hit a good few years versus if we

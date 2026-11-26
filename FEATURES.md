@@ -590,6 +590,12 @@ yourself, or if it is the cost of that thing." And: "I don't know when you get t
 get it back with interest?" (D-122)
 **Show it:** Finance › Homes › Oranjezicht 2-bed (example) › What each side is worth; then "Its rental deposit".
 
+#### Good and bad years, shaded on prime's graph (v0.38.3, 2026-11-26)
+**What it does:** "What prime has been" shades the range Compare tests for prime - 7% to 15.5% unless you set your
+own - so you see which years would have been good and which bad. (D-168)
+**Why it is there:** "I do not see the tolerance bands on the graph."
+**Show it:** Finance › Homes › a home › Financing › The bond (Advanced) › What prime has been.
+
 #### Prime plus your margin, and what prime has been (v0.38.0, 2026-11-26)
 **What it does:** a bond or car rate is prime plus your margin, with what is normal beside it. Under the bond, the
 last 20 years of prime as a graph, with your instalment at its low, average and high. The range tests prime's real

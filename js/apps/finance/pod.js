@@ -337,7 +337,7 @@ function drawChart(series, { label, marks = [], story = null, xLabel = null, ban
     const b = band ? near(band.points, x) : null;
     readout.classList.remove('muted');
     const here = shown.filter((m) => Math.abs(m.x - x) <= (x1 - x0) / 30).map((m) => m.label);
-    readout.textContent = `${here.length ? `${here.join(', ')} - ` : ''}${when(x)}: ${series.map((s) => `${s.name} ${yFull(near(s.points, x)[1])}`).join(' · ')}${stack ? ` · All of it ${rand(series.filter(piled).reduce((t, s) => t + near(s.points, x)[1], 0))}` : ''}${b ? ` · ${band.name}: ${rand(b[1])} to ${rand(b[2])}` : ''}`;
+    readout.textContent = `${here.length ? `${here.join(', ')} - ` : ''}${when(x)}: ${series.map((s) => `${s.name} ${yFull(near(s.points, x)[1])}`).join(' · ')}${stack ? ` · All of it ${rand(series.filter(piled).reduce((t, s) => t + near(s.points, x)[1], 0))}` : ''}${b ? ` · ${band.name}: ${yFull(b[1])} to ${yFull(b[2])}` : ''}`;
   };
   return el('figure', { class: 'fin-chart', style: { margin: 0 } }, [
     svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': [label, ...shown.map((m) => m.label), ...dots.filter(Boolean).map((d) => d.label)].join('. '), width: '100%', on: { pointermove: read, pointerdown: read } }, [

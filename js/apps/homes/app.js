@@ -442,6 +442,9 @@ function primeHistory(v, plan) {
   const at = (p) => (owed > 0 && left > 0 ? payment(owed, monthlyRate(p + margin), left) : 0);
   const idx = (ym) => s.months.findIndex((m) => m.ym === ym) + 1;
   const year = (x) => s.months[Math.max(0, Math.min(s.months.length, x) - 1)].ym.slice(0, 4);
+  // The band: the range Compare tests for the rate (its own setting, else prime's 20-year low to high).
+  const r = cmpRange.ranges?.rate?.on !== false && cmpRange.ranges?.rate ? cmpRange.ranges.rate : { low: s.low - s.now, high: s.high - s.now };
+  const lo = Math.round((prime + r.low) * 100) / 100; const hi = Math.round((prime + r.high) * 100) / 100;
   return el('details', { class: 'more', 'data-field': 'prime-history' }, [
     el('summary', { text: 'What prime has been' }),
     el('p', { class: 'small', style: { margin: 0 } }, [`Over the last 20 years prime was ${s.low}% at its lowest (${ymName(s.lowYM)}), ${s.high}% at its highest (${ymName(s.highYM)}) and ${s.avg}% on average; it is ${s.now}% now. With your margin of ${margin >= 0 ? '+' : ''}${margin}, `,
@@ -450,7 +453,8 @@ function primeHistory(v, plan) {
       label: 'Prime, month by month, over the last 20 years', percent: true, xLabel: year,
       marks: [{ x: idx(s.highYM), label: `Highest: ${s.high}% (${ymName(s.highYM)})` }, { x: idx(s.lowYM), label: `Lowest: ${s.low}% (${ymName(s.lowYM)})` }],
       yLines: [{ y: s.avg, label: `20-year average: ${s.avg}%` }],
-      story: `Prime is the Reserve Bank's repo rate plus 3.5 points; it moves after the Monetary Policy Committee's meetings, and a bond at prime plus a margin moves with it. Sources: ${PRIME_SOURCE}.`,
+      band: { name: `Range tested in Compare: ${lo}% to ${hi}%`, points: [[1, lo, hi], [s.months.length, lo, hi]] },
+      story: `The shaded band is the range Compare tests for prime - bad years at the top, good years at the bottom; set it in Compare's range. Prime is the Reserve Bank's repo rate plus 3.5 points; it moves after the Monetary Policy Committee's meetings, and a bond at prime plus a margin moves with it. Sources: ${PRIME_SOURCE}.`,
     }),
   ]);
 }
