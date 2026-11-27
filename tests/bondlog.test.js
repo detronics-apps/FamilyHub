@@ -48,6 +48,20 @@ test('D-075 paid in once, taken out again, and a rate change', () => {
   near(onTop.interest, runBond({ ...base, events: [{ ...small[0], kind: 'more' }] }).interest, 0.01);
 });
 
+test('D-169 a rate change from the month the bond starts (or before) is the rate it starts at', () => {
+  const plain = runBond(base);
+  const atStart = runBond({ ...base, events: [{ kind: 'rate', from: '2019-12', amount: 16.5 }] });
+  near(atStart.rows[1].minPmt, payment(900000, 16.5 / 1200, 240), 0.01);
+  assert.ok(atStart.interest > plain.interest);
+  // Before the start: the later of two changes is the one in force.
+  const before = runBond({ ...base, events: [{ kind: 'rate', from: '2019-11', amount: 7 }, { kind: 'rate', from: '2019-06', amount: 16.5 }] });
+  near(before.rows[1].minPmt, payment(900000, 7 / 1200, 240), 0.01);
+  // Bad start and Good start for a home bought this month now differ.
+  const bad = runBond({ ...base, events: [{ kind: 'rate', from: '2019-12', amount: 16.5 }, { kind: 'rate', from: '2024-12', amount: 11 }] });
+  const good = runBond({ ...base, events: [{ kind: 'rate', from: '2019-12', amount: 8 }, { kind: 'rate', from: '2024-12', amount: 11 }] });
+  assert.ok(bad.interest > good.interest + 100000);
+});
+
 test('D-075 where it stands today, and what paying extra from now would do', () => {
   const v = { ...base, events: [{ kind: 'pay', from: '2020-01', to: '2024-12', amount: 12000 }, { kind: 'withdraw', from: '2023-12', amount: 100000 }] };
   const b = bondNow(v, '2026-10-27');

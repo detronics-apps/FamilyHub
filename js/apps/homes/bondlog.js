@@ -44,7 +44,8 @@ export function runBond({ loan, ratePct, termYears, start, events = [], fromMont
   const rows = [{ m: 0, ym: start, balance: L, minPmt, paidThis: 0, interestThis: 0 }];
   const notes = [];
   for (let m = 1; m <= 720 && bal > 0.005; m += 1) {
-    for (const e of ev.filter((x) => x.kind === 'rate' && x.at === m)) { r = monthlyRate(e.amount); minPmt = payment(bal, r, Math.max(1, n - m + 1)); }
+    // A rate change from the start month or earlier is the rate the bond starts at (D-169): the first payment is month 1.
+    for (const e of ev.filter((x) => x.kind === 'rate' && (m === 1 ? x.at <= 1 : x.at === m)).sort((a, b) => a.at - b.at)) { r = monthlyRate(e.amount); minPmt = payment(bal, r, Math.max(1, n - m + 1)); }
     const i = bal * r;
     const chosen = ev.filter((x) => x.kind === 'pay' && x.at <= m && (x.until == null || m <= x.until)).at(-1);
     let pay = chosen ? chosen.amount : minPmt;

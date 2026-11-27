@@ -986,6 +986,13 @@ source says so. Medical aid gets the **2027** increases (Discovery 8.2%, Bonitas
 BusinessTech, The Citizen); "from now on" and later years use the latest a scheme has announced. Every default that
 follows CPI (costs rise, fuel rises) moves with it.
 
+**D-169 Bad start and Good start count for a home bought this month (owner, 2026-11-27).** Found while making the
+video reports: the first rate line was dated the buying month, but the first instalment is the month after, so the bond
+skipped it - both buttons gave the same answer. "Yes, fix it." A rate change dated the month the bond starts, or
+earlier, is now the rate it starts at (the later one wins), which also fixes a "Rate changes" line typed for the buying
+month. Bad start and Good start for a home being bought now start at the first instalment, so the five years are 60
+instalments. A home we own already is unchanged: its lines start this month, well after its bond began.
+
 **D-168 The range Compare tests, shaded on prime's graph (owner, 2026-11-26).** "I do not see the tolerance bands on
 the graph." "What prime has been" now shades the range Compare tests for the bond rate - by default prime's own 20-year
 low to high (7% to 15.5%), or the range set in Compare. Bad years sit at the top of the band, good years at the bottom.

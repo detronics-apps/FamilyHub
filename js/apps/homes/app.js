@@ -10,7 +10,7 @@ import { loading, failure } from '../kit.js';
 import { REFERENCE, total, SELL_DEFAULTS, payment, monthlyRate } from '../finance/maths.js';
 import { primeAt, primeStats, primeMonths, startTest, PRIME_SOURCE } from '../finance/prime.js';
 import { historyGrowth, CGT } from './ownrent.js';
-import { EVENT_KINDS } from './bondlog.js';
+import { EVENT_KINDS, addMonthsYM } from './bondlog.js';
 import { homePlan, withAndWithout, sameMoney, kindOf, YEARS, inToday, KINDS, SECTIONS, SECTIONS_ON, SCENARIO_KINDS, PLAN_DEFAULTS } from './home.js';
 import { shows, hiddenNote, draft, loadDraft, input, info, linesPanel as eventsPanel, stat, sums, step, lineChart, chartPanel, crossing, whenLabel, RULE, savedPanel, exportBar, rand, pct, months } from '../finance/pod.js';
 import { HOME_HELP as H } from '../finance/help.js';
@@ -328,7 +328,8 @@ function rateStarts(v) {
   const now = () => {
     const own = isOwn(v);
     const prime = own ? (primeAt(v.bondStart ?? '') ?? REFERENCE.prime.value) : (v.primePct ?? REFERENCE.prime.value);
-    return { margin: n(own ? v.bondRate : v.ratePct) - n(prime), fromYM: own ? thisMonth() : (v.fromMonth || thisMonth()) };
+    // Buying: from the first instalment, the month after buying, so the five years are 60 instalments (D-169).
+    return { margin: n(own ? v.bondRate : v.ratePct) - n(prime), fromYM: own ? thisMonth() : addMonthsYM(v.fromMonth || thisMonth(), 1) };
   };
   const s = primeStats();
   return [
